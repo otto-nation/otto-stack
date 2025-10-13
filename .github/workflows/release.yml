@@ -203,7 +203,17 @@ jobs:
           echo "  Scoop: ${{ steps.package-config.outputs.scoop_enabled }}"
 
           if [[ "${{ steps.package-config.outputs.homebrew_enabled }}" == "true" ]]; then
-            echo "🍺 Homebrew formula update would be triggered here"
+            echo "🍺 Updating Homebrew formula..."
+            ./scripts/update-homebrew-formula.sh --version ${{ needs.release.outputs.tag_name }}
+            
+            # Check if formula was updated
+            if git diff --quiet Formula/otto-stack.rb; then
+              echo "ℹ️  No changes to Homebrew formula"
+            else
+              echo "✅ Homebrew formula updated successfully"
+              echo "📝 Formula changes:"
+              git diff Formula/otto-stack.rb
+            fi
           fi
 
           if [[ "${{ steps.package-config.outputs.scoop_enabled }}" == "true" ]]; then
