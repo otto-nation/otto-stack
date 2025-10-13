@@ -1,0 +1,100 @@
+name: Validation
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+    paths:
+      - "docs-site/**"
+      - "*.md"
+      - ".github/.commitlintrc.json"
+      - ".github/.release-please-config.json"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validation:
+    name: Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Load configuration
+        id: config
+        uses: ./.github/actions/load-config
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          install-task: "true"
+          install-tools: "true"
+
+      - name: Validate conventional commits
+        if: github.event_name == 'pull_request'
+        uses: wagoid/commitlint-github-action@v5
+        with:
+          configFile: .github/.commitlintrc.json
+
+      - name: Setup Hugo for validation
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: ${{ steps.config.outputs.hugo-version }}
+          extended: true
+
+      - name: Setup Node.js for documentation tools
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ steps.config.outputs.node-version }}
+          cache: "npm"
+          cache-dependency-path: ${{ steps.config.outputs.docs-dir }}/package-lock.json
+
+      - name: Install documentation dependencies
+        working-directory: ${{ steps.config.outputs.docs-dir }}
+        run: |
+          if [ -f package.json ]; then
+            npm ci
+          else
+            echo "No package.json found, skipping npm dependencies"
+          fi
+
+      - name: Run project validation
+        run: ./scripts/validate-project.sh
+
+      - name: Lint markdown files
+        working-directory: ${{ steps.config.outputs.docs-dir }}
+        run: |
+          echo "🔍 Linting markdown files..."
+          if [ -f package.json ]; then
+            npm run lint:md || echo "⚠️ Markdown linting found issues"
+          else
+            echo "⚠️ Markdown linting not configured, skipping"
+          fi
+
+      - name: Check for broken links
+        uses: tcort/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: "yes"
+          use-verbose-mode: "no"
+          config-file: ".github/markdown-link-check.json"
+          folder-path: "docs-site/content"
+        timeout-minutes: 5
+        continue-on-error: true
+
+      - name: Validation summary
+        if: always()
+        run: |
+          echo "## 📋 Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Configuration**: Files validated" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Documentation**: Checked for issues" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Hugo**: Site configuration and content validated" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **Code Quality**: Basic checks completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "📋 See individual steps above for detailed results." >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,3 @@
+[submodule "docs-site/themes/doks"]
+	path = docs-site/themes/doks
+	url = https://github.com/h-enk/doks.git

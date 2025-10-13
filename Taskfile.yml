@@ -1,0 +1,700 @@
+version: "3"
+
+# ============================================================================
+# VARIABLES
+# ============================================================================
+vars:
+  BINARY_NAME: otto-stack
+  BUILD_DIR: build
+  MODULE_PATH: github.com/otto-nation/otto-stack
+  VERSION:
+    sh: git describe --tags --always --dirty 2>/dev/null || echo "dev"
+  COMMIT:
+    sh: git rev-parse --short HEAD 2>/dev/null || echo "unknown"
+  BUILD_DATE:
+    sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
+  LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/cli.version={{.VERSION}} -X {{.MODULE_PATH}}/internal/cli.commit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/cli.date={{.BUILD_DATE}}"'
+  GOLANGCI_LINT_VERSION: "v2.4.0"
+
+# ============================================================================
+# TASKS
+# ============================================================================
+tasks:
+  # ----------------------------------------------------------------------------
+  # DEFAULT TASK
+  # ----------------------------------------------------------------------------
+  default:
+    desc: "🚀 Build the binary (default task)"
+    silent: true
+    cmds:
+      - task: build
+
+  # ----------------------------------------------------------------------------
+  # BUILD TASKS
+  # ----------------------------------------------------------------------------
+  build:
+    desc: "🔨 Build the Go binary for current platform"
+    deps: [deps]
+    sources:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+    generates:
+      - "{{.BUILD_DIR}}/{{.BINARY_NAME}}"
+    silent: true
+    cmds:
+      - echo "🔨 Building {{.BINARY_NAME}}..."
+      - mkdir -p {{.BUILD_DIR}}
+      - go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}} ./cmd/otto-stack
+      - echo "✅ Built at {{.BUILD_DIR}}/{{.BINARY_NAME}}"
+
+  build-all:
+    desc: "🌍 Build binaries for all supported platforms"
+    deps: [deps]
+    silent: true
+    cmds:
+      - echo "🌍 Building {{.BINARY_NAME}} for all platforms..."
+      - mkdir -p {{.BUILD_DIR}}
+      - GOOS=linux GOARCH=amd64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-linux-amd64 ./cmd/otto-stack
+      - GOOS=linux GOARCH=arm64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-linux-arm64 ./cmd/otto-stack
+      - GOOS=darwin GOARCH=amd64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-darwin-amd64 ./cmd/otto-stack
+      - GOOS=darwin GOARCH=arm64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-darwin-arm64 ./cmd/otto-stack
+      - GOOS=windows GOARCH=amd64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-windows-amd64.exe ./cmd/otto-stack
+      - echo "✅ All binaries built in {{.BUILD_DIR}}/"
+
+  install:
+    desc: "📦 Install the binary to GOPATH/bin"
+    deps: [build]
+    silent: true
+    cmds:
+      - echo "📦 Installing {{.BINARY_NAME}}..."
+      - go install {{.LDFLAGS}} ./cmd/otto-stack
+      - echo "✅ Installed to $(go env GOPATH)/bin/{{.BINARY_NAME}}"
+
+  # ----------------------------------------------------------------------------
+  # DEVELOPMENT TASKS
+  # ----------------------------------------------------------------------------
+  dev:
+    desc: "🚀 Quick start - build and show help"
+    deps: [build]
+    silent: true
+    cmds:
+      - echo "🚀 Running {{.BINARY_NAME}} in development mode..."
+      - ./{{.BUILD_DIR}}/{{.BINARY_NAME}} --help
+
+  watch:
+    desc: "👀 Watch for changes and rebuild automatically"
+    watch: true
+    sources:
+      - "**/*.go"
+    silent: true
+    cmds:
+      - echo "👀 Rebuilding due to changes..."
+      - task: build
+
+  # ----------------------------------------------------------------------------
+  # DEPENDENCY MANAGEMENT
+  # ----------------------------------------------------------------------------
+  deps:
+    desc: "📥 Download and tidy Go dependencies"
+    silent: true
+    cmds:
+      - echo "📥 Downloading Go dependencies..."
+      - go mod download
+      - go mod tidy
+      - echo "✅ Dependencies updated"
+
+  # ----------------------------------------------------------------------------
+  # GIT AUTOMATION
+  # ----------------------------------------------------------------------------
+  commit:
+    desc: "🤖 Generate AI-powered commit message based on staged changes"
+    silent: true
+    cmds:
+      - |
+        # Check if there are staged changes
+        STAGED_FILES=$(git diff --cached --name-only)
+        if [ -z "$STAGED_FILES" ]; then
+          echo "❌ No staged changes found. Use 'git add' first."
+          exit 1
+        fi
+
+        echo "🤖 Analyzing staged changes with AI..."
+
+        # Get detailed diff for AI analysis
+        DIFF_CONTENT=$(git diff --cached --no-color)
+        FILE_LIST=$(echo "$STAGED_FILES" | tr '\n' ', ' | sed 's/,$//')
+        COMMITLINT_CONFIG=$(cat .github/.commitlintrc.json)
+
+        # Create AI prompt with commitlint config
+        AI_PROMPT="Generate a conventional commit message using this commitlint config:
+
+        $COMMITLINT_CONFIG
+
+        Files changed: $FILE_LIST
+
+        Diff:
+        $DIFF_CONTENT
+
+        Return only the commit message, nothing else."
+
+        # Use AI to generate commit message
+        if command -v q >/dev/null 2>&1; then
+          echo "🤖 Generating commit message..."
+          COMMIT_MSG=$(echo "$AI_PROMPT" | q chat --no-interactive | tr -d '\033' | sed 's/\[[0-9;]*m//g' | sed 's/^[> ]*//g' | xargs)
+          echo "✨ AI Analysis Complete"
+        else
+          echo "⚠️  AI not available, using fallback..."
+          TYPE="feat"
+          if echo "$STAGED_FILES" | grep -q "_test\.go"; then TYPE="test"
+          elif echo "$STAGED_FILES" | grep -q "\.md$"; then TYPE="docs"
+          elif echo "$STAGED_FILES" | grep -q "Taskfile\.yml\|\.github/"; then TYPE="ci"
+          elif echo "$STAGED_FILES" | grep -q "go\.mod\|go\.sum"; then TYPE="deps"
+          fi
+          COMMIT_MSG="$TYPE: improve codebase"
+        fi
+
+        echo ""
+        echo "📝 Generated: $COMMIT_MSG"
+        echo "🚀 Committing..."
+        git commit -m "$COMMIT_MSG"
+        echo "✅ Committed successfully!"
+
+  # === GIT AUTOMATION ===
+  create-pr:
+    desc: "🤖 Create AI-powered pull request with smart title and description"
+    silent: true
+    cmds:
+      - |
+        BRANCH=$(git branch --show-current)
+        if [ "$BRANCH" = "main" ]; then
+          echo "❌ Cannot create PR from main branch"
+          exit 1
+        fi
+
+        echo "🤖 Analyzing branch changes with AI: $BRANCH"
+
+        # Get comprehensive change analysis
+
+        # commits that are in the current branch but not in main
+        COMMITS=$(git log --oneline origin/main..HEAD)
+        COMMIT_COUNT=$(git rev-list --count origin/main..$BRANCH)
+        CHANGED_FILES=$(git diff --name-only origin/main..$BRANCH)
+        PR_TEMPLATE=$(cat .github/PULL_REQUEST_TEMPLATE.md)
+
+        # Create AI prompt with PR template
+        AI_PROMPT="Generate a professional PR title and fill out this template based on the changes:
+
+        Template:
+        $PR_TEMPLATE
+
+        Branch: $BRANCH
+        Commits: $COMMIT_COUNT
+
+        Recent commits:
+        $COMMITS
+
+        Changed files:
+        $CHANGED_FILES
+
+        Return: TITLE: <title>
+        DESCRIPTION: <filled template>"
+
+        # Use AI to generate PR content
+        if command -v q >/dev/null 2>&1; then
+          echo "🤖 Generating PR title and description..."
+          RAW_RESPONSE=$(echo "$AI_PROMPT" | q chat --no-interactive --trust-all-tools)
+          # Strip all ANSI escape sequences and control characters
+          AI_RESPONSE=$(echo "$RAW_RESPONSE" | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;]*R//g' | tr -d '\033\007\015' | sed 's/^[> ]*//g')
+
+          TITLE=$(echo "$AI_RESPONSE" | grep "^TITLE:" | sed 's/^TITLE: //' | head -1 | tr -d '\n\r')
+          DESCRIPTION=$(echo "$AI_RESPONSE" | sed -n '/^DESCRIPTION:/,$ p' | sed '1d')
+
+          if [ -z "$TITLE" ]; then TITLE="feat: improve codebase"; fi
+          if [ -z "$DESCRIPTION" ]; then DESCRIPTION="## Summary\n\nBranch: $BRANCH\nCommits: $COMMIT_COUNT"; fi
+
+          echo "✨ AI Analysis Complete"
+        else
+          echo "⚠️  AI not available, using template..."
+          TITLE="feat: improve codebase"
+          DESCRIPTION="## Summary\n\nBranch: $BRANCH\nCommits: $COMMIT_COUNT\n\nFiles changed: $CHANGED_FILES"
+        fi
+
+        echo ""
+        echo "📝 Title: $TITLE"
+        echo "🚀 Creating PR..."
+
+        PR_URL=$(gh pr create --title "$TITLE" --body "$DESCRIPTION" --assignee @me 2>&1 | grep -o 'https://github.com[^[:space:]]*' || echo "")
+
+        echo "✅ Pull request created!"
+        if [ -n "$PR_URL" ]; then echo "🔗 View: $PR_URL"; fi
+
+  push-and-pr:
+    desc: "🚀 Push current branch and create PR in one command"
+    silent: true
+    cmds:
+      - |
+        BRANCH=$(git branch --show-current)
+        echo "🚀 Pushing branch: $BRANCH"
+        git push -u origin $BRANCH
+      - task: create-pr
+
+  pre-commit:
+    desc: "🔒 Run all pre-commit checks"
+    silent: true
+    cmds:
+      - echo "🔒 Running pre-commit checks..."
+      - task: pre-commit-fix
+      - task: pre-commit-verify
+
+  pre-commit-fix:
+    desc: "🔧 Auto-fix formatting and module issues"
+    silent: true
+    cmds:
+      - echo "🔧 Auto-fixing formatting and modules..."
+      - git diff --name-only > /tmp/git_before_fixes || touch /tmp/git_before_fixes
+      - task: fmt
+      - go mod tidy
+
+  pre-commit-verify:
+    desc: "✅ Verify all checks pass after fixes"
+    silent: true
+    cmds:
+      - |
+        echo "✅ Verifying fixes..."
+        # Check if pre-commit-fix made changes by comparing before/after states
+        if [ -f /tmp/git_before_fixes ]; then
+          git diff --name-only > /tmp/git_after_fixes
+          if ! cmp -s /tmp/git_before_fixes /tmp/git_after_fixes; then
+            echo ""
+            echo "❌ Pre-commit failed: Files were modified during formatting"
+            echo ""
+            echo "📋 Modified files:"
+            git diff --name-only
+            echo ""
+            echo "🔧 Please add these changes and commit again:"
+            echo "   git add ."
+            echo "   git commit"
+            echo ""
+            rm -f /tmp/git_before_fixes /tmp/git_after_fixes
+            exit 1
+          fi
+          rm -f /tmp/git_before_fixes /tmp/git_after_fixes
+        fi
+      - task: lint
+      - echo "✅ Pre-commit checks passed"
+
+  pre-push:
+    desc: "🚀 Run all pre-push checks"
+    silent: true
+    cmds:
+      - echo "🚀 Running pre-push checks..."
+      - task: test-all
+      - task: build
+      - |
+        # Capture git state before docs generation
+        git diff --name-only > /tmp/git_before_docs || touch /tmp/git_before_docs
+      - task: docs
+      - |
+        # Check if docs generation made changes
+        git diff --name-only > /tmp/git_after_docs
+        if ! cmp -s /tmp/git_before_docs /tmp/git_after_docs; then
+          echo ""
+          echo "❌ Pre-push failed: Documentation was out of sync"
+          echo ""
+          echo "📋 Modified files:"
+          git diff --name-only
+          echo ""
+          echo "🔧 Please add these changes and commit again:"
+          echo "   git add ."
+          echo "   git commit"
+          echo ""
+          rm -f /tmp/git_before_docs /tmp/git_after_docs
+          exit 1
+        fi
+        rm -f /tmp/git_before_docs /tmp/git_after_docs
+      - task: docs-lastmod-update
+      - echo "✅ Pre-push checks passed"
+
+  fmt-check:
+    desc: "📝 Check Go code formatting"
+    silent: true
+    cmds:
+      - |
+        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+          echo "❌ Code is not formatted. Run: task fmt"
+          gofmt -s -l .
+          exit 1
+        fi
+        echo "✅ Code formatting OK"
+
+  mod-tidy-check:
+    desc: "📦 Check if go.mod is tidy"
+    silent: true
+    cmds:
+      - go mod tidy
+      - |
+        if ! git diff --exit-code go.mod go.sum; then
+          echo "❌ go.mod/go.sum not tidy. Run: go mod tidy"
+          exit 1
+        fi
+        echo "✅ Go modules are tidy"
+
+  lint-md:
+    desc: "📝 Lint markdown files"
+    silent: true
+    cmds:
+      - echo "📝 Linting markdown files..."
+      - cd docs-site && npm run lint:md
+      - echo "✅ Markdown linting passed"
+
+  docs-sync-check:
+    desc: "📚 Check if documentation is in sync"
+    silent: true
+    cmds:
+      - cd docs-site && npm run docs:generate
+      - |
+        # Check if there are content changes (ignoring timestamp changes in frontmatter)
+        DIFF_OUTPUT=$(git diff docs-site/content/_index.md docs-site/content/reference.md docs-site/content/services.md | grep -v "^[+-]date:" | grep -v "^[+-]lastmod:")
+        if echo "$DIFF_OUTPUT" | grep -q "^[+-]"; then
+          echo "❌ Documentation content out of sync. Run: cd docs-site && npm run docs:generate"
+          echo "$DIFF_OUTPUT"
+          exit 1
+        fi
+        echo "✅ Documentation is in sync"
+
+  docs-lastmod-update:
+    desc: "🗓️ Update lastmod dates for changed documentation files"
+    silent: true
+    cmds:
+      - ./scripts/update-docs-lastmod.sh
+
+  setup-hooks:
+    desc: "🪝 Install Git hooks for pre-commit and pre-push checks"
+    silent: true
+    cmds:
+      - ./scripts/setup-hooks.sh
+
+  # ----------------------------------------------------------------------------
+  # TESTING TASKS
+  # ----------------------------------------------------------------------------
+  test:
+    desc: "🧪 Run all tests with coverage"
+    deps: [deps]
+    sources:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+    generates:
+      - "coverage.out"
+    silent: true
+    cmds:
+      - echo "🧪 Running tests with coverage..."
+      - go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+      - echo "✅ Coverage report at coverage.out"
+
+  test-unit:
+    desc: "🧪 Run unit tests only"
+    deps: [deps]
+    silent: true
+    cmds:
+      - echo "🧪 Running unit tests..."
+      - go test -race -short ./...
+      - echo "✅ Unit tests passed"
+
+  test-integration:
+    desc: "🔗 Run integration tests"
+    deps: [deps]
+    silent: true
+    cmds:
+      - echo "🔗 Running integration tests..."
+      - go test -race -tags=integration ./...
+      - echo "✅ Integration tests passed"
+
+  test-cross-platform:
+    desc: "🌍 Run cross-platform compatibility tests"
+    deps: [deps]
+    silent: true
+    cmds:
+      - echo "🌍 Running cross-platform compatibility tests..."
+      - ./scripts/test-cross-platform.sh
+      - echo "✅ Cross-platform tests completed"
+
+  test-ci:
+    desc: "🐳 Test using Colima to match GitHub Actions environment"
+    silent: true
+    cmds:
+      - echo "🐳 Testing with Colima (matches GitHub Actions)..."
+      - |
+        if ! command -v docker >/dev/null 2>&1; then
+          echo "❌ Docker not available. Start Colima first: colima start"
+          exit 1
+        fi
+      - |
+        GO_VERSION=$(cat .go-version | tr -d '[:space:]')
+        docker run --rm -v $(pwd):/app -w /app golang:${GO_VERSION} sh -c "
+          echo '📥 Downloading dependencies...' &&
+          go mod download &&
+          echo '🧪 Running tests...' &&
+          go test -v ./... &&
+          echo '🔨 Testing Windows build...' &&
+          GOOS=windows GOARCH=amd64 go build -buildvcs=false -o otto-stack-windows.exe ./cmd/otto-stack &&
+          echo '🔨 Testing macOS build...' &&
+          GOOS=darwin GOARCH=amd64 go build -buildvcs=false -o otto-stack-macos ./cmd/otto-stack &&
+          echo '🔨 Testing Linux build...' &&
+          go build -buildvcs=false -o otto-stack-linux ./cmd/otto-stack
+        "
+      - echo "✅ CI environment tests completed"
+
+  test-coverage:
+    desc: "📊 View test coverage report in browser"
+    deps: [test]
+    silent: true
+    cmds:
+      - echo "📊 Opening coverage report..."
+      - go tool cover -html=coverage.out
+
+  test-coverage-check:
+    desc: "🎯 Check if test coverage meets minimum threshold"
+    deps: [test]
+    silent: true
+    cmds:
+      - |
+        COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+        MIN_COVERAGE=15.0
+        echo "Current test coverage: ${COVERAGE}%"
+        echo "Minimum threshold: ${MIN_COVERAGE}%"
+
+        if command -v bc >/dev/null 2>&1; then
+          if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
+            echo "❌ Test coverage ${COVERAGE}% is below minimum threshold ${MIN_COVERAGE}%"
+            exit 1
+          else
+            echo "✅ Test coverage ${COVERAGE}% meets minimum threshold ${MIN_COVERAGE}%"
+          fi
+        else
+          # Fallback for systems without bc
+          COVERAGE_INT=$(echo "$COVERAGE" | cut -d'.' -f1)
+          MIN_COVERAGE_INT=$(echo "$MIN_COVERAGE" | cut -d'.' -f1)
+          if [ "$COVERAGE_INT" -lt "$MIN_COVERAGE_INT" ]; then
+            echo "❌ Test coverage ${COVERAGE}% is below minimum threshold ${MIN_COVERAGE}%"
+            exit 1
+          else
+            echo "✅ Test coverage ${COVERAGE}% meets minimum threshold ${MIN_COVERAGE}%"
+          fi
+        fi
+
+  test-all:
+    desc: "🧪 Run comprehensive test suite"
+    silent: true
+    cmds:
+      - task: test-unit
+      - task: test-integration
+      - task: test-cross-platform
+      - task: test-coverage-check
+      - echo "✅ All tests completed successfully"
+
+  lint:
+    desc: "🔍 Run comprehensive linting (vet + fmt + golangci-lint)"
+    deps: [deps]
+    silent: true
+    cmds:
+      - echo "🔍 Running go vet..."
+      - go vet ./...
+      - echo "🔍 Checking code formatting..."
+      - |
+        if [ "$(gofmt -l . | wc -l)" -gt 0 ]; then
+          echo "❌ Code is not formatted. Run 'task fmt' to fix:"
+          gofmt -l .
+          exit 1
+        fi
+      - echo "✅ Basic linting passed"
+      - echo "🔍 Running golangci-lint config verify..."
+      - |
+        if [ ! -f .golangci.yml ]; then
+          echo "❌ .golangci.yml config file not found!"
+          exit 1
+        fi
+        if [ ! -f $(go env GOPATH)/bin/golangci-lint ]; then
+          echo "📦 Installing golangci-lint {{.GOLANGCI_LINT_VERSION}}..."
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin {{.GOLANGCI_LINT_VERSION}}
+        fi
+        $(go env GOPATH)/bin/golangci-lint config verify
+      - echo "✅ golangci-lint config is valid"
+      - echo "🔍 Running golangci-lint..."
+      - $(go env GOPATH)/bin/golangci-lint run ./...
+      - echo "📝 Linting documentation..."
+      - cd docs-site && npm run lint:md
+      - cd docs-site && npm run lint:links
+      - echo "✅ All linting checks passed!"
+
+  fmt:
+    desc: "✨ Format Go code with gofmt and goimports"
+    silent: true
+    cmds:
+      - echo "✨ Formatting Go code..."
+      - |
+        if [ ! -f $(go env GOPATH)/bin/goimports ]; then
+          echo "📦 Installing goimports..."
+          go install golang.org/x/tools/cmd/goimports@latest
+        fi
+      - go fmt ./...
+      - $(go env GOPATH)/bin/goimports -w .
+      - echo "📝 Formatting documentation..."
+      - cd docs-site && npm run format
+      - echo "✅ Code formatted"
+
+  security:
+    desc: "🔒 Run security vulnerability scan"
+    deps: [deps]
+    silent: true
+    cmds:
+      - echo "🔒 Running security scan..."
+      - |
+        if ! command -v govulncheck >/dev/null 2>&1; then
+          echo "📦 Installing govulncheck..."
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+        fi
+      - govulncheck ./...
+      - echo "✅ Security scan complete"
+
+  # ----------------------------------------------------------------------------
+  # DOCUMENTATION
+  # ----------------------------------------------------------------------------
+  docs:
+    desc: "📚 Generate documentation"
+    deps: [build]
+    silent: true
+    cmds:
+      - echo "📚 Generating documentation..."
+      - ./{{.BUILD_DIR}}/{{.BINARY_NAME}} docs --verbose
+      - echo "📝 Generating Hugo documentation..."
+      - cd docs-site && npm run docs:generate
+      - echo "✅ Documentation generated"
+
+  # ----------------------------------------------------------------------------
+  # DOCKER
+  # ----------------------------------------------------------------------------
+  docker-build:
+    desc: "🐳 Build Docker image"
+    silent: true
+    cmds:
+      - echo "🐳 Building Docker image..."
+      - docker build -t {{.BINARY_NAME}}:{{.VERSION}} .
+      - echo "✅ Docker image built at {{.BINARY_NAME}}:{{.VERSION}}"
+
+  docker-run:
+    desc: "🐳 Run Docker container interactively"
+    deps: [docker-build]
+    silent: true
+    cmds:
+      - echo "🐳 Running Docker container..."
+      - docker run --rm -it {{.BINARY_NAME}}:{{.VERSION}}
+
+  # ----------------------------------------------------------------------------
+  # CLEANUP
+  # ----------------------------------------------------------------------------
+  clean:
+    desc: "🧹 Remove build artifacts and generated files"
+    silent: true
+    cmds:
+      - echo "🧹 Cleaning build artifacts..."
+      - rm -rf {{.BUILD_DIR}}/
+      - rm -f coverage.out *.test *.prof
+      - go clean -cache
+      - echo "📚 Cleaning documentation..."
+      - cd docs-site && npm run docs:clean
+      - echo "✅ Clean complete"
+
+  clean-all:
+    desc: "🧹 Deep clean - remove all generated files including dependencies"
+    deps: [clean]
+    silent: true
+    cmds:
+      - echo "🧹 Deep cleaning..."
+      - go clean -modcache
+      - rm -rf vendor/
+      - echo "✅ Deep clean complete"
+
+  # ----------------------------------------------------------------------------
+  # UTILITY
+  # ----------------------------------------------------------------------------
+  version:
+    desc: "ℹ️  Show version information"
+    silent: true
+    cmds:
+      - echo "📋 Version Information:"
+      - echo "   Version:" {{.VERSION}}
+      - echo "   Commit:"  {{.COMMIT}}
+      - echo "   Date:"    {{.BUILD_DATE}}
+
+  help:
+    desc: "❓ Show this help message"
+    silent: true
+    cmds:
+      - echo "🛠️  otto-stack Task Runner"
+      - echo ""
+      - echo "📋 Quick Start:"
+      - echo "   task build     - Build the binary"
+      - echo "   task dev       - Build and run"
+      - echo "   task test      - Run tests"
+      - echo "   task lint      - Check code quality"
+      - echo ""
+      - echo "🔨 Build Tasks:"
+      - echo "   build          - Build binary for current platform"
+      - echo "   build-all      - Build for all platforms"
+      - echo "   install        - Install to GOPATH/bin"
+      - echo ""
+      - echo "🚀 Development:"
+      - echo "   dev            - Quick start (build + help)"
+      - echo "   watch          - Auto-rebuild on changes"
+      - echo ""
+      - echo "🧪 Testing:"
+      - echo "   test           - Run all tests"
+      - echo "   test-coverage  - Run tests with coverage"
+      - echo "   deps           - Update dependencies"
+      - echo ""
+      - echo "🧪 Testing:"
+      - echo "   test           - Run all tests with coverage"
+      - echo "   test-unit      - Run unit tests only"
+      - echo "   test-integration - Run integration tests"
+      - echo "   test-cross-platform - Run cross-platform tests"
+      - echo "   test-ci        - Test with Colima (matches GitHub Actions)"
+      - echo "   test-all       - Run comprehensive test suite"
+      - echo "   test-coverage  - View coverage in browser"
+      - echo "   test-coverage-check - Check coverage threshold"
+      - echo ""
+      - echo "🔍 Quality:"
+      - echo "   lint           - Run all linting checks"
+      - echo "   fmt            - Format code"
+      - echo "   security       - Security vulnerability scan"
+      - echo ""
+      - echo "📚 Documentation:"
+      - echo "   docs           - Generate documentation"
+      - echo ""
+      - echo "🐳 Docker:"
+      - echo "   docker-build   - Build Docker image"
+      - echo "   docker-run     - Run in container"
+      - echo ""
+      - echo "🧹 Cleanup:"
+      - echo "   clean          - Remove build artifacts"
+      - echo "   clean-all      - Deep clean everything"
+      - echo ""
+      - echo "ℹ️  Info:"
+      - echo "   version        - Show version info"
+      - echo "   help           - Show this help"
+      - echo ""
+      - echo "🤖 AI-Powered Git Automation:"
+      - echo "   commit         - AI-generated commit messages"
+      - echo "   create-pr      - AI-generated PR title/description"
+      - echo "   push-and-pr    - Push branch and create AI PR"
+      - echo "   pre-commit     - Run all pre-commit checks"
+      - echo "   pre-push       - Run all pre-push checks"
+      - echo "   setup-hooks    - Install Git hooks"
+      - echo ""
+      - echo "💡 Examples:"
+      - echo "   task build && ./build/otto-stack --help"
+      - echo "   task watch  (Auto-rebuild on file changes)"
+      - echo "   task test && task lint"
+      - echo ""
+      - echo "For detailed task list:" "task --list"
