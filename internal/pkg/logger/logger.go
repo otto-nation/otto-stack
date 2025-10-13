@@ -15,6 +15,8 @@ import (
 var (
 	// Default logger instance
 	defaultLogger *slog.Logger
+	// File handle for cleanup (Windows compatibility)
+	logFile *os.File
 )
 
 // LogLevel represents available log levels
@@ -64,6 +66,7 @@ func Init(config Config) error {
 			return fmt.Errorf("failed to open log file %s: %w", config.Output, err)
 		}
 		writer = file
+		logFile = file // Store for cleanup
 	}
 
 	var handler slog.Handler
@@ -88,6 +91,15 @@ func Init(config Config) error {
 
 	defaultLogger = slog.New(handler)
 	return nil
+}
+
+// Close closes the logger and any open file handles
+func Close() {
+	if logFile != nil {
+		_ = logFile.Close() // Ignore error on close
+		logFile = nil
+	}
+	defaultLogger = nil
 }
 
 // InitFromViper initializes the logger from viper configuration
