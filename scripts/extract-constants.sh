@@ -34,6 +34,28 @@ fi
 
 # Get current GitHub user dynamically
 get_github_user() {
+    # Use existing GITHUB_USER if set
+    if [[ -n "${GITHUB_USER:-}" ]]; then
+        echo "$GITHUB_USER"
+        return
+    fi
+    
+    # Try GitHub CLI first
+    if command -v gh >/dev/null 2>&1; then
+        local gh_user=$(gh api user --jq '.login' 2>/dev/null || echo "")
+        if [[ -n "$gh_user" ]]; then
+            echo "$gh_user"
+            return
+        fi
+    fi
+    
+    # Try git config github.user
+    local git_github_user=$(git config --global github.user 2>/dev/null || echo "")
+    if [[ -n "$git_github_user" ]]; then
+        echo "$git_github_user"
+        return
+    fi
+    
     # Try to extract from git remote origin URL
     local remote_url=$(git remote get-url origin 2>/dev/null || echo "")
     if [[ "$remote_url" =~ github\.com[:/]([^/]+)/ ]]; then
