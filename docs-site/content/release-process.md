@@ -188,10 +188,10 @@ commit_types:
 package_managers:
   homebrew:
     enabled: false # Enable when ready
-    tap: "isaacgarza/homebrew-otto-stack"
+    tap: "otto-nation/homebrew-otto-stack"
   scoop:
     enabled: false # Enable when ready
-    bucket: "isaacgarza/scoop-otto-stack"
+    bucket: "otto-nation/scoop-otto-stack"
 ```
 
 When you modify this file, regenerate the config files:
@@ -206,7 +206,7 @@ task generate-release-configs
 
 To enable Homebrew releases:
 
-1. Create a tap repository: `isaacgarza/homebrew-otto-stack`
+1. Create a tap repository: `otto-nation/homebrew-otto-stack`
 2. Enable in config: `package_managers.homebrew.enabled: true`
 3. Add `HOMEBREW_TOKEN` secret to GitHub
 4. Regenerate configs: `task generate-release-configs`
@@ -215,7 +215,7 @@ To enable Homebrew releases:
 
 To enable Scoop releases:
 
-1. Create a bucket repository: `isaacgarza/scoop-otto-stack`
+1. Create a bucket repository: `otto-nation/scoop-otto-stack`
 2. Enable in config: `package_managers.scoop.enabled: true`
 3. Add `SCOOP_TOKEN` secret to GitHub
 4. Regenerate configs: `task generate-release-configs`
