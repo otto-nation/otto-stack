@@ -1,0 +1,36 @@
+# golangci-lint configuration for otto-stack
+# Minimal configuration for golangci-lint v2.x
+# Binary version: v2.4.0 (keep in sync with Taskfile.yml GOLANGCI_LINT_VERSION)
+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: false
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - unused
+    - ineffassign
+    - misspell
+  exclusions:
+    rules:
+      - path: '(.+)_test\.go'
+        linters:
+          - errcheck
+      - path: "test_helpers.go"
+        linters:
+          - errcheck
+          - unused
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

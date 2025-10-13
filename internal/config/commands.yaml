@@ -1,0 +1,944 @@
+###############################################################
+#  otto-stack: Commands Configuration                          #
+#-------------------------------------------------------------#
+#  Single source of truth for otto-stack CLI commands,         #
+#  flags, examples, and documentation.                        #
+#                                                             #
+#  This file is used to:                                      #
+#  - Generate CLI command structures automatically            #
+#  - Create comprehensive documentation                       #
+#  - Validate CLI implementation consistency                  #
+#  - Enable rich help text and shell completion               #
+#  - Provide command discovery and suggestions                #
+###############################################################
+
+metadata:
+  version: "2.0"
+  generated_at: "2024-01-01T00:00:00Z"
+  cli_version: "0.1.0"
+  description: "Development stack management tool"
+
+global:
+  flags:
+    config:
+      short: "c"
+      type: "string"
+      description: "Config file (default: $HOME/.otto-stack.yaml)"
+      default: ""
+    verbose:
+      short: "v"
+      type: "bool"
+      description: "Enable verbose output"
+      default: false
+    help:
+      short: "h"
+      type: "bool"
+      description: "Show help information"
+      default: false
+    version:
+      type: "bool"
+      description: "Show version information"
+      default: false
+    quiet:
+      short: "q"
+      type: "bool"
+      description: "Suppress non-essential output (CI-friendly)"
+      default: false
+    json:
+      type: "bool"
+      description: "Output in JSON format (CI-friendly)"
+      default: false
+    no-color:
+      type: "bool"
+      description: "Disable colored output (CI-friendly)"
+      default: false
+    non-interactive:
+      type: "bool"
+      description: "Run in non-interactive mode (CI-friendly)"
+      default: false
+
+categories:
+  lifecycle:
+    name: "Lifecycle Management"
+    description: "Commands for starting, stopping, and managing service lifecycles"
+    icon: "🚀"
+    commands: ["up", "down", "restart", "scale"]
+
+  monitoring:
+    name: "Monitoring & Observability"
+    description: "Commands for monitoring services and viewing logs"
+    icon: "📊"
+    commands: ["status", "logs", "monitor", "doctor"]
+
+  data:
+    name: "Data Management"
+    description: "Commands for backup, restore, and data operations"
+    icon: "💾"
+    commands: ["backup", "restore", "exec", "connect"]
+
+  maintenance:
+    name: "Maintenance & Cleanup"
+    description: "Commands for cleanup, initialization, and maintenance"
+    icon: "🧹"
+    commands: ["cleanup", "init", "version"]
+
+  development:
+    name: "Development Tools"
+    description: "Commands for development workflow and documentation"
+    icon: "🛠️"
+    commands: ["docs", "validate", "services", "deps", "conflicts"]
+
+commands:
+  up:
+    category: "lifecycle"
+    description: "Start development stack services"
+    long_description: |
+      Start one or more services in the development stack. Services are started
+      with their configured dependencies and health checks. Use profiles to start
+      predefined service combinations.
+    usage: "up [service...]"
+    aliases: ["start", "run"]
+    examples:
+      - command: "otto-stack up"
+        description: "Start all configured services"
+      - command: "otto-stack up postgres redis"
+        description: "Start specific services"
+      - command: "otto-stack up --profile web"
+        description: "Start services using the 'web' profile"
+      - command: "otto-stack up --detach --build"
+        description: "Build images and start services in background"
+    flags:
+      detach:
+        short: "d"
+        type: "bool"
+        description: "Run services in background (detached mode)"
+        default: false
+      build:
+        short: "b"
+        type: "bool"
+        description: "Build images before starting services"
+        default: false
+      profile:
+        short: "p"
+        type: "string"
+        description: "Use a specific service profile"
+        default: ""
+        completion: "profiles"
+      force-recreate:
+        type: "bool"
+        description: "Recreate containers even if config hasn't changed"
+        default: false
+      no-deps:
+        type: "bool"
+        description: "Don't start linked services"
+        default: false
+      timeout:
+        short: "t"
+        type: "string"
+        description: "Timeout for service startup (e.g., 30s, 2m)"
+        default: "30s"
+      resolve-deps:
+        type: "bool"
+        description: "Show dependency resolution tree before starting"
+        default: false
+      check-conflicts:
+        type: "bool"
+        description: "Check for service conflicts before starting"
+        default: false
+    related_commands: ["down", "restart", "status"]
+    tips:
+      - "Use --profile to quickly start predefined service combinations"
+      - "Add --build if you've made changes to Dockerfiles"
+      - "Use --detach to free up your terminal while services run"
+
+  down:
+    category: "lifecycle"
+    description: "Stop development stack services"
+    long_description: |
+      Stop one or more services in the development stack. By default, containers
+      are removed but volumes are preserved. Use --volumes to also remove data.
+    usage: "down [service...]"
+    aliases: ["stop"]
+    examples:
+      - command: "otto-stack down"
+        description: "Stop all running services"
+      - command: "otto-stack down postgres redis"
+        description: "Stop specific services"
+      - command: "otto-stack down --volumes"
+        description: "Stop services and remove volumes"
+      - command: "otto-stack down --timeout 5"
+        description: "Stop services with custom timeout"
+    flags:
+      volumes:
+        short: "v"
+        type: "bool"
+        description: "Remove named volumes and anonymous volumes"
+        default: false
+      remove-orphans:
+        type: "bool"
+        description: "Remove containers for services not in compose file"
+        default: false
+      timeout:
+        short: "t"
+        type: "int"
+        description: "Shutdown timeout in seconds"
+        default: 10
+      remove-images:
+        type: "string"
+        description: "Remove images (all|local)"
+        default: ""
+        options: ["all", "local"]
+    related_commands: ["up", "cleanup", "status"]
+    tips:
+      - "Use --volumes carefully as it will delete all data"
+      - "Add --remove-orphans to clean up unused containers"
+
+  restart:
+    category: "lifecycle"
+    description: "Restart development stack services"
+    long_description: |
+      Restart one or more services. This is equivalent to running down followed
+      by up, but more efficient for quick restarts.
+    usage: "restart [service...]"
+    examples:
+      - command: "otto-stack restart"
+        description: "Restart all services"
+      - command: "otto-stack restart postgres"
+        description: "Restart a specific service"
+      - command: "otto-stack restart --timeout 5"
+        description: "Restart with custom timeout"
+    flags:
+      timeout:
+        short: "t"
+        type: "int"
+        description: "Restart timeout in seconds"
+        default: 10
+      no-deps:
+        type: "bool"
+        description: "Don't restart linked services"
+        default: false
+    related_commands: ["up", "down", "status"]
+
+  status:
+    category: "monitoring"
+    description: "Show status of development stack services"
+    long_description: |
+      Display comprehensive status information for services including running
+      state, health checks, resource usage, and port mappings. Supports multiple
+      output formats and real-time monitoring.
+    usage: "status [service...]"
+    aliases: ["ps", "ls"]
+    examples:
+      - command: "otto-stack status"
+        description: "Show status of all services"
+      - command: "otto-stack status postgres redis"
+        description: "Show status of specific services"
+      - command: "otto-stack status --format json"
+        description: "Output status in JSON format"
+      - command: "otto-stack status --watch"
+        description: "Watch for status changes in real-time"
+      - command: "otto-stack status --filter running"
+        description: "Show only running services"
+    flags:
+      format:
+        short: "f"
+        type: "string"
+        description: "Output format (table|json|yaml)"
+        default: "table"
+        options: ["table", "json", "yaml"]
+      watch:
+        short: "w"
+        type: "bool"
+        description: "Watch for status changes"
+        default: false
+      quiet:
+        short: "q"
+        type: "bool"
+        description: "Only show service names and basic status"
+        default: false
+      filter:
+        type: "string"
+        description: "Filter services by status"
+        options: ["running", "stopped", "starting", "unhealthy"]
+      no-trunc:
+        type: "bool"
+        description: "Don't truncate output"
+        default: false
+    related_commands: ["logs", "monitor", "doctor"]
+    tips:
+      - "Use --watch to monitor services in real-time"
+      - "Try --format json for programmatic access"
+      - "Use --filter to focus on specific service states"
+
+  logs:
+    category: "monitoring"
+    description: "View logs from services"
+    long_description: |
+      View and follow logs from one or more services. Supports filtering,
+      timestamps, and real-time following. Logs from multiple services are
+      color-coded for easy identification.
+    usage: "logs [service...]"
+    examples:
+      - command: "otto-stack logs"
+        description: "Show logs from all services"
+      - command: "otto-stack logs postgres redis"
+        description: "Show logs from specific services"
+      - command: "otto-stack logs --follow postgres"
+        description: "Follow logs from postgres in real-time"
+      - command: "otto-stack logs --tail 100 --since 1h"
+        description: "Show last 100 lines from the past hour"
+    flags:
+      follow:
+        short: "f"
+        type: "bool"
+        description: "Follow log output in real-time"
+        default: false
+      tail:
+        short: "t"
+        type: "string"
+        description: "Number of lines to show from end of logs"
+        default: "all"
+      since:
+        type: "string"
+        description: "Show logs since timestamp or relative time"
+        default: ""
+      timestamps:
+        type: "bool"
+        description: "Show timestamps in log output"
+        default: false
+      no-color:
+        type: "bool"
+        description: "Disable colored output"
+        default: false
+      no-prefix:
+        type: "bool"
+        description: "Don't show service name prefix"
+        default: false
+    related_commands: ["status", "monitor"]
+    tips:
+      - "Use --follow to see logs in real-time"
+      - "Combine --tail and --since for targeted log viewing"
+      - "Use --timestamps to correlate events across services"
+
+  monitor:
+    category: "monitoring"
+    description: "Real-time monitoring dashboard for services"
+    long_description: |
+      Launch an interactive monitoring dashboard showing real-time metrics,
+      logs, and status for all services. Provides a unified view of your
+      development stack health.
+    usage: "monitor [service...]"
+    examples:
+      - command: "otto-stack monitor"
+        description: "Monitor all services"
+      - command: "otto-stack monitor postgres redis"
+        description: "Monitor specific services"
+      - command: "otto-stack monitor --refresh 5"
+        description: "Monitor with custom refresh interval"
+    flags:
+      refresh:
+        short: "r"
+        type: "int"
+        description: "Refresh interval in seconds"
+        default: 2
+      no-logs:
+        type: "bool"
+        description: "Don't show log streams"
+        default: false
+      compact:
+        type: "bool"
+        description: "Use compact display mode"
+        default: false
+    related_commands: ["status", "logs", "doctor"]
+
+  doctor:
+    category: "monitoring"
+    description: "Diagnose and troubleshoot stack health"
+    long_description: |
+      Run comprehensive health checks on your development stack. Identifies
+      common issues, provides troubleshooting suggestions, and validates
+      service configurations.
+    usage: "doctor [service...]"
+    examples:
+      - command: "otto-stack doctor"
+        description: "Run health checks on all services"
+      - command: "otto-stack doctor postgres"
+        description: "Diagnose a specific service"
+      - command: "otto-stack doctor --fix"
+        description: "Attempt to fix detected issues"
+    flags:
+      fix:
+        type: "bool"
+        description: "Attempt to automatically fix issues"
+        default: false
+      verbose:
+        short: "v"
+        type: "bool"
+        description: "Show detailed diagnostic information"
+        default: false
+      format:
+        short: "f"
+        type: "string"
+        description: "Output format (table|json)"
+        default: "table"
+        options: ["table", "json"]
+    related_commands: ["status", "logs"]
+    tips:
+      - "Run doctor when services aren't behaving as expected"
+      - "Use --fix to attempt automatic resolution of common issues"
+
+  exec:
+    category: "data"
+    description: "Execute commands in running service containers"
+    long_description: |
+      Execute commands inside running service containers. Useful for database
+      operations, debugging, and maintenance tasks. Supports interactive and
+      non-interactive modes.
+    usage: "exec <service> <command> [args...]"
+    examples:
+      - command: "otto-stack exec postgres psql -U postgres"
+        description: "Connect to PostgreSQL with psql"
+      - command: "otto-stack exec redis redis-cli"
+        description: "Connect to Redis CLI"
+      - command: "otto-stack exec postgres bash"
+        description: "Open bash shell in postgres container"
+    flags:
+      user:
+        short: "u"
+        type: "string"
+        description: "Username to execute command as"
+        default: ""
+      workdir:
+        short: "w"
+        type: "string"
+        description: "Working directory for command"
+        default: ""
+      interactive:
+        short: "i"
+        type: "bool"
+        description: "Keep STDIN open (interactive mode)"
+        default: true
+      tty:
+        short: "t"
+        type: "bool"
+        description: "Allocate a pseudo-TTY"
+        default: true
+      detach:
+        short: "d"
+        type: "bool"
+        description: "Run command in background"
+        default: false
+      env:
+        short: "e"
+        type: "string"
+        description: "Set environment variables (comma-separated key=value pairs)"
+        default: ""
+    related_commands: ["connect", "logs"]
+    tips:
+      - "Use for database maintenance and debugging"
+      - "Combine with --user to run as specific user"
+
+  connect:
+    category: "data"
+    description: "Quick connect to service databases and interfaces"
+    long_description: |
+      Quickly connect to service databases and management interfaces using
+      appropriate client tools. Automatically configures connection parameters
+      based on service configuration.
+    usage: "connect <service>"
+    examples:
+      - command: "otto-stack connect postgres"
+        description: "Connect to PostgreSQL database"
+      - command: "otto-stack connect redis"
+        description: "Connect to Redis CLI"
+      - command: "otto-stack connect mysql"
+        description: "Connect to MySQL database"
+    flags:
+      database:
+        short: "d"
+        type: "string"
+        description: "Database name to connect to"
+        default: ""
+      user:
+        short: "u"
+        type: "string"
+        description: "Username for connection"
+        default: ""
+      host:
+        short: "h"
+        type: "string"
+        description: "Host to connect to"
+        default: "localhost"
+      port:
+        short: "p"
+        type: "int"
+        description: "Port to connect to"
+        default: 0
+      read-only:
+        type: "bool"
+        description: "Connect in read-only mode"
+        default: false
+    related_commands: ["exec", "status"]
+    tips:
+      - "Automatically uses correct client tools for each service"
+      - "Use --read-only for safe data exploration"
+
+  backup:
+    category: "data"
+    description: "Backup service data and configurations"
+    long_description: |
+      Create backups of service data, configurations, and state. Supports
+      multiple backup formats and compression. Backups include metadata
+      for easy restoration.
+    usage: "backup [service...]"
+    examples:
+      - command: "otto-stack backup"
+        description: "Backup all services"
+      - command: "otto-stack backup postgres redis"
+        description: "Backup specific services"
+      - command: "otto-stack backup --output ./backups --compress"
+        description: "Backup with compression to custom directory"
+    flags:
+      output:
+        short: "o"
+        type: "string"
+        description: "Output directory for backups"
+        default: "./backups"
+      compress:
+        short: "c"
+        type: "bool"
+        description: "Compress backup files"
+        default: false
+      format:
+        short: "f"
+        type: "string"
+        description: "Backup format (native|sql|json)"
+        default: "native"
+        options: ["native", "sql", "json"]
+      include-config:
+        type: "bool"
+        description: "Include service configurations"
+        default: true
+      exclude-logs:
+        type: "bool"
+        description: "Exclude log files from backup"
+        default: false
+    related_commands: ["restore", "cleanup"]
+
+  restore:
+    category: "data"
+    description: "Restore service data from backups"
+    long_description: |
+      Restore service data and configurations from previously created backups.
+      Supports multiple restore strategies and validation of backup integrity.
+    usage: "restore <service> <backup-path>"
+    examples:
+      - command: "otto-stack restore postgres ./backups/postgres-20240101.sql"
+        description: "Restore PostgreSQL from SQL backup"
+      - command: "otto-stack restore redis ./backups/redis-20240101.rdb"
+        description: "Restore Redis from RDB backup"
+      - command: "otto-stack restore --clean postgres backup.sql"
+        description: "Clean database before restore"
+    flags:
+      clean:
+        type: "bool"
+        description: "Clean existing data before restore"
+        default: false
+      create-db:
+        type: "bool"
+        description: "Create database if it doesn't exist"
+        default: true
+      single-transaction:
+        type: "bool"
+        description: "Perform restore in single transaction"
+        default: false
+      no-owner:
+        type: "bool"
+        description: "Skip ownership commands"
+        default: false
+      validate:
+        type: "bool"
+        description: "Validate backup before restore"
+        default: true
+    related_commands: ["backup", "cleanup"]
+
+  cleanup:
+    category: "maintenance"
+    description: "Clean up unused resources and data"
+    long_description: |
+      Clean up unused Docker resources, temporary files, and orphaned data
+      created by otto-stack services. Helps reclaim disk space and maintain
+      a clean development environment.
+    usage: "cleanup [options]"
+    examples:
+      - command: "otto-stack cleanup"
+        description: "Interactive cleanup with confirmations"
+      - command: "otto-stack cleanup --all --force"
+        description: "Clean up everything without prompts"
+      - command: "otto-stack cleanup --dry-run"
+        description: "Preview what would be cleaned up"
+    flags:
+      all:
+        short: "a"
+        type: "bool"
+        description: "Clean up all resources (containers, volumes, images)"
+        default: false
+      volumes:
+        short: "v"
+        type: "bool"
+        description: "Remove unused volumes"
+        default: false
+      images:
+        short: "i"
+        type: "bool"
+        description: "Remove unused images"
+        default: false
+      networks:
+        short: "n"
+        type: "bool"
+        description: "Remove unused networks"
+        default: false
+      force:
+        short: "f"
+        type: "bool"
+        description: "Don't prompt for confirmation"
+        default: false
+      dry-run:
+        type: "bool"
+        description: "Show what would be cleaned without doing it"
+        default: false
+    related_commands: ["down", "doctor"]
+    tips:
+      - "Use --dry-run first to see what will be removed"
+      - "Be careful with --volumes as it removes all data"
+
+  scale:
+    category: "lifecycle"
+    description: "Scale services up or down"
+    long_description: |
+      Scale the number of running instances for one or more services.
+      Useful for load testing and development scenarios requiring multiple
+      service instances.
+    usage: "scale <service=replicas>..."
+    examples:
+      - command: "otto-stack scale postgres=2"
+        description: "Scale postgres to 2 instances"
+      - command: "otto-stack scale redis=3 postgres=1"
+        description: "Scale multiple services"
+      - command: "otto-stack scale --timeout 60 postgres=2"
+        description: "Scale with custom timeout"
+    flags:
+      timeout:
+        short: "t"
+        type: "int"
+        description: "Timeout for scaling operation"
+        default: 30
+      no-recreate:
+        type: "bool"
+        description: "Don't recreate existing containers"
+        default: false
+    related_commands: ["up", "down", "status"]
+
+  init:
+    category: "maintenance"
+    description: "Initialize a new otto-stack project interactively"
+    long_description: |
+      Initialize a new otto-stack project in the current directory with an
+      interactive setup process. Guides you through selecting services,
+      configuring validation and advanced settings, and creates all
+      necessary configuration files.
+    usage: "init [flags]"
+    examples:
+      - command: "otto-stack init"
+        description: "Interactive project initialization (recommended)"
+      - command: "otto-stack init --name myproject --minimal"
+        description: "Non-interactive minimal setup"
+      - command: "otto-stack init --force"
+        description: "Overwrite existing configuration"
+    flags:
+      force:
+        short: "f"
+        type: "bool"
+        description: "Overwrite existing files"
+        default: false
+    related_commands: ["docs", "validate"]
+
+  docs:
+    category: "development"
+    description: "Generate and manage documentation"
+    long_description: |
+      Generate documentation from YAML manifests and manage documentation
+      files. Supports multiple output formats and automatic synchronization
+      with documentation websites.
+    usage: "docs [subcommand]"
+    examples:
+      - command: "otto-stack docs"
+        description: "Generate all documentation"
+      - command: "otto-stack docs --commands-only"
+        description: "Generate only command reference"
+      - command: "otto-stack docs --dry-run"
+        description: "Preview documentation changes"
+    flags:
+      commands-only:
+        type: "bool"
+        description: "Generate only command reference"
+        default: false
+      services-only:
+        type: "bool"
+        description: "Generate only services documentation"
+        default: false
+      hugo-sync:
+        type: "bool"
+        description: "Sync to Hugo site"
+        default: true
+      no-hugo-sync:
+        type: "bool"
+        description: "Skip Hugo synchronization"
+        default: false
+      dry-run:
+        type: "bool"
+        description: "Preview changes without writing files"
+        default: false
+      format:
+        short: "f"
+        type: "string"
+        description: "Output format (markdown|html|json)"
+        default: "markdown"
+        options: ["markdown", "html", "json"]
+    related_commands: ["init", "validate"]
+
+  services:
+    category: "development"
+    description: "List available services by category"
+    long_description: |
+      List all available services organized by category (database, cache, 
+      messaging, observability, cloud). Shows service descriptions and 
+      dependencies for easy discovery and selection.
+    usage: "services [flags]"
+    examples:
+      - command: "otto-stack services"
+        description: "List all services grouped by category"
+      - command: "otto-stack services --category database"
+        description: "List services in database category"
+      - command: "otto-stack services --category cache"
+        description: "List cache services"
+    flags:
+      category:
+        short: "c"
+        type: "string"
+        description: "Show services in specific category"
+        default: ""
+        options: ["database", "cache", "messaging", "observability", "cloud"]
+    related_commands: ["deps", "conflicts", "init"]
+
+  deps:
+    category: "development"
+    description: "Show dependency tree for a service"
+    long_description: |
+      Display the complete dependency tree for a service, showing all required
+      dependencies and the resolved start order. Helps understand service
+      relationships and startup sequences.
+    usage: "deps <service>"
+    examples:
+      - command: "otto-stack deps kafka-ui"
+        description: "Show dependencies for kafka-ui service"
+      - command: "otto-stack deps postgres"
+        description: "Show dependencies for postgres service"
+    related_commands: ["services", "conflicts", "up"]
+
+  conflicts:
+    category: "development"
+    description: "Check for conflicts between services"
+    long_description: |
+      Check if the specified services have any conflicts that would prevent
+      them from running together. Identifies port conflicts, resource conflicts,
+      and incompatible service combinations.
+    usage: "conflicts <service1> <service2> [service...]"
+    examples:
+      - command: "otto-stack conflicts postgres mysql"
+        description: "Check if postgres and mysql conflict"
+      - command: "otto-stack conflicts postgres redis kafka-broker"
+        description: "Check conflicts between multiple services"
+    related_commands: ["services", "deps", "up"]
+
+  validate:
+    category: "development"
+    description: "Validate configurations and manifests"
+    long_description: |
+      Validate otto-stack configurations, service definitions, and YAML
+      manifests. Checks for syntax errors, missing dependencies, and
+      configuration inconsistencies.
+    usage: "validate [file...]"
+    examples:
+      - command: "otto-stack validate"
+        description: "Validate all configuration files"
+      - command: "otto-stack validate otto-stack-config.yaml"
+        description: "Validate specific configuration file"
+      - command: "otto-stack validate --strict"
+        description: "Use strict validation rules"
+    flags:
+      strict:
+        short: "s"
+        type: "bool"
+        description: "Use strict validation rules"
+        default: false
+      format:
+        short: "f"
+        type: "string"
+        description: "Output format (table|json)"
+        default: "table"
+        options: ["table", "json"]
+      fix:
+        type: "bool"
+        description: "Attempt to fix validation errors"
+        default: false
+    related_commands: ["doctor", "docs"]
+
+  version:
+    category: "maintenance"
+    description: "Show version information"
+    long_description: |
+      Display version information for otto-stack CLI, Docker, and managed
+      services. Includes build information and dependency versions.
+    usage: "version"
+    examples:
+      - command: "otto-stack version"
+        description: "Show basic version information"
+      - command: "otto-stack version --full"
+        description: "Show detailed version and build info"
+      - command: "otto-stack version --check-updates"
+        description: "Check for available updates"
+    flags:
+      full:
+        short: "f"
+        type: "bool"
+        description: "Show detailed version information"
+        default: false
+      check-updates:
+        type: "bool"
+        description: "Check for available updates"
+        default: false
+      format:
+        type: "string"
+        description: "Output format (table|json|yaml)"
+        default: "table"
+        options: ["table", "json", "yaml"]
+    related_commands: ["doctor"]
+
+# Workflow definitions for common task sequences
+workflows:
+  quick-start:
+    name: "Quick Start"
+    description: "Get started with a basic development stack"
+    steps:
+      - command: "init"
+        description: "Initialize project"
+      - command: "up postgres redis"
+        description: "Start database services"
+      - command: "status"
+        description: "Check service status"
+
+  full-stack:
+    name: "Full Stack Development"
+    description: "Complete development environment setup"
+    steps:
+      - command: "init web"
+        description: "Initialize web project"
+      - command: "up --profile web"
+        description: "Start web development services"
+      - command: "monitor"
+        description: "Monitor all services"
+
+  cleanup-reset:
+    name: "Clean Reset"
+    description: "Complete cleanup and fresh start"
+    steps:
+      - command: "down --volumes"
+        description: "Stop services and remove data"
+      - command: "cleanup --all"
+        description: "Clean up all resources"
+      - command: "up"
+        description: "Start fresh services"
+
+# Service profiles for common combinations
+profiles:
+  web:
+    name: "Web Development"
+    description: "Services for web application development"
+    services: ["postgres", "redis", "jaeger"]
+
+  api:
+    name: "API Development"
+    description: "Services for API development and testing"
+    services: ["postgres", "redis", "prometheus"]
+
+  microservices:
+    name: "Microservices"
+    description: "Full microservices development stack"
+    services: ["postgres", "redis", "kafka", "jaeger", "prometheus"]
+
+  data:
+    name: "Data Engineering"
+    description: "Services for data processing and analytics"
+    services: ["postgres", "redis", "kafka", "localstack"]
+
+  minimal:
+    name: "Minimal Stack"
+    description: "Minimal services for basic development"
+    services: ["postgres"]
+
+# Help and documentation sections
+help:
+  getting_started: |
+    ## Getting Started with otto-stack
+
+    1. Initialize a new project:
+       otto-stack init
+
+    2. Start your development services:
+       otto-stack up
+
+    3. Check service status:
+       otto-stack status
+
+    4. View logs:
+       otto-stack logs --follow
+
+    For more help, visit: https://otto-stack.dev/docs
+
+  common_tasks: |
+    ## Common Tasks
+
+    **Start services for web development:**
+    otto-stack up --profile web
+
+    **Connect to database:**
+    otto-stack connect postgres
+
+    **View real-time logs:**
+    otto-stack logs --follow
+
+    **Backup your data:**
+    otto-stack backup
+
+    **Clean up resources:**
+    otto-stack cleanup --dry-run
+
+  troubleshooting: |
+    ## Troubleshooting
+
+    **Services won't start:**
+    - Run: otto-stack doctor
+    - Check: otto-stack logs <service>
+
+    **Port conflicts:**
+    - Use: otto-stack status
+    - Modify port mappings in config
+
+    **Out of disk space:**
+    - Run: otto-stack cleanup --dry-run
+    - Then: otto-stack cleanup --all
+
+    **Performance issues:**
+    - Check: otto-stack monitor
+    - Scale services: otto-stack scale <service>=<count>
