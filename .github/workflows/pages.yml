@@ -1,0 +1,170 @@
+name: Deploy Documentation to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs-site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Load configuration
+        id: config
+        uses: ./.github/actions/load-config
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: ${{ steps.config.outputs.hugo-version }}
+          extended: true
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          install-task: "true"
+
+      - name: Verify content structure
+        run: |
+          echo "🔍 Verifying content structure..."
+          DOCS_DIR="${{ steps.config.outputs.docs-dir }}"
+
+          if [ ! -d "$DOCS_DIR" ]; then
+            echo "❌ $DOCS_DIR directory not found"
+            exit 1
+          fi
+
+          if [ ! -d "$DOCS_DIR/content" ]; then
+            echo "❌ Content directory not found"
+            exit 1
+          fi
+
+          if [ ! -f "$DOCS_DIR/content/_index.md" ]; then
+            echo "❌ Homepage content not found"
+            exit 1
+          fi
+
+          echo "✅ Content structure verified"
+
+      - name: Build CLI for documentation
+        run: |
+          if task build 2>/dev/null; then
+            echo "✅ CLI built successfully"
+          else
+            echo "⚠️ CLI build failed, continuing without CLI docs"
+          fi
+
+      - name: Generate CLI documentation
+        run: |
+          DOCS_DIR="${{ steps.config.outputs.docs-dir }}"
+          BUILD_DIR="${{ steps.config.outputs.build-dir }}"
+          CLI_BINARY="${{ steps.config.outputs.cli-binary }}"
+
+          mkdir -p "$DOCS_DIR/content/cli-reference"
+
+          if [ -f "./$BUILD_DIR/$CLI_BINARY" ] && "./$BUILD_DIR/$CLI_BINARY" --help > /tmp/cli-help.txt 2>&1; then
+            echo "🔍 Generating CLI documentation from built binary..."
+            {
+              echo '---'
+              echo 'title: "CLI Reference"'
+              echo 'description: "Complete command reference for otto-stack CLI"'
+              echo 'weight: 30'
+              echo '---'
+              echo ''
+              echo '# CLI Reference'
+              echo ''
+              echo '```'
+              cat /tmp/cli-help.txt
+              echo '```'
+            } > "$DOCS_DIR/content/cli-reference/index.md"
+            echo "✅ CLI documentation generated from binary"
+          else
+            echo "🔍 Creating CLI reference placeholder..."
+            {
+              echo '---'
+              echo 'title: "CLI Reference"'
+              echo 'description: "Complete command reference for otto-stack CLI"'
+              echo 'weight: 30'
+              echo '---'
+              echo ''
+              echo '# CLI Reference'
+              echo ''
+              echo 'CLI help generation is not yet implemented.'
+              echo ''
+              echo 'Check back soon or [contribute to the project]({{< ref "/contributing" >}}) to help add this feature!'
+            } > "$DOCS_DIR/content/cli-reference/index.md"
+            echo "✅ CLI reference placeholder created"
+          fi
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Check for Node.js dependencies
+        working-directory: ${{ steps.config.outputs.docs-dir }}
+        run: |
+          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
+            npm ci
+          else
+            echo "No Node.js dependencies found, skipping"
+          fi
+
+      - name: Build with Hugo
+        working-directory: ${{ steps.config.outputs.docs-dir }}
+        env:
+          HUGO_ENVIRONMENT: production
+          HUGO_ENV: production
+        run: |
+          echo "🔍 Hugo version:"
+          hugo version
+          echo ""
+          echo "🔍 Building Hugo site..."
+          if hugo --gc --minify --baseURL "${{ steps.pages.outputs.base_url }}/"; then
+            echo "✅ Hugo build completed successfully"
+            echo ""
+            echo "📋 Build summary:"
+            find public -name "*.html" | wc -l | xargs echo "HTML files:"
+            find public -name "*.css" | wc -l | xargs echo "CSS files:"
+            find public -name "*.js" | wc -l | xargs echo "JS files:"
+          else
+            echo "❌ Hugo build failed"
+            exit 1
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./${{ steps.config.outputs.docs-dir }}/public
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

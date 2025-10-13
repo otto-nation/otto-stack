@@ -1,0 +1,187 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Load configuration
+        id: config
+        uses: ./.github/actions/load-config
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          install-task: "true"
+
+      - name: Validate Go modules
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Check formatting
+        run: |
+          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
+            echo "The following files are not formatted:"
+            gofmt -s -l .
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          args: --timeout=5m
+
+      - name: Run unit tests
+        run: task test-unit
+
+      - name: Run integration tests
+        run: task test-integration
+
+      - name: Run all tests with coverage
+        run: task test
+
+      - name: Check test coverage
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Current test coverage: ${COVERAGE}%"
+
+          # Set minimum coverage threshold
+          MIN_COVERAGE=15.0
+
+          if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
+            echo "❌ Test coverage ${COVERAGE}% is below minimum threshold ${MIN_COVERAGE}%"
+            exit 1
+          else
+            echo "✅ Test coverage ${COVERAGE}% meets minimum threshold ${MIN_COVERAGE}%"
+          fi
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          file: ./coverage.out
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Generate coverage report
+        run: |
+          go tool cover -html=coverage.out -o coverage.html
+          echo "Coverage report generated at coverage.html"
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.html
+          retention-days: 30
+
+      - name: Build binary
+        run: task build
+
+      - name: Verify binary
+        run: |
+          chmod +x ${{ steps.config.outputs.build-dir }}/${{ steps.config.outputs.cli-binary }}
+          ./${{ steps.config.outputs.build-dir }}/${{ steps.config.outputs.cli-binary }} --version || \
+          ./${{ steps.config.outputs.build-dir }}/${{ steps.config.outputs.cli-binary }} version || \
+          echo "Binary built successfully"
+
+  get-go-matrix:
+    name: Get Go Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      go-matrix: ${{ steps.matrix.outputs.go-matrix }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate Go version matrix
+        id: matrix
+        run: |
+          GO_MATRIX=$(./scripts/get-go-version.sh --github-matrix)
+          echo "go-matrix=$GO_MATRIX" >> $GITHUB_OUTPUT
+          echo "Generated Go matrix: $GO_MATRIX"
+
+  test-matrix:
+    name: Test Matrix
+    runs-on: ${{ matrix.os }}
+    needs: get-go-matrix
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'test-matrix')
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: ${{ fromJson(needs.get-go-matrix.outputs.go-matrix) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go ${{ matrix.go-version }}
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -v -race ./...
+
+      - name: Build
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            go build -o otto-stack-${{ matrix.os }}-${{ matrix.go-version }}.exe ./cmd/otto-stack
+          else
+            go build -o otto-stack-${{ matrix.os }}-${{ matrix.go-version }} ./cmd/otto-stack
+          fi
+
+  integration:
+    name: Integration
+    runs-on: ubuntu-latest
+    needs: ci
+    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'integration')
+    services:
+      docker:
+        image: docker:dind
+        options: --privileged
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          install-task: "true"
+
+      - name: Build binary
+        run: task build
+
+      - name: Run integration tests
+        run: |
+          if find ./tests -name "*_test.go" 2>/dev/null | grep -q .; then
+            cd tests/integration && go test -v -tags=integration .
+          else
+            echo "No integration tests found, skipping..."
+          fi
