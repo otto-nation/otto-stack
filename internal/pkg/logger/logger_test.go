@@ -103,8 +103,8 @@ func TestInit(t *testing.T) {
 		// Write a test log to ensure file is created
 		Warn("test message")
 
-		// Reset logger to close file handle (Windows compatibility)
-		defaultLogger = nil
+		// Close logger to release file handle (Windows compatibility)
+		Close()
 
 		// Verify file exists and has content
 		info, err := os.Stat(logFile)
