@@ -3,8 +3,7 @@ package init
 import (
 	"fmt"
 	"os"
-	"path/filepath"
-	"strings"
+	"os/exec"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
@@ -125,26 +124,7 @@ func (h *InitHandler) isCommandAvailable(command string) bool {
 		return false
 	}
 
-	_, err := os.Stat(filepath.Join("/usr/bin", command))
-	if err == nil {
-		return true
-	}
-
-	_, err = os.Stat(filepath.Join("/usr/local/bin", command))
-	if err == nil {
-		return true
-	}
-
-	// Check PATH
-	path := os.Getenv("PATH")
-	for _, dir := range strings.Split(path, ":") {
-		if dir == "" {
-			continue
-		}
-		if _, err := os.Stat(filepath.Join(dir, command)); err == nil {
-			return true
-		}
-	}
-
-	return false
+	// Use exec.LookPath which is cross-platform
+	_, err := exec.LookPath(command)
+	return err == nil
 }
