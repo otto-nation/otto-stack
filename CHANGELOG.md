@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/otto-nation/otto-stack/compare/otto-stack-v1.0.1...otto-stack-v1.1.0) (2025-10-13)
+
+
+### Features
+
+* add comprehensive CLI installation and build automation ([#12](https://github.com/otto-nation/otto-stack/issues/12)) ([d7fee41](https://github.com/otto-nation/otto-stack/commit/d7fee41e6b417b44549cee6746b42cbad2806866))
+
 ## [1.0.1](https://github.com/otto-nation/otto-stack/compare/otto-stack-v1.0.0...otto-stack-v1.0.1) (2025-10-13)
 
 
