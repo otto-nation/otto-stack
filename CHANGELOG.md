@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/otto-nation/otto-stack/compare/otto-stack-v1.0.0...otto-stack-v1.0.1) (2025-10-13)
+
+
+### Dependencies
+
+* **deps-dev:** bump markdown-link-check from 3.13.7 to 3.14.1 in /docs-site ([#6](https://github.com/otto-nation/otto-stack/issues/6)) ([4fec5d3](https://github.com/otto-nation/otto-stack/commit/4fec5d3cf834003f5d476366ec48bf9240f225a2))
+
 ## 1.0.0 (2025-10-13)
 
 
