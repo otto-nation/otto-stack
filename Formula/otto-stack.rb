@@ -39,19 +39,8 @@ class OttoStack < Formula
 
     os_name = OS.mac? ? "darwin" : "linux"
     binary_name = "otto-stack-#{os_name}-#{arch_suffix}"
-    
-    bin.install binary_name => "otto-stack"
-  end
 
-  test do
-    assert_match "otto-stack", shell_output("#{bin}/otto-stack --version")
-    
-    # Test basic functionality
-    system bin/"otto-stack", "--help"
-    
-    # Test that the binary is properly linked
-    assert_predicate bin/"otto-stack", :exist?
-    assert_predicate bin/"otto-stack", :executable?
+    bin.install binary_name => "otto-stack"
   end
 
   def caveats
@@ -61,8 +50,19 @@ class OttoStack < Formula
 
       For more information:
         otto-stack --help
-        
+
       Documentation: https://github.com/otto-nation/otto-stack/tree/main/docs-site
     EOS
+  end
+
+  test do
+    assert_match "otto-stack", shell_output("#{bin}/otto-stack --version")
+
+    # Test basic functionality
+    system bin/"otto-stack", "--help"
+
+    # Test that the binary is properly linked
+    assert_path_exists bin/"otto-stack"
+    assert_predicate bin/"otto-stack", :executable?
   end
 end
