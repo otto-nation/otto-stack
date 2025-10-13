@@ -38,7 +38,7 @@ sudo mv otto-stack /usr/local/bin/
 **Homebrew (macOS):**
 ```bash
 # Coming soon
-brew install isaacgarza/tap/otto-stack
+brew install otto-nation/tap/otto-stack
 ```
 
 ### Basic Usage
