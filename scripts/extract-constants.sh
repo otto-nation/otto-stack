@@ -32,20 +32,62 @@ else
     GITHUB_REPO=$(echo "$GITHUB_REPO_RAW" | sed -E 's/.*=[[:space:]]*"([^"]+)".*/\1/')
 fi
 
+# Get current GitHub user dynamically
+get_github_user() {
+    # Try to extract from git remote origin URL
+    local remote_url=$(git remote get-url origin 2>/dev/null || echo "")
+    if [[ "$remote_url" =~ github\.com[:/]([^/]+)/ ]]; then
+        local repo_owner="${BASH_REMATCH[1]}"
+        
+        # If this is the main repo (otto-nation), we need the fork owner
+        if [[ "$repo_owner" == "otto-nation" ]]; then
+            # Check if there's a fork remote
+            local fork_url=$(git remote get-url fork 2>/dev/null || echo "")
+            if [[ "$fork_url" =~ github\.com[:/]([^/]+)/ ]]; then
+                echo "${BASH_REMATCH[1]}"
+                return
+            fi
+            
+            # Fallback: prompt user for their GitHub username
+            if [[ -t 0 ]]; then
+                read -p "Enter your GitHub username (for homebrew-core fork): " github_user
+                echo "$github_user"
+            else
+                echo "unknown-user"
+            fi
+        else
+            # This is already a fork, use the owner
+            echo "$repo_owner"
+        fi
+    else
+        # No GitHub remote found, prompt user
+        if [[ -t 0 ]]; then
+            read -p "Enter your GitHub username: " github_user
+            echo "$github_user"
+        else
+            echo "unknown-user"
+        fi
+    fi
+}
+
+GITHUB_USER=$(get_github_user)
+
 # Fallback to hardcoded values if extraction fails
 GITHUB_ORG="${GITHUB_ORG:-otto-nation}"
+GITHUB_USER="${GITHUB_USER:-$(whoami)}"
 GITHUB_REPO="${GITHUB_REPO:-otto-stack}"
 APP_NAME="${APP_NAME:-otto-stack}"
 APP_NAME_TITLE="${APP_NAME_TITLE:-Otto Stack}"
 
 # Export for use by other scripts
-export GITHUB_ORG GITHUB_REPO APP_NAME APP_NAME_TITLE
+export GITHUB_ORG GITHUB_USER GITHUB_REPO APP_NAME APP_NAME_TITLE
 
 # If called directly, output the constants
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     cat << EOF
 # Extracted constants from Go code
 export GITHUB_ORG="$GITHUB_ORG"
+export GITHUB_USER="$GITHUB_USER"
 export GITHUB_REPO="$GITHUB_REPO"
 export APP_NAME="$APP_NAME"
 export APP_NAME_TITLE="$APP_NAME_TITLE"

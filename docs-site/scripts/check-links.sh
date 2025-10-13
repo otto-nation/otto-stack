@@ -3,8 +3,9 @@ set -e
 
 echo "Checking markdown links..."
 
-# Check all markdown files and capture output
-LINK_CHECK_OUTPUT=$(find content -name '*.md' -exec markdown-link-check {} \; && markdown-link-check README.md 2>&1)
+# Suppress Node.js deprecation warnings and check all markdown files
+export NODE_NO_WARNINGS=1
+LINK_CHECK_OUTPUT=$(find content -name '*.md' -exec markdown-link-check {} \; 2>/dev/null && markdown-link-check README.md 2>/dev/null)
 echo "$LINK_CHECK_OUTPUT"
 
 # Check if there were any dead links

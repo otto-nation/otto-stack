@@ -308,6 +308,6 @@ Error: disallowed license found
 - [Sonatype OSS Index](https://ossindex.sonatype.org/)
 - [GitHub Security Features](https://docs.github.com/en/code-security)
 - [CodeQL Documentation](https://codeql.github.com/docs/)
-- [Gosec Rules](https://github.com/securecodewarrior/gosec#available-rules)
+- [Gosec Rules](https://github.com/securecodewarrior/gosec)
 - [Trivy Documentation](https://aquasecurity.github.io/trivy/)
 - [Gitleaks Configuration](https://github.com/gitleaks/gitleaks)
