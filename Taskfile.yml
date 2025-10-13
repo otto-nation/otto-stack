@@ -13,7 +13,13 @@ vars:
     sh: git rev-parse --short HEAD 2>/dev/null || echo "unknown"
   BUILD_DATE:
     sh: date -u +"%Y-%m-%dT%H:%M:%SZ"
-  LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/cli.version={{.VERSION}} -X {{.MODULE_PATH}}/internal/cli.commit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/cli.date={{.BUILD_DATE}}"'
+  GO_VERSION:
+    sh: go version | cut -d' ' -f3
+  BUILD_OS:
+    sh: echo "{{OS}}"
+  BUILD_ARCH:
+    sh: echo "{{ARCH}}"
+  LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/cli.version={{.VERSION}} -X {{.MODULE_PATH}}/internal/cli.commit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/cli.date={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.Version={{.VERSION}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.BuildDate={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.GitCommit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.GoVersion={{.GO_VERSION}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.BuildOS={{.BUILD_OS}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.BuildArch={{.BUILD_ARCH}}"'
   GOLANGCI_LINT_VERSION: "v2.4.0"
 
 # ============================================================================
@@ -282,7 +288,25 @@ tasks:
           rm -f /tmp/git_before_fixes /tmp/git_after_fixes
         fi
       - task: lint
+      - task: validate-homebrew-formula
       - echo "✅ Pre-commit checks passed"
+
+  validate-homebrew-formula:
+    desc: "🍺 Validate Homebrew formula syntax and style"
+    silent: true
+    cmds:
+      - |
+        echo "🍺 Validating Homebrew formula..."
+        if [ -f "Formula/otto-stack.rb" ]; then
+          if command -v brew >/dev/null 2>&1; then
+            brew style Formula/otto-stack.rb
+            echo "✅ Homebrew formula validation passed"
+          else
+            echo "⚠️  Homebrew not installed, skipping formula validation"
+          fi
+        else
+          echo "ℹ️  No Homebrew formula found, skipping validation"
+        fi
 
   pre-push:
     desc: "🚀 Run all pre-push checks"
