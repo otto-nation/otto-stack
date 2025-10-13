@@ -25,7 +25,19 @@ A powerful development stack management tool built in Go for streamlined local d
 
 ```bash
 # Install latest version
-curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts/install.sh | bash
+```
+
+#### Custom Installation
+
+```bash
+# Install to custom directory
+curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts/install.sh | bash -s -- --dir ~/.local/bin
+
+# Or download and run locally
+curl -fsSL -o install.sh https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts/install.sh
+chmod +x install.sh
+./install.sh --help
 ```
 
 #### Manual Installation
@@ -44,6 +56,13 @@ sudo mv otto-stack /usr/local/bin/
 ```powershell
 # Download from releases page
 # https://github.com/otto-nation/otto-stack/releases/latest
+```
+
+#### Uninstallation
+
+```bash
+# Remove otto-stack from your system
+curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts/uninstall.sh | bash
 ```
 
 #### Package Managers
@@ -79,6 +98,7 @@ otto-stack up
 - **[Services Guide](services.md)**
 - **[Configuration](configuration.md)**
 - **[CLI Reference](reference.md)**
+- **[Scripts Reference](scripts.md)**
 - **[Contributing](contributing.md)**
 
 ## Get Started

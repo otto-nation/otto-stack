@@ -140,17 +140,24 @@ jobs:
           echo "📤 Uploading release assets to ${{ env.TAG_NAME }}"
           gh release upload ${{ env.TAG_NAME }} ${{ steps.config.outputs.build-dir }}/* --clobber
 
+      - name: Calculate source tarball SHA256
+        id: source-sha
+        run: |
+          # Download the source tarball that GitHub creates
+          curl -L -o source.tar.gz "https://github.com/${{ github.repository }}/archive/refs/tags/${{ env.TAG_NAME }}.tar.gz"
+          SOURCE_SHA256=$(sha256sum source.tar.gz | cut -d' ' -f1)
+          echo "SOURCE_SHA256=$SOURCE_SHA256" >> $GITHUB_ENV
+          echo "source-sha256=$SOURCE_SHA256" >> $GITHUB_OUTPUT
+          echo "📦 Source tarball SHA256: $SOURCE_SHA256"
+
       - name: Output Homebrew information
         run: |
-          echo "🍺 Homebrew Formula Information:"
+          echo "🍺 Homebrew Core Information:"
           echo "Version: ${{ env.VERSION }}"
-          echo "Darwin AMD64 SHA256: ${{ env.SHA256_DARWIN_AMD64 }}"
-          echo "Darwin ARM64 SHA256: ${{ env.SHA256_DARWIN_ARM64 }}"
+          echo "Source SHA256: ${{ env.SOURCE_SHA256 }}"
           echo ""
-          echo "📝 Update Formula/otto-stack.rb with these values:"
-          echo "  version: ${{ env.VERSION }}"
-          echo "  darwin-amd64 sha256: ${{ env.SHA256_DARWIN_AMD64 }}"
-          echo "  darwin-arm64 sha256: ${{ env.SHA256_DARWIN_ARM64 }}"
+          echo "📝 To submit to Homebrew Core manually:"
+          echo "  ./scripts/submit-homebrew-pr.sh --version ${{ env.VERSION }} --sha256 ${{ env.SOURCE_SHA256 }}"
 
       - name: Verify release
         run: |
@@ -203,7 +210,17 @@ jobs:
           echo "  Scoop: ${{ steps.package-config.outputs.scoop_enabled }}"
 
           if [[ "${{ steps.package-config.outputs.homebrew_enabled }}" == "true" ]]; then
-            echo "🍺 Homebrew formula update would be triggered here"
+            echo "🍺 Updating Homebrew formula..."
+            ./scripts/update-homebrew-formula.sh --version ${{ needs.release.outputs.tag_name }}
+            
+            # Check if formula was updated
+            if git diff --quiet Formula/otto-stack.rb; then
+              echo "ℹ️  No changes to Homebrew formula"
+            else
+              echo "✅ Homebrew formula updated successfully"
+              echo "📝 Formula changes:"
+              git diff Formula/otto-stack.rb
+            fi
           fi
 
           if [[ "${{ steps.package-config.outputs.scoop_enabled }}" == "true" ]]; then
