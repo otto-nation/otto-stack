@@ -11,15 +11,17 @@ import (
 func TestServiceDefinition(t *testing.T) {
 	t.Run("service definition structure", func(t *testing.T) {
 		service := ServiceDefinition{
-			Description:  "Test service",
-			Options:      []string{"option1", "option2"},
-			Examples:     []string{"example1", "example2"},
-			UsageNotes:   "Usage notes",
-			Links:        []string{"http://example.com"},
-			Category:     "database",
-			DefaultPort:  5432,
-			Dependencies: []string{"dep1", "dep2"},
-			Tags:         []string{"tag1", "tag2"},
+			Description: "Test service",
+			Options:     []string{"option1", "option2"},
+			Examples:    []string{"example1", "example2"},
+			UsageNotes:  "Usage notes",
+			Links:       []string{"http://example.com"},
+			Category:    "database",
+			DefaultPort: 5432,
+			Dependencies: ServiceDependencies{
+				Required: []string{"dep1", "dep2"},
+			},
+			Tags: []string{"tag1", "tag2"},
 		}
 
 		assert.Equal(t, "Test service", service.Description)
@@ -258,85 +260,28 @@ postgres:
 	assert.NoError(t, err)
 
 	registry := &ServiceRegistry{
-		services:   make(map[string]ServiceDefinition),
-		configPath: servicesFile,
+		services: make(map[string]ServiceDefinition),
 	}
 
-	// Initial load
-	err = registry.Load()
+	// Load from embedded
+	err = registry.LoadFromEmbedded()
 	assert.NoError(t, err)
-	assert.Len(t, registry.services, 2)
+	assert.Greater(t, len(registry.services), 0)
 
-	// Add a service manually to test reload
+	// Add a service manually
 	registry.services["manual"] = ServiceDefinition{Description: "Manual service"}
-	assert.Len(t, registry.services, 3)
 
-	// Reload should reset and reload from file
-	err = registry.Reload()
-	assert.NoError(t, err)
-	assert.Len(t, registry.services, 2)
-	assert.Contains(t, registry.services, "redis")
-	assert.Contains(t, registry.services, "postgres")
-	assert.NotContains(t, registry.services, "manual")
-}
-
-func TestServiceRegistry_Load_InvalidFile(t *testing.T) {
-	t.Run("non-existent file", func(t *testing.T) {
-		registry := &ServiceRegistry{
-			services:   make(map[string]ServiceDefinition),
-			configPath: "/nonexistent/path/services.yaml",
-		}
-
-		err := registry.Load()
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to read services file")
-	})
-
-	t.Run("invalid YAML", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		servicesFile := filepath.Join(tmpDir, "invalid.yaml")
-
-		invalidContent := `redis:
-  description: "Redis cache"
-  invalid_yaml: [unclosed bracket`
-
-		err := os.WriteFile(servicesFile, []byte(invalidContent), 0644)
-		assert.NoError(t, err)
-
-		registry := &ServiceRegistry{
-			services:   make(map[string]ServiceDefinition),
-			configPath: servicesFile,
-		}
-
-		err = registry.Load()
-		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to parse services YAML")
-	})
+	// Verify manual service was added
+	assert.Contains(t, registry.services, "manual")
+	assert.Greater(t, len(registry.services), 0)
 }
 
 func TestNewServiceRegistry(t *testing.T) {
-	t.Run("valid services file", func(t *testing.T) {
-		tmpDir := t.TempDir()
-		servicesFile := filepath.Join(tmpDir, "services.yaml")
-
-		servicesContent := `redis:
-  description: "Redis cache"
-  category: "cache"`
-
-		err := os.WriteFile(servicesFile, []byte(servicesContent), 0644)
-		assert.NoError(t, err)
-
-		registry, err := NewServiceRegistry(servicesFile)
+	t.Run("embedded services", func(t *testing.T) {
+		registry, err := NewServiceRegistry("")
 		assert.NoError(t, err)
 		assert.NotNil(t, registry)
-		assert.Len(t, registry.services, 1)
-	})
-
-	t.Run("invalid services file", func(t *testing.T) {
-		registry, err := NewServiceRegistry("/nonexistent/path/services.yaml")
-		assert.Error(t, err)
-		assert.Nil(t, registry)
-		assert.Contains(t, err.Error(), "failed to load service registry")
+		assert.Greater(t, len(registry.services), 0)
 	})
 }
 

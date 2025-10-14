@@ -13,6 +13,7 @@ otto-stack-macos
 otto-stack-windows.exe
 otto-stack
 !otto-stack/
+otto-stack.yaml
 
 # Documentation build artifacts (Hugo)
 docs-site/public/

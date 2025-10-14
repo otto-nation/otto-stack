@@ -2,6 +2,7 @@ package compose
 
 import (
 	"fmt"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
@@ -46,7 +47,7 @@ type Generator struct {
 func NewGenerator(projectName string, servicesPath string) (*Generator, error) {
 	registry, err := services.NewServiceRegistry(servicesPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load service registry: %w", err)
+		return nil, fmt.Errorf("failed to create service registry: %w", err)
 	}
 
 	return &Generator{
@@ -90,6 +91,14 @@ func (g *Generator) GenerateYAML(serviceNames []string) ([]byte, error) {
 
 // addService adds a specific service to the compose file based on service definitions
 func (g *Generator) addService(compose *ComposeFile, serviceName string) error {
+	// Try to get service from registry first
+	if g.registry != nil {
+		if serviceDef, exists := g.registry.GetService(serviceName); exists {
+			return g.addServiceFromDefinition(compose, serviceName, serviceDef)
+		}
+	}
+
+	// Fallback to hardcoded services for backward compatibility
 	switch serviceName {
 	case "postgres":
 		g.addPostgres(compose)
@@ -110,6 +119,89 @@ func (g *Generator) addService(compose *ComposeFile, serviceName string) error {
 	default:
 		return fmt.Errorf("unknown service: %s", serviceName)
 	}
+	return nil
+}
+
+// addServiceFromDefinition creates a compose service from a service definition
+func (g *Generator) addServiceFromDefinition(compose *ComposeFile, serviceName string, def services.ServiceDefinition) error {
+	service := ComposeService{
+		Restart: "unless-stopped",
+	}
+
+	// Set image from defaults
+	if def.Defaults.Image != "" {
+		service.Image = def.Defaults.Image
+	}
+
+	// Configure environment variables
+	if len(def.Environment) > 0 {
+		service.Environment = make(map[string]string)
+		for key, value := range def.Environment {
+			service.Environment[key] = value
+		}
+	}
+
+	// Add Docker-specific environment variables
+	if len(def.Docker.Environment) > 0 {
+		if service.Environment == nil {
+			service.Environment = make(map[string]string)
+		}
+		for _, env := range def.Docker.Environment {
+			// Parse KEY=VALUE format
+			parts := strings.SplitN(env, "=", 2)
+			if len(parts) == 2 {
+				service.Environment[parts[0]] = parts[1]
+			}
+		}
+	}
+
+	// Configure ports
+	if def.Defaults.Port > 0 {
+		service.Ports = []string{fmt.Sprintf("%d:%d", def.Defaults.Port, def.Defaults.Port)}
+	}
+	if len(def.Docker.Ports) > 0 {
+		service.Ports = def.Docker.Ports
+	}
+
+	// Configure volumes
+	if len(def.Docker.Volumes) > 0 {
+		service.Volumes = def.Docker.Volumes
+	}
+
+	// Add named volumes if defined
+	for _, vol := range def.Volumes {
+		volumeName := fmt.Sprintf("%s-%s", g.projectName, vol.Name)
+		compose.Volumes[volumeName] = nil
+
+		// Add volume mount to service
+		volumeMount := fmt.Sprintf("%s:%s", volumeName, vol.Mount)
+		service.Volumes = append(service.Volumes, volumeMount)
+	}
+
+	// Configure health check
+	if len(def.Docker.HealthCheck.Test) > 0 {
+		service.HealthCheck = &HealthCheck{
+			Test:     def.Docker.HealthCheck.Test,
+			Interval: def.Docker.HealthCheck.Interval,
+			Timeout:  def.Docker.HealthCheck.Timeout,
+			Retries:  def.Docker.HealthCheck.Retries,
+		}
+	}
+
+	// Configure restart policy
+	if def.Docker.Restart != "" {
+		service.Restart = def.Docker.Restart
+	}
+
+	// Configure dependencies
+	if len(def.Dependencies.Required) > 0 {
+		service.DependsOn = def.Dependencies.Required
+	}
+	if len(def.Docker.DependsOn) > 0 {
+		service.DependsOn = append(service.DependsOn, def.Docker.DependsOn...)
+	}
+
+	compose.Services[serviceName] = service
 	return nil
 }
 
