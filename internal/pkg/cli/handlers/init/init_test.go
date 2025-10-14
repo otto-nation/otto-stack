@@ -40,25 +40,6 @@ func TestInitHandler_GetRequiredFlags(t *testing.T) {
 	assert.Empty(t, flags)
 }
 
-func TestFindTemplateFile(t *testing.T) {
-	handler := NewInitHandler()
-	cleanup := setupTestDir(t)
-	defer cleanup()
-
-	// Create test file
-	createTestFile(t, "test-template.yml", "test")
-
-	// Test finding existing file
-	found, err := handler.findTemplateFile([]string{"test-template.yml", "nonexistent.yml"}, "template")
-	assert.NoError(t, err)
-	assert.Equal(t, "test-template.yml", found)
-
-	// Test with no existing files
-	_, err = handler.findTemplateFile([]string{"nonexistent1.yml", "nonexistent2.yml"}, "template")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no template found")
-}
-
 func TestCreateGitignoreEntries_ExistingContent(t *testing.T) {
 	handler := NewInitHandler()
 	cleanup := setupTestDir(t)

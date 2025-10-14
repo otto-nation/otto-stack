@@ -89,7 +89,7 @@ PostgreSQL relational database for persistent data storage
 
 ---
 
-## prometheus
+## prometheus-service
 
 Prometheus metrics collection and monitoring system
 

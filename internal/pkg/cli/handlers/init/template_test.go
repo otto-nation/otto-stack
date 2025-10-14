@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGenerateInitEnvFile(t *testing.T) {
+func TestGenerateEnvFile(t *testing.T) {
 	handler := NewInitHandler()
 	cleanup := setupTestDir(t)
 	defer cleanup()
@@ -14,26 +14,28 @@ func TestGenerateInitEnvFile(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	projectConfig := &struct {
-		Project struct {
+	projectConfig := &ProjectConfig{
+		Project: struct {
 			Name        string
 			Environment string
-		}
-		Stack struct {
+		}{
+			Name:        TestProjectName,
+			Environment: TestEnvironmentLocal,
+		},
+		Stack: struct {
 			Enabled []string
-		}
-	}{}
-	projectConfig.Project.Name = TestProjectName
-	projectConfig.Project.Environment = TestEnvironmentLocal
-	projectConfig.Stack.Enabled = []string{TestServicePostgres}
+		}{
+			Enabled: []string{TestServicePostgres},
+		},
+	}
 
-	err = handler.generateInitEnvFile([]string{TestServicePostgres}, projectConfig)
+	err = handler.generateEnvFile([]string{TestServicePostgres}, projectConfig)
 	if err != nil {
 		t.Logf("Expected error in test environment: %v", err)
 	}
 }
 
-func TestGenerateInitDockerCompose(t *testing.T) {
+func TestGenerateDockerCompose(t *testing.T) {
 	handler := NewInitHandler()
 	cleanup := setupTestDir(t)
 	defer cleanup()
@@ -41,20 +43,22 @@ func TestGenerateInitDockerCompose(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	projectConfig := &struct {
-		Project struct {
+	projectConfig := &ProjectConfig{
+		Project: struct {
 			Name        string
 			Environment string
-		}
-		Stack struct {
+		}{
+			Name:        TestProjectName,
+			Environment: TestEnvironmentLocal,
+		},
+		Stack: struct {
 			Enabled []string
-		}
-	}{}
-	projectConfig.Project.Name = TestProjectName
-	projectConfig.Project.Environment = TestEnvironmentLocal
-	projectConfig.Stack.Enabled = []string{TestServicePostgres}
+		}{
+			Enabled: []string{TestServicePostgres},
+		},
+	}
 
-	err = handler.generateInitDockerCompose([]string{TestServicePostgres}, projectConfig)
+	err = handler.generateDockerCompose([]string{TestServicePostgres}, projectConfig)
 	if err != nil {
 		t.Logf("Expected error in test environment: %v", err)
 	}

@@ -10,8 +10,5 @@ var EmbeddedCommandsYAML []byte
 //go:embed init-settings.yaml
 var EmbeddedInitSettingsYAML []byte
 
-//go:embed env.template
-var EmbeddedEnvTemplate []byte
-
 //go:embed services
 var EmbeddedServicesFS embed.FS

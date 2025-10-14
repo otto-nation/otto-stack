@@ -3,17 +3,25 @@ package init
 import (
 	"fmt"
 	"os"
-	"strings"
-	"text/template"
-	"time"
+	"path/filepath"
 
-	"github.com/otto-nation/otto-stack/internal/config"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/env"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
+
+// ProjectConfig represents the project configuration structure
+type ProjectConfig struct {
+	Project struct {
+		Name        string
+		Environment string
+	}
+	Stack struct {
+		Enabled []string
+	}
+}
 
 // generateConfig generates config using code generation
 func (h *InitHandler) generateConfig(name, environment string, services []string, validation, advanced map[string]bool) (string, error) {
@@ -22,16 +30,7 @@ func (h *InitHandler) generateConfig(name, environment string, services []string
 
 // generateInitialComposeFiles generates initial compose files during init
 func (h *InitHandler) generateInitialComposeFiles(services []string, projectName, environment string, validation, advanced map[string]bool) error {
-	// Create a temporary project config structure
-	projectConfig := struct {
-		Project struct {
-			Name        string
-			Environment string
-		}
-		Stack struct {
-			Enabled []string
-		}
-	}{
+	projectConfig := &ProjectConfig{
 		Project: struct {
 			Name        string
 			Environment string
@@ -47,134 +46,58 @@ func (h *InitHandler) generateInitialComposeFiles(services []string, projectName
 	}
 
 	// Generate .env.generated
-	if err := h.generateInitEnvFile(services, &projectConfig); err != nil {
+	if err := h.generateEnvFile(services, projectConfig); err != nil {
 		return fmt.Errorf("failed to generate .env file: %w", err)
 	}
 
 	// Generate docker-compose.yml
-	if err := h.generateInitDockerCompose(services, &projectConfig); err != nil {
+	if err := h.generateDockerCompose(services, projectConfig); err != nil {
 		return fmt.Errorf("failed to generate docker-compose.yml: %w", err)
 	}
 
-	ui.Success("Generated otto-stack/docker-compose.yml and otto-stack/.env.generated")
+	ui.Success("Generated %s and %s",
+		filepath.Join(constants.DevStackDir, constants.DockerComposeFileName),
+		filepath.Join(constants.DevStackDir, constants.EnvGeneratedFileName))
+
 	return nil
 }
 
-// generateInitEnvFile generates .env.generated during init using template
-func (h *InitHandler) generateInitEnvFile(services []string, projectConfig interface{}) error {
-	pc := projectConfig.(*struct {
-		Project struct {
-			Name        string
-			Environment string
-		}
-		Stack struct {
-			Enabled []string
-		}
-	})
+// generateEnvFile generates .env.generated using programmatic generation
+func (h *InitHandler) generateEnvFile(services []string, config *ProjectConfig) error {
+	ui.Info("Generating environment file...")
 
-	// Load template
-	var templateContent []byte
-	candidates := []string{
-		"internal/config/env.template",
-		"config/env.template",
-		"otto-stack/env.template",
-	}
+	generator := env.NewGenerator(config.Project.Name, config.Project.Environment)
 
-	if templatePath, err := h.findTemplateFile(candidates, "env template"); err == nil {
-		content, err := os.ReadFile(templatePath)
-		if err != nil {
-			return fmt.Errorf("failed to read env template: %w", err)
-		}
-		templateContent = content
-	} else {
-		templateContent = config.EmbeddedEnvTemplate
-		if len(templateContent) == 0 {
-			return fmt.Errorf("no env template found and no embedded template available")
-		}
-	}
-
-	// Parse template with custom functions
-	tmpl, err := template.New("env").Funcs(template.FuncMap{
-		"ToUpper": strings.ToUpper,
-	}).Parse(string(templateContent))
+	envContent, err := generator.Generate(services)
 	if err != nil {
-		return fmt.Errorf("failed to parse env template: %w", err)
+		return fmt.Errorf("failed to generate env content: %w", err)
 	}
 
-	// Prepare template data
-	var templateServices []struct {
-		Name   string
-		Config *types.ServiceConfig
+	envPath := filepath.Join(constants.DevStackDir, constants.EnvGeneratedFileName)
+	if err := os.WriteFile(envPath, envContent, 0644); err != nil {
+		return fmt.Errorf("failed to write %s: %w", envPath, err)
 	}
 
-	for _, serviceName := range services {
-		serviceConfig, err := utils.NewServiceUtils().LoadServiceConfig(serviceName)
-		if err != nil {
-			ui.Warning("Failed to load config for %s: %v", serviceName, err)
-			continue
-		}
-		templateServices = append(templateServices, struct {
-			Name   string
-			Config *types.ServiceConfig
-		}{
-			Name:   serviceName,
-			Config: serviceConfig,
-		})
-	}
-
-	data := struct {
-		ProjectName string
-		Environment string
-		GeneratedAt string
-		Services    []struct {
-			Name   string
-			Config *types.ServiceConfig
-		}
-	}{
-		ProjectName: pc.Project.Name,
-		Environment: pc.Project.Environment,
-		GeneratedAt: time.Now().Format(time.RFC1123),
-		Services:    templateServices,
-	}
-
-	// Execute template
-	var result strings.Builder
-	if err := tmpl.Execute(&result, data); err != nil {
-		return fmt.Errorf("failed to execute env template: %w", err)
-	}
-
-	return os.WriteFile("otto-stack/.env.generated", []byte(result.String()), 0644)
+	return nil
 }
 
-// generateInitDockerCompose generates docker-compose.yml during init using programmatic generation
-func (h *InitHandler) generateInitDockerCompose(services []string, projectConfig interface{}) error {
-	pc := projectConfig.(*struct {
-		Project struct {
-			Name        string
-			Environment string
-		}
-		Stack struct {
-			Enabled []string
-		}
-	})
-
+// generateDockerCompose generates docker-compose.yml using programmatic generation
+func (h *InitHandler) generateDockerCompose(services []string, config *ProjectConfig) error {
 	ui.Info("Generating docker-compose files...")
 
-	// Create compose generator
-	generator, err := compose.NewGenerator(pc.Project.Name, "internal/config/services")
+	generator, err := compose.NewGenerator(config.Project.Name, constants.ServicesDir)
 	if err != nil {
 		return fmt.Errorf("failed to create compose generator: %w", err)
 	}
 
-	// Generate docker-compose.yml
 	composeYAML, err := generator.GenerateYAML(services)
 	if err != nil {
 		return fmt.Errorf("failed to generate docker-compose YAML: %w", err)
 	}
 
-	// Write docker-compose.yml
-	if err := os.WriteFile("otto-stack/docker-compose.yml", composeYAML, 0644); err != nil {
-		return fmt.Errorf("failed to write docker-compose.yml: %w", err)
+	composePath := filepath.Join(constants.DevStackDir, constants.DockerComposeFileName)
+	if err := os.WriteFile(composePath, composeYAML, 0644); err != nil {
+		return fmt.Errorf("failed to write %s: %w", composePath, err)
 	}
 
 	return nil
