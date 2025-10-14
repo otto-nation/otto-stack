@@ -105,7 +105,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - 📖 [Documentation](docs-site/)
 - 🐛 [Issues](https://github.com/otto-nation/otto-stack/issues)
-- 💬 [Discussions](https://github.com/otto-nation/otto-stack/discussions)
 
 ---
 

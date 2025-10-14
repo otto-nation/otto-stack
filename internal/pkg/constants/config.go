@@ -8,11 +8,31 @@ const (
 
 // Configuration sections
 const (
-	ProjectSection    = "project"
-	StackSection      = "stack"
-	OverridesSection  = "overrides"
-	ValidationSection = "validation"
-	AdvancedSection   = "advanced"
+	ProjectSection              = "project"
+	StackSection                = "stack"
+	ServiceConfigurationSection = "service-configuration"
+	ValidationSection           = "validation"
+	AdvancedSection             = "advanced"
+)
+
+// Service types
+const (
+	ServiceTypeContainer     = "container"
+	ServiceTypeConfiguration = "configuration"
+	ServiceTypeComposite     = "composite"
+)
+
+// Service names
+const (
+	ServiceKafkaTopics    = "kafka-topics"
+	ServiceLocalstackInit = "localstack-init"
+)
+
+// User action responses
+const (
+	ActionProceed = "proceed"
+	ActionBack    = "back"
+	ActionCancel  = "cancel"
 )
 
 // Default configuration values

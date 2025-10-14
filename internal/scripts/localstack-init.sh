@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # LocalStack AWS Resource Initialization Script
-# This script creates SQS queues and SNS topics based on configuration
+# This script creates AWS resources based on otto-stack configuration
 
 set -e
 
@@ -13,9 +13,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-AWS_ENDPOINT="http://localhost:4566"
+AWS_ENDPOINT="http://localstack-core:4566"
 AWS_REGION="us-east-1"
-CONFIG_FILE="/tmp/localstack/aws-resources.json"
+CONFIG_FILE="/config/otto-stack-config.yml"
 
 # Helper functions
 log_info() {
@@ -56,16 +56,18 @@ wait_for_localstack() {
     return 1
 }
 
-# Check if configuration file exists
+# Check if configuration file exists and has LocalStack services
 check_config() {
     if [ ! -f "$CONFIG_FILE" ]; then
-        log_warning "No AWS resources configuration found at $CONFIG_FILE"
-        log_info "Skipping AWS resource creation"
+        log_warning "No otto-stack configuration found at $CONFIG_FILE"
         return 1
     fi
 
-    if [ ! -s "$CONFIG_FILE" ]; then
-        log_warning "AWS resources configuration file is empty"
+    # Check if any LocalStack services are enabled
+    local enabled_services=$(yq '.stack.enabled[]' "$CONFIG_FILE" 2>/dev/null | grep -E "localstack|sqs|sns|s3" || true)
+    
+    if [ -z "$enabled_services" ]; then
+        log_info "No LocalStack services enabled, skipping initialization"
         return 1
     fi
 
@@ -74,57 +76,177 @@ check_config() {
 
 # Create SQS queues
 create_sqs_queues() {
+    # Check if SQS services are enabled
+    local sqs_enabled=$(yq '.stack.enabled[]' "$CONFIG_FILE" | grep -E "localstack-sqs|sqs" || true)
+    
+    if [ -z "$sqs_enabled" ]; then
+        log_info "SQS not enabled, skipping queue creation"
+        return 0
+    fi
+
     log_info "Creating SQS queues..."
 
-    # Check if sqs_queues exists in config
-    if ! jq -e '.sqs_queues' "$CONFIG_FILE" > /dev/null 2>&1; then
+    # Get project name for prefixing
+    local project_name=$(yq '.project.name' "$CONFIG_FILE")
+    
+    # Get queue names from service configuration or use defaults
+    local queue_names=$(yq '.service-configuration.localstack-sqs.queue_names // ["default-queue", "test-queue"]' "$CONFIG_FILE")
+    
+    # Convert YAML array to bash array
+    local queues=()
+    while IFS= read -r queue; do
+        # Remove quotes and add to array
+        queue=$(echo "$queue" | sed 's/^"//;s/"$//')
+        queues+=("$queue")
+    done < <(echo "$queue_names" | yq '.[]')
+
+    if [ ${#queues[@]} -eq 0 ]; then
         log_info "No SQS queues configured"
         return 0
     fi
 
-    # Get queue count
-    local queue_count=$(jq '.sqs_queues | length' "$CONFIG_FILE")
-
-    if [ "$queue_count" -eq 0 ]; then
-        log_info "No SQS queues configured"
-        return 0
-    fi
-
-    log_info "Found $queue_count SQS queue(s) to create"
+    log_info "Found ${#queues[@]} SQS queue(s) to create"
 
     # Create each queue
-    for i in $(seq 0 $((queue_count - 1))); do
-        local queue_config=$(jq ".sqs_queues[$i]" "$CONFIG_FILE")
-        local queue_name=$(echo "$queue_config" | jq -r '.name')
-        local visibility_timeout=$(echo "$queue_config" | jq -r '.visibility_timeout // 30')
-        local message_retention_period=$(echo "$queue_config" | jq -r '.message_retention_period // 1209600')
-        local receive_message_wait_time=$(echo "$queue_config" | jq -r '.receive_message_wait_time // 0')
-        local delay_seconds=$(echo "$queue_config" | jq -r '.delay_seconds // 0')
-        local max_receive_count=$(echo "$queue_config" | jq -r '.max_receive_count // 3')
-        local dead_letter_queue_config=$(echo "$queue_config" | jq -r '.dead_letter_queue // empty')
-
-        # Handle dead letter queue - support both boolean true/false and string values
-        local dead_letter_queue=""
-        if [ "$dead_letter_queue_config" = "true" ]; then
-            dead_letter_queue="${queue_name}-dlq"
-        elif [ "$dead_letter_queue_config" != "null" ] && [ "$dead_letter_queue_config" != "false" ] && [ "$dead_letter_queue_config" != "" ]; then
-            dead_letter_queue="$dead_letter_queue_config"
+    for queue_name in "${queues[@]}"; do
+        local full_queue_name="${project_name}-${queue_name}"
+        
+        log_info "Creating SQS queue: $full_queue_name"
+        
+        if aws --endpoint-url="$AWS_ENDPOINT" --region="$AWS_REGION" \
+           sqs create-queue --queue-name "$full_queue_name" > /dev/null 2>&1; then
+            log_success "Created SQS queue: $full_queue_name"
+        else
+            log_error "Failed to create SQS queue: $full_queue_name"
         fi
+    done
+}
 
-        log_info "Creating queue: $queue_name"
+# Create SNS topics
+create_sns_topics() {
+    # Check if SNS services are enabled
+    local sns_enabled=$(yq '.stack.enabled[]' "$CONFIG_FILE" | grep -E "localstack-sns|sns" || true)
+    
+    if [ -z "$sns_enabled" ]; then
+        log_info "SNS not enabled, skipping topic creation"
+        return 0
+    fi
 
-        # Create dead letter queue first if specified
-        if [ -n "$dead_letter_queue" ]; then
-            log_info "Creating dead letter queue: $dead_letter_queue"
+    log_info "Creating SNS topics..."
 
-            aws --endpoint-url="$AWS_ENDPOINT" --region="$AWS_REGION" \
-                sqs create-queue \
-                --queue-name "$dead_letter_queue" \
-                --attributes "{
-                    \"VisibilityTimeoutSeconds\": \"$visibility_timeout\",
-                    \"MessageRetentionPeriod\": \"$message_retention_period\",
-                    \"ReceiveMessageWaitTimeSeconds\": \"$receive_message_wait_time\",
-                    \"DelaySeconds\": \"$delay_seconds\"
+    # Get project name for prefixing
+    local project_name=$(yq '.project.name' "$CONFIG_FILE")
+    
+    # Get topic names from service configuration or use defaults
+    local topic_names=$(yq '.service-configuration.localstack-sns.topic_names // ["default-topic"]' "$CONFIG_FILE")
+    
+    # Convert YAML array to bash array
+    local topics=()
+    while IFS= read -r topic; do
+        topic=$(echo "$topic" | sed 's/^"//;s/"$//')
+        topics+=("$topic")
+    done < <(echo "$topic_names" | yq '.[]')
+
+    if [ ${#topics[@]} -eq 0 ]; then
+        log_info "No SNS topics configured"
+        return 0
+    fi
+
+    log_info "Found ${#topics[@]} SNS topic(s) to create"
+
+    # Create each topic
+    for topic_name in "${topics[@]}"; do
+        local full_topic_name="${project_name}-${topic_name}"
+        
+        log_info "Creating SNS topic: $full_topic_name"
+        
+        if aws --endpoint-url="$AWS_ENDPOINT" --region="$AWS_REGION" \
+           sns create-topic --name "$full_topic_name" > /dev/null 2>&1; then
+            log_success "Created SNS topic: $full_topic_name"
+        else
+            log_error "Failed to create SNS topic: $full_topic_name"
+        fi
+    done
+}
+
+# Create S3 buckets
+create_s3_buckets() {
+    # Check if S3 services are enabled
+    local s3_enabled=$(yq '.stack.enabled[]' "$CONFIG_FILE" | grep -E "localstack-s3|s3" || true)
+    
+    if [ -z "$s3_enabled" ]; then
+        log_info "S3 not enabled, skipping bucket creation"
+        return 0
+    fi
+
+    log_info "Creating S3 buckets..."
+
+    # Get project name for prefixing
+    local project_name=$(yq '.project.name' "$CONFIG_FILE")
+    
+    # Get bucket names from service configuration or use defaults
+    local bucket_names=$(yq '.service-configuration.localstack-s3.bucket_names // ["uploads", "static-assets"]' "$CONFIG_FILE")
+    
+    # Convert YAML array to bash array
+    local buckets=()
+    while IFS= read -r bucket; do
+        bucket=$(echo "$bucket" | sed 's/^"//;s/"$//')
+        buckets+=("$bucket")
+    done < <(echo "$bucket_names" | yq '.[]')
+
+    if [ ${#buckets[@]} -eq 0 ]; then
+        log_info "No S3 buckets configured"
+        return 0
+    fi
+
+    log_info "Found ${#buckets[@]} S3 bucket(s) to create"
+
+    # Create each bucket
+    for bucket_name in "${buckets[@]}"; do
+        local full_bucket_name="${project_name}-${bucket_name}"
+        
+        log_info "Creating S3 bucket: $full_bucket_name"
+        
+        if aws --endpoint-url="$AWS_ENDPOINT" --region="$AWS_REGION" \
+           s3 mb "s3://$full_bucket_name" > /dev/null 2>&1; then
+            log_success "Created S3 bucket: $full_bucket_name"
+        else
+            log_error "Failed to create S3 bucket: $full_bucket_name"
+        fi
+    done
+}
+
+# Main execution
+main() {
+    log_info "Starting LocalStack AWS resource initialization..."
+
+    # Set AWS credentials for LocalStack
+    export AWS_ACCESS_KEY_ID=test
+    export AWS_SECRET_ACCESS_KEY=test
+    export AWS_DEFAULT_REGION="$AWS_REGION"
+
+    # Check configuration
+    if ! check_config; then
+        log_info "Exiting - no LocalStack services to initialize"
+        exit 0
+    fi
+
+    # Wait for LocalStack to be ready
+    if ! wait_for_localstack; then
+        log_error "LocalStack is not ready, exiting"
+        exit 1
+    fi
+
+    # Create resources based on enabled services
+    create_sqs_queues
+    create_sns_topics  
+    create_s3_buckets
+
+    log_success "LocalStack AWS resource initialization completed!"
+}
+
+# Run main function
+main "$@"
                 }" > /dev/null
 
             # Get DLQ ARN for redrive policy

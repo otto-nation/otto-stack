@@ -18,9 +18,9 @@ func NewYAMLFormatter(writer io.Writer) *YAMLFormatter {
 
 // FormatStatus formats service status as YAML
 func (f *YAMLFormatter) FormatStatus(services []ServiceStatus, options StatusOptions) error {
-	output := map[string]interface{}{
+	output := map[string]any{
 		"services": services,
-		"summary": map[string]interface{}{
+		"summary": map[string]any{
 			"total":   len(services),
 			"running": f.countByState(services, "running"),
 			"healthy": f.countByHealth(services, "healthy"),
@@ -46,7 +46,7 @@ func (f *YAMLFormatter) FormatHealth(report HealthReport, options HealthOptions)
 }
 
 // Helper methods
-func (f *YAMLFormatter) writeYAML(data interface{}) error {
+func (f *YAMLFormatter) writeYAML(data any) error {
 	encoder := yaml.NewEncoder(f.writer)
 	defer func() {
 		_ = encoder.Close()

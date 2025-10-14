@@ -56,7 +56,7 @@ class OttoStack < Formula
   end
 
   test do
-    assert_match "otto-stack", shell_output("#{bin}/otto-stack --version")
+    assert_match(/\d+\.\d+\.\d+/, shell_output("#{bin}/otto-stack --version"))
 
     # Test basic functionality
     system bin/"otto-stack", "--help"

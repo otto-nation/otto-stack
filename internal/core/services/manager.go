@@ -198,7 +198,7 @@ func (m *Manager) validateServices(serviceNames []string) error {
 		return nil
 	}
 
-	var services map[string]interface{}
+	var services map[string]any
 	if err := yaml.Unmarshal(data, &services); err != nil {
 		for _, name := range serviceNames {
 			if strings.TrimSpace(name) == "" {

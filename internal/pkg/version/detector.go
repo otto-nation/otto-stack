@@ -252,7 +252,7 @@ func (d *VersionDetector) parseVersionFromConfig(configPath string) (*VersionCon
 		return nil, err
 	}
 
-	var config map[string]interface{}
+	var config map[string]any
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, err
 	}

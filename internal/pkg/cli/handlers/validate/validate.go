@@ -59,7 +59,7 @@ func (h *ValidateHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 }
 
 func (h *ValidateHandler) outputJSON(result config.ValidationResult, exitCode int) {
-	output := map[string]interface{}{
+	output := map[string]any{
 		"valid":     result.Valid,
 		"errors":    h.formatErrors(result.Errors),
 		"warnings":  h.formatWarnings(result.Warnings),

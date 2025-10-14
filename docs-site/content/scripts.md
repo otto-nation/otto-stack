@@ -204,48 +204,78 @@ Updates the Homebrew formula with the latest release checksums.
 - `--validate-only` - Only validate existing formula syntax
 - `-h, --help` - Show help message
 
-### submit-homebrew-pr.sh
+### prepare-homebrew-formula.sh
 
-Prepares a Homebrew Core pull request branch for new otto-stack releases.
+Prepares a Homebrew Core formula for otto-stack following official Homebrew Core guidelines.
 
 **Usage:**
 
 ```bash
-./scripts/submit-homebrew-pr.sh --version v1.0.0 --sha256 abc123...
+# Use latest version and auto-calculate SHA256
+./scripts/prepare-homebrew-formula.sh
+
+# Use specific version
+./scripts/prepare-homebrew-formula.sh --version v1.0.0
+
+# Use specific version and SHA256
+./scripts/prepare-homebrew-formula.sh --version v1.0.0 --sha256 abc123...
 ```
 
-**Features:**
+**Options:**
 
-- Updates forked homebrew-core repository
-- Creates formula with correct version and SHA256
-- Prepares branch for manual testing and PR submission
-- Provides step-by-step testing instructions
-- Follows Homebrew contribution guidelines
+- `-v, --version VERSION` - Version to submit (default: latest from GitHub)
+- `-s, --sha256 SHA256` - SHA256 hash of release tarball (default: auto-calculate)
+- `-h, --help` - Show help message
 
 **Prerequisites:**
 
 - Forked homebrew-core repository in `../homebrew-core`
-- Local Homebrew installation for testing
+- Local Homebrew installation for validation
 
-**Process:**
+**What it does:**
 
-1. Fetches latest upstream changes
-2. Creates new branch for the version
-3. Updates `Formula/o/otto-stack.rb`
-4. Commits changes and pushes branch
-5. Provides manual testing instructions
-6. Shows PR creation URL
+1. **Updates homebrew-core fork** - Fetches latest upstream changes and creates new branch
+2. **Creates source-based formula** - Generates proper Homebrew Core formula that builds from Go source
+3. **Calculates SHA256** - Downloads and verifies source tarball checksum
+4. **Validates syntax** - Runs `brew style` to check formula formatting
+5. **Commits and pushes** - Prepares branch for manual PR submission
 
-**Manual Steps Required:**
-After running the script, you must manually:
+**Formula Features:**
 
-1. Test formula with `brew install --build-from-source`
-2. Run `brew test otto-stack`
-3. Run `brew audit --strict otto-stack`
-4. Create PR manually if tests pass
+- **Source compilation** - Downloads source tarball (required for Homebrew Core)
+- **Go build system** - Uses `go build` with proper ldflags for version info
+- **Shell completions** - Generates completions from built binary
+- **Proper testing** - Includes version check and help command tests
 
-**Automated Integration:**
-The release workflow calculates the source SHA256 and provides the command to run manually. Homebrew Core prefers human-reviewed submissions over automated PRs.
+**Manual Testing Required:**
+
+After the script completes, you must manually test the formula:
+
+```bash
+# Navigate to homebrew-core directory
+cd ../homebrew-core
+
+# Install from source (required for Core)
+HOMEBREW_NO_INSTALL_FROM_API=1 brew install --build-from-source otto-stack
+
+# Run tests
+brew test otto-stack
+
+# Run audit
+brew audit --strict otto-stack
+
+# Run style check
+brew style otto-stack
+
+# Test linkage
+brew linkage otto-stack
+```
+
+**PR Submission:**
+
+The script provides the GitHub URL to create a PR manually. Homebrew Core requires human review and doesn't accept automated PRs.
+
+**Note:** The script only validates what can be tested locally (`brew style`). Full testing requires the formula to be in an actual Homebrew tap, which happens after PR submission.
 
 ### update-docs-lastmod.sh
 

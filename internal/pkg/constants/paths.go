@@ -11,6 +11,9 @@ const (
 	GitignoreFileName        = ".gitignore"
 	ReadmeFileName           = "README.md"
 	ServiceConfigExtension   = ".yaml"
+	KafkaTopicsInitScript    = "kafka-topics-init.sh"
+	LocalstackInitScript     = "localstack-init.sh"
+	StateFileName            = "state.json"
 )
 
 // Directory names
@@ -19,13 +22,8 @@ const (
 	DataDir     = "data"
 	LogsDir     = "logs"
 	TmpDir      = "tmp"
+	ScriptsDir  = "scripts"
 	ServicesDir = "internal/config/services"
-)
-
-// Template file names
-const (
-	EnvTemplate           = "env.template"
-	DockerComposeTemplate = "docker-compose.template"
 )
 
 // Configuration URLs

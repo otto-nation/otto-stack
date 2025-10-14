@@ -97,6 +97,14 @@ func getHandlerForCommand(name string, serviceManager *services.Manager) cliType
 		return core.NewRestartHandler()
 	case constants.CmdNameStatus:
 		return core.NewStatusHandler()
+	case constants.CmdNameLogs:
+		return core.NewLogsHandler()
+	case constants.CmdNameExec:
+		return core.NewExecHandler()
+	case constants.CmdNameConnect:
+		return core.NewConnectHandler()
+	case constants.CmdNameCleanup:
+		return core.NewCleanupHandler()
 	case constants.CmdNameInit:
 		return initHandler.NewInitHandler()
 	case constants.CmdNameDoctor:

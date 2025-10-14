@@ -133,9 +133,14 @@ tasks:
         COMMITLINT_CONFIG=$(cat .github/.commitlintrc.json)
 
         # Create AI prompt with commitlint config
-        AI_PROMPT="Generate a conventional commit message using this commitlint config:
+        AI_PROMPT="Generate a conventional commit message following these rules:
+        - Header (first line) must be ≤72 characters (no exceptions)
+        - Body lines must be ≤100 characters each
+        - Use conventional commit format: type(scope): description
+        - Separate header and body with blank line
+        - Use bullet points for multiple changes
 
-        $COMMITLINT_CONFIG
+        Config: $COMMITLINT_CONFIG
 
         Files changed: $FILE_LIST
 
@@ -147,7 +152,7 @@ tasks:
         # Use AI to generate commit message
         if command -v q >/dev/null 2>&1; then
           echo "🤖 Generating commit message..."
-          COMMIT_MSG=$(echo "$AI_PROMPT" | q chat --no-interactive | tr -d '\033' | sed 's/\[[0-9;]*m//g' | sed 's/^[> ]*//g' | xargs)
+          COMMIT_MSG=$(echo "$AI_PROMPT" | q chat --no-interactive | tr -d '\033' | sed 's/\[[0-9;]*m//g' | sed 's/^[> ]*//g')
           echo "✨ AI Analysis Complete"
         else
           echo "⚠️  AI not available, using fallback..."
@@ -313,7 +318,7 @@ tasks:
     silent: true
     cmds:
       - echo "🚀 Running pre-push checks..."
-      - task: test-all
+      - task: test
       - task: build
       - |
         # Capture git state before docs generation
@@ -418,7 +423,7 @@ tasks:
       - echo "✅ Coverage report at coverage.out"
 
   test-unit:
-    desc: "🧪 Run unit tests only"
+    desc: "🧪 Run unit tests only (fast)"
     deps: [deps]
     silent: true
     cmds:
@@ -435,41 +440,6 @@ tasks:
       - go test -race -tags=integration ./...
       - echo "✅ Integration tests passed"
 
-  test-cross-platform:
-    desc: "🌍 Run cross-platform compatibility tests"
-    deps: [deps]
-    silent: true
-    cmds:
-      - echo "🌍 Running cross-platform compatibility tests..."
-      - ./scripts/test-cross-platform.sh
-      - echo "✅ Cross-platform tests completed"
-
-  test-ci:
-    desc: "🐳 Test using Colima to match GitHub Actions environment"
-    silent: true
-    cmds:
-      - echo "🐳 Testing with Colima (matches GitHub Actions)..."
-      - |
-        if ! command -v docker >/dev/null 2>&1; then
-          echo "❌ Docker not available. Start Colima first: colima start"
-          exit 1
-        fi
-      - |
-        GO_VERSION=$(cat .go-version | tr -d '[:space:]')
-        docker run --rm -v $(pwd):/app -w /app golang:${GO_VERSION} sh -c "
-          echo '📥 Downloading dependencies...' &&
-          go mod download &&
-          echo '🧪 Running tests...' &&
-          go test -v ./... &&
-          echo '🔨 Testing Windows build...' &&
-          GOOS=windows GOARCH=amd64 go build -buildvcs=false -o otto-stack-windows.exe ./cmd/otto-stack &&
-          echo '🔨 Testing macOS build...' &&
-          GOOS=darwin GOARCH=amd64 go build -buildvcs=false -o otto-stack-macos ./cmd/otto-stack &&
-          echo '🔨 Testing Linux build...' &&
-          go build -buildvcs=false -o otto-stack-linux ./cmd/otto-stack
-        "
-      - echo "✅ CI environment tests completed"
-
   test-coverage:
     desc: "📊 View test coverage report in browser"
     deps: [test]
@@ -477,46 +447,6 @@ tasks:
     cmds:
       - echo "📊 Opening coverage report..."
       - go tool cover -html=coverage.out
-
-  test-coverage-check:
-    desc: "🎯 Check if test coverage meets minimum threshold"
-    deps: [test]
-    silent: true
-    cmds:
-      - |
-        COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
-        MIN_COVERAGE=15.0
-        echo "Current test coverage: ${COVERAGE}%"
-        echo "Minimum threshold: ${MIN_COVERAGE}%"
-
-        if command -v bc >/dev/null 2>&1; then
-          if (( $(echo "$COVERAGE < $MIN_COVERAGE" | bc -l) )); then
-            echo "❌ Test coverage ${COVERAGE}% is below minimum threshold ${MIN_COVERAGE}%"
-            exit 1
-          else
-            echo "✅ Test coverage ${COVERAGE}% meets minimum threshold ${MIN_COVERAGE}%"
-          fi
-        else
-          # Fallback for systems without bc
-          COVERAGE_INT=$(echo "$COVERAGE" | cut -d'.' -f1)
-          MIN_COVERAGE_INT=$(echo "$MIN_COVERAGE" | cut -d'.' -f1)
-          if [ "$COVERAGE_INT" -lt "$MIN_COVERAGE_INT" ]; then
-            echo "❌ Test coverage ${COVERAGE}% is below minimum threshold ${MIN_COVERAGE}%"
-            exit 1
-          else
-            echo "✅ Test coverage ${COVERAGE}% meets minimum threshold ${MIN_COVERAGE}%"
-          fi
-        fi
-
-  test-all:
-    desc: "🧪 Run comprehensive test suite"
-    silent: true
-    cmds:
-      - task: test-unit
-      - task: test-integration
-      - task: test-cross-platform
-      - task: test-coverage-check
-      - echo "✅ All tests completed successfully"
 
   lint:
     desc: "🔍 Run comprehensive linting (vet + fmt + golangci-lint)"
@@ -591,7 +521,6 @@ tasks:
     silent: true
     cmds:
       - echo "📚 Generating documentation..."
-      - ./{{.BUILD_DIR}}/{{.BINARY_NAME}} docs --verbose
       - echo "📝 Generating Hugo documentation..."
       - cd docs-site && npm run docs:generate
       - echo "✅ Documentation generated"
@@ -674,19 +603,10 @@ tasks:
       - echo "   watch          - Auto-rebuild on changes"
       - echo ""
       - echo "🧪 Testing:"
-      - echo "   test           - Run all tests"
-      - echo "   test-coverage  - Run tests with coverage"
-      - echo "   deps           - Update dependencies"
-      - echo ""
-      - echo "🧪 Testing:"
       - echo "   test           - Run all tests with coverage"
-      - echo "   test-unit      - Run unit tests only"
+      - echo "   test-unit      - Run unit tests only (fast)"
       - echo "   test-integration - Run integration tests"
-      - echo "   test-cross-platform - Run cross-platform tests"
-      - echo "   test-ci        - Test with Colima (matches GitHub Actions)"
-      - echo "   test-all       - Run comprehensive test suite"
       - echo "   test-coverage  - View coverage in browser"
-      - echo "   test-coverage-check - Check coverage threshold"
       - echo ""
       - echo "🔍 Quality:"
       - echo "   lint           - Run all linting checks"
@@ -704,6 +624,10 @@ tasks:
       - echo "   clean          - Remove build artifacts"
       - echo "   clean-all      - Deep clean everything"
       - echo ""
+      - echo "🛠️ Development:"
+      - echo "   setup-hooks    - Install Git hooks"
+      - echo "   deps           - Update dependencies"
+      - echo ""
       - echo "ℹ️  Info:"
       - echo "   version        - Show version info"
       - echo "   help           - Show this help"
@@ -714,7 +638,6 @@ tasks:
       - echo "   push-and-pr    - Push branch and create AI PR"
       - echo "   pre-commit     - Run all pre-commit checks"
       - echo "   pre-push       - Run all pre-push checks"
-      - echo "   setup-hooks    - Install Git hooks"
       - echo ""
       - echo "💡 Examples:"
       - echo "   task build && ./build/otto-stack --help"

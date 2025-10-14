@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Kafka Topic Initialization Script
-# This script creates Kafka topics based on configuration
+# This script creates Kafka topics based on otto-stack configuration
 
 set -e
 
@@ -13,9 +13,9 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-KAFKA_BROKER="kafka:29092"
-CONFIG_FILE="/tmp/kafka/topics-config.json"
-DEFAULT_PARTITIONS=1
+KAFKA_BROKER="kafka-broker:29092"
+CONFIG_FILE="/config/otto-stack-config.yml"
+DEFAULT_PARTITIONS=3
 DEFAULT_REPLICATION_FACTOR=1
 
 # Helper functions
@@ -47,6 +47,104 @@ wait_for_kafka() {
             log_success "Kafka is ready!"
             return 0
         fi
+
+        log_info "Attempt $attempt/$max_attempts - Kafka not ready yet..."
+        sleep 2
+        ((attempt++))
+    done
+
+    log_error "Kafka failed to start within expected time"
+    return 1
+}
+
+# Check if configuration file exists and has Kafka services
+check_config() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        log_warning "No otto-stack configuration found at $CONFIG_FILE"
+        return 1
+    fi
+
+    # Check if Kafka services are enabled
+    local kafka_enabled=$(yq '.stack.enabled[]' "$CONFIG_FILE" 2>/dev/null | grep -E "kafka" || true)
+    
+    if [ -z "$kafka_enabled" ]; then
+        log_info "No Kafka services enabled, skipping topic creation"
+        return 1
+    fi
+
+    return 0
+}
+
+# Create Kafka topics
+create_kafka_topics() {
+    log_info "Creating Kafka topics..."
+
+    # Get project name for prefixing
+    local project_name=$(yq '.project.name' "$CONFIG_FILE")
+    
+    # Get topic names from service configuration or use defaults
+    local topic_names=$(yq '.service-configuration.kafka-topics.topic_names // ["events", "notifications", "audit-logs"]' "$CONFIG_FILE")
+    
+    # Get topic configuration
+    local partitions=$(yq '.service-configuration.kafka-topics.partitions // 3' "$CONFIG_FILE")
+    local replication_factor=$(yq '.service-configuration.kafka-topics.replication_factor // 1' "$CONFIG_FILE")
+    
+    # Convert YAML array to bash array
+    local topics=()
+    while IFS= read -r topic; do
+        topic=$(echo "$topic" | sed 's/^"//;s/"$//')
+        topics+=("$topic")
+    done < <(echo "$topic_names" | yq '.[]')
+
+    if [ ${#topics[@]} -eq 0 ]; then
+        log_info "No Kafka topics configured"
+        return 0
+    fi
+
+    log_info "Found ${#topics[@]} Kafka topic(s) to create"
+
+    # Create each topic
+    for topic_name in "${topics[@]}"; do
+        local full_topic_name="${project_name}-${topic_name}"
+        
+        log_info "Creating Kafka topic: $full_topic_name (partitions: $partitions, replication: $replication_factor)"
+        
+        if kafka-topics --bootstrap-server "$KAFKA_BROKER" \
+           --create --topic "$full_topic_name" \
+           --partitions "$partitions" \
+           --replication-factor "$replication_factor" \
+           --if-not-exists > /dev/null 2>&1; then
+            log_success "Created Kafka topic: $full_topic_name"
+        else
+            log_error "Failed to create Kafka topic: $full_topic_name"
+        fi
+    done
+}
+
+# Main execution
+main() {
+    log_info "Starting Kafka topic initialization..."
+
+    # Check configuration
+    if ! check_config; then
+        log_info "Exiting - no Kafka services to initialize"
+        exit 0
+    fi
+
+    # Wait for Kafka to be ready
+    if ! wait_for_kafka; then
+        log_error "Kafka is not ready, exiting"
+        exit 1
+    fi
+
+    # Create topics
+    create_kafka_topics
+
+    log_success "Kafka topic initialization completed!"
+}
+
+# Run main function
+main "$@"
 
         log_info "Attempt $attempt/$max_attempts - Kafka not ready yet..."
         sleep 2
