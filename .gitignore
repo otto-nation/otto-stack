@@ -11,6 +11,8 @@ out/
 otto-stack-linux
 otto-stack-macos
 otto-stack-windows.exe
+otto-stack
+!otto-stack/
 
 # Documentation build artifacts (Hugo)
 docs-site/public/
