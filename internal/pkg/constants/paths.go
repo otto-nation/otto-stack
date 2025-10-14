@@ -22,12 +22,6 @@ const (
 	ServicesDir = "internal/config/services"
 )
 
-// Template file names
-const (
-	EnvTemplate           = "env.template"
-	DockerComposeTemplate = "docker-compose.template"
-)
-
 // Configuration URLs
 const (
 	ConfigDocsURL    = "https://github.com/otto-nation/otto-stack/tree/main/docs-site/content/configuration.md"

@@ -108,16 +108,6 @@ func (h *InitHandler) validateDirectoryStructure() error {
 	return nil
 }
 
-// findTemplateFile finds a template file from candidates
-func (h *InitHandler) findTemplateFile(candidates []string, templateType string) (string, error) {
-	for _, candidate := range candidates {
-		if _, err := os.Stat(candidate); err == nil {
-			return candidate, nil
-		}
-	}
-	return "", fmt.Errorf("no %s found in any of the expected locations", templateType)
-}
-
 // isCommandAvailable checks if a command is available in PATH
 func (h *InitHandler) isCommandAvailable(command string) bool {
 	if command == "" {
