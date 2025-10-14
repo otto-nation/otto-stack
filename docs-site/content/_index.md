@@ -119,7 +119,6 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 - 📖 [Documentation](/)
 - 🐛 [Issues](https://github.com/otto-nation/otto-stack/issues)
-- 💬 [Discussions](https://github.com/otto-nation/otto-stack/discussions)
 
 ---
 
