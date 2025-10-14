@@ -3,7 +3,7 @@ title: "otto-stack"
 description: "A powerful development stack management tool built in Go for streamlined local development automation"
 lead: "Streamline your local development with powerful CLI tools and automated service management"
 date: "2025-10-01"
-lastmod: "2025-10-13"
+lastmod: "2025-10-14"
 draft: false
 weight: 50
 toc: true
@@ -119,7 +119,6 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 - 📖 [Documentation](/)
 - 🐛 [Issues](https://github.com/otto-nation/otto-stack/issues)
-- 💬 [Discussions](https://github.com/otto-nation/otto-stack/discussions)
 
 ---
 
