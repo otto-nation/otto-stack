@@ -13,7 +13,7 @@ options:
   - default_topics_enabled
 examples:
   - "kafka-topics --create --bootstrap-server localhost:9092 --topic test --partitions 3 --replication-factor 1"
-usage_notes: "Initializes default Kafka topics for development. Runs once on startup."
+usage_notes: "Initializes default Kafka topics for development. Runs once on startup via init container."
 links:
   - "https://kafka.apache.org/documentation/#quickstart_createtopic"
 
@@ -25,12 +25,6 @@ docker:
   restart: "no"
   networks:
     - otto-stack
-  command: |
-    bash -c "
-      apk add --no-cache jq bash
-      chmod +x /usr/local/bin/init-kafka-topics.sh
-      /usr/local/bin/init-kafka-topics.sh
-    "
 
 cli_commands:
   create_topic: "docker exec ${PROJECT_NAME:-otto-stack}-kafka-broker kafka-topics --create --bootstrap-server localhost:9092 --topic test --partitions 3 --replication-factor 1"

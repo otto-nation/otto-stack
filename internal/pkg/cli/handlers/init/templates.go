@@ -10,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
@@ -145,7 +146,7 @@ func (h *InitHandler) generateInitEnvFile(services []string, projectConfig inter
 	return os.WriteFile("otto-stack/.env.generated", []byte(result.String()), 0644)
 }
 
-// generateInitDockerCompose generates docker-compose.yml during init using template
+// generateInitDockerCompose generates docker-compose.yml during init using programmatic generation
 func (h *InitHandler) generateInitDockerCompose(services []string, projectConfig interface{}) error {
 	pc := projectConfig.(*struct {
 		Project struct {
@@ -157,95 +158,24 @@ func (h *InitHandler) generateInitDockerCompose(services []string, projectConfig
 		}
 	})
 
-	// Load template
-	var templateContent []byte
-	candidates := []string{
-		"internal/config/docker-compose.template",
-		"config/docker-compose.template",
-		"otto-stack/docker-compose.template",
-	}
+	ui.Info("Generating docker-compose files...")
 
-	if templatePath, err := h.findTemplateFile(candidates, "docker-compose template"); err == nil {
-		content, err := os.ReadFile(templatePath)
-		if err != nil {
-			return fmt.Errorf("failed to read docker-compose template: %w", err)
-		}
-		templateContent = content
-	} else {
-		templateContent = config.EmbeddedDockerComposeTemplate
-		if len(templateContent) == 0 {
-			return fmt.Errorf("no docker-compose template found and no embedded template available")
-		}
-	}
-
-	// Parse template with custom functions
-	tmpl, err := template.New("docker-compose").Funcs(template.FuncMap{
-		"toYamlArray": func(arr []string) string {
-			if len(arr) == 0 {
-				return "[]"
-			}
-			result := "["
-			for i, item := range arr {
-				if i > 0 {
-					result += ", "
-				}
-				result += fmt.Sprintf(`"%s"`, item)
-			}
-			result += "]"
-			return result
-		},
-	}).Parse(string(templateContent))
+	// Create compose generator
+	generator, err := compose.NewGenerator(pc.Project.Name, "internal/config/services")
 	if err != nil {
-		return fmt.Errorf("failed to parse docker-compose template: %w", err)
+		return fmt.Errorf("failed to create compose generator: %w", err)
 	}
 
-	// Prepare template data
-	var templateServices []struct {
-		Name   string
-		Config *types.ServiceConfig
-	}
-	var volumes []string
-
-	for _, serviceName := range services {
-		serviceConfig, err := utils.NewServiceUtils().LoadServiceConfig(serviceName)
-		if err != nil {
-			ui.Warning("Failed to load config for %s: %v", serviceName, err)
-			continue
-		}
-
-		templateServices = append(templateServices, struct {
-			Name   string
-			Config *types.ServiceConfig
-		}{
-			Name:   serviceName,
-			Config: serviceConfig,
-		})
-
-		// Collect volumes
-		for _, volume := range serviceConfig.Volumes {
-			volumeName := fmt.Sprintf("%s-%s", pc.Project.Name, volume.Name)
-			volumes = append(volumes, volumeName)
-		}
+	// Generate docker-compose.yml
+	composeYAML, err := generator.GenerateYAML(services)
+	if err != nil {
+		return fmt.Errorf("failed to generate docker-compose YAML: %w", err)
 	}
 
-	data := struct {
-		ProjectName string
-		Services    []struct {
-			Name   string
-			Config *types.ServiceConfig
-		}
-		Volumes []string
-	}{
-		ProjectName: pc.Project.Name,
-		Services:    templateServices,
-		Volumes:     volumes,
+	// Write docker-compose.yml
+	if err := os.WriteFile("otto-stack/docker-compose.yml", composeYAML, 0644); err != nil {
+		return fmt.Errorf("failed to write docker-compose.yml: %w", err)
 	}
 
-	// Execute template
-	var result strings.Builder
-	if err := tmpl.Execute(&result, data); err != nil {
-		return fmt.Errorf("failed to execute docker-compose template: %w", err)
-	}
-
-	return os.WriteFile("otto-stack/docker-compose.yml", []byte(result.String()), 0644)
+	return nil
 }

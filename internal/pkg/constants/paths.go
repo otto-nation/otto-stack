@@ -24,8 +24,7 @@ const (
 
 // Template file names
 const (
-	EnvTemplate           = "env.template"
-	DockerComposeTemplate = "docker-compose.template"
+	EnvTemplate = "env.template"
 )
 
 // Configuration URLs
