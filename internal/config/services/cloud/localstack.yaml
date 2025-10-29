@@ -1,0 +1,31 @@
+name: localstack
+description: Complete LocalStack AWS emulation environment
+category: cloud
+type: composite
+visibility: visible
+
+components:
+  - localstack-core
+  - localstack-init
+
+dependencies:
+  required: []
+  soft: []
+  conflicts: []
+  provides: [aws-emulation, cloud-services]
+
+documentation:
+  examples:
+    - "aws --endpoint-url=http://localhost:4566 s3 ls"
+    - "aws --endpoint-url=http://localhost:4566 sqs list-queues"
+  usage_notes: "Complete LocalStack setup with core services and automatic resource initialization"
+  links:
+    - "https://docs.localstack.cloud/"
+  web_interfaces:
+    - name: LocalStack Dashboard
+      url: "http://localhost:8055"
+      description: LocalStack web dashboard
+  use_cases:
+    - Complete AWS service emulation for local development
+    - Cloud service testing without AWS costs
+    - Offline development environment with pre-configured resources

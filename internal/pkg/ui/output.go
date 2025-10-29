@@ -20,7 +20,7 @@ func NewOutput() *Output {
 }
 
 // Success prints a success message
-func (o *Output) Success(msg string, args ...interface{}) {
+func (o *Output) Success(msg string, args ...any) {
 	if o.Quiet {
 		return
 	}
@@ -33,7 +33,7 @@ func (o *Output) Success(msg string, args ...interface{}) {
 }
 
 // Error prints an error message
-func (o *Output) Error(msg string, args ...interface{}) {
+func (o *Output) Error(msg string, args ...any) {
 	formatted := fmt.Sprintf(msg, args...)
 	if o.NoColor {
 		fmt.Fprintf(os.Stderr, "❌ %s\n", formatted)
@@ -43,7 +43,7 @@ func (o *Output) Error(msg string, args ...interface{}) {
 }
 
 // Warning prints a warning message
-func (o *Output) Warning(msg string, args ...interface{}) {
+func (o *Output) Warning(msg string, args ...any) {
 	if o.Quiet {
 		return
 	}
@@ -56,7 +56,7 @@ func (o *Output) Warning(msg string, args ...interface{}) {
 }
 
 // Info prints an info message
-func (o *Output) Info(msg string, args ...interface{}) {
+func (o *Output) Info(msg string, args ...any) {
 	if o.Quiet {
 		return
 	}
@@ -69,7 +69,7 @@ func (o *Output) Info(msg string, args ...interface{}) {
 }
 
 // Header prints a styled header
-func (o *Output) Header(msg string, args ...interface{}) {
+func (o *Output) Header(msg string, args ...any) {
 	if o.Quiet {
 		return
 	}
@@ -82,7 +82,7 @@ func (o *Output) Header(msg string, args ...interface{}) {
 }
 
 // SubHeader prints a styled sub-header
-func (o *Output) SubHeader(msg string, args ...interface{}) {
+func (o *Output) SubHeader(msg string, args ...any) {
 	if o.Quiet {
 		return
 	}
@@ -123,7 +123,7 @@ func (o *Output) Progress(msg string, fn func() error) error {
 }
 
 // Muted prints muted text
-func (o *Output) Muted(msg string, args ...interface{}) {
+func (o *Output) Muted(msg string, args ...any) {
 	if o.Quiet {
 		return
 	}
@@ -152,13 +152,13 @@ func (o *Output) Box(title, content string) {
 var DefaultOutput = NewOutput()
 
 // Convenience functions for global use
-func Success(msg string, args ...interface{})    { DefaultOutput.Success(msg, args...) }
-func Error(msg string, args ...interface{})      { DefaultOutput.Error(msg, args...) }
-func Warning(msg string, args ...interface{})    { DefaultOutput.Warning(msg, args...) }
-func Info(msg string, args ...interface{})       { DefaultOutput.Info(msg, args...) }
-func Header(msg string, args ...interface{})     { DefaultOutput.Header(msg, args...) }
-func SubHeader(msg string, args ...interface{})  { DefaultOutput.SubHeader(msg, args...) }
+func Success(msg string, args ...any)            { DefaultOutput.Success(msg, args...) }
+func Error(msg string, args ...any)              { DefaultOutput.Error(msg, args...) }
+func Warning(msg string, args ...any)            { DefaultOutput.Warning(msg, args...) }
+func Info(msg string, args ...any)               { DefaultOutput.Info(msg, args...) }
+func Header(msg string, args ...any)             { DefaultOutput.Header(msg, args...) }
+func SubHeader(msg string, args ...any)          { DefaultOutput.SubHeader(msg, args...) }
 func List(items []string)                        { DefaultOutput.List(items) }
 func Progress(msg string, fn func() error) error { return DefaultOutput.Progress(msg, fn) }
-func Muted(msg string, args ...interface{})      { DefaultOutput.Muted(msg, args...) }
+func Muted(msg string, args ...any)              { DefaultOutput.Muted(msg, args...) }
 func Box(title, content string)                  { DefaultOutput.Box(title, content) }

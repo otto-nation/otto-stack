@@ -29,21 +29,36 @@ func GenerateConfig(projectName, environment string, services []string, validati
 	}
 	builder.WriteString("\n")
 
-	// Overrides section
-	builder.WriteString("# Service-specific overrides\n")
+	// Service configuration section
+	builder.WriteString("# Service-specific configuration\n")
 	builder.WriteString(fmt.Sprintf("# Service configuration options: %s\n", constants.ServiceConfigURL))
-	builder.WriteString(fmt.Sprintf("%s: {}\n\n", constants.OverridesSection))
+	builder.WriteString(fmt.Sprintf("%s: {}\n\n", constants.ServiceConfigurationSection))
 
 	// Validation section
 	builder.WriteString(fmt.Sprintf("%s:\n", constants.ValidationSection))
-	builder.WriteString(fmt.Sprintf("  skip_warnings: %t\n", getBoolValue(validation, "skip_warnings", constants.DefaultSkipWarnings)))
-	builder.WriteString(fmt.Sprintf("  allow_multiple_databases: %t\n\n", getBoolValue(validation, "allow_multiple_databases", constants.DefaultAllowMultipleDBs)))
+
+	validationDefaults := map[string]bool{
+		"skip_warnings":            constants.DefaultSkipWarnings,
+		"allow_multiple_databases": constants.DefaultAllowMultipleDBs,
+	}
+
+	for key, defaultValue := range validationDefaults {
+		builder.WriteString(fmt.Sprintf("  %s: %t\n", key, getBoolValue(validation, key, defaultValue)))
+	}
+	builder.WriteString("\n")
 
 	// Advanced section
 	builder.WriteString(fmt.Sprintf("%s:\n", constants.AdvancedSection))
-	builder.WriteString(fmt.Sprintf("  auto_start: %t\n", getBoolValue(advanced, "auto_start", constants.DefaultAutoStart)))
-	builder.WriteString(fmt.Sprintf("  pull_latest_images: %t\n", getBoolValue(advanced, "pull_latest_images", constants.DefaultPullLatestImages)))
-	builder.WriteString(fmt.Sprintf("  cleanup_on_recreate: %t\n", getBoolValue(advanced, "cleanup_on_recreate", constants.DefaultCleanupOnRecreate)))
+
+	advancedDefaults := map[string]bool{
+		"auto_start":          constants.DefaultAutoStart,
+		"pull_latest_images":  constants.DefaultPullLatestImages,
+		"cleanup_on_recreate": constants.DefaultCleanupOnRecreate,
+	}
+
+	for key, defaultValue := range advancedDefaults {
+		builder.WriteString(fmt.Sprintf("  %s: %t\n", key, getBoolValue(advanced, key, defaultValue)))
+	}
 
 	return builder.String()
 }

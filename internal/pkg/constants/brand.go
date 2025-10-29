@@ -13,6 +13,9 @@ const (
 	MsgStopping     = "Stopping " + AppNameTitle
 	MsgRestarting   = "Restarting " + AppNameTitle
 	MsgStatus       = AppNameTitle + " Status"
+	MsgLogs         = AppNameTitle + " Logs"
+	MsgConnecting   = "Connecting to %s"
+	MsgCleaning     = "Cleaning up " + AppNameTitle
 
 	// Success messages
 	MsgInitSuccess    = AppNameLower + " initialized successfully!"
