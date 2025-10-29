@@ -60,32 +60,47 @@ func (g *Generator) addServiceEnv(content *strings.Builder, serviceName string) 
 		return nil
 	}
 
-	content.WriteString("# ============================================================================\n")
-	fmt.Fprintf(content, "# %s (%s)\n", strings.ToUpper(serviceName), serviceConfig.Description)
-	content.WriteString("# ============================================================================\n")
+	// Generate env vars in a temporary buffer first
+	var envVars strings.Builder
+	hasEnvVars := false
 
 	// Add service-specific environment variables
 	switch serviceName {
 	case "postgres":
-		g.addPostgresEnv(content)
+		g.addPostgresEnv(&envVars)
+		hasEnvVars = true
 	case "mysql":
-		g.addMySQLEnv(content)
+		g.addMySQLEnv(&envVars)
+		hasEnvVars = true
 	case "redis":
-		g.addRedisEnv(content)
+		g.addRedisEnv(&envVars)
+		hasEnvVars = true
 	case "kafka-broker":
-		g.addKafkaEnv(content)
+		g.addKafkaEnv(&envVars)
+		hasEnvVars = true
 	case "localstack-core":
-		g.addLocalstackEnv(content)
+		g.addLocalstackEnv(&envVars)
+		hasEnvVars = true
 	case "prometheus":
-		g.addPrometheusEnv(content)
+		g.addPrometheusEnv(&envVars)
+		hasEnvVars = true
 	case "jaeger":
-		g.addJaegerEnv(content)
+		g.addJaegerEnv(&envVars)
+		hasEnvVars = true
 	default:
-		// Generic service env vars
-		fmt.Fprintf(content, "# %s configuration\n", strings.ToUpper(serviceName))
+		// No environment variables for this service
+		return nil
 	}
 
-	content.WriteString("\n")
+	// Only add section if we have environment variables
+	if hasEnvVars {
+		content.WriteString("# ============================================================================\n")
+		fmt.Fprintf(content, "# %s (%s)\n", strings.ToUpper(serviceName), serviceConfig.Description)
+		content.WriteString("# ============================================================================\n")
+		content.WriteString(envVars.String())
+		content.WriteString("\n")
+	}
+
 	return nil
 }
 

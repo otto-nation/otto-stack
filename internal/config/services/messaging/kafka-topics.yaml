@@ -1,59 +1,42 @@
 name: kafka-topics
 description: Kafka topic initialization and management service
 category: messaging
-version: "latest"
+visibility: hidden
 
 dependencies:
-  required: [kafka-broker]
+  required:
+  - kafka-broker
   soft: []
   conflicts: []
-  provides: [topic-management]
-
-options:
-  - default_topics_enabled
-examples:
-  - "kafka-topics --create --bootstrap-server localhost:9092 --topic test --partitions 3 --replication-factor 1"
-usage_notes: "Initializes default Kafka topics for development. Runs once on startup via init container."
-links:
-  - "https://kafka.apache.org/documentation/#quickstart_createtopic"
-
-defaults:
-  image: confluentinc/cp-kafka:latest
-  default_topics_enabled: true
+  provides:
+  - topic-management
 
 docker:
+  image: confluentinc/cp-kafka:latest
   restart: "no"
-  networks:
-    - otto-stack
+  command:
+    - "sh"
+    - "-c"
+    - "chmod +x /scripts/kafka-topics-init.sh && /scripts/kafka-topics-init.sh"
+  simple_volumes:
+    - ./otto-stack/otto-stack-config.yml:/config/otto-stack-config.yml:ro
+    - ./otto-stack/scripts:/scripts:ro
 
-cli_commands:
-  create_topic: "docker exec ${PROJECT_NAME:-otto-stack}-kafka-broker kafka-topics --create --bootstrap-server localhost:9092 --topic test --partitions 3 --replication-factor 1"
-  produce_message: "docker exec -it ${PROJECT_NAME:-otto-stack}-kafka-broker kafka-console-producer --bootstrap-server localhost:9092 --topic test"
-  consume_messages: "docker exec -it ${PROJECT_NAME:-otto-stack}-kafka-broker kafka-console-consumer --bootstrap-server localhost:9092 --topic test --from-beginning"
+service_configuration:
+  - name: docker_image
+    type: string
+    description: Docker image to use for Kafka topics initialization
+    default: confluentinc/cp-kafka:latest
+    example: confluentinc/cp-kafka:7.4.0
+    required: false
 
-default_topics:
-  - name: "test"
-    partitions: 3
-    replication_factor: 1
-    description: "Default test topic for development"
-  - name: "events"
-    partitions: 6
-    replication_factor: 1
-    description: "General application events topic"
-  - name: "user-events"
-    partitions: 3
-    replication_factor: 1
-    description: "User-related events topic"
-  - name: "notifications"
-    partitions: 3
-    replication_factor: 1
-    description: "Notifications topic"
-
-docs:
-  - name: Kafka Topics Documentation
-    url: https://kafka.apache.org/documentation/#quickstart_createtopic
-
-use_cases:
-  - Automatic topic creation for development
-  - Topic initialization scripts
-  - Development environment setup
+documentation:
+  examples:
+    - "kafka-topics --bootstrap-server localhost:9092 --list"
+  usage_notes: "Dynamically creates Kafka topics based on otto-stack configuration and service overrides"
+  links:
+    - "https://kafka.apache.org/documentation/"
+  use_cases:
+    - Automatic Kafka topic creation based on configuration
+    - Configurable topic names, partitions, and replication
+    - Project-specific topic naming
