@@ -2,16 +2,13 @@ package core
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"path/filepath"
+	"strings"
 
-	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
-	pkgUtils "github.com/otto-nation/otto-stack/internal/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -32,51 +29,54 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		ui.Header(constants.MsgStatus)
 	}
 
-	// Check if otto-stack is initialized
-	configPath := filepath.Join(constants.DevStackDir, constants.ConfigFileName)
-	if !pkgUtils.FileExists(configPath) {
-		utils.HandleError(ciFlags, errors.New(constants.ErrNotInitialized))
-		return nil
-	}
-
-	// Load project configuration
-	cfg, err := LoadProjectConfig(configPath)
+	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		utils.HandleError(ciFlags, fmt.Errorf("failed to load configuration: %w", err))
+		utils.HandleError(ciFlags, err)
 		return nil
 	}
-
-	// Create Docker client
-	logger := base.Logger.(loggerAdapter)
-	dockerClient, err := docker.NewClient(logger.SlogLogger())
-	if err != nil {
-		utils.HandleError(ciFlags, fmt.Errorf("failed to create Docker client: %w", err))
-		return nil
-	}
-	defer func() {
-		if err := dockerClient.Close(); err != nil {
-			base.Logger.Error("Failed to close Docker client", "error", err)
-		}
-	}()
+	defer cleanup()
 
 	// Determine services to check
 	serviceNames := args
 	if len(serviceNames) == 0 {
-		serviceNames = cfg.Stack.Enabled
+		serviceNames = setup.Config.Stack.Enabled
+	}
+
+	// Apply same service resolution as up command
+	serviceUtils := utils.NewServiceUtils()
+	resolvedServices, err := serviceUtils.ResolveServices(serviceNames)
+	if err != nil {
+		utils.HandleError(ciFlags, fmt.Errorf("failed to resolve services: %w", err))
+		return nil
 	}
 
 	// Get service status
-	statuses, err := dockerClient.Containers().List(ctx, cfg.Project.Name, serviceNames)
+	statuses, err := setup.DockerClient.Containers().List(ctx, setup.Config.Project.Name, resolvedServices)
 	if err != nil {
 		utils.HandleError(ciFlags, fmt.Errorf("failed to get service status: %w", err))
 		return nil
 	}
 
 	// Handle CI-friendly output
-	utils.OutputResult(ciFlags, map[string]interface{}{
-		"services": statuses,
-		"count":    len(statuses),
-	}, constants.ExitSuccess)
+	if ciFlags.JSON {
+		utils.OutputResult(ciFlags, map[string]any{
+			"services": statuses,
+			"count":    len(statuses),
+		}, constants.ExitSuccess)
+		return nil
+	}
+
+	// Display user-friendly status
+	if len(statuses) == 0 {
+		ui.Info("No services are currently running")
+		return nil
+	}
+
+	fmt.Printf("%-20s %-12s %s\n", constants.StatusHeaderService, constants.StatusHeaderState, constants.StatusHeaderHealth)
+	fmt.Println(strings.Repeat(constants.StatusSeparator, 45))
+	for _, status := range statuses {
+		fmt.Printf("%-20s %-12s %s\n", status.Name, status.State, status.Health)
+	}
 
 	return nil
 }

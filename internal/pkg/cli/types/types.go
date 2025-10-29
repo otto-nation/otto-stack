@@ -2,8 +2,11 @@ package types
 
 // ServiceConfig represents the structure of service.yaml files
 type ServiceConfig struct {
-	Name        string `yaml:"name"`
-	Description string `yaml:"description"`
+	Name        string   `yaml:"name"`
+	Description string   `yaml:"description"`
+	Type        string   `yaml:"type,omitempty"`       // "composite" for composite services
+	Visibility  string   `yaml:"visibility,omitempty"` // "hidden" to hide from interactive selection
+	Components  []string `yaml:"components,omitempty"` // List of component services for composite type
 	Defaults    struct {
 		Image string `yaml:"image"`
 		Port  int    `yaml:"port"`
@@ -11,12 +14,12 @@ type ServiceConfig struct {
 	Environment map[string]string `yaml:"environment"`
 	Docker      struct {
 		// Single service configuration (legacy)
-		Restart     string      `yaml:"restart,omitempty"`
-		Command     interface{} `yaml:"command,omitempty"` // Can be string or []string
-		Networks    []string    `yaml:"networks,omitempty"`
-		MemoryLimit string      `yaml:"memory_limit,omitempty"`
-		Environment []string    `yaml:"environment,omitempty"`
-		ExtraHosts  []string    `yaml:"extra_hosts,omitempty"`
+		Restart     string   `yaml:"restart,omitempty"`
+		Command     any      `yaml:"command,omitempty"` // Can be string or []string
+		Networks    []string `yaml:"networks,omitempty"`
+		MemoryLimit string   `yaml:"memory_limit,omitempty"`
+		Environment []string `yaml:"environment,omitempty"`
+		ExtraHosts  []string `yaml:"extra_hosts,omitempty"`
 		HealthCheck struct {
 			Test        []string `yaml:"test"`
 			Interval    string   `yaml:"interval"`
@@ -36,14 +39,14 @@ type ServiceConfig struct {
 
 // DockerService represents a single service in multi-service configuration
 type DockerService struct {
-	Image       string      `yaml:"image"`
-	Restart     string      `yaml:"restart,omitempty"`
-	Command     interface{} `yaml:"command,omitempty"` // Can be string or []string
-	Networks    []string    `yaml:"networks,omitempty"`
-	MemoryLimit string      `yaml:"memory_limit,omitempty"`
-	Environment []string    `yaml:"environment,omitempty"`
-	ExtraHosts  []string    `yaml:"extra_hosts,omitempty"`
-	DependsOn   []string    `yaml:"depends_on,omitempty"`
+	Image       string   `yaml:"image"`
+	Restart     string   `yaml:"restart,omitempty"`
+	Command     any      `yaml:"command,omitempty"` // Can be string or []string
+	Networks    []string `yaml:"networks,omitempty"`
+	MemoryLimit string   `yaml:"memory_limit,omitempty"`
+	Environment []string `yaml:"environment,omitempty"`
+	ExtraHosts  []string `yaml:"extra_hosts,omitempty"`
+	DependsOn   []string `yaml:"depends_on,omitempty"`
 	HealthCheck struct {
 		Test        []string `yaml:"test"`
 		Interval    string   `yaml:"interval"`
@@ -53,16 +56,44 @@ type DockerService struct {
 	} `yaml:"health_check,omitempty"`
 }
 
+// ServiceOption represents a configurable option for a service
+type ServiceOption struct {
+	Name        string   `json:"name"`
+	Type        string   `json:"type"`
+	Description string   `json:"description"`
+	Default     string   `json:"default,omitempty"`
+	Example     string   `json:"example,omitempty"`
+	Required    bool     `json:"required,omitempty"`
+	Values      []string `json:"values,omitempty"`
+}
+
 // ServiceInfo represents service information for display
 type ServiceInfo struct {
-	Name         string
-	Description  string
-	Category     string
-	Dependencies []string
-	Options      []string
-	Examples     []string
-	UsageNotes   string
-	Links        []string
+	Name                 string
+	Description          string
+	Category             string
+	Type                 string   // "composite" for composite services
+	Visibility           string   // "hidden" to hide from interactive selection
+	Components           []string // List of component services for composite type
+	Dependencies         []string
+	ServiceConfiguration []ServiceOption
+	Documentation        ServiceDocumentation
+}
+
+// ServiceDocumentation represents documentation fields for a service
+type ServiceDocumentation struct {
+	Examples      []string
+	UsageNotes    string
+	Links         []string
+	WebInterfaces []WebInterface
+	UseCases      []string
+}
+
+// WebInterface represents a web interface for a service
+type WebInterface struct {
+	Name        string `yaml:"name"`
+	URL         string `yaml:"url"`
+	Description string `yaml:"description"`
 }
 
 // ServiceStatus represents the status of a service

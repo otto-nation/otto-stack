@@ -2,11 +2,42 @@ package compose
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/scripts"
 )
+
+// QuotedStringSlice ensures strings are quoted in YAML output
+type QuotedStringSlice []string
+
+func (q QuotedStringSlice) MarshalYAML() (interface{}, error) {
+	if len(q) == 0 {
+		return nil, nil
+	}
+
+	// Create a slice of yaml.Node with quoted strings
+	var nodes []*yaml.Node
+	for _, s := range q {
+		node := &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Value: s,
+			Style: yaml.DoubleQuotedStyle,
+		}
+		nodes = append(nodes, node)
+	}
+
+	return &yaml.Node{
+		Kind:    yaml.SequenceNode,
+		Content: nodes,
+	}, nil
+}
 
 // ComposeService represents a Docker Compose service configuration
 type ComposeService struct {
@@ -15,25 +46,24 @@ type ComposeService struct {
 	Environment map[string]string `yaml:"environment,omitempty"`
 	Volumes     []string          `yaml:"volumes,omitempty"`
 	DependsOn   []string          `yaml:"depends_on,omitempty"`
-	Command     []string          `yaml:"command,omitempty"`
+	Command     QuotedStringSlice `yaml:"command,omitempty"`
 	HealthCheck *HealthCheck      `yaml:"healthcheck,omitempty"`
 	Restart     string            `yaml:"restart,omitempty"`
 }
 
 // HealthCheck represents Docker health check configuration
 type HealthCheck struct {
-	Test     []string `yaml:"test"`
-	Interval string   `yaml:"interval,omitempty"`
-	Timeout  string   `yaml:"timeout,omitempty"`
-	Retries  int      `yaml:"retries,omitempty"`
+	Test     QuotedStringSlice `yaml:"test"`
+	Interval string            `yaml:"interval,omitempty"`
+	Timeout  string            `yaml:"timeout,omitempty"`
+	Retries  int               `yaml:"retries,omitempty"`
 }
 
 // ComposeFile represents a complete Docker Compose file
 type ComposeFile struct {
-	Version  string                    `yaml:"version"`
 	Services map[string]ComposeService `yaml:"services"`
-	Volumes  map[string]interface{}    `yaml:"volumes,omitempty"`
-	Networks map[string]interface{}    `yaml:"networks,omitempty"`
+	Volumes  map[string]any            `yaml:"volumes,omitempty"`
+	Networks map[string]any            `yaml:"networks,omitempty"`
 }
 
 // Generator handles docker-compose file generation
@@ -46,7 +76,7 @@ type Generator struct {
 func NewGenerator(projectName string, servicesPath string) (*Generator, error) {
 	registry, err := services.NewServiceRegistry(servicesPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load service registry: %w", err)
+		return nil, fmt.Errorf("failed to create service registry: %w", err)
 	}
 
 	return &Generator{
@@ -58,24 +88,207 @@ func NewGenerator(projectName string, servicesPath string) (*Generator, error) {
 // Generate creates a docker-compose file for the specified services
 func (g *Generator) Generate(serviceNames []string) (*ComposeFile, error) {
 	compose := &ComposeFile{
-		Version:  "3.8",
 		Services: make(map[string]ComposeService),
-		Volumes:  make(map[string]interface{}),
-		Networks: make(map[string]interface{}),
+		Volumes:  make(map[string]any),
+		Networks: make(map[string]any),
 	}
 
 	// Add default network
-	compose.Networks["default"] = map[string]interface{}{
+	compose.Networks["default"] = map[string]any{
 		"name": fmt.Sprintf("%s-network", g.projectName),
 	}
 
-	for _, serviceName := range serviceNames {
+	// Use service utils for proper dependency resolution and composite expansion
+	serviceUtils := utils.NewServiceUtils()
+
+	// First expand composite services, then resolve dependencies
+	expandedServices, err := serviceUtils.ExpandCompositeServices(serviceNames)
+	if err != nil {
+		return nil, fmt.Errorf("failed to expand composite services: %w", err)
+	}
+
+	resolvedServices, err := serviceUtils.ResolveDependencies(expandedServices)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve dependencies: %w", err)
+	}
+
+	// Use the resolved services list (which excludes configuration and composite services)
+	allServices := resolvedServices
+
+	// Write scripts only if needed
+	if err := g.writeRequiredScripts(allServices); err != nil {
+		return nil, err
+	}
+
+	// Separate container vs configuration services
+	containerServices := []string{}
+	configServices := make(map[string][]services.ServiceDefinition) // target -> configs
+
+	for _, serviceName := range allServices {
+		serviceDef, exists := g.registry.GetService(serviceName)
+		if !exists {
+			return nil, fmt.Errorf("service %s not found", serviceName)
+		}
+
+		if serviceDef.Type == constants.ServiceTypeConfiguration {
+			target := serviceDef.TargetService
+			configServices[target] = append(configServices[target], serviceDef)
+		} else {
+			containerServices = append(containerServices, serviceName)
+		}
+	}
+
+	// Add container services with merged configurations
+	for _, serviceName := range containerServices {
 		if err := g.addService(compose, serviceName); err != nil {
 			return nil, fmt.Errorf("failed to add service %s: %w", serviceName, err)
+		}
+
+		// Apply configuration services
+		if configs, exists := configServices[serviceName]; exists {
+			if err := g.mergeConfigurations(compose, serviceName, configs); err != nil {
+				return nil, fmt.Errorf("failed to merge configurations for %s: %w", serviceName, err)
+			}
 		}
 	}
 
 	return compose, nil
+}
+
+// GetRequiredPorts extracts all ports from the generated compose file
+func (g *Generator) GetRequiredPorts(serviceNames []string) (map[string][]string, error) {
+	compose, err := g.Generate(serviceNames)
+	if err != nil {
+		return nil, err
+	}
+
+	ports := make(map[string][]string)
+	for serviceName, service := range compose.Services {
+		if len(service.Ports) > 0 {
+			var servicePorts []string
+			for _, port := range service.Ports {
+				// Extract host port from "host:container" format
+				if strings.Contains(port, ":") {
+					hostPort := strings.Split(port, ":")[0]
+					servicePorts = append(servicePorts, hostPort)
+				} else {
+					servicePorts = append(servicePorts, port)
+				}
+			}
+			if len(servicePorts) > 0 {
+				ports[serviceName] = servicePorts
+			}
+		}
+	}
+
+	return ports, nil
+}
+
+// mergeConfigurations applies configuration services to a container service
+func (g *Generator) mergeConfigurations(compose *ComposeFile, serviceName string, configs []services.ServiceDefinition) error {
+	service := compose.Services[serviceName]
+
+	for _, config := range configs {
+		// Merge environment additions
+		if len(config.EnvironmentAdditions) > 0 {
+			if service.Environment == nil {
+				service.Environment = make(map[string]string)
+			}
+			for key, value := range config.EnvironmentAdditions {
+				// For SERVICES key, append instead of replace
+				if key == "SERVICES" {
+					if existing, exists := service.Environment[key]; exists && existing != "" {
+						service.Environment[key] = existing + "," + value
+					} else {
+						service.Environment[key] = value
+					}
+				} else {
+					service.Environment[key] = value
+				}
+			}
+		}
+	}
+
+	compose.Services[serviceName] = service
+	return nil
+}
+
+// resolveDependencies resolves all dependencies recursively and returns a unique list
+//
+//nolint:unused // Used internally for dependency resolution
+func (g *Generator) resolveDependencies(serviceNames []string) ([]string, error) {
+	resolved := make(map[string]bool)
+	var result []string
+
+	var resolve func(serviceName string) error
+	resolve = func(serviceName string) error {
+		if resolved[serviceName] {
+			return nil
+		}
+
+		// Get service definition
+		serviceDef, exists := g.registry.GetService(serviceName)
+		if !exists {
+			return fmt.Errorf("service %s not found", serviceName)
+		}
+
+		// Resolve dependencies first
+		for _, dep := range serviceDef.Dependencies.Required {
+			if err := resolve(dep); err != nil {
+				return err
+			}
+		}
+
+		// Add this service
+		if !resolved[serviceName] {
+			resolved[serviceName] = true
+			result = append(result, serviceName)
+		}
+
+		return nil
+	}
+
+	// Resolve all requested services
+	for _, serviceName := range serviceNames {
+		if err := resolve(serviceName); err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
+}
+
+// expandCompositeServices expands composite services to their component services
+//
+//nolint:unused // Used for recursive composite service expansion
+func (g *Generator) expandCompositeServices(serviceNames []string) ([]string, error) {
+	var expandedServices []string
+
+	for _, serviceName := range serviceNames {
+		if g.registry != nil {
+			if serviceDef, exists := g.registry.GetService(serviceName); exists {
+				if serviceDef.Type == constants.ServiceTypeComposite && len(serviceDef.Components) > 0 {
+					// Recursively expand composite services (in case components are also composite)
+					componentServices, err := g.expandCompositeServices(serviceDef.Components)
+					if err != nil {
+						return nil, fmt.Errorf("failed to expand components of %s: %w", serviceName, err)
+					}
+					expandedServices = append(expandedServices, componentServices...)
+				} else {
+					// Regular service, keep as-is
+					expandedServices = append(expandedServices, serviceName)
+				}
+			} else {
+				// Service not found in registry, keep as-is
+				expandedServices = append(expandedServices, serviceName)
+			}
+		} else {
+			// No registry, keep as-is
+			expandedServices = append(expandedServices, serviceName)
+		}
+	}
+
+	return expandedServices, nil
 }
 
 // GenerateYAML generates the docker-compose YAML content
@@ -90,275 +303,162 @@ func (g *Generator) GenerateYAML(serviceNames []string) ([]byte, error) {
 
 // addService adds a specific service to the compose file based on service definitions
 func (g *Generator) addService(compose *ComposeFile, serviceName string) error {
-	switch serviceName {
-	case "postgres":
-		g.addPostgres(compose)
-	case "redis":
-		g.addRedis(compose)
-	case "mysql":
-		g.addMySQL(compose)
-	case "kafka-broker":
-		g.addKafka(compose)
-	case "zookeeper":
-		g.addZookeeper(compose)
-	case "prometheus":
-		g.addPrometheus(compose)
-	case "jaeger":
-		g.addJaeger(compose)
-	case "localstack-core":
-		g.addLocalstack(compose)
-	default:
-		return fmt.Errorf("unknown service: %s", serviceName)
+	// Try to get service from registry first
+	if g.registry != nil {
+		if serviceDef, exists := g.registry.GetService(serviceName); exists {
+			return g.addServiceFromDefinition(compose, serviceName, serviceDef)
+		}
 	}
 	return nil
 }
 
-// Service-specific generators
-func (g *Generator) addPostgres(compose *ComposeFile) {
-	volumeName := fmt.Sprintf("%s-postgres-data", g.projectName)
-	compose.Volumes[volumeName] = nil
-
-	compose.Services["postgres"] = ComposeService{
-		Image: "postgres:15-alpine",
-		Environment: map[string]string{
-			"POSTGRES_DB":       g.projectName,
-			"POSTGRES_USER":     "postgres",
-			"POSTGRES_PASSWORD": "postgres",
-		},
-		Ports:   []string{"5432:5432"},
-		Volumes: []string{fmt.Sprintf("%s:/var/lib/postgresql/data", volumeName)},
-		HealthCheck: &HealthCheck{
-			Test:     []string{"CMD-SHELL", "pg_isready -U postgres"},
-			Interval: "10s",
-			Timeout:  "5s",
-			Retries:  5,
-		},
-		Restart: "unless-stopped",
-	}
-}
-
-func (g *Generator) addRedis(compose *ComposeFile) {
-	volumeName := fmt.Sprintf("%s-redis-data", g.projectName)
-	compose.Volumes[volumeName] = nil
-
-	compose.Services["redis"] = ComposeService{
-		Image:   "redis:7-alpine",
-		Ports:   []string{"6379:6379"},
-		Volumes: []string{fmt.Sprintf("%s:/data", volumeName)},
-		HealthCheck: &HealthCheck{
-			Test:     []string{"CMD", "redis-cli", "ping"},
-			Interval: "10s",
-			Timeout:  "3s",
-			Retries:  3,
-		},
-		Restart: "unless-stopped",
-	}
-}
-
-func (g *Generator) addMySQL(compose *ComposeFile) {
-	volumeName := fmt.Sprintf("%s-mysql-data", g.projectName)
-	compose.Volumes[volumeName] = nil
-
-	compose.Services["mysql"] = ComposeService{
-		Image: "mysql:8.0",
-		Environment: map[string]string{
-			"MYSQL_ROOT_PASSWORD": "root",
-			"MYSQL_DATABASE":      g.projectName,
-			"MYSQL_USER":          "mysql",
-			"MYSQL_PASSWORD":      "mysql",
-		},
-		Ports:   []string{"3306:3306"},
-		Volumes: []string{fmt.Sprintf("%s:/var/lib/mysql", volumeName)},
-		HealthCheck: &HealthCheck{
-			Test:     []string{"CMD", "mysqladmin", "ping", "-h", "localhost"},
-			Interval: "10s",
-			Timeout:  "5s",
-			Retries:  5,
-		},
-		Restart: "unless-stopped",
-	}
-}
-
-func (g *Generator) addKafka(compose *ComposeFile) {
-	kafkaVolume := fmt.Sprintf("%s-kafka-data", g.projectName)
-	compose.Volumes[kafkaVolume] = nil
-
-	// Add Zookeeper if not already present
-	if _, exists := compose.Services["zookeeper"]; !exists {
-		g.addZookeeper(compose)
+// addServiceFromDefinition creates a compose service from a service definition
+func (g *Generator) addServiceFromDefinition(compose *ComposeFile, serviceName string, def services.ServiceDefinition) error {
+	// Skip composite services - they don't have their own containers
+	if def.Type == constants.ServiceTypeComposite {
+		return nil
 	}
 
-	compose.Services["kafka"] = ComposeService{
-		Image: "confluentinc/cp-kafka:latest",
-		Environment: map[string]string{
-			"KAFKA_BROKER_ID":                        "1",
-			"KAFKA_ZOOKEEPER_CONNECT":                "zookeeper:2181",
-			"KAFKA_ADVERTISED_LISTENERS":             "PLAINTEXT://localhost:9092",
-			"KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR": "1",
-		},
-		Ports:     []string{"9092:9092"},
-		DependsOn: []string{"zookeeper"},
-		Volumes:   []string{fmt.Sprintf("%s:/var/lib/kafka/data", kafkaVolume)},
-		Restart:   "unless-stopped",
-	}
+	// Hidden services can still be processed if they're needed as dependencies
+	// Only skip them if they're truly not needed (this filtering happens at selection time)
 
-	// Add Kafka init container for topic creation
-	g.addKafkaInit(compose)
-}
-
-func (g *Generator) addZookeeper(compose *ComposeFile) {
-	zookeeperVolume := fmt.Sprintf("%s-zookeeper-data", g.projectName)
-	compose.Volumes[zookeeperVolume] = nil
-
-	compose.Services["zookeeper"] = ComposeService{
-		Image: "confluentinc/cp-zookeeper:latest",
-		Environment: map[string]string{
-			"ZOOKEEPER_CLIENT_PORT": "2181",
-			"ZOOKEEPER_TICK_TIME":   "2000",
-		},
-		Volumes: []string{fmt.Sprintf("%s:/var/lib/zookeeper/data", zookeeperVolume)},
-		Restart: "unless-stopped",
-	}
-}
-
-func (g *Generator) addKafkaInit(compose *ComposeFile) {
-	initScript := `#!/bin/bash
-set -e
-
-# Wait for Kafka to be ready
-echo "Waiting for Kafka to be ready..."
-while ! kafka-topics --bootstrap-server kafka:9092 --list > /dev/null 2>&1; do
-    echo "Kafka not ready yet, waiting..."
-    sleep 2
-done
-
-echo "Creating default topics..."
-
-# Create default topics
-kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic events --partitions 3 --replication-factor 1
-kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic notifications --partitions 1 --replication-factor 1
-kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic logs --partitions 1 --replication-factor 1
-
-echo "Kafka topics created successfully"
-`
-
-	compose.Services["kafka-init"] = ComposeService{
-		Image:     "confluentinc/cp-kafka:latest",
-		DependsOn: []string{"kafka"},
-		Command: []string{
-			"bash", "-c", initScript,
-		},
-		Restart: "no",
-	}
-}
-
-func (g *Generator) addLocalstack(compose *ComposeFile) {
-	volumeName := fmt.Sprintf("%s-localstack-data", g.projectName)
-	compose.Volumes[volumeName] = nil
-
-	compose.Services["localstack"] = ComposeService{
-		Image: "localstack/localstack:latest",
-		Environment: map[string]string{
-			"SERVICES":    "s3,dynamodb,sqs,sns,lambda",
-			"DEBUG":       "1",
-			"DATA_DIR":    "/tmp/localstack/data",
-			"DOCKER_HOST": "unix:///var/run/docker.sock",
-		},
-		Ports: []string{
-			"4566:4566",           // LocalStack main port
-			"4510-4559:4510-4559", // External service ports
-		},
-		Volumes: []string{
-			fmt.Sprintf("%s:/tmp/localstack", volumeName),
-			"/var/run/docker.sock:/var/run/docker.sock",
-		},
+	service := ComposeService{
 		Restart: "unless-stopped",
 	}
 
-	// Add LocalStack init container for AWS resource creation
-	g.addLocalstackInit(compose)
+	// Set image from docker.image or docker_image option in service_configuration
+	if def.Docker.Image != "" {
+		service.Image = def.Docker.Image
+	} else {
+		// Check service_configuration for docker_image option
+		for _, option := range def.ServiceConfiguration {
+			if option.Name == "docker_image" && option.Default != "" {
+				service.Image = option.Default
+				break
+			}
+		}
+	}
+
+	// Configure environment variables from Docker section only
+	if len(def.Docker.Environment) > 0 {
+		if service.Environment == nil {
+			service.Environment = make(map[string]string)
+		}
+		for _, env := range def.Docker.Environment {
+			// Parse KEY=VALUE format
+			parts := strings.SplitN(env, "=", 2)
+			if len(parts) == 2 {
+				service.Environment[parts[0]] = parts[1]
+			}
+		}
+	}
+
+	// Configure ports from Docker section only
+	if len(def.Docker.Ports) > 0 {
+		service.Ports = def.Docker.Ports
+	}
+
+	// Configure volumes - handle both simple string volumes and VolumeConfig
+	if len(def.Docker.SimpleVolumes) > 0 {
+		for _, vol := range def.Docker.SimpleVolumes {
+			// Resolve relative paths to prevent nested otto-stack directories
+			resolvedVol := strings.Replace(vol, "./"+constants.DevStackDir+"/", "./", 1)
+			service.Volumes = append(service.Volumes, resolvedVol)
+		}
+	}
+
+	// Configure complex volumes - process VolumeConfig to create volume mounts
+	for _, vol := range def.Docker.Volumes {
+		volumeName := fmt.Sprintf("%s-%s", g.projectName, vol.Name)
+		compose.Volumes[volumeName] = map[string]interface{}{}
+
+		// Add volume mount to service
+		volumeMount := fmt.Sprintf("%s:%s", volumeName, vol.Mount)
+		service.Volumes = append(service.Volumes, volumeMount)
+	}
+
+	// Configure health check
+	if len(def.Docker.HealthCheck.Test) > 0 {
+		service.HealthCheck = &HealthCheck{
+			Test:     QuotedStringSlice(def.Docker.HealthCheck.Test),
+			Interval: def.Docker.HealthCheck.Interval,
+			Timeout:  def.Docker.HealthCheck.Timeout,
+			Retries:  def.Docker.HealthCheck.Retries,
+		}
+	}
+
+	// Configure restart policy - handle init containers generically
+	if def.Docker.Restart != "" {
+		service.Restart = def.Docker.Restart
+	}
+
+	// Services with restart: "no" are treated as init containers
+	// They should run once and exit, not appear as persistent services
+
+	// Configure command
+	if len(def.Docker.Command) > 0 {
+		service.Command = QuotedStringSlice(def.Docker.Command)
+	}
+
+	// Configure dependencies
+	if len(def.Dependencies.Required) > 0 {
+		service.DependsOn = def.Dependencies.Required
+	}
+	if len(def.Docker.DependsOn) > 0 {
+		service.DependsOn = append(service.DependsOn, def.Docker.DependsOn...)
+	}
+
+	compose.Services[serviceName] = service
+	return nil
 }
 
-func (g *Generator) addLocalstackInit(compose *ComposeFile) {
-	initScript := `#!/bin/bash
-set -e
-
-# Wait for LocalStack to be ready
-echo "Waiting for LocalStack to be ready..."
-while ! curl -s http://localstack:4566/_localstack/health > /dev/null; do
-    echo "LocalStack not ready yet, waiting..."
-    sleep 2
-done
-
-echo "Creating AWS resources..."
-
-# Create default SQS queues
-aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name events-queue --region us-east-1
-aws --endpoint-url=http://localstack:4566 sqs create-queue --queue-name notifications-queue --region us-east-1
-
-# Create default SNS topics
-aws --endpoint-url=http://localstack:4566 sns create-topic --name events-topic --region us-east-1
-aws --endpoint-url=http://localstack:4566 sns create-topic --name notifications-topic --region us-east-1
-
-# Create default DynamoDB table
-aws --endpoint-url=http://localstack:4566 dynamodb create-table \
-    --table-name app-data \
-    --attribute-definitions AttributeName=id,AttributeType=S \
-    --key-schema AttributeName=id,KeyType=HASH \
-    --billing-mode PAY_PER_REQUEST \
-    --region us-east-1
-
-# Create default S3 bucket
-aws --endpoint-url=http://localstack:4566 s3 mb s3://app-bucket --region us-east-1
-
-echo "AWS resources created successfully"
-`
-
-	compose.Services["localstack-init"] = ComposeService{
-		Image:     "amazon/aws-cli:latest",
-		DependsOn: []string{"localstack"},
-		Command: []string{
-			"bash", "-c", initScript,
-		},
-		Environment: map[string]string{
-			"AWS_ACCESS_KEY_ID":     "test",
-			"AWS_SECRET_ACCESS_KEY": "test",
-			"AWS_DEFAULT_REGION":    "us-east-1",
-		},
-		Restart: "no",
+// writeRequiredScripts writes only the scripts needed for enabled services
+func (g *Generator) writeRequiredScripts(services []string) error {
+	scriptMap := map[string]string{
+		constants.ServiceKafkaTopics:    constants.KafkaTopicsInitScript,
+		constants.ServiceLocalstackInit: constants.LocalstackInitScript,
 	}
+
+	scriptContent := map[string]string{
+		constants.KafkaTopicsInitScript: scripts.KafkaTopicsInitScript,
+		constants.LocalstackInitScript:  scripts.LocalstackInitScript,
+	}
+
+	var scriptsToWrite []string
+	for _, service := range services {
+		if scriptFile, exists := scriptMap[service]; exists {
+			scriptsToWrite = append(scriptsToWrite, scriptFile)
+		}
+	}
+
+	if len(scriptsToWrite) == 0 {
+		return nil
+	}
+
+	scriptsDir := filepath.Join(constants.DevStackDir, constants.ScriptsDir)
+	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
+		return fmt.Errorf("failed to create scripts directory: %w", err)
+	}
+
+	for _, scriptFile := range scriptsToWrite {
+		scriptPath := filepath.Join(scriptsDir, scriptFile)
+		content := scriptContent[scriptFile]
+		if err := os.WriteFile(scriptPath, []byte(content), 0755); err != nil {
+			return fmt.Errorf("failed to write script %s: %w", scriptFile, err)
+		}
+	}
+
+	return nil
 }
 
-func (g *Generator) addPrometheus(compose *ComposeFile) {
-	volumeName := fmt.Sprintf("%s-prometheus-data", g.projectName)
-	compose.Volumes[volumeName] = nil
-
-	compose.Services["prometheus"] = ComposeService{
-		Image:   "prom/prometheus:latest",
-		Ports:   []string{"9090:9090"},
-		Volumes: []string{fmt.Sprintf("%s:/prometheus", volumeName)},
-		Command: []string{
-			"--config.file=/etc/prometheus/prometheus.yml",
-			"--storage.tsdb.path=/prometheus",
-			"--web.console.libraries=/etc/prometheus/console_libraries",
-			"--web.console.templates=/etc/prometheus/consoles",
-		},
-		Restart: "unless-stopped",
+// isServiceEnabled checks if a service is in the list of enabled services
+//
+//nolint:unused // Used by writeRequiredScripts method
+func (g *Generator) isServiceEnabled(services []string, serviceName string) bool {
+	for _, service := range services {
+		if service == serviceName {
+			return true
+		}
 	}
-}
-
-func (g *Generator) addJaeger(compose *ComposeFile) {
-	compose.Services["jaeger"] = ComposeService{
-		Image: "jaegertracing/all-in-one:latest",
-		Environment: map[string]string{
-			"COLLECTOR_OTLP_ENABLED": "true",
-		},
-		Ports: []string{
-			"16686:16686", // Jaeger UI
-			"14268:14268", // Jaeger collector
-			"4317:4317",   // OTLP gRPC
-			"4318:4318",   // OTLP HTTP
-		},
-		Restart: "unless-stopped",
-	}
+	return false
 }

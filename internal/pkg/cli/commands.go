@@ -277,16 +277,20 @@ type loggerAdapter struct {
 	logger *slog.Logger
 }
 
-func (l *loggerAdapter) Info(msg string, args ...interface{}) {
+func (l *loggerAdapter) Info(msg string, args ...any) {
 	l.logger.Info(msg, args...)
 }
 
-func (l *loggerAdapter) Error(msg string, args ...interface{}) {
+func (l *loggerAdapter) Error(msg string, args ...any) {
 	l.logger.Error(msg, args...)
 }
 
-func (l *loggerAdapter) Debug(msg string, args ...interface{}) {
+func (l *loggerAdapter) Debug(msg string, args ...any) {
 	l.logger.Debug(msg, args...)
+}
+
+func (l *loggerAdapter) SlogLogger() *slog.Logger {
+	return l.logger
 }
 
 // NewDoctorCommand creates the doctor command

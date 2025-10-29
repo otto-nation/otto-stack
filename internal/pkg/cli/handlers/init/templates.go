@@ -29,14 +29,14 @@ func (h *InitHandler) generateConfig(name, environment string, services []string
 }
 
 // generateInitialComposeFiles generates initial compose files during init
-func (h *InitHandler) generateInitialComposeFiles(services []string, projectName, environment string, validation, advanced map[string]bool) error {
+func (h *InitHandler) generateInitialComposeFiles(services []string, projectName string, validation, advanced map[string]bool) error {
 	projectConfig := &ProjectConfig{
 		Project: struct {
 			Name        string
 			Environment string
 		}{
 			Name:        projectName,
-			Environment: environment,
+			Environment: constants.DefaultEnvironment,
 		},
 		Stack: struct {
 			Enabled []string

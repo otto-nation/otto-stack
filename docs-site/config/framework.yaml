@@ -180,7 +180,6 @@ integrations:
     notes: "Framework services work alongside Datadog agents"
 
   docker_compose:
-    version: "3.8"
     generate_unified_file: true
 
 # Resource limits (for development safety)

@@ -489,44 +489,44 @@ func TestStyles(t *testing.T) {
 func TestOutput_MessageFormatting(t *testing.T) {
 	tests := []struct {
 		name     string
-		method   func(*Output, string, ...interface{})
+		method   func(*Output, string, ...any)
 		message  string
-		args     []interface{}
+		args     []any
 		expected string
 	}{
 		{
 			name:     "success with args",
 			method:   (*Output).Success,
 			message:  "Operation %s completed in %d seconds",
-			args:     []interface{}{"backup", 5},
+			args:     []any{"backup", 5},
 			expected: "Operation backup completed in 5 seconds",
 		},
 		{
 			name:     "error with args",
 			method:   (*Output).Error,
 			message:  "Failed to connect to %s on port %d",
-			args:     []interface{}{"database", 5432},
+			args:     []any{"database", 5432},
 			expected: "Failed to connect to database on port 5432",
 		},
 		{
 			name:     "warning with args",
 			method:   (*Output).Warning,
 			message:  "Service %s is using %d%% CPU",
-			args:     []interface{}{"redis", 85},
+			args:     []any{"redis", 85},
 			expected: "Service redis is using 85% CPU",
 		},
 		{
 			name:     "info with args",
 			method:   (*Output).Info,
 			message:  "Processing %s items",
-			args:     []interface{}{"100"},
+			args:     []any{"100"},
 			expected: "Processing 100 items",
 		},
 		{
 			name:     "header with args",
 			method:   (*Output).Header,
 			message:  "Starting %s deployment",
-			args:     []interface{}{"production"},
+			args:     []any{"production"},
 			expected: "Starting production deployment",
 		},
 	}

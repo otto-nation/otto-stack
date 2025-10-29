@@ -47,9 +47,9 @@ type ServiceManager interface {
 
 // Logger interface for logging operations
 type Logger interface {
-	Info(msg string, args ...interface{})
-	Error(msg string, args ...interface{})
-	Debug(msg string, args ...interface{})
+	Info(msg string, args ...any)
+	Error(msg string, args ...any)
+	Debug(msg string, args ...any)
 }
 
 // ValidateServices validates service names against available services
@@ -72,7 +72,7 @@ func (b *BaseCommand) ValidateServices(serviceNames []string) error {
 		return fmt.Errorf("failed to read services.yaml: %w", err)
 	}
 
-	var servicesConfig map[string]interface{}
+	var servicesConfig map[string]any
 	if err := yaml.Unmarshal(data, &servicesConfig); err != nil {
 		return fmt.Errorf("failed to parse services.yaml: %w", err)
 	}

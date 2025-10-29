@@ -3,7 +3,7 @@ title: "Services"
 description: "Available services and configuration options"
 lead: "Explore all the services you can use with otto-stack"
 date: "2025-10-01"
-lastmod: "2025-10-14"
+lastmod: "2025-10-29"
 draft: false
 weight: 30
 toc: true
@@ -11,7 +11,7 @@ toc: true
 
 # Available Services
 
-14 services available for your development stack.
+17 services available for your development stack.
 
 ## jaeger
 
@@ -19,11 +19,15 @@ Jaeger distributed tracing system for monitoring and troubleshooting microservic
 
 ---
 
+## kafka
+
+Complete Apache Kafka messaging platform with UI and topic management
+
+---
+
 ## kafka-broker
 
 Apache Kafka broker for event streaming and messaging
-
-**Default Port:** 9092
 
 ---
 
@@ -37,7 +41,11 @@ Kafka topic initialization and management service
 
 Web UI for Kafka cluster management and topic browsing
 
-**Default Port:** 8080
+---
+
+## localstack
+
+Complete LocalStack AWS emulation environment
 
 ---
 
@@ -45,13 +53,17 @@ Web UI for Kafka cluster management and topic browsing
 
 LocalStack core AWS service emulator
 
-**Default Port:** 4566
-
 ---
 
 ## localstack-dynamodb
 
 LocalStack DynamoDB NoSQL database emulation
+
+---
+
+## localstack-init
+
+LocalStack AWS resource initialization service
 
 ---
 
@@ -77,15 +89,11 @@ LocalStack SQS (Simple Queue Service) emulation
 
 MySQL relational database for persistent data storage
 
-**Default Port:** 3306
-
 ---
 
 ## postgres
 
 PostgreSQL relational database for persistent data storage
-
-**Default Port:** 5432
 
 ---
 
@@ -93,22 +101,16 @@ PostgreSQL relational database for persistent data storage
 
 Prometheus metrics collection and monitoring system
 
-**Default Port:** 9090
-
 ---
 
 ## redis
 
 Redis in-memory data store for caching and session storage
 
-**Default Port:** 6379
-
 ---
 
 ## zookeeper
 
 Apache Zookeeper coordination service for distributed systems
-
-**Default Port:** 2181
 
 ---

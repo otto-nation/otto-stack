@@ -36,7 +36,7 @@ func GetCIFlags(cmd *cobra.Command) CIFlags {
 }
 
 // OutputResult outputs result in CI-friendly format
-func OutputResult(flags CIFlags, result interface{}, exitCode int) {
+func OutputResult(flags CIFlags, result any, exitCode int) {
 	if flags.JSON {
 		outputJSON(result, exitCode)
 		return
@@ -54,7 +54,7 @@ func OutputResult(flags CIFlags, result interface{}, exitCode int) {
 // HandleError handles errors in CI-friendly way
 func HandleError(flags CIFlags, err error) {
 	if flags.JSON {
-		errorResult := map[string]interface{}{
+		errorResult := map[string]any{
 			"error":     err.Error(),
 			"exit_code": constants.ExitError,
 		}
@@ -66,8 +66,8 @@ func HandleError(flags CIFlags, err error) {
 	os.Exit(constants.ExitError)
 }
 
-func outputJSON(result interface{}, exitCode int) {
-	output := map[string]interface{}{
+func outputJSON(result any, exitCode int) {
+	output := map[string]any{
 		"result":    result,
 		"exit_code": exitCode,
 	}
@@ -79,6 +79,6 @@ func outputJSON(result interface{}, exitCode int) {
 	}
 }
 
-func outputTable(result interface{}) {
+func outputTable(result any) {
 	fmt.Printf("%+v\n", result)
 }

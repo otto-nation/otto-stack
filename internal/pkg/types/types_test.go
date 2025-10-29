@@ -289,9 +289,7 @@ func TestConfigStructure(t *testing.T) {
 			TelemetryEnabled:   false,
 		},
 		Projects: map[string]ProjectConfig{
-			"test-project": {
-				Version: "3.8",
-			},
+			"test-project": {},
 		},
 		Profiles: map[string]Profile{
 			"development": {

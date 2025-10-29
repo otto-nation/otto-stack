@@ -62,31 +62,31 @@ categories:
     name: "Lifecycle Management"
     description: "Commands for starting, stopping, and managing service lifecycles"
     icon: "🚀"
-    commands: ["up", "down", "restart", "scale"]
+    commands: ["up", "down", "restart"]
 
   monitoring:
     name: "Monitoring & Observability"
     description: "Commands for monitoring services and viewing logs"
     icon: "📊"
-    commands: ["status", "logs", "monitor", "doctor"]
+    commands: ["status", "logs", "doctor"]
 
   data:
     name: "Data Management"
     description: "Commands for backup, restore, and data operations"
     icon: "💾"
-    commands: ["backup", "restore", "exec", "connect"]
+    commands: ["exec", "connect"]
 
   maintenance:
     name: "Maintenance & Cleanup"
     description: "Commands for cleanup, initialization, and maintenance"
     icon: "🧹"
-    commands: ["cleanup", "init", "version"]
+    commands: ["cleanup", "init"]
 
   development:
     name: "Development Tools"
-    description: "Commands for development workflow and documentation"
+    description: "Commands for development workflow and validation"
     icon: "🛠️"
-    commands: ["docs", "validate", "services", "deps", "conflicts"]
+    commands: ["validate", "services", "deps", "conflicts"]
 
 commands:
   up:
@@ -320,36 +320,7 @@ commands:
       - "Combine --tail and --since for targeted log viewing"
       - "Use --timestamps to correlate events across services"
 
-  monitor:
-    category: "monitoring"
-    description: "Real-time monitoring dashboard for services"
-    long_description: |
-      Launch an interactive monitoring dashboard showing real-time metrics,
-      logs, and status for all services. Provides a unified view of your
-      development stack health.
-    usage: "monitor [service...]"
-    examples:
-      - command: "otto-stack monitor"
-        description: "Monitor all services"
-      - command: "otto-stack monitor postgres redis"
-        description: "Monitor specific services"
-      - command: "otto-stack monitor --refresh 5"
-        description: "Monitor with custom refresh interval"
-    flags:
-      refresh:
-        short: "r"
-        type: "int"
-        description: "Refresh interval in seconds"
-        default: 2
-      no-logs:
-        type: "bool"
-        description: "Don't show log streams"
-        default: false
-      compact:
-        type: "bool"
-        description: "Use compact display mode"
-        default: false
-    related_commands: ["status", "logs", "doctor"]
+
 
   doctor:
     category: "monitoring"
@@ -483,84 +454,7 @@ commands:
       - "Automatically uses correct client tools for each service"
       - "Use --read-only for safe data exploration"
 
-  backup:
-    category: "data"
-    description: "Backup service data and configurations"
-    long_description: |
-      Create backups of service data, configurations, and state. Supports
-      multiple backup formats and compression. Backups include metadata
-      for easy restoration.
-    usage: "backup [service...]"
-    examples:
-      - command: "otto-stack backup"
-        description: "Backup all services"
-      - command: "otto-stack backup postgres redis"
-        description: "Backup specific services"
-      - command: "otto-stack backup --output ./backups --compress"
-        description: "Backup with compression to custom directory"
-    flags:
-      output:
-        short: "o"
-        type: "string"
-        description: "Output directory for backups"
-        default: "./backups"
-      compress:
-        short: "c"
-        type: "bool"
-        description: "Compress backup files"
-        default: false
-      format:
-        short: "f"
-        type: "string"
-        description: "Backup format (native|sql|json)"
-        default: "native"
-        options: ["native", "sql", "json"]
-      include-config:
-        type: "bool"
-        description: "Include service configurations"
-        default: true
-      exclude-logs:
-        type: "bool"
-        description: "Exclude log files from backup"
-        default: false
-    related_commands: ["restore", "cleanup"]
 
-  restore:
-    category: "data"
-    description: "Restore service data from backups"
-    long_description: |
-      Restore service data and configurations from previously created backups.
-      Supports multiple restore strategies and validation of backup integrity.
-    usage: "restore <service> <backup-path>"
-    examples:
-      - command: "otto-stack restore postgres ./backups/postgres-20240101.sql"
-        description: "Restore PostgreSQL from SQL backup"
-      - command: "otto-stack restore redis ./backups/redis-20240101.rdb"
-        description: "Restore Redis from RDB backup"
-      - command: "otto-stack restore --clean postgres backup.sql"
-        description: "Clean database before restore"
-    flags:
-      clean:
-        type: "bool"
-        description: "Clean existing data before restore"
-        default: false
-      create-db:
-        type: "bool"
-        description: "Create database if it doesn't exist"
-        default: true
-      single-transaction:
-        type: "bool"
-        description: "Perform restore in single transaction"
-        default: false
-      no-owner:
-        type: "bool"
-        description: "Skip ownership commands"
-        default: false
-      validate:
-        type: "bool"
-        description: "Validate backup before restore"
-        default: true
-    related_commands: ["backup", "cleanup"]
 
   cleanup:
     category: "maintenance"
@@ -612,32 +506,7 @@ commands:
       - "Use --dry-run first to see what will be removed"
       - "Be careful with --volumes as it removes all data"
 
-  scale:
-    category: "lifecycle"
-    description: "Scale services up or down"
-    long_description: |
-      Scale the number of running instances for one or more services.
-      Useful for load testing and development scenarios requiring multiple
-      service instances.
-    usage: "scale <service=replicas>..."
-    examples:
-      - command: "otto-stack scale postgres=2"
-        description: "Scale postgres to 2 instances"
-      - command: "otto-stack scale redis=3 postgres=1"
-        description: "Scale multiple services"
-      - command: "otto-stack scale --timeout 60 postgres=2"
-        description: "Scale with custom timeout"
-    flags:
-      timeout:
-        short: "t"
-        type: "int"
-        description: "Timeout for scaling operation"
-        default: 30
-      no-recreate:
-        type: "bool"
-        description: "Don't recreate existing containers"
-        default: false
-    related_commands: ["up", "down", "status"]
+
 
   init:
     category: "maintenance"
@@ -663,49 +532,7 @@ commands:
         default: false
     related_commands: ["docs", "validate"]
 
-  docs:
-    category: "development"
-    description: "Generate and manage documentation"
-    long_description: |
-      Generate documentation from YAML manifests and manage documentation
-      files. Supports multiple output formats and automatic synchronization
-      with documentation websites.
-    usage: "docs [subcommand]"
-    examples:
-      - command: "otto-stack docs"
-        description: "Generate all documentation"
-      - command: "otto-stack docs --commands-only"
-        description: "Generate only command reference"
-      - command: "otto-stack docs --dry-run"
-        description: "Preview documentation changes"
-    flags:
-      commands-only:
-        type: "bool"
-        description: "Generate only command reference"
-        default: false
-      services-only:
-        type: "bool"
-        description: "Generate only services documentation"
-        default: false
-      hugo-sync:
-        type: "bool"
-        description: "Sync to Hugo site"
-        default: true
-      no-hugo-sync:
-        type: "bool"
-        description: "Skip Hugo synchronization"
-        default: false
-      dry-run:
-        type: "bool"
-        description: "Preview changes without writing files"
-        default: false
-      format:
-        short: "f"
-        type: "string"
-        description: "Output format (markdown|html|json)"
-        default: "markdown"
-        options: ["markdown", "html", "json"]
-    related_commands: ["init", "validate"]
+
 
   services:
     category: "development"
@@ -794,36 +621,7 @@ commands:
         default: false
     related_commands: ["doctor", "docs"]
 
-  version:
-    category: "maintenance"
-    description: "Show version information"
-    long_description: |
-      Display version information for otto-stack CLI, Docker, and managed
-      services. Includes build information and dependency versions.
-    usage: "version"
-    examples:
-      - command: "otto-stack version"
-        description: "Show basic version information"
-      - command: "otto-stack version --full"
-        description: "Show detailed version and build info"
-      - command: "otto-stack version --check-updates"
-        description: "Check for available updates"
-    flags:
-      full:
-        short: "f"
-        type: "bool"
-        description: "Show detailed version information"
-        default: false
-      check-updates:
-        type: "bool"
-        description: "Check for available updates"
-        default: false
-      format:
-        type: "string"
-        description: "Output format (table|json|yaml)"
-        default: "table"
-        options: ["table", "json", "yaml"]
-    related_commands: ["doctor"]
+
 
 # Workflow definitions for common task sequences
 workflows:
@@ -846,8 +644,8 @@ workflows:
         description: "Initialize web project"
       - command: "up --profile web"
         description: "Start web development services"
-      - command: "monitor"
-        description: "Monitor all services"
+      - command: "status"
+        description: "Check service status"
 
   cleanup-reset:
     name: "Clean Reset"
@@ -918,9 +716,6 @@ help:
     **View real-time logs:**
     otto-stack logs --follow
 
-    **Backup your data:**
-    otto-stack backup
-
     **Clean up resources:**
     otto-stack cleanup --dry-run
 
@@ -940,5 +735,5 @@ help:
     - Then: otto-stack cleanup --all
 
     **Performance issues:**
-    - Check: otto-stack monitor
-    - Scale services: otto-stack scale <service>=<count>
+    - Check: otto-stack status
+    - Review logs: otto-stack logs --follow

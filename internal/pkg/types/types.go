@@ -68,12 +68,12 @@ type HealthCheck struct {
 
 // ProjectConfig represents project-level configuration
 type ProjectConfig struct {
-	Version    string                 `yaml:"version" json:"version"`
-	Networks   map[string]Network     `yaml:"networks,omitempty" json:"networks,omitempty"`
-	Volumes    map[string]Volume      `yaml:"volumes,omitempty" json:"volumes,omitempty"`
-	Secrets    map[string]Secret      `yaml:"secrets,omitempty" json:"secrets,omitempty"`
-	Profiles   []string               `yaml:"profiles,omitempty" json:"profiles,omitempty"`
-	Extensions map[string]interface{} `yaml:"x-*,omitempty" json:"x-*,omitempty"`
+	Version    string             `yaml:"version" json:"version"`
+	Networks   map[string]Network `yaml:"networks,omitempty" json:"networks,omitempty"`
+	Volumes    map[string]Volume  `yaml:"volumes,omitempty" json:"volumes,omitempty"`
+	Secrets    map[string]Secret  `yaml:"secrets,omitempty" json:"secrets,omitempty"`
+	Profiles   []string           `yaml:"profiles,omitempty" json:"profiles,omitempty"`
+	Extensions map[string]any     `yaml:"x-*,omitempty" json:"x-*,omitempty"`
 }
 
 // Network represents a Docker network configuration
@@ -169,12 +169,12 @@ type TemplateFile struct {
 
 // TemplateVar represents a template variable
 type TemplateVar struct {
-	Name        string      `yaml:"name" json:"name"`
-	Description string      `yaml:"description" json:"description"`
-	Type        string      `yaml:"type" json:"type"` // string, int, bool, choice
-	Default     interface{} `yaml:"default,omitempty" json:"default,omitempty"`
-	Required    bool        `yaml:"required,omitempty" json:"required,omitempty"`
-	Choices     []string    `yaml:"choices,omitempty" json:"choices,omitempty"`
+	Name        string   `yaml:"name" json:"name"`
+	Description string   `yaml:"description" json:"description"`
+	Type        string   `yaml:"type" json:"type"` // string, int, bool, choice
+	Default     any      `yaml:"default,omitempty" json:"default,omitempty"`
+	Required    bool     `yaml:"required,omitempty" json:"required,omitempty"`
+	Choices     []string `yaml:"choices,omitempty" json:"choices,omitempty"`
 }
 
 // Config represents the main application configuration
@@ -197,11 +197,11 @@ type GlobalConfig struct {
 
 // Profile represents a configuration profile
 type Profile struct {
-	Name        string                 `yaml:"name" json:"name"`
-	Description string                 `yaml:"description,omitempty" json:"description,omitempty"`
-	Services    []string               `yaml:"services" json:"services"`
-	Environment map[string]string      `yaml:"environment,omitempty" json:"environment,omitempty"`
-	Overrides   map[string]interface{} `yaml:"overrides,omitempty" json:"overrides,omitempty"`
+	Name                 string            `yaml:"name" json:"name"`
+	Description          string            `yaml:"description,omitempty" json:"description,omitempty"`
+	Services             []string          `yaml:"services" json:"services"`
+	Environment          map[string]string `yaml:"environment,omitempty" json:"environment,omitempty"`
+	ServiceConfiguration map[string]any    `yaml:"service-configuration,omitempty" json:"service-configuration,omitempty"`
 }
 
 // Error represents an application error with context

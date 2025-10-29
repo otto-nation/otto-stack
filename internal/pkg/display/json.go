@@ -17,9 +17,9 @@ func NewJSONFormatter(writer io.Writer) *JSONFormatter {
 
 // FormatStatus formats service status as JSON
 func (f *JSONFormatter) FormatStatus(services []ServiceStatus, options StatusOptions) error {
-	output := map[string]interface{}{
+	output := map[string]any{
 		"services": services,
-		"summary": map[string]interface{}{
+		"summary": map[string]any{
 			"total":   len(services),
 			"running": f.countByState(services, "running"),
 			"healthy": f.countByHealth(services, "healthy"),
@@ -45,7 +45,7 @@ func (f *JSONFormatter) FormatHealth(report HealthReport, options HealthOptions)
 }
 
 // Helper methods
-func (f *JSONFormatter) writeJSON(data interface{}) error {
+func (f *JSONFormatter) writeJSON(data any) error {
 	encoder := json.NewEncoder(f.writer)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(data)

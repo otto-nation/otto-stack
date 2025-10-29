@@ -3,7 +3,7 @@ title: "CLI Reference"
 description: "Complete command reference for otto-stack CLI"
 lead: "Comprehensive reference for all otto-stack CLI commands and their usage"
 date: "2025-10-01"
-lastmod: "2025-10-14"
+lastmod: "2025-10-29"
 draft: false
 weight: 50
 toc: true
@@ -16,6 +16,47 @@ Development stack management tool
 Version: 0.1.0
 
 ## Commands
+
+### cleanup
+
+```
+Clean up unused Docker resources, temporary files, and orphaned data
+created by otto-stack services. Helps reclaim disk space and maintain
+a clean development environment.
+
+Usage:
+  otto-stack cleanup [options] [flags]
+
+Examples:
+  otto-stack cleanup
+    Interactive cleanup with confirmations
+
+  otto-stack cleanup --all --force
+    Clean up everything without prompts
+
+  otto-stack cleanup --dry-run
+    Preview what would be cleaned up
+
+
+
+Flags:
+  -a, --all        Clean up all resources (containers, volumes, images)
+      --dry-run    Show what would be cleaned without doing it
+  -f, --force      Don't prompt for confirmation
+  -i, --images     Remove unused images
+  -n, --networks   Remove unused networks
+  -v, --volumes    Remove unused volumes
+
+Global Flags:
+  -c, --config string     Config file (default: $HOME/.otto-stack.yaml)
+  -h, --help              Show help information
+      --json              Output in JSON format (CI-friendly)
+      --no-color          Disable colored output (CI-friendly)
+      --non-interactive   Run in non-interactive mode (CI-friendly)
+  -q, --quiet             Suppress non-essential output (CI-friendly)
+  -v, --verbose           Enable verbose output
+      --version           Show version information
+```
 
 ### conflicts
 
@@ -35,6 +76,46 @@ Examples:
     Check conflicts between multiple services
 
 
+
+Global Flags:
+  -c, --config string     Config file (default: $HOME/.otto-stack.yaml)
+  -h, --help              Show help information
+      --json              Output in JSON format (CI-friendly)
+      --no-color          Disable colored output (CI-friendly)
+      --non-interactive   Run in non-interactive mode (CI-friendly)
+  -q, --quiet             Suppress non-essential output (CI-friendly)
+  -v, --verbose           Enable verbose output
+      --version           Show version information
+```
+
+### connect
+
+```
+Quickly connect to service databases and management interfaces using
+appropriate client tools. Automatically configures connection parameters
+based on service configuration.
+
+Usage:
+  otto-stack connect <service> [flags]
+
+Examples:
+  otto-stack connect postgres
+    Connect to PostgreSQL database
+
+  otto-stack connect redis
+    Connect to Redis CLI
+
+  otto-stack connect mysql
+    Connect to MySQL database
+
+
+
+Flags:
+  -d, --database string   Database name to connect to
+  -h, --host string       Host to connect to (default "localhost")
+  -p, --port int          Port to connect to
+      --read-only         Connect in read-only mode
+  -u, --user string       Username for connection
 
 Global Flags:
   -c, --config string     Config file (default: $HOME/.otto-stack.yaml)
@@ -158,6 +239,47 @@ Global Flags:
       --version           Show version information
 ```
 
+### exec
+
+```
+Execute commands inside running service containers. Useful for database
+operations, debugging, and maintenance tasks. Supports interactive and
+non-interactive modes.
+
+Usage:
+  otto-stack exec <service> <command> [args...] [flags]
+
+Examples:
+  otto-stack exec postgres psql -U postgres
+    Connect to PostgreSQL with psql
+
+  otto-stack exec redis redis-cli
+    Connect to Redis CLI
+
+  otto-stack exec postgres bash
+    Open bash shell in postgres container
+
+
+
+Flags:
+  -d, --detach           Run command in background
+  -e, --env string       Set environment variables (comma-separated key=value pairs)
+  -i, --interactive      Keep STDIN open (interactive mode) (default true)
+  -t, --tty              Allocate a pseudo-TTY (default true)
+  -u, --user string      Username to execute command as
+  -w, --workdir string   Working directory for command
+
+Global Flags:
+  -c, --config string     Config file (default: $HOME/.otto-stack.yaml)
+  -h, --help              Show help information
+      --json              Output in JSON format (CI-friendly)
+      --no-color          Disable colored output (CI-friendly)
+      --non-interactive   Run in non-interactive mode (CI-friendly)
+  -q, --quiet             Suppress non-essential output (CI-friendly)
+  -v, --verbose           Enable verbose output
+      --version           Show version information
+```
+
 ### init
 
 ```
@@ -189,6 +311,49 @@ Global Flags:
   -h, --help              Show help information
       --json              Output in JSON format (CI-friendly)
       --no-color          Disable colored output (CI-friendly)
+      --non-interactive   Run in non-interactive mode (CI-friendly)
+  -q, --quiet             Suppress non-essential output (CI-friendly)
+  -v, --verbose           Enable verbose output
+      --version           Show version information
+```
+
+### logs
+
+```
+View and follow logs from one or more services. Supports filtering,
+timestamps, and real-time following. Logs from multiple services are
+color-coded for easy identification.
+
+Usage:
+  otto-stack logs [service...] [flags]
+
+Examples:
+  otto-stack logs
+    Show logs from all services
+
+  otto-stack logs postgres redis
+    Show logs from specific services
+
+  otto-stack logs --follow postgres
+    Follow logs from postgres in real-time
+
+  otto-stack logs --tail 100 --since 1h
+    Show last 100 lines from the past hour
+
+
+
+Flags:
+  -f, --follow         Follow log output in real-time
+      --no-color       Disable colored output
+      --no-prefix      Don't show service name prefix
+      --since string   Show logs since timestamp or relative time
+  -t, --tail string    Number of lines to show from end of logs (default "all")
+      --timestamps     Show timestamps in log output
+
+Global Flags:
+  -c, --config string     Config file (default: $HOME/.otto-stack.yaml)
+  -h, --help              Show help information
+      --json              Output in JSON format (CI-friendly)
       --non-interactive   Run in non-interactive mode (CI-friendly)
   -q, --quiet             Suppress non-essential output (CI-friendly)
   -v, --verbose           Enable verbose output

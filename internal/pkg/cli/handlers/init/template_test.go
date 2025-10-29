@@ -69,7 +69,7 @@ func TestGenerateInitialComposeFiles(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.generateInitialComposeFiles([]string{TestServicePostgres}, TestProjectName, TestEnvironmentLocal,
+	err := handler.generateInitialComposeFiles([]string{TestServicePostgres}, TestProjectName,
 		map[string]bool{"skip_warnings": false},
 		map[string]bool{"auto_start": true})
 

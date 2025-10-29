@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	pkgTypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -18,13 +19,13 @@ func NewCompletionHandler() *CompletionHandler {
 
 func (h *CompletionHandler) ValidateArgs(args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf("completion requires exactly one argument (%s)",
+		return fmt.Errorf(constants.MsgCompletionRequiresOneArg.Content,
 			fmt.Sprintf("%v", pkgTypes.AllShellTypeStrings()))
 	}
 
 	shell := pkgTypes.ShellType(args[0])
 	if !shell.IsValid() {
-		return fmt.Errorf("unsupported shell: %s (supported: %v)",
+		return fmt.Errorf(constants.MsgUnsupportedShell.Content,
 			args[0], pkgTypes.AllShellTypeStrings())
 	}
 

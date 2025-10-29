@@ -2,34 +2,125 @@ package services
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/otto-nation/otto-stack/internal/config"
 )
 
 // ServiceRegistry manages service definitions and validation
 type ServiceRegistry struct {
-	services   map[string]ServiceDefinition
-	configPath string
+	services map[string]ServiceDefinition
+}
+
+// ServiceOption represents a configurable option for a service
+type ServiceOption struct {
+	Name        string   `yaml:"name"`
+	Type        string   `yaml:"type"`
+	Description string   `yaml:"description"`
+	Default     string   `yaml:"default,omitempty"`
+	Example     string   `yaml:"example,omitempty"`
+	Required    bool     `yaml:"required,omitempty"`
+	Values      []string `yaml:"values,omitempty"` // for enum types
 }
 
 // ServiceDefinition represents a complete service definition from services.yaml
 type ServiceDefinition struct {
-	Description string   `yaml:"description"`
-	Options     []string `yaml:"options"`
-	Examples    []string `yaml:"examples"`
-	UsageNotes  string   `yaml:"usage_notes"`
-	Links       []string `yaml:"links"`
+	Name                 string          `yaml:"name"`
+	Description          string          `yaml:"description"`
+	Category             string          `yaml:"category"`
+	Type                 string          `yaml:"type,omitempty"`       // "container", "configuration", or "composite"
+	Visibility           string          `yaml:"visibility,omitempty"` // "hidden" to hide from interactive selection
+	Components           []string        `yaml:"components,omitempty"` // List of component services for composite type
+	ServiceConfiguration []ServiceOption `yaml:"service_configuration,omitempty"`
+	Documentation        Documentation   `yaml:"documentation,omitempty"`
+
+	// Configuration service fields
+	TargetService        string            `yaml:"target_service,omitempty"`
+	EnvironmentAdditions map[string]string `yaml:"environment_additions,omitempty"`
+
+	// Dependencies
+	Dependencies ServiceDependencies `yaml:"dependencies,omitempty"`
+
+	// Docker configuration
+	Docker DockerConfig `yaml:"docker,omitempty"`
 
 	// Extended properties
-	Category     string            `yaml:"category,omitempty"`
-	DefaultPort  int               `yaml:"default_port,omitempty"`
-	HealthCheck  HealthCheckConfig `yaml:"health_check,omitempty"`
-	Dependencies []string          `yaml:"dependencies,omitempty"`
-	Tags         []string          `yaml:"tags,omitempty"`
+	DefaultPort int               `yaml:"default_port,omitempty"`
+	HealthCheck HealthCheckConfig `yaml:"health_check,omitempty"`
+	Tags        []string          `yaml:"tags,omitempty"`
+}
+
+// Documentation represents structured documentation for a service
+type Documentation struct {
+	Examples      []string          `yaml:"examples,omitempty"`
+	UsageNotes    string            `yaml:"usage_notes,omitempty"`
+	Links         []string          `yaml:"links,omitempty"`
+	UseCases      []string          `yaml:"use_cases,omitempty"`
+	WebInterfaces []WebInterface    `yaml:"web_interfaces,omitempty"`
+	Docs          []DocLink         `yaml:"docs,omitempty"`
+	CLICommands   map[string]string `yaml:"cli_commands,omitempty"`
+	SpringConfig  SpringConfig      `yaml:"spring_config,omitempty"`
+}
+
+// WebInterface represents a web interface for a service
+type WebInterface struct {
+	Name        string `yaml:"name"`
+	URL         string `yaml:"url"`
+	Description string `yaml:"description"`
+}
+
+// DocLink represents a documentation link
+type DocLink struct {
+	Name string `yaml:"name"`
+	URL  string `yaml:"url"`
+}
+
+// SpringConfig represents Spring Boot configuration
+type SpringConfig struct {
+	Properties []string `yaml:"properties,omitempty"`
+}
+
+// ServiceDependencies represents service dependency configuration
+type ServiceDependencies struct {
+	Required  []string `yaml:"required,omitempty"`
+	Soft      []string `yaml:"soft,omitempty"`
+	Conflicts []string `yaml:"conflicts,omitempty"`
+	Provides  []string `yaml:"provides,omitempty"`
+}
+
+// DockerConfig represents Docker Compose specific configuration
+type DockerConfig struct {
+	Image         string            `yaml:"image,omitempty"`
+	Restart       string            `yaml:"restart,omitempty"`
+	Networks      []string          `yaml:"networks,omitempty"`
+	MemoryLimit   string            `yaml:"memory_limit,omitempty"`
+	Environment   []string          `yaml:"environment,omitempty"`
+	Command       []string          `yaml:"command,omitempty"`
+	HealthCheck   DockerHealthCheck `yaml:"health_check,omitempty"`
+	Ports         []string          `yaml:"ports,omitempty"`
+	Volumes       []VolumeConfig    `yaml:"volumes,omitempty"`        // Complex volume configurations
+	SimpleVolumes []string          `yaml:"simple_volumes,omitempty"` // Simple string volumes (host:container)
+	DependsOn     []string          `yaml:"depends_on,omitempty"`
+}
+
+// DockerHealthCheck represents Docker health check configuration
+type DockerHealthCheck struct {
+	Test        []string `yaml:"test,omitempty"`
+	Interval    string   `yaml:"interval,omitempty"`
+	Timeout     string   `yaml:"timeout,omitempty"`
+	Retries     int      `yaml:"retries,omitempty"`
+	StartPeriod string   `yaml:"start_period,omitempty"`
+}
+
+// VolumeConfig represents volume configuration
+type VolumeConfig struct {
+	Name        string `yaml:"name"`
+	Mount       string `yaml:"mount"`
+	Description string `yaml:"description,omitempty"`
 }
 
 // HealthCheckConfig represents health check configuration
@@ -47,52 +138,70 @@ type ServiceManifest map[string]ServiceDefinition
 // NewServiceRegistry creates a new service registry
 func NewServiceRegistry(configPath string) (*ServiceRegistry, error) {
 	registry := &ServiceRegistry{
-		services:   make(map[string]ServiceDefinition),
-		configPath: configPath,
+		services: make(map[string]ServiceDefinition),
 	}
 
-	if err := registry.Load(); err != nil {
+	if err := registry.LoadFromEmbedded(); err != nil {
 		return nil, fmt.Errorf("failed to load service registry: %w", err)
 	}
 
 	return registry, nil
 }
 
-// Load loads services from the configuration file
-func (r *ServiceRegistry) Load() error {
-	// Resolve config path
-	configPath, err := r.resolveConfigPath()
-	if err != nil {
-		return fmt.Errorf("failed to resolve config path: %w", err)
-	}
+// LoadFromEmbedded loads services from the embedded file system
+func (r *ServiceRegistry) LoadFromEmbedded() error {
+	// Walk through all service directories in the embedded FS
+	categories := []string{"database", "cache", "messaging", "cloud", "observability"}
 
-	// Read the YAML file
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return fmt.Errorf("failed to read services file %s: %w", configPath, err)
-	}
-
-	// Parse YAML
-	var manifest ServiceManifest
-	if err := yaml.Unmarshal(data, &manifest); err != nil {
-		return fmt.Errorf("failed to parse services YAML: %w", err)
-	}
-
-	// Validate and store services
-	for name, definition := range manifest {
-		if err := r.validateServiceDefinition(name, definition); err != nil {
-			return fmt.Errorf("invalid service definition for %s: %w", name, err)
+	for _, category := range categories {
+		categoryPath := fmt.Sprintf("services/%s", category)
+		entries, err := config.EmbeddedServicesFS.ReadDir(categoryPath)
+		if err != nil {
+			continue // Skip if category doesn't exist
 		}
-		r.services[name] = definition
+
+		for _, entry := range entries {
+			if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".yaml") {
+				servicePath := fmt.Sprintf("%s/%s", categoryPath, entry.Name())
+				if err := r.loadServiceFromEmbedded(servicePath); err != nil {
+					return fmt.Errorf("failed to load service from %s: %w", servicePath, err)
+				}
+			}
+		}
 	}
 
 	return nil
 }
 
-// Reload reloads the service registry from the configuration file
-func (r *ServiceRegistry) Reload() error {
-	r.services = make(map[string]ServiceDefinition)
-	return r.Load()
+// loadServiceFromEmbedded loads a single service from the embedded FS
+func (r *ServiceRegistry) loadServiceFromEmbedded(servicePath string) error {
+	data, err := config.EmbeddedServicesFS.ReadFile(servicePath)
+	if err != nil {
+		return fmt.Errorf("failed to read service file: %w", err)
+	}
+
+	var serviceDef ServiceDefinition
+	if err := yaml.Unmarshal(data, &serviceDef); err != nil {
+		return fmt.Errorf("failed to parse service YAML: %w", err)
+	}
+
+	// Extract filename without extension
+	filename := filepath.Base(servicePath)
+	expectedName := strings.TrimSuffix(filename, ".yaml")
+
+	// Validate that filename matches service name
+	if serviceDef.Name != expectedName {
+		return fmt.Errorf("service name '%s' does not match filename '%s' (expected '%s')",
+			serviceDef.Name, filename, expectedName)
+	}
+
+	// Validate and store the service
+	if err := r.validateServiceDefinition(serviceDef.Name, serviceDef); err != nil {
+		return fmt.Errorf("invalid service definition for %s: %w", serviceDef.Name, err)
+	}
+
+	r.services[serviceDef.Name] = serviceDef
+	return nil
 }
 
 // GetService returns a service definition by name
@@ -173,7 +282,7 @@ func (r *ServiceRegistry) GetServiceDependencies(name string) ([]string, error) 
 	if !exists {
 		return nil, fmt.Errorf("service %s not found", name)
 	}
-	return service.Dependencies, nil
+	return service.Dependencies.Required, nil
 }
 
 // GetAllCategories returns all unique service categories
@@ -260,67 +369,54 @@ func (r *ServiceRegistry) GetServiceInfo(name string) (string, error) {
 		info.WriteString(fmt.Sprintf("Default Port: %d\n", service.DefaultPort))
 	}
 
-	if len(service.Dependencies) > 0 {
-		info.WriteString(fmt.Sprintf("Dependencies: %s\n", strings.Join(service.Dependencies, ", ")))
+	if len(service.Dependencies.Required) > 0 {
+		info.WriteString(fmt.Sprintf("Dependencies: %s\n", strings.Join(service.Dependencies.Required, ", ")))
 	}
 
 	if len(service.Tags) > 0 {
 		info.WriteString(fmt.Sprintf("Tags: %s\n", strings.Join(service.Tags, ", ")))
 	}
 
-	if len(service.Options) > 0 {
+	if len(service.ServiceConfiguration) > 0 {
 		info.WriteString("\nConfiguration Options:\n")
-		for _, option := range service.Options {
-			info.WriteString(fmt.Sprintf("  - %s\n", option))
+		for _, option := range service.ServiceConfiguration {
+			info.WriteString(fmt.Sprintf("  • %s (%s)\n", option.Name, option.Type))
+			info.WriteString(fmt.Sprintf("    %s\n", option.Description))
+			if option.Default != "" {
+				info.WriteString(fmt.Sprintf("    Default: %s\n", option.Default))
+			}
+			if option.Example != "" {
+				info.WriteString(fmt.Sprintf("    Example: %s\n", option.Example))
+			}
+			if option.Required {
+				info.WriteString("    Required: Yes\n")
+			}
+			if len(option.Values) > 0 {
+				info.WriteString(fmt.Sprintf("    Allowed values: %s\n", strings.Join(option.Values, ", ")))
+			}
+			info.WriteString("\n")
 		}
 	}
 
-	if len(service.Examples) > 0 {
+	if len(service.Documentation.Examples) > 0 {
 		info.WriteString("\nExamples:\n")
-		for _, example := range service.Examples {
+		for _, example := range service.Documentation.Examples {
 			info.WriteString(fmt.Sprintf("  %s\n", example))
 		}
 	}
 
-	if service.UsageNotes != "" {
-		info.WriteString(fmt.Sprintf("\nUsage Notes:\n%s\n", service.UsageNotes))
+	if service.Documentation.UsageNotes != "" {
+		info.WriteString(fmt.Sprintf("\nUsage Notes:\n%s\n", service.Documentation.UsageNotes))
 	}
 
-	if len(service.Links) > 0 {
+	if len(service.Documentation.Links) > 0 {
 		info.WriteString("\nLinks:\n")
-		for _, link := range service.Links {
+		for _, link := range service.Documentation.Links {
 			info.WriteString(fmt.Sprintf("  - %s\n", link))
 		}
 	}
 
 	return info.String(), nil
-}
-
-// resolveConfigPath resolves the configuration file path
-func (r *ServiceRegistry) resolveConfigPath() (string, error) {
-	if r.configPath == "" {
-		// Try default locations
-		candidates := []string{
-			"internal/config/services/services.yaml",
-			"config/services.yaml",
-			".otto-stack/services.yaml",
-		}
-
-		for _, candidate := range candidates {
-			if _, err := os.Stat(candidate); err == nil {
-				return filepath.Abs(candidate)
-			}
-		}
-
-		return "", fmt.Errorf("no services.yaml found in default locations: %v", candidates)
-	}
-
-	// Use provided path
-	if !filepath.IsAbs(r.configPath) {
-		return filepath.Abs(r.configPath)
-	}
-
-	return r.configPath, nil
 }
 
 // validateServiceDefinition validates a service definition
@@ -344,12 +440,12 @@ func (r *ServiceRegistry) validateServiceDefinition(name string, definition Serv
 	return nil
 }
 
-// LoadDefault loads the service registry from the default location
+// LoadDefaultServiceRegistry loads the service registry from embedded services
 func LoadDefaultServiceRegistry() (*ServiceRegistry, error) {
 	return NewServiceRegistry("")
 }
 
-// LoadFromPath loads the service registry from a specific path
+// LoadServiceRegistryFromPath loads the service registry from embedded services (ignores path)
 func LoadServiceRegistryFromPath(path string) (*ServiceRegistry, error) {
-	return NewServiceRegistry(path)
+	return NewServiceRegistry("")
 }

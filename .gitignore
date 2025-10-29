@@ -13,6 +13,7 @@ otto-stack-macos
 otto-stack-windows.exe
 otto-stack
 !otto-stack/
+otto-stack.yaml
 
 # Documentation build artifacts (Hugo)
 docs-site/public/
@@ -155,3 +156,10 @@ security-results/
 ignore
 .amazonq
 otto-stack-completion.*
+
+# Otto Stack
+otto-stack/.env.generated
+otto-stack/data/
+otto-stack/logs/
+otto-stack/tmp/
+otto-stack/scripts/

@@ -80,7 +80,7 @@ func TestIntegrationFileLogging(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Parse as JSON
-		var logEntry map[string]interface{}
+		var logEntry map[string]any
 		lines := strings.Split(strings.TrimSpace(string(content)), "\n")
 		assert.Greater(t, len(lines), 0)
 
@@ -141,7 +141,7 @@ func TestIntegrationViperConfiguration(t *testing.T) {
 			if strings.TrimSpace(line) == "" {
 				continue
 			}
-			var logEntry map[string]interface{}
+			var logEntry map[string]any
 			err := json.Unmarshal([]byte(line), &logEntry)
 			assert.NoError(t, err, "Line should be valid JSON: %s", line)
 		}
@@ -255,7 +255,7 @@ func TestIntegrationSpecializedLogging(t *testing.T) {
 		if strings.TrimSpace(line) == "" {
 			continue
 		}
-		var logEntry map[string]interface{}
+		var logEntry map[string]any
 		err := json.Unmarshal([]byte(line), &logEntry)
 		assert.NoError(t, err, "Line should be valid JSON: %s", line)
 	}

@@ -39,16 +39,16 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Create display data
-	var displayData []map[string]interface{}
+	var displayData []map[string]any
 	for serviceName, deps := range dependencies {
 		if len(deps) == 0 {
-			displayData = append(displayData, map[string]interface{}{
+			displayData = append(displayData, map[string]any{
 				"Service":      serviceName,
 				"Dependencies": "None",
 			})
 		} else {
 			for _, dep := range deps {
-				displayData = append(displayData, map[string]interface{}{
+				displayData = append(displayData, map[string]any{
 					"Service":      serviceName,
 					"Dependencies": dep,
 				})

@@ -89,6 +89,16 @@ func (u *ServiceUtils) ResolveDependencies(selectedServices []string) ([]string,
 		return selectedServices, err
 	}
 
+	// Pre-expand all composite dependencies
+	expandedServiceMap := make(map[string][]string)
+	for service, deps := range serviceMap {
+		expandedDeps, err := u.ExpandCompositeServices(deps)
+		if err != nil {
+			return selectedServices, err
+		}
+		expandedServiceMap[service] = expandedDeps
+	}
+
 	visited := make(map[string]bool)
 	visiting := make(map[string]bool)
 	var result []string
@@ -103,13 +113,20 @@ func (u *ServiceUtils) ResolveDependencies(selectedServices []string) ([]string,
 		}
 
 		visiting[serviceName] = true
-		for _, dep := range serviceMap[serviceName] {
+		for _, dep := range expandedServiceMap[serviceName] {
 			if err := visit(dep); err != nil {
 				return err
 			}
 		}
 		visiting[serviceName] = false
 		visited[serviceName] = true
+
+		// Only add container services to result
+		serviceConfig, err := u.LoadServiceConfig(serviceName)
+		if err == nil && (serviceConfig.Type == constants.ServiceTypeConfiguration || serviceConfig.Type == constants.ServiceTypeComposite) {
+			return nil
+		}
+
 		result = append(result, serviceName)
 		return nil
 	}
@@ -121,6 +138,45 @@ func (u *ServiceUtils) ResolveDependencies(selectedServices []string) ([]string,
 	}
 
 	return result, nil
+}
+
+// ExpandCompositeServices expands composite services to their component services
+func (u *ServiceUtils) ExpandCompositeServices(selectedServices []string) ([]string, error) {
+	var expandedServices []string
+
+	for _, serviceName := range selectedServices {
+		serviceConfig, err := u.LoadServiceConfig(serviceName)
+		if err != nil {
+			// If service not found, keep as-is (might be a direct service name)
+			expandedServices = append(expandedServices, serviceName)
+			continue
+		}
+
+		if serviceConfig.Type == constants.ServiceTypeComposite && len(serviceConfig.Components) > 0 {
+			// Expand composite service to its components
+			expandedServices = append(expandedServices, serviceConfig.Components...)
+		} else {
+			// Regular service, keep as-is
+			expandedServices = append(expandedServices, serviceName)
+		}
+	}
+
+	return expandedServices, nil
+}
+
+// ResolveServices applies composite expansion and dependency resolution
+func (u *ServiceUtils) ResolveServices(serviceNames []string) ([]string, error) {
+	expandedServices, err := u.ExpandCompositeServices(serviceNames)
+	if err != nil {
+		return serviceNames, fmt.Errorf("failed to expand composite services: %w", err)
+	}
+
+	resolvedServices, err := u.ResolveDependencies(expandedServices)
+	if err != nil {
+		return serviceNames, fmt.Errorf("failed to resolve dependencies: %w", err)
+	}
+
+	return resolvedServices, nil
 }
 
 // Helper methods
@@ -157,6 +213,12 @@ func (u *ServiceUtils) getServicesInCategory(category string) ([]types.ServiceIn
 		if err != nil {
 			continue
 		}
+
+		// Filter out hidden services from interactive selection
+		if serviceInfo.Visibility == "hidden" {
+			continue
+		}
+
 		services = append(services, serviceInfo)
 	}
 
@@ -170,20 +232,21 @@ func (u *ServiceUtils) parseServiceInfo(categoryPath, fileName, serviceName, cat
 		return types.ServiceInfo{}, err
 	}
 
-	var serviceData map[string]interface{}
+	var serviceData map[string]any
 	if err := yaml.Unmarshal(data, &serviceData); err != nil {
 		return types.ServiceInfo{}, err
 	}
 
 	return types.ServiceInfo{
-		Name:         serviceName,
-		Category:     category,
-		Description:  getString(serviceData, "description"),
-		UsageNotes:   getString(serviceData, "usage_notes"),
-		Dependencies: getDependencies(serviceData),
-		Options:      getStringSlice(serviceData["options"]),
-		Examples:     getStringSlice(serviceData["examples"]),
-		Links:        getStringSlice(serviceData["links"]),
+		Name:                 serviceName,
+		Category:             category,
+		Description:          getString(serviceData, "description"),
+		Type:                 getString(serviceData, "type"),
+		Visibility:           getString(serviceData, "visibility"),
+		Components:           getStringSlice(serviceData["components"]),
+		Dependencies:         getDependencies(serviceData),
+		ServiceConfiguration: convertServiceConfiguration(serviceData),
+		Documentation:        parseDocumentation(serviceData),
 	}, nil
 }
 
@@ -233,7 +296,7 @@ func (u *ServiceUtils) parseServiceDependencies(categoryPath, fileName string) (
 		return nil, err
 	}
 
-	var serviceData map[string]interface{}
+	var serviceData map[string]any
 	if err := yaml.Unmarshal(data, &serviceData); err != nil {
 		return nil, err
 	}
@@ -241,8 +304,57 @@ func (u *ServiceUtils) parseServiceDependencies(categoryPath, fileName string) (
 	return getDependencies(serviceData), nil
 }
 
+// parseDocumentation parses documentation section from service data
+func parseDocumentation(serviceData map[string]any) types.ServiceDocumentation {
+	doc := types.ServiceDocumentation{}
+
+	// Check for new documentation structure
+	if docData, exists := serviceData["documentation"]; exists {
+		if docMap, ok := docData.(map[string]any); ok {
+			doc.Examples = getStringSlice(docMap["examples"])
+			doc.UsageNotes = getString(docMap, "usage_notes")
+			doc.Links = getStringSlice(docMap["links"])
+			doc.UseCases = getStringSlice(docMap["use_cases"])
+			doc.WebInterfaces = parseWebInterfaces(docMap["web_interfaces"])
+			return doc
+		}
+	}
+
+	// Fallback to old structure for backward compatibility
+	doc.Examples = getStringSlice(serviceData["examples"])
+	doc.UsageNotes = getString(serviceData, "usage_notes")
+	doc.Links = getStringSlice(serviceData["links"])
+	doc.UseCases = getStringSlice(serviceData["use_cases"])
+	doc.WebInterfaces = parseWebInterfaces(serviceData["web_interfaces"])
+
+	return doc
+}
+
+// parseWebInterfaces parses web interfaces from service data
+func parseWebInterfaces(data any) []types.WebInterface {
+	if data == nil {
+		return nil
+	}
+
+	if interfaces, ok := data.([]any); ok {
+		var result []types.WebInterface
+		for _, item := range interfaces {
+			if interfaceMap, ok := item.(map[string]any); ok {
+				result = append(result, types.WebInterface{
+					Name:        getString(interfaceMap, "name"),
+					URL:         getString(interfaceMap, "url"),
+					Description: getString(interfaceMap, "description"),
+				})
+			}
+		}
+		return result
+	}
+
+	return nil
+}
+
 // Helper functions
-func getString(data map[string]interface{}, key string) string {
+func getString(data map[string]any, key string) string {
 	if val, exists := data[key]; exists {
 		if str, ok := val.(string); ok {
 			return str
@@ -251,12 +363,12 @@ func getString(data map[string]interface{}, key string) string {
 	return ""
 }
 
-func getStringSlice(val interface{}) []string {
+func getStringSlice(val any) []string {
 	if val == nil {
 		return nil
 	}
 
-	if slice, ok := val.([]interface{}); ok {
+	if slice, ok := val.([]any); ok {
 		var result []string
 		for _, item := range slice {
 			if str, ok := item.(string); ok {
@@ -269,13 +381,13 @@ func getStringSlice(val interface{}) []string {
 	return nil
 }
 
-func getDependencies(serviceData map[string]interface{}) []string {
+func getDependencies(serviceData map[string]any) []string {
 	deps, exists := serviceData["dependencies"]
 	if !exists {
 		return nil
 	}
 
-	depsMap, ok := deps.(map[string]interface{})
+	depsMap, ok := deps.(map[string]any)
 	if !ok {
 		return nil
 	}
@@ -286,4 +398,79 @@ func getDependencies(serviceData map[string]interface{}) []string {
 	}
 
 	return getStringSlice(required)
+}
+
+// convertServiceConfiguration converts service configuration from YAML to CLI ServiceOption format
+func convertServiceConfiguration(serviceData map[string]any) []types.ServiceOption {
+	// Check for new service_configuration key first
+	if data := serviceData["service_configuration"]; data != nil {
+		return convertOptionsData(data)
+	}
+
+	// Fallback to old options key for backward compatibility
+	if data := serviceData["options"]; data != nil {
+		return convertOptionsData(data)
+	}
+
+	return nil
+}
+
+// convertOptionsData converts options from YAML to CLI ServiceOption format
+func convertOptionsData(data interface{}) []types.ServiceOption {
+	if data == nil {
+		return nil
+	}
+
+	// Handle both old string slice format and new structured format
+	switch v := data.(type) {
+	case []interface{}:
+		var options []types.ServiceOption
+		for _, item := range v {
+			if optMap, ok := item.(map[interface{}]interface{}); ok {
+				// New structured format
+				option := types.ServiceOption{
+					Name:        getStringFromInterface(optMap, "name"),
+					Type:        getStringFromInterface(optMap, "type"),
+					Description: getStringFromInterface(optMap, "description"),
+					Default:     getStringFromInterface(optMap, "default"),
+					Example:     getStringFromInterface(optMap, "example"),
+					Required:    getBool(optMap, "required"),
+					Values:      getStringSlice(optMap["values"]),
+				}
+				options = append(options, option)
+			} else if str, ok := item.(string); ok {
+				// Old string format - convert to structured
+				option := types.ServiceOption{
+					Name:        str,
+					Type:        "string",
+					Description: fmt.Sprintf("Configuration option: %s", str),
+					Required:    false,
+				}
+				options = append(options, option)
+			}
+		}
+		return options
+	default:
+		return nil
+	}
+}
+
+// getStringFromInterface safely extracts a string value from interface{} map
+func getStringFromInterface(data map[interface{}]interface{}, key string) string {
+	if val, exists := data[key]; exists {
+		if str, ok := val.(string); ok {
+			return str
+		}
+	}
+	return ""
+}
+
+// getBool safely extracts a boolean value from a map
+func getBool(data map[interface{}]interface{}, key string) bool {
+	if val, exists := data[key]; exists {
+		if b, ok := val.(bool); ok {
+			return b
+		}
+	}
+	return false
 }

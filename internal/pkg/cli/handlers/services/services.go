@@ -6,8 +6,8 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -21,28 +21,28 @@ func NewServicesHandler() *ServicesHandler {
 
 // Handle executes the services command
 func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	ui.Header("Available Services")
+	constants.SendMessage(constants.MsgAvailableServices)
 
 	// Get output format
-	format, _ := cmd.Flags().GetString("output")
+	format, _ := cmd.Flags().GetString(constants.FlagOutput)
 
 	// Load services by category
 	serviceUtils := utils.NewServiceUtils()
 	categories, err := serviceUtils.GetServicesByCategory()
 	if err != nil {
-		return fmt.Errorf("failed to load services: %w", err)
+		return fmt.Errorf(constants.MsgFailedLoadServices.Content, err)
 	}
 
 	if len(categories) == 0 {
-		ui.Info("No services available")
+		constants.SendMessage(constants.MsgNoServicesAvailable)
 		return nil
 	}
 
 	// Create display data
-	var displayData []map[string]interface{}
+	var displayData []map[string]any
 	for categoryName, services := range categories {
 		for _, service := range services {
-			displayData = append(displayData, map[string]interface{}{
+			displayData = append(displayData, map[string]any{
 				"Category":    categoryName,
 				"Name":        service.Name,
 				"Description": service.Description,

@@ -53,15 +53,15 @@ type Command struct {
 
 // Flag represents a command line flag definition
 type Flag struct {
-	Short       string      `yaml:"short,omitempty"`
-	Type        string      `yaml:"type"`
-	Description string      `yaml:"description"`
-	Default     interface{} `yaml:"default"`
-	Options     []string    `yaml:"options,omitempty"`
-	Completion  string      `yaml:"completion,omitempty"`
-	Required    bool        `yaml:"required,omitempty"`
-	Hidden      bool        `yaml:"hidden,omitempty"`
-	Deprecated  string      `yaml:"deprecated,omitempty"`
+	Short       string   `yaml:"short,omitempty"`
+	Type        string   `yaml:"type"`
+	Description string   `yaml:"description"`
+	Default     any      `yaml:"default"`
+	Options     []string `yaml:"options,omitempty"`
+	Completion  string   `yaml:"completion,omitempty"`
+	Required    bool     `yaml:"required,omitempty"`
+	Hidden      bool     `yaml:"hidden,omitempty"`
+	Deprecated  string   `yaml:"deprecated,omitempty"`
 }
 
 // Example represents a command usage example

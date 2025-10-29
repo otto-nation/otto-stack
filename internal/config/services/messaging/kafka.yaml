@@ -1,0 +1,36 @@
+name: kafka
+description: Complete Apache Kafka messaging platform with UI and topic management
+category: messaging
+type: composite
+visibility: visible
+
+components:
+  - zookeeper
+  - kafka-broker
+  - kafka-topics
+  - kafka-ui
+
+dependencies:
+  required: []
+  soft: []
+  conflicts: []
+  provides: [messaging, streaming, event-processing]
+
+documentation:
+  examples:
+    - "kafka-console-producer --bootstrap-server localhost:9092 --topic test-topic"
+    - "kafka-console-consumer --bootstrap-server localhost:9092 --topic test-topic --from-beginning"
+  usage_notes: "Complete Kafka setup with Zookeeper coordination, broker, automatic topic creation, and web UI for management"
+  links:
+    - "https://kafka.apache.org/documentation/"
+    - "https://github.com/provectus/kafka-ui"
+  web_interfaces:
+    - name: Kafka UI
+      url: "http://localhost:8080"
+      description: Kafka cluster management and topic browser
+  use_cases:
+    - Event streaming and processing
+    - Message queuing and pub/sub
+    - Real-time data pipelines
+    - Microservices communication
+    - Log aggregation and analytics
