@@ -16,30 +16,72 @@ type ServiceRegistry struct {
 	services map[string]ServiceDefinition
 }
 
+// ServiceOption represents a configurable option for a service
+type ServiceOption struct {
+	Name        string   `yaml:"name"`
+	Type        string   `yaml:"type"`
+	Description string   `yaml:"description"`
+	Default     string   `yaml:"default,omitempty"`
+	Example     string   `yaml:"example,omitempty"`
+	Required    bool     `yaml:"required,omitempty"`
+	Values      []string `yaml:"values,omitempty"` // for enum types
+}
+
 // ServiceDefinition represents a complete service definition from services.yaml
 type ServiceDefinition struct {
-	Name        string   `yaml:"name"`
-	Description string   `yaml:"description"`
-	Category    string   `yaml:"category"`
-	Version     string   `yaml:"version"`
-	Options     []string `yaml:"options"`
-	Examples    []string `yaml:"examples"`
-	UsageNotes  string   `yaml:"usage_notes"`
-	Links       []string `yaml:"links"`
+	Name                 string          `yaml:"name"`
+	Description          string          `yaml:"description"`
+	Category             string          `yaml:"category"`
+	Type                 string          `yaml:"type,omitempty"`       // "container", "configuration", or "composite"
+	Visibility           string          `yaml:"visibility,omitempty"` // "hidden" to hide from interactive selection
+	Components           []string        `yaml:"components,omitempty"` // List of component services for composite type
+	ServiceConfiguration []ServiceOption `yaml:"service_configuration,omitempty"`
+	Documentation        Documentation   `yaml:"documentation,omitempty"`
+
+	// Configuration service fields
+	TargetService        string            `yaml:"target_service,omitempty"`
+	EnvironmentAdditions map[string]string `yaml:"environment_additions,omitempty"`
 
 	// Dependencies
 	Dependencies ServiceDependencies `yaml:"dependencies,omitempty"`
 
 	// Docker configuration
-	Defaults    ServiceDefaults   `yaml:"defaults,omitempty"`
-	Environment map[string]string `yaml:"environment,omitempty"`
-	Docker      DockerConfig      `yaml:"docker,omitempty"`
-	Volumes     []VolumeConfig    `yaml:"volumes,omitempty"`
+	Docker DockerConfig `yaml:"docker,omitempty"`
 
 	// Extended properties
 	DefaultPort int               `yaml:"default_port,omitempty"`
 	HealthCheck HealthCheckConfig `yaml:"health_check,omitempty"`
 	Tags        []string          `yaml:"tags,omitempty"`
+}
+
+// Documentation represents structured documentation for a service
+type Documentation struct {
+	Examples      []string          `yaml:"examples,omitempty"`
+	UsageNotes    string            `yaml:"usage_notes,omitempty"`
+	Links         []string          `yaml:"links,omitempty"`
+	UseCases      []string          `yaml:"use_cases,omitempty"`
+	WebInterfaces []WebInterface    `yaml:"web_interfaces,omitempty"`
+	Docs          []DocLink         `yaml:"docs,omitempty"`
+	CLICommands   map[string]string `yaml:"cli_commands,omitempty"`
+	SpringConfig  SpringConfig      `yaml:"spring_config,omitempty"`
+}
+
+// WebInterface represents a web interface for a service
+type WebInterface struct {
+	Name        string `yaml:"name"`
+	URL         string `yaml:"url"`
+	Description string `yaml:"description"`
+}
+
+// DocLink represents a documentation link
+type DocLink struct {
+	Name string `yaml:"name"`
+	URL  string `yaml:"url"`
+}
+
+// SpringConfig represents Spring Boot configuration
+type SpringConfig struct {
+	Properties []string `yaml:"properties,omitempty"`
 }
 
 // ServiceDependencies represents service dependency configuration
@@ -50,23 +92,19 @@ type ServiceDependencies struct {
 	Provides  []string `yaml:"provides,omitempty"`
 }
 
-// ServiceDefaults represents default service configuration
-type ServiceDefaults struct {
-	Image       string `yaml:"image,omitempty"`
-	Port        int    `yaml:"port,omitempty"`
-	MemoryLimit string `yaml:"memory_limit,omitempty"`
-}
-
 // DockerConfig represents Docker Compose specific configuration
 type DockerConfig struct {
-	Restart     string            `yaml:"restart,omitempty"`
-	Networks    []string          `yaml:"networks,omitempty"`
-	MemoryLimit string            `yaml:"memory_limit,omitempty"`
-	Environment []string          `yaml:"environment,omitempty"`
-	HealthCheck DockerHealthCheck `yaml:"health_check,omitempty"`
-	Ports       []string          `yaml:"ports,omitempty"`
-	Volumes     []string          `yaml:"volumes,omitempty"`
-	DependsOn   []string          `yaml:"depends_on,omitempty"`
+	Image         string            `yaml:"image,omitempty"`
+	Restart       string            `yaml:"restart,omitempty"`
+	Networks      []string          `yaml:"networks,omitempty"`
+	MemoryLimit   string            `yaml:"memory_limit,omitempty"`
+	Environment   []string          `yaml:"environment,omitempty"`
+	Command       []string          `yaml:"command,omitempty"`
+	HealthCheck   DockerHealthCheck `yaml:"health_check,omitempty"`
+	Ports         []string          `yaml:"ports,omitempty"`
+	Volumes       []VolumeConfig    `yaml:"volumes,omitempty"`        // Complex volume configurations
+	SimpleVolumes []string          `yaml:"simple_volumes,omitempty"` // Simple string volumes (host:container)
+	DependsOn     []string          `yaml:"depends_on,omitempty"`
 }
 
 // DockerHealthCheck represents Docker health check configuration
@@ -147,19 +185,22 @@ func (r *ServiceRegistry) loadServiceFromEmbedded(servicePath string) error {
 		return fmt.Errorf("failed to parse service YAML: %w", err)
 	}
 
-	// Use the name from the YAML, or derive from filename if not present
-	serviceName := serviceDef.Name
-	if serviceName == "" {
-		filename := filepath.Base(servicePath)
-		serviceName = strings.TrimSuffix(filename, ".yaml")
+	// Extract filename without extension
+	filename := filepath.Base(servicePath)
+	expectedName := strings.TrimSuffix(filename, ".yaml")
+
+	// Validate that filename matches service name
+	if serviceDef.Name != expectedName {
+		return fmt.Errorf("service name '%s' does not match filename '%s' (expected '%s')",
+			serviceDef.Name, filename, expectedName)
 	}
 
 	// Validate and store the service
-	if err := r.validateServiceDefinition(serviceName, serviceDef); err != nil {
-		return fmt.Errorf("invalid service definition for %s: %w", serviceName, err)
+	if err := r.validateServiceDefinition(serviceDef.Name, serviceDef); err != nil {
+		return fmt.Errorf("invalid service definition for %s: %w", serviceDef.Name, err)
 	}
 
-	r.services[serviceName] = serviceDef
+	r.services[serviceDef.Name] = serviceDef
 	return nil
 }
 
@@ -336,27 +377,41 @@ func (r *ServiceRegistry) GetServiceInfo(name string) (string, error) {
 		info.WriteString(fmt.Sprintf("Tags: %s\n", strings.Join(service.Tags, ", ")))
 	}
 
-	if len(service.Options) > 0 {
+	if len(service.ServiceConfiguration) > 0 {
 		info.WriteString("\nConfiguration Options:\n")
-		for _, option := range service.Options {
-			info.WriteString(fmt.Sprintf("  - %s\n", option))
+		for _, option := range service.ServiceConfiguration {
+			info.WriteString(fmt.Sprintf("  • %s (%s)\n", option.Name, option.Type))
+			info.WriteString(fmt.Sprintf("    %s\n", option.Description))
+			if option.Default != "" {
+				info.WriteString(fmt.Sprintf("    Default: %s\n", option.Default))
+			}
+			if option.Example != "" {
+				info.WriteString(fmt.Sprintf("    Example: %s\n", option.Example))
+			}
+			if option.Required {
+				info.WriteString("    Required: Yes\n")
+			}
+			if len(option.Values) > 0 {
+				info.WriteString(fmt.Sprintf("    Allowed values: %s\n", strings.Join(option.Values, ", ")))
+			}
+			info.WriteString("\n")
 		}
 	}
 
-	if len(service.Examples) > 0 {
+	if len(service.Documentation.Examples) > 0 {
 		info.WriteString("\nExamples:\n")
-		for _, example := range service.Examples {
+		for _, example := range service.Documentation.Examples {
 			info.WriteString(fmt.Sprintf("  %s\n", example))
 		}
 	}
 
-	if service.UsageNotes != "" {
-		info.WriteString(fmt.Sprintf("\nUsage Notes:\n%s\n", service.UsageNotes))
+	if service.Documentation.UsageNotes != "" {
+		info.WriteString(fmt.Sprintf("\nUsage Notes:\n%s\n", service.Documentation.UsageNotes))
 	}
 
-	if len(service.Links) > 0 {
+	if len(service.Documentation.Links) > 0 {
 		info.WriteString("\nLinks:\n")
-		for _, link := range service.Links {
+		for _, link := range service.Documentation.Links {
 			info.WriteString(fmt.Sprintf("  - %s\n", link))
 		}
 	}

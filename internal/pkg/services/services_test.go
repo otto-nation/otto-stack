@@ -12,10 +12,15 @@ func TestServiceDefinition(t *testing.T) {
 	t.Run("service definition structure", func(t *testing.T) {
 		service := ServiceDefinition{
 			Description: "Test service",
-			Options:     []string{"option1", "option2"},
-			Examples:    []string{"example1", "example2"},
-			UsageNotes:  "Usage notes",
-			Links:       []string{"http://example.com"},
+			ServiceConfiguration: []ServiceOption{
+				{Name: "option1", Type: "string", Description: "First option"},
+				{Name: "option2", Type: "string", Description: "Second option"},
+			},
+			Documentation: Documentation{
+				Examples:   []string{"example1", "example2"},
+				UsageNotes: "Usage notes",
+				Links:      []string{"http://example.com"},
+			},
 			Category:    "database",
 			DefaultPort: 5432,
 			Dependencies: ServiceDependencies{
@@ -25,13 +30,15 @@ func TestServiceDefinition(t *testing.T) {
 		}
 
 		assert.Equal(t, "Test service", service.Description)
-		assert.Equal(t, []string{"option1", "option2"}, service.Options)
-		assert.Equal(t, []string{"example1", "example2"}, service.Examples)
-		assert.Equal(t, "Usage notes", service.UsageNotes)
-		assert.Equal(t, []string{"http://example.com"}, service.Links)
+		assert.Equal(t, 2, len(service.ServiceConfiguration))
+		assert.Equal(t, "option1", service.ServiceConfiguration[0].Name)
+		assert.Equal(t, "option2", service.ServiceConfiguration[1].Name)
+		assert.Equal(t, []string{"example1", "example2"}, service.Documentation.Examples)
+		assert.Equal(t, "Usage notes", service.Documentation.UsageNotes)
+		assert.Equal(t, []string{"http://example.com"}, service.Documentation.Links)
 		assert.Equal(t, "database", service.Category)
 		assert.Equal(t, 5432, service.DefaultPort)
-		assert.Equal(t, []string{"dep1", "dep2"}, service.Dependencies)
+		assert.Equal(t, []string{"dep1", "dep2"}, service.Dependencies.Required)
 		assert.Equal(t, []string{"tag1", "tag2"}, service.Tags)
 	})
 }

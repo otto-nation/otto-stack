@@ -60,7 +60,7 @@ func TestCreateConfigFile(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.createConfigFile(TestProjectName, TestEnvironmentLocal, []string{TestServicePostgres},
+	err = handler.createConfigFile(TestProjectName, []string{TestServicePostgres},
 		map[string]bool{"skip_warnings": false},
 		map[string]bool{"auto_start": true})
 	assert.NoError(t, err)
