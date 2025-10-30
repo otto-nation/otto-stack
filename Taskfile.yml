@@ -19,7 +19,7 @@ vars:
     sh: echo "{{OS}}"
   BUILD_ARCH:
     sh: echo "{{ARCH}}"
-  LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/cli.version={{.VERSION}} -X {{.MODULE_PATH}}/internal/cli.commit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/cli.date={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.Version={{.VERSION}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.BuildDate={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.GitCommit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.GoVersion={{.GO_VERSION}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.BuildOS={{.BUILD_OS}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.BuildArch={{.BUILD_ARCH}}"'
+  LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/pkg/version.AppVersion={{.VERSION}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildDate={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/version.GitCommit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildBy=taskfile"'
   GOLANGCI_LINT_VERSION: "v2.4.0"
 
 # ============================================================================
