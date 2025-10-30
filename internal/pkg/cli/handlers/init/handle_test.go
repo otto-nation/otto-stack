@@ -26,7 +26,8 @@ func TestHandle_DirectoryValidation(t *testing.T) {
 	assert.Error(t, err)
 	// Test should fail due to either directory validation or missing Docker
 	assert.True(t,
-		strings.Contains(err.Error(), "directory validation failed") ||
+		strings.Contains(err.Error(), "validation failed: %w") ||
+			strings.Contains(err.Error(), "directory validation failed: %w") ||
 			strings.Contains(err.Error(), "required tool 'docker' is not available"),
 		"Expected directory validation or Docker availability error, got: %s", err.Error())
 }
