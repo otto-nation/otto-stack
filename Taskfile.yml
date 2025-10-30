@@ -36,11 +36,31 @@ tasks:
       - task: build
 
   # ============================================================================
+  # GENERATE
+  # ============================================================================
+  generate:
+    desc: "🔧 Generate code from YAML configs"
+    sources:
+      - "internal/config/commands.yaml"
+      - "cmd/generate-flags/main.go"
+      - "cmd/generate-registers/main.go"
+    generates:
+      - "internal/pkg/constants/flags_generated.go"
+      - "internal/pkg/cli/handlers/*/register_generated.go"
+    silent: true
+    cmds:
+      - echo "🔧 Generating flag constants from commands.yaml..."
+      - go run cmd/generate-flags/main.go
+      - echo "🔧 Generating register files from commands.yaml..."
+      - go run cmd/generate-registers/main.go
+      - echo "✅ Generated code from YAML configs"
+
+  # ============================================================================
   # BUILD
   # ============================================================================
   build:
     desc: "🔨 Build the Go binary for current platform"
-    deps: [deps]
+    deps: [deps, generate]
     sources:
       - "**/*.go"
       - "go.mod"

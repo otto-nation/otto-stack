@@ -7,10 +7,8 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers"
-	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/core"
-	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/init"
-	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/services"
-	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/standard"
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/stack"
 	cliTypes "github.com/otto-nation/otto-stack/internal/pkg/cli/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"

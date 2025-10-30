@@ -1,3 +1,7 @@
+# Generated files
+internal/pkg/constants/flags_generated.go
+internal/pkg/cli/handlers/*/register_generated.go
+
 # Build artifacts and binaries
 build/
 dist/

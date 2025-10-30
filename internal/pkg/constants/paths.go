@@ -15,12 +15,13 @@ const (
 
 // Directory names
 const (
-	DevStackDir = AppName
-	DataDir     = "data"
-	LogsDir     = "logs"
-	TmpDir      = "tmp"
-	ScriptsDir  = "scripts"
-	ServicesDir = "internal/config/services"
+	DevStackDir         = AppName
+	DataDir             = "data"
+	LogsDir             = "logs"
+	TmpDir              = "tmp"
+	ScriptsDir          = "scripts"
+	ServicesDir         = "internal/config/services"
+	EmbeddedServicesDir = "services" // Directory name in embedded FS
 )
 
 // Configuration URLs

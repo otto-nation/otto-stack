@@ -20,18 +20,12 @@ metadata:
 
 # Handler type definitions
 handlers:
-  core:
-    description: "Core operational commands (lifecycle, monitoring, data)"
-    package: "core"
-  services:
-    description: "Service management commands"
-    package: "services"
-  init:
-    description: "Project initialization command"
-    package: "init"
-  standard:
-    description: "Standard utility commands"
-    package: "standard"
+  stack:
+    description: "Stack operational commands (lifecycle, monitoring, data)"
+    package: "stack"
+  project:
+    description: "Project management and utility commands"
+    package: "project"
 
 global:
   flags:
@@ -112,7 +106,7 @@ categories:
 commands:
   up:
     category: "lifecycle"
-    handler: "core"
+    handler: "stack"
     description: "Start development stack services"
     long_description: |
       Start one or more services in the development stack. Services are started
@@ -175,6 +169,7 @@ commands:
 
   down:
     category: "lifecycle"
+    handler: "stack"
     description: "Stop development stack services"
     long_description: |
       Stop one or more services in the development stack. By default, containers
@@ -217,6 +212,7 @@ commands:
 
   restart:
     category: "lifecycle"
+    handler: "stack"
     description: "Restart development stack services"
     long_description: |
       Restart one or more services. This is equivalent to running down followed
@@ -243,6 +239,7 @@ commands:
 
   status:
     category: "monitoring"
+    handler: "stack"
     description: "Show status of development stack services"
     long_description: |
       Display comprehensive status information for services including running
@@ -294,6 +291,7 @@ commands:
 
   logs:
     category: "monitoring"
+    handler: "stack"
     description: "View logs from services"
     long_description: |
       View and follow logs from one or more services. Supports filtering,
@@ -344,6 +342,7 @@ commands:
 
   doctor:
     category: "monitoring"
+    handler: "project"
     description: "Diagnose and troubleshoot stack health"
     long_description: |
       Run comprehensive health checks on your development stack. Identifies
@@ -380,6 +379,7 @@ commands:
 
   exec:
     category: "data"
+    handler: "stack"
     description: "Execute commands in running service containers"
     long_description: |
       Execute commands inside running service containers. Useful for database
@@ -431,6 +431,7 @@ commands:
 
   connect:
     category: "data"
+    handler: "stack"
     description: "Quick connect to service databases and interfaces"
     long_description: |
       Quickly connect to service databases and management interfaces using
@@ -476,6 +477,7 @@ commands:
 
   cleanup:
     category: "maintenance"
+    handler: "stack"
     description: "Clean up unused resources and data"
     long_description: |
       Clean up unused Docker resources, temporary files, and orphaned data
@@ -526,7 +528,7 @@ commands:
 
   init:
     category: "maintenance"
-    handler: "init"
+    handler: "project"
     description: "Initialize a new otto-stack project interactively"
     long_description: |
       Initialize a new otto-stack project in the current directory with an
@@ -551,7 +553,7 @@ commands:
 
   services:
     category: "development"
-    handler: "services"
+    handler: "project"
     description: "List available services by category"
     long_description: |
       List all available services organized by category (database, cache,
@@ -576,6 +578,7 @@ commands:
 
   deps:
     category: "development"
+    handler: "project"
     description: "Show dependency tree for a service"
     long_description: |
       Display the complete dependency tree for a service, showing all required
@@ -591,6 +594,7 @@ commands:
 
   conflicts:
     category: "development"
+    handler: "project"
     description: "Check for conflicts between services"
     long_description: |
       Check if the specified services have any conflicts that would prevent
@@ -606,6 +610,7 @@ commands:
 
   validate:
     category: "development"
+    handler: "project"
     description: "Validate configurations and manifests"
     long_description: |
       Validate otto-stack configurations, service definitions, and YAML
@@ -639,7 +644,7 @@ commands:
 
   version:
     category: "utility"
-    handler: "standard"
+    handler: "project"
     description: "Show version information"
     long_description: |
       Display version information for otto-stack including build details,
@@ -668,6 +673,7 @@ commands:
 
   help:
     category: "utility"
+    handler: "project"
     description: "Show help information"
     long_description: |
       Display help information for otto-stack commands and usage.
