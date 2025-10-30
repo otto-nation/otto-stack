@@ -19,7 +19,7 @@ vars:
     sh: echo "{{OS}}"
   BUILD_ARCH:
     sh: echo "{{ARCH}}"
-  LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/cli.version={{.VERSION}} -X {{.MODULE_PATH}}/internal/cli.commit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/cli.date={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.Version={{.VERSION}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.BuildDate={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.GitCommit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.GoVersion={{.GO_VERSION}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.BuildOS={{.BUILD_OS}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.BuildArch={{.BUILD_ARCH}}"'
+  LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/pkg/version.AppVersion={{.VERSION}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildDate={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/version.GitCommit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildBy=taskfile"'
   GOLANGCI_LINT_VERSION: "v2.4.0"
 
 # ============================================================================
@@ -36,11 +36,31 @@ tasks:
       - task: build
 
   # ============================================================================
+  # GENERATE
+  # ============================================================================
+  generate:
+    desc: "🔧 Generate code from YAML configs"
+    sources:
+      - "internal/config/commands.yaml"
+      - "cmd/generate-flags/main.go"
+      - "cmd/generate-registers/main.go"
+    generates:
+      - "internal/pkg/constants/flags_generated.go"
+      - "internal/pkg/cli/handlers/*/register_generated.go"
+    silent: true
+    cmds:
+      - echo "🔧 Generating flag constants from commands.yaml..."
+      - go run cmd/generate-flags/main.go
+      - echo "🔧 Generating register files from commands.yaml..."
+      - go run cmd/generate-registers/main.go
+      - echo "✅ Generated code from YAML configs"
+
+  # ============================================================================
   # BUILD
   # ============================================================================
   build:
     desc: "🔨 Build the Go binary for current platform"
-    deps: [deps]
+    deps: [deps, generate]
     sources:
       - "**/*.go"
       - "go.mod"
@@ -103,6 +123,7 @@ tasks:
   # ============================================================================
   deps:
     desc: "📥 Download and tidy Go dependencies"
+    deps: [generate]
     silent: true
     cmds:
       - echo "📥 Downloading Go dependencies..."

@@ -7,13 +7,51 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
+// Version drift classification rules
+var driftClassificationRules = []struct {
+	condition            func(required, active Version) bool
+	changeType, severity string
+}{
+	{func(r, a Version) bool { return a.Major != r.Major }, ChangeTypeMajor, "high"},
+	{func(r, a Version) bool { return a.Minor != r.Minor }, ChangeTypeMinor, "medium"},
+	{func(r, a Version) bool { return a.Patch != r.Patch }, ChangeTypePatch, "low"},
+}
+
+// Policy enforcement rules
+var policyEnforcementRules = []struct {
+	condition   func(e *VersionEnforcer, drift *DriftDetection) bool
+	action      string
+	messageFunc func(activeVersion, requiredVersion Version, drift *DriftDetection, enforcer *VersionEnforcer) string
+}{
+	{
+		func(e *VersionEnforcer, d *DriftDetection) bool { return e.policy.StrictMode },
+		EnforcementActionSwitch,
+		func(a, r Version, d *DriftDetection, e *VersionEnforcer) string {
+			return fmt.Sprintf("Strict mode: must switch to version %s", r)
+		},
+	},
+	{
+		func(e *VersionEnforcer, d *DriftDetection) bool { return !e.policy.AllowDrift },
+		EnforcementActionWarn,
+		func(a, r Version, d *DriftDetection, e *VersionEnforcer) string {
+			return fmt.Sprintf("Version drift detected: using %s, required %s", a, r)
+		},
+	},
+	{
+		func(e *VersionEnforcer, d *DriftDetection) bool { return d.DriftDuration > e.policy.MaxDriftDuration },
+		EnforcementActionSwitch,
+		func(a, r Version, d *DriftDetection, e *VersionEnforcer) string {
+			return fmt.Sprintf("Drift duration exceeded: %v > %v", d.DriftDuration, e.policy.MaxDriftDuration)
+		},
+	},
+}
+
 // EnforcementPolicy defines how strict version enforcement should be
 type EnforcementPolicy struct {
 	StrictMode       bool          `json:"strict_mode"`
 	AllowDrift       bool          `json:"allow_drift"`
 	MaxDriftDuration time.Duration `json:"max_drift_duration"`
 	AutoSync         bool          `json:"auto_sync"`
-	NotifyUpdates    bool          `json:"notify_updates"`
 }
 
 // DriftDetection represents version drift information
@@ -22,15 +60,15 @@ type DriftDetection struct {
 	RequiredVersion Version       `json:"required_version"`
 	ActiveVersion   Version       `json:"active_version"`
 	DriftDuration   time.Duration `json:"drift_duration"`
-	DriftType       string        `json:"drift_type"` // constants.DriftType*
-	Severity        string        `json:"severity"`   // constants.Severity*
+	DriftType       string        `json:"drift_type"` // ChangeType*
+	Severity        string        `json:"severity"`   // Severity*
 }
 
 // EnforcementResult represents the result of version enforcement
 type EnforcementResult struct {
 	Compliant bool            `json:"compliant"`
 	Drift     *DriftDetection `json:"drift,omitempty"`
-	Action    string          `json:"action"` // constants.EnforcementAction*
+	Action    string          `json:"action"` // version.EnforcementAction*
 	Message   string          `json:"message"`
 	ExitCode  int             `json:"exit_code"`
 }
@@ -67,42 +105,39 @@ func (e *VersionEnforcer) CheckCompliance(projectPath string) (*EnforcementResul
 	if projectConfig.Required.Satisfies(activeVersion.Version) {
 		return &EnforcementResult{
 			Compliant: true,
-			Action:    constants.EnforcementActionNone,
+			Action:    EnforcementActionNone,
 			Message:   "Version compliance satisfied",
 			ExitCode:  constants.ExitSuccess,
 		}, nil
 	}
 
-	// Detect drift
+	// Detect drift and determine enforcement action
 	drift := e.detectDrift(projectPath, projectConfig.Required.Version, activeVersion.Version, projectConfig.LastUsed)
+	action, message := e.determineAction(drift, activeVersion.Version, projectConfig.Required.Version)
 
-	result := &EnforcementResult{
+	exitCode := constants.ExitSuccess
+	if action == EnforcementActionSwitch {
+		exitCode = constants.ExitError
+	}
+
+	return &EnforcementResult{
 		Compliant: false,
 		Drift:     drift,
-		ExitCode:  constants.ExitError,
+		Action:    action,
+		Message:   message,
+		ExitCode:  exitCode,
+	}, nil
+}
+
+// determineAction determines the enforcement action based on policy
+func (e *VersionEnforcer) determineAction(drift *DriftDetection, activeVersion, requiredVersion Version) (string, string) {
+	for _, rule := range policyEnforcementRules {
+		if rule.condition(e, drift) {
+			return rule.action, rule.messageFunc(activeVersion, requiredVersion, drift, e)
+		}
 	}
 
-	// Determine action based on policy
-	if e.policy.StrictMode {
-		result.Action = constants.EnforcementActionSwitch
-		result.Message = fmt.Sprintf("Strict mode: must switch to version %s", projectConfig.Required.Version)
-		result.ExitCode = constants.ExitError
-	} else if !e.policy.AllowDrift {
-		result.Action = constants.EnforcementActionWarn
-		result.Message = fmt.Sprintf("Version drift detected: using %s, required %s",
-			activeVersion.Version, projectConfig.Required.Version)
-	} else if drift.DriftDuration > e.policy.MaxDriftDuration {
-		result.Action = constants.EnforcementActionSwitch
-		result.Message = fmt.Sprintf("Drift duration exceeded: %v > %v",
-			drift.DriftDuration, e.policy.MaxDriftDuration)
-		result.ExitCode = constants.ExitError
-	} else {
-		result.Action = constants.EnforcementActionNone
-		result.Message = "Drift within acceptable limits"
-		result.ExitCode = constants.ExitSuccess
-	}
-
-	return result, nil
+	return EnforcementActionNone, "Drift within acceptable limits"
 }
 
 // EnforceCompliance enforces version compliance based on policy
@@ -113,13 +148,13 @@ func (e *VersionEnforcer) EnforceCompliance(projectPath string) error {
 	}
 
 	switch result.Action {
-	case constants.EnforcementActionSwitch:
+	case EnforcementActionSwitch:
 		if e.policy.AutoSync {
 			return e.autoSwitchVersion(projectPath)
 		}
 		return fmt.Errorf("version enforcement required: %s", result.Message)
-	case constants.EnforcementActionWarn:
-		// Just log warning, don't fail
+	case EnforcementActionWarn:
+		fmt.Printf("⚠️  Warning: %s\n", result.Message)
 		return nil
 	default:
 		return nil
@@ -150,33 +185,31 @@ func (e *VersionEnforcer) DetectAllDrift() ([]DriftDetection, error) {
 }
 
 func (e *VersionEnforcer) detectDrift(projectPath string, required, active Version, lastUsed time.Time) *DriftDetection {
-	drift := &DriftDetection{
+	driftType, severity := e.classifyVersionDrift(required, active)
+
+	return &DriftDetection{
 		ProjectPath:     projectPath,
 		RequiredVersion: required,
 		ActiveVersion:   active,
 		DriftDuration:   time.Since(lastUsed),
+		DriftType:       driftType,
+		Severity:        severity,
+	}
+}
+
+// classifyVersionDrift determines the type and severity of version drift
+func (e *VersionEnforcer) classifyVersionDrift(required, active Version) (string, string) {
+	if active.Compare(required) == 0 {
+		return ChangeTypeNone, "low"
 	}
 
-	// Determine drift type and severity
-	cmp := active.Compare(required)
-	if cmp == 0 {
-		drift.DriftType = constants.DriftTypeNone
-		drift.Severity = constants.SeverityInfo
-	} else if active.Major != required.Major {
-		drift.DriftType = constants.DriftTypeMajor
-		drift.Severity = constants.SeverityCritical
-	} else if active.Minor != required.Minor {
-		drift.DriftType = constants.DriftTypeMinor
-		drift.Severity = constants.SeverityWarning
-	} else if active.Patch != required.Patch {
-		drift.DriftType = constants.DriftTypePatch
-		drift.Severity = constants.SeverityInfo
-	} else {
-		drift.DriftType = constants.DriftTypePrerelease
-		drift.Severity = constants.SeverityInfo
+	for _, rule := range driftClassificationRules {
+		if rule.condition(required, active) {
+			return rule.changeType, rule.severity
+		}
 	}
 
-	return drift
+	return ChangeTypePrerelease, "low"
 }
 
 func (e *VersionEnforcer) autoSwitchVersion(projectPath string) error {
@@ -186,29 +219,14 @@ func (e *VersionEnforcer) autoSwitchVersion(projectPath string) error {
 	}
 
 	// Try to resolve to an installed version first
-	installedVersion, err := e.manager.ResolveVersion(projectConfig.Required)
-	if err == nil {
+	if installedVersion, err := e.manager.ResolveVersion(projectConfig.Required); err == nil {
 		return e.manager.SwitchToVersion(installedVersion.Version)
 	}
 
-	// If not installed, install the required version
-	availableVersions, err := e.manager.ListAvailableVersions()
+	// Find and install the best matching available version
+	bestMatch, err := e.findBestMatchingVersion(projectConfig.Required)
 	if err != nil {
-		return fmt.Errorf("failed to list available versions: %w", err)
-	}
-
-	// Find best matching version
-	var bestMatch *Version
-	for _, version := range availableVersions {
-		if projectConfig.Required.Satisfies(version) {
-			if bestMatch == nil || version.Compare(*bestMatch) > 0 {
-				bestMatch = &version
-			}
-		}
-	}
-
-	if bestMatch == nil {
-		return fmt.Errorf("no available version satisfies constraint %s", projectConfig.Required.Original)
+		return err
 	}
 
 	// Install and switch to the best match
@@ -217,4 +235,25 @@ func (e *VersionEnforcer) autoSwitchVersion(projectPath string) error {
 	}
 
 	return e.manager.SwitchToVersion(*bestMatch)
+}
+
+// findBestMatchingVersion finds the best available version that satisfies the constraint
+func (e *VersionEnforcer) findBestMatchingVersion(constraint VersionConstraint) (*Version, error) {
+	availableVersions, err := e.manager.ListAvailableVersions()
+	if err != nil {
+		return nil, fmt.Errorf("failed to list available versions: %w", err)
+	}
+
+	var bestMatch *Version
+	for _, version := range availableVersions {
+		if constraint.Satisfies(version) && (bestMatch == nil || version.Compare(*bestMatch) > 0) {
+			bestMatch = &version
+		}
+	}
+
+	if bestMatch == nil {
+		return nil, fmt.Errorf("no available version satisfies constraint %s", constraint.Original)
+	}
+
+	return bestMatch, nil
 }

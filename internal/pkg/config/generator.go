@@ -17,12 +17,12 @@ func GenerateConfig(projectName, environment string, services []string, validati
 	builder.WriteString(fmt.Sprintf("# Documentation: %s\n\n", constants.ConfigDocsURL))
 
 	// Project section
-	builder.WriteString(fmt.Sprintf("%s:\n", constants.ProjectSection))
+	builder.WriteString("project:\n")
 	builder.WriteString(fmt.Sprintf("  name: %s\n", projectName))
 	builder.WriteString(fmt.Sprintf("  environment: %s\n\n", environment))
 
 	// Stack section
-	builder.WriteString(fmt.Sprintf("%s:\n", constants.StackSection))
+	builder.WriteString("stack:\n")
 	builder.WriteString("  enabled:\n")
 	for _, service := range services {
 		builder.WriteString(fmt.Sprintf("    - %s\n", service))
@@ -32,10 +32,10 @@ func GenerateConfig(projectName, environment string, services []string, validati
 	// Service configuration section
 	builder.WriteString("# Service-specific configuration\n")
 	builder.WriteString(fmt.Sprintf("# Service configuration options: %s\n", constants.ServiceConfigURL))
-	builder.WriteString(fmt.Sprintf("%s: {}\n\n", constants.ServiceConfigurationSection))
+	builder.WriteString("service_configuration: {}\n\n")
 
 	// Validation section
-	builder.WriteString(fmt.Sprintf("%s:\n", constants.ValidationSection))
+	builder.WriteString("validation:\n")
 
 	validationDefaults := map[string]bool{
 		"skip_warnings":            constants.DefaultSkipWarnings,
@@ -48,7 +48,7 @@ func GenerateConfig(projectName, environment string, services []string, validati
 	builder.WriteString("\n")
 
 	// Advanced section
-	builder.WriteString(fmt.Sprintf("%s:\n", constants.AdvancedSection))
+	builder.WriteString("advanced:\n")
 
 	advancedDefaults := map[string]bool{
 		"auto_start":          constants.DefaultAutoStart,

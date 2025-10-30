@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -177,7 +178,7 @@ func TestValidator_ValidateAgainstCLI(t *testing.T) {
 			},
 			setupCLI: func() *cobra.Command {
 				rootCmd := &cobra.Command{
-					Use:   "otto-stack",
+					Use:   constants.AppName,
 					Short: "Development stack management tool",
 				}
 
@@ -201,7 +202,7 @@ func TestValidator_ValidateAgainstCLI(t *testing.T) {
 			},
 			setupCLI: func() *cobra.Command {
 				rootCmd := &cobra.Command{
-					Use:   "otto-stack",
+					Use:   constants.AppName,
 					Short: "Development stack management tool",
 				}
 

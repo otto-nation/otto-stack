@@ -1,6 +1,20 @@
 name: mysql
 description: MySQL relational database for persistent data storage
 category: database
+connection:
+  client: mysql
+  default_user: root
+  default_port: 3306
+  user_flag: "-u"
+  host_flag: "-h"
+  port_flag: "-P"
+  extra_flags: ["-p"]
+environment:
+  MYSQL_HOST: localhost
+  MYSQL_PORT: ${MYSQL_PORT:-3306}
+  MYSQL_USER: ${MYSQL_USER:-root}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
+  MYSQL_DATABASE: ${MYSQL_DATABASE:-local_dev}
 dependencies:
   required: []
   soft: []

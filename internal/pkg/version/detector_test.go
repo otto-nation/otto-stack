@@ -5,21 +5,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewVersionDetector(t *testing.T) {
-	detector := NewVersionDetector()
-
-	assert.NotNil(t, detector)
-	assert.NotEmpty(t, detector.searchPaths)
-	assert.NotEmpty(t, detector.fileNames)
-	assert.Contains(t, detector.searchPaths, ".")
-	assert.Contains(t, detector.fileNames, ".otto-stack-version")
-}
-
-func TestVersionDetector_DetectProjectVersion(t *testing.T) {
+func TestDetectProjectVersion(t *testing.T) {
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T) string
@@ -27,32 +18,40 @@ func TestVersionDetector_DetectProjectVersion(t *testing.T) {
 		expectFound bool
 	}{
 		{
-			name: "detect from .otto-stack-version file",
+			name: "detect from " + constants.ConfigFileName,
 			setupFunc: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				versionFile := filepath.Join(tmpDir, ".otto-stack-version")
-				err := os.WriteFile(versionFile, []byte("1.2.3"), 0644)
-				require.NoError(t, err)
+				configContent := `project:
+  name: test
+  environment: development
+
+version_config:
+  required_version: ">=1.0.0"
+`
+				configPath := filepath.Join(tmpDir, constants.ConfigFileName)
+				require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
 				return tmpDir
 			},
 			expectError: false,
 			expectFound: true,
 		},
 		{
-			name: "detect from YAML version file",
+			name: "no version config found",
 			setupFunc: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				versionFile := filepath.Join(tmpDir, ".otto-stack-version.yaml")
-				content := `version: "2.1.0"`
-				err := os.WriteFile(versionFile, []byte(content), 0644)
-				require.NoError(t, err)
+				configContent := `project:
+  name: test
+  environment: development
+`
+				configPath := filepath.Join(tmpDir, constants.ConfigFileName)
+				require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
 				return tmpDir
 			},
 			expectError: false,
-			expectFound: true,
+			expectFound: false,
 		},
 		{
-			name: "no version file found",
+			name: "no config file",
 			setupFunc: func(t *testing.T) string {
 				return t.TempDir()
 			},
@@ -63,168 +62,65 @@ func TestVersionDetector_DetectProjectVersion(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := tt.setupFunc(t)
-			detector := NewVersionDetector()
+			projectPath := tt.setupFunc(t)
 
-			constraint, err := detector.DetectProjectVersion(tmpDir)
+			constraint, err := DetectProjectVersion(projectPath)
 
 			if tt.expectError {
 				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
+				return
 			}
-
-			if tt.expectFound {
-				assert.NotNil(t, constraint)
-			} else {
-				// Implementation may return a default constraint even when no file found
-				_ = constraint
-			}
-		})
-	}
-}
-
-func TestVersionDetector_FindVersionFiles(t *testing.T) {
-	tests := []struct {
-		name        string
-		setupFunc   func(t *testing.T) string
-		expectCount int
-	}{
-		{
-			name: "find single version file",
-			setupFunc: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-				versionFile := filepath.Join(tmpDir, ".otto-stack-version")
-				err := os.WriteFile(versionFile, []byte("1.2.3"), 0644)
-				require.NoError(t, err)
-				return tmpDir
-			},
-			expectCount: 1,
-		},
-		{
-			name: "find multiple version files",
-			setupFunc: func(t *testing.T) string {
-				tmpDir := t.TempDir()
-
-				// Create multiple version files
-				files := []string{".otto-stack-version", ".otto-stack-version.yaml"}
-				for _, file := range files {
-					path := filepath.Join(tmpDir, file)
-					err := os.WriteFile(path, []byte("1.2.3"), 0644)
-					require.NoError(t, err)
-				}
-				return tmpDir
-			},
-			expectCount: 2,
-		},
-		{
-			name: "no version files found",
-			setupFunc: func(t *testing.T) string {
-				return t.TempDir()
-			},
-			expectCount: 0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := tt.setupFunc(t)
-			detector := NewVersionDetector()
-
-			files, err := detector.FindVersionFiles(tmpDir)
 
 			assert.NoError(t, err)
-			assert.Len(t, files, tt.expectCount)
-		})
-	}
-}
+			assert.NotNil(t, constraint)
 
-func TestVersionDetector_CreateVersionFile(t *testing.T) {
-	tests := []struct {
-		name        string
-		version     string
-		format      string
-		expectError bool
-	}{
-		{
-			name:        "create text version file",
-			version:     "1.2.3",
-			format:      "text",
-			expectError: false,
-		},
-		{
-			name:        "create YAML version file",
-			version:     "2.1.0",
-			format:      "yaml",
-			expectError: false,
-		},
-		{
-			name:        "invalid format",
-			version:     "1.0.0",
-			format:      "invalid",
-			expectError: false, // Implementation may handle invalid format gracefully
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			detector := NewVersionDetector()
-
-			err := detector.CreateVersionFile(tmpDir, tt.version, tt.format)
-
-			if tt.expectError {
-				assert.Error(t, err)
+			if tt.expectFound {
+				assert.NotEqual(t, "*", constraint.Operator)
 			} else {
-				assert.NoError(t, err)
-
-				// Verify file was created
-				files, err := detector.FindVersionFiles(tmpDir)
-				assert.NoError(t, err)
-				assert.NotEmpty(t, files)
+				assert.Equal(t, "*", constraint.Operator)
 			}
 		})
 	}
 }
 
-func TestVersionDetector_ValidateProjectVersion(t *testing.T) {
+func TestValidateProjectVersion(t *testing.T) {
 	tests := []struct {
 		name        string
 		setupFunc   func(t *testing.T) string
 		expectError bool
 	}{
 		{
-			name: "valid version file",
+			name: "valid version constraint",
 			setupFunc: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				versionFile := filepath.Join(tmpDir, ".otto-stack-version")
-				err := os.WriteFile(versionFile, []byte("1.2.3"), 0644)
-				require.NoError(t, err)
+				configContent := `version_config:
+  required_version: ">=1.0.0"
+`
+				configPath := filepath.Join(tmpDir, constants.ConfigFileName)
+				require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
 				return tmpDir
 			},
 			expectError: false,
 		},
 		{
-			name: "no version file",
+			name: "no version constraint",
 			setupFunc: func(t *testing.T) string {
 				return t.TempDir()
 			},
-			expectError: false, // May not error if no version file found
+			expectError: false, // Default constraint is valid
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tmpDir := tt.setupFunc(t)
-			detector := NewVersionDetector()
+			projectPath := tt.setupFunc(t)
 
-			err := detector.ValidateProjectVersion(tmpDir)
+			err := ValidateProjectVersion(projectPath)
 
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
-				// May error or not depending on implementation
-				_ = err
+				assert.NoError(t, err)
 			}
 		})
 	}

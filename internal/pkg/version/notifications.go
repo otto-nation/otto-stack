@@ -12,30 +12,63 @@ import (
 
 // UpdateNotification represents an update notification
 type UpdateNotification struct {
-	CurrentVersion   Version   `json:"current_version"`
-	LatestVersion    Version   `json:"latest_version"`
-	UpdateType       string    `json:"update_type"` // constants.UpdateType*
-	Severity         string    `json:"severity"`    // constants.UpdateSeverity*
-	ReleaseDate      time.Time `json:"release_date"`
-	ChangelogURL     string    `json:"changelog_url"`
-	DownloadURL      string    `json:"download_url"`
-	SecurityUpdate   bool      `json:"security_update"`
-	BreakingChanges  bool      `json:"breaking_changes"`
-	Message          string    `json:"message"`
-	LastNotified     time.Time `json:"last_notified"`
-	NotificationFreq string    `json:"notification_freq"` // constants.NotificationFrequency*
+	CurrentVersion  Version `json:"current_version"`
+	LatestVersion   Version `json:"latest_version"`
+	UpdateType      string  `json:"update_type"` // ChangeType*
+	Severity        string  `json:"severity"`    // Severity*
+	BreakingChanges bool    `json:"breaking_changes"`
+	Message         string  `json:"message"`
 }
 
 // NotificationConfig controls update notification behavior
 type NotificationConfig struct {
 	Enabled         bool          `json:"enabled"`
-	Frequency       string        `json:"frequency"`      // constants.NotificationFrequency*
-	MinSeverity     string        `json:"min_severity"`   // constants.UpdateSeverity*
+	Frequency       string        `json:"frequency"`      // NotificationFrequency*
+	MinSeverity     string        `json:"min_severity"`   // Severity*
 	CheckInterval   time.Duration `json:"check_interval"` // How often to check for updates
 	LastCheck       time.Time     `json:"last_check"`
 	AutoCheck       bool          `json:"auto_check"`       // Check on command execution
 	ShowPrerelease  bool          `json:"show_prerelease"`  // Include prerelease versions
 	SuppressedUntil time.Time     `json:"suppressed_until"` // Suppress notifications until this time
+}
+
+// Notification frequencies with their check functions
+var NotificationFrequencies = map[string]func(*UpdateNotifier) bool{
+	"never":  func(n *UpdateNotifier) bool { return false },
+	"always": func(n *UpdateNotifier) bool { return true },
+	"daily":  func(n *UpdateNotifier) bool { return time.Since(n.config.LastCheck) >= 24*time.Hour },
+	"weekly": func(n *UpdateNotifier) bool { return time.Since(n.config.LastCheck) >= 7*24*time.Hour },
+}
+
+// Update categorization rules
+var updateCategorizationRules = []struct {
+	condition       func(current, latest Version) bool
+	updateType      string
+	severity        string
+	breakingChanges bool
+	messageTemplate string
+}{
+	{
+		func(c, l Version) bool { return l.Major > c.Major },
+		ChangeTypeMajor,
+		"medium",
+		true,
+		"Major update available: %s → %s (may contain breaking changes)",
+	},
+	{
+		func(c, l Version) bool { return l.Minor > c.Minor },
+		ChangeTypeMinor,
+		"medium",
+		false,
+		"Minor update available: %s → %s (new features)",
+	},
+	{
+		func(c, l Version) bool { return l.Patch > c.Patch },
+		ChangeTypePatch,
+		"low",
+		false,
+		"Patch update available: %s → %s (bug fixes)",
+	},
 }
 
 // UpdateNotifier handles update notifications
@@ -51,12 +84,12 @@ func NewUpdateNotifier(manager VersionManager, configPath string) *UpdateNotifie
 		manager:    manager,
 		configPath: configPath,
 		config: NotificationConfig{
-			Enabled:        constants.DefaultNotifyUpdates,
-			Frequency:      constants.NotificationFrequencyDaily,
-			MinSeverity:    constants.UpdateSeverityRecommended,
-			CheckInterval:  constants.DefaultCheckInterval,
-			AutoCheck:      constants.DefaultAutoCheck,
-			ShowPrerelease: constants.DefaultShowPrerelease,
+			Enabled:        DefaultNotifyUpdates,
+			Frequency:      "daily",
+			MinSeverity:    "medium",
+			CheckInterval:  DefaultCheckInterval,
+			AutoCheck:      DefaultAutoCheck,
+			ShowPrerelease: DefaultShowPrerelease,
 		},
 	}
 
@@ -66,65 +99,67 @@ func NewUpdateNotifier(manager VersionManager, configPath string) *UpdateNotifie
 
 // CheckForUpdates checks for available updates
 func (n *UpdateNotifier) CheckForUpdates() (*UpdateNotification, error) {
-	if !n.config.Enabled {
+	if !n.config.Enabled || !n.shouldCheck() {
 		return nil, nil
 	}
 
-	// Check if we should skip based on frequency
-	if !n.shouldCheck() {
-		return nil, nil
-	}
-
-	currentVersion, err := n.manager.GetActiveVersion()
+	currentVersion, latestVersion, err := n.getVersions()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get current version: %w", err)
+		return nil, err
 	}
 
-	availableVersions, err := n.manager.ListAvailableVersions()
-	if err != nil {
-		return nil, fmt.Errorf("failed to list available versions: %w", err)
-	}
-
-	// Find latest version
-	var latestVersion *Version
-	for _, version := range availableVersions {
-		if !n.config.ShowPrerelease && version.PreRelease != "" {
-			continue
-		}
-
-		if latestVersion == nil || version.Compare(*latestVersion) > 0 {
-			latestVersion = &version
-		}
-	}
-
-	if latestVersion == nil {
-		return nil, nil
-	}
-
-	// Check if update is available
-	if currentVersion.Version.Compare(*latestVersion) >= 0 {
+	if latestVersion == nil || currentVersion.Version.Compare(*latestVersion) >= 0 {
 		n.updateLastCheck()
 		return nil, nil
 	}
 
-	// Create notification
-	notification := &UpdateNotification{
-		CurrentVersion: currentVersion.Version,
-		LatestVersion:  *latestVersion,
-		ReleaseDate:    time.Now(), // Would be fetched from release info
-		LastNotified:   time.Now(),
-	}
-
-	// Determine update type and severity
-	n.categorizeUpdate(notification)
-
-	// Check if we should notify based on severity
+	notification := n.createNotification(currentVersion.Version, *latestVersion)
 	if !n.shouldNotify(notification) {
 		return nil, nil
 	}
 
 	n.updateLastCheck()
 	return notification, nil
+}
+
+// getVersions retrieves current and latest available versions
+func (n *UpdateNotifier) getVersions() (*InstalledVersion, *Version, error) {
+	currentVersion, err := n.manager.GetActiveVersion()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get current version: %w", err)
+	}
+
+	availableVersions, err := n.manager.ListAvailableVersions()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to list available versions: %w", err)
+	}
+
+	latestVersion := n.findLatestVersion(availableVersions)
+	return currentVersion, latestVersion, nil
+}
+
+// findLatestVersion finds the latest version from available versions
+func (n *UpdateNotifier) findLatestVersion(versions []Version) *Version {
+	var latest *Version
+	for _, version := range versions {
+		if !n.config.ShowPrerelease && version.PreRelease != "" {
+			continue
+		}
+		if latest == nil || version.Compare(*latest) > 0 {
+			latest = &version
+		}
+	}
+	return latest
+}
+
+// createNotification creates and categorizes an update notification
+func (n *UpdateNotifier) createNotification(current, latest Version) *UpdateNotification {
+	notification := &UpdateNotification{
+		CurrentVersion: current,
+		LatestVersion:  latest,
+	}
+	n.categorizeUpdate(notification)
+	return notification
 }
 
 // NotifyIfNeeded checks for updates and shows notification if needed
@@ -163,29 +198,17 @@ func (n *UpdateNotifier) shouldCheck() bool {
 		return false
 	}
 
-	switch n.config.Frequency {
-	case constants.NotificationFrequencyNever:
-		return false
-	case constants.NotificationFrequencyAlways:
-		return true
-	case constants.NotificationFrequencyDaily:
-		return time.Since(n.config.LastCheck) >= 24*time.Hour
-	case constants.NotificationFrequencyWeekly:
-		return time.Since(n.config.LastCheck) >= 7*24*time.Hour
-	default:
-		return time.Since(n.config.LastCheck) >= n.config.CheckInterval
+	if checkFunc, exists := NotificationFrequencies[n.config.Frequency]; exists {
+		return checkFunc(n)
 	}
+
+	// Default fallback
+	return time.Since(n.config.LastCheck) >= n.config.CheckInterval
 }
 
 func (n *UpdateNotifier) shouldNotify(notification *UpdateNotification) bool {
-	severityLevel := map[string]int{
-		constants.UpdateSeverityOptional:    1,
-		constants.UpdateSeverityRecommended: 2,
-		constants.UpdateSeverityCritical:    3,
-	}
-
-	minLevel := severityLevel[n.config.MinSeverity]
-	notificationLevel := severityLevel[notification.Severity]
+	minLevel := SeverityLevels[n.config.MinSeverity]
+	notificationLevel := SeverityLevels[notification.Severity]
 
 	return notificationLevel >= minLevel
 }
@@ -194,32 +217,21 @@ func (n *UpdateNotifier) categorizeUpdate(notification *UpdateNotification) {
 	current := notification.CurrentVersion
 	latest := notification.LatestVersion
 
-	if latest.Major > current.Major {
-		notification.UpdateType = constants.UpdateTypeMajor
-		notification.Severity = constants.UpdateSeverityRecommended
-		notification.BreakingChanges = true
-		notification.Message = fmt.Sprintf("Major update available: %s → %s (may contain breaking changes)",
-			current, latest)
-	} else if latest.Minor > current.Minor {
-		notification.UpdateType = constants.UpdateTypeMinor
-		notification.Severity = constants.UpdateSeverityRecommended
-		notification.Message = fmt.Sprintf("Minor update available: %s → %s (new features)",
-			current, latest)
-	} else if latest.Patch > current.Patch {
-		notification.UpdateType = constants.UpdateTypePatch
-		notification.Severity = constants.UpdateSeverityOptional
-		notification.Message = fmt.Sprintf("Patch update available: %s → %s (bug fixes)",
-			current, latest)
-	} else {
-		notification.UpdateType = constants.UpdateTypePrerelease
-		notification.Severity = constants.UpdateSeverityOptional
-		notification.Message = fmt.Sprintf("Prerelease update available: %s → %s",
-			current, latest)
+	// Check categorization rules in order of precedence
+	for _, rule := range updateCategorizationRules {
+		if rule.condition(current, latest) {
+			notification.UpdateType = rule.updateType
+			notification.Severity = rule.severity
+			notification.BreakingChanges = rule.breakingChanges
+			notification.Message = fmt.Sprintf(rule.messageTemplate, current, latest)
+			return
+		}
 	}
 
-	// Set URLs (would be populated from actual release data)
-	notification.ChangelogURL = fmt.Sprintf("https://github.com/otto-nation/otto-stack/releases/tag/v%s", latest)
-	notification.DownloadURL = fmt.Sprintf("https://github.com/otto-nation/otto-stack/releases/download/v%s/otto-stack", latest)
+	// Default to prerelease if no other rule matches
+	notification.UpdateType = ChangeTypePrerelease
+	notification.Severity = "low"
+	notification.Message = fmt.Sprintf("Prerelease update available: %s → %s", current, latest)
 }
 
 func (n *UpdateNotifier) showNotification(notification *UpdateNotification) {
@@ -232,14 +244,9 @@ func (n *UpdateNotifier) showNotification(notification *UpdateNotification) {
 		fmt.Printf("   ⚠️  May contain breaking changes\n")
 	}
 
-	if notification.SecurityUpdate {
-		fmt.Printf("   🔒 Security update\n")
-	}
-
 	fmt.Printf("\n   %s\n", notification.Message)
-	fmt.Printf("\n   To update: otto-stack version install %s\n", notification.LatestVersion)
-	fmt.Printf("   Changelog: %s\n", notification.ChangelogURL)
-	fmt.Printf("\n   To suppress: otto-stack version suppress 7d\n\n")
+	fmt.Printf("\n   To update: %s version install %s\n", constants.AppName, notification.LatestVersion)
+	fmt.Printf("\n   To suppress: %s version suppress 7d\n\n", constants.AppName)
 }
 
 func (n *UpdateNotifier) updateLastCheck() {

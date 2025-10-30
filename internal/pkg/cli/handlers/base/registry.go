@@ -4,10 +4,8 @@ import (
 	"fmt"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/completion"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/core"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/doctor"
-	inithandler "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/init"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/stack"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
 )
 
@@ -52,14 +50,20 @@ func (r *Registry) HasHandler(name string) bool {
 
 // registerDefaultHandlers registers all default command handlers
 func (r *Registry) registerDefaultHandlers() {
-	r.RegisterHandler("up", core.NewUpHandler())
-	r.RegisterHandler("down", core.NewDownHandler())
-	r.RegisterHandler("restart", core.NewRestartHandler())
-	r.RegisterHandler("status", core.NewStatusHandler())
-	r.RegisterHandler("deps", services.NewDepsHandler())
-	r.RegisterHandler("conflicts", services.NewConflictsHandler())
-	r.RegisterHandler("services", services.NewServicesHandler())
-	r.RegisterHandler("init", inithandler.NewInitHandler())
-	r.RegisterHandler("doctor", doctor.NewDoctorHandler())
+	r.RegisterHandler("up", stack.NewUpHandler())
+	r.RegisterHandler("down", stack.NewDownHandler())
+	r.RegisterHandler("restart", stack.NewRestartHandler())
+	r.RegisterHandler("status", stack.NewStatusHandler())
+	r.RegisterHandler("logs", stack.NewLogsHandler())
+	r.RegisterHandler("exec", stack.NewExecHandler())
+	r.RegisterHandler("connect", stack.NewConnectHandler())
+	r.RegisterHandler("cleanup", stack.NewCleanupHandler())
+	r.RegisterHandler("deps", project.NewDepsHandler())
+	r.RegisterHandler("conflicts", project.NewConflictsHandler())
+	r.RegisterHandler("services", project.NewServicesHandler())
+	r.RegisterHandler("init", project.NewInitHandler())
+	r.RegisterHandler("doctor", project.NewDoctorHandler())
+	r.RegisterHandler("validate", project.NewValidateHandler())
+	r.RegisterHandler("version", project.NewVersionHandler())
 	r.RegisterHandler("completion", completion.NewCompletionHandler())
 }

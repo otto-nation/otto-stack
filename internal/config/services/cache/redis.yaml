@@ -1,6 +1,17 @@
 name: redis
 description: Redis in-memory data store for caching and session storage
 category: cache
+connection:
+  client: redis-cli
+  default_port: 6379
+  host_flag: "-h"
+  port_flag: "-p"
+  database_flag: "-n"
+environment:
+  REDIS_HOST: localhost
+  REDIS_PORT: ${REDIS_PORT:-6379}
+  REDIS_PASSWORD: ${REDIS_PASSWORD:-password}
+  REDIS_URL: redis://:${REDIS_PASSWORD:-password}@localhost:${REDIS_PORT:-6379}
 dependencies:
   required: []
   soft: []

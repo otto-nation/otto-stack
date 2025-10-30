@@ -138,27 +138,42 @@ func (l *Loader) validateConfig(config *CommandConfig) error {
 
 // postProcessConfig performs post-processing tasks
 func (l *Loader) postProcessConfig(config *CommandConfig) error {
-	// Add commands to categories if not already present
+	l.addCommandsToCategories(config)
+	l.setDefaultFlagTypes(config)
+	return nil
+}
+
+// addCommandsToCategories ensures all commands are added to their categories
+func (l *Loader) addCommandsToCategories(config *CommandConfig) {
 	for cmdName, cmd := range config.Commands {
-		if cmd.Category != "" {
-			if category, exists := config.Categories[cmd.Category]; exists {
-				// Check if command is already in category
-				found := false
-				for _, catCmd := range category.Commands {
-					if catCmd == cmdName {
-						found = true
-						break
-					}
-				}
-				if !found {
-					category.Commands = append(category.Commands, cmdName)
-					config.Categories[cmd.Category] = category
-				}
-			}
+		if cmd.Category == "" {
+			continue
+		}
+
+		category, exists := config.Categories[cmd.Category]
+		if !exists {
+			continue
+		}
+
+		if !l.categoryContainsCommand(category, cmdName) {
+			category.Commands = append(category.Commands, cmdName)
+			config.Categories[cmd.Category] = category
 		}
 	}
+}
 
-	// Set default values for flags
+// categoryContainsCommand checks if a category already contains a command
+func (l *Loader) categoryContainsCommand(category Category, cmdName string) bool {
+	for _, catCmd := range category.Commands {
+		if catCmd == cmdName {
+			return true
+		}
+	}
+	return false
+}
+
+// setDefaultFlagTypes sets default types for flags that don't have them
+func (l *Loader) setDefaultFlagTypes(config *CommandConfig) {
 	for cmdName, cmd := range config.Commands {
 		for flagName, flag := range cmd.Flags {
 			if flag.Type == "" {
@@ -168,8 +183,6 @@ func (l *Loader) postProcessConfig(config *CommandConfig) error {
 		}
 		config.Commands[cmdName] = cmd
 	}
-
-	return nil
 }
 
 // LoadDefault loads the default commands configuration

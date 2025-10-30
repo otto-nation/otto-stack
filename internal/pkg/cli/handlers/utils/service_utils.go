@@ -123,7 +123,7 @@ func (u *ServiceUtils) ResolveDependencies(selectedServices []string) ([]string,
 
 		// Only add container services to result
 		serviceConfig, err := u.LoadServiceConfig(serviceName)
-		if err == nil && (serviceConfig.Type == constants.ServiceTypeConfiguration || serviceConfig.Type == constants.ServiceTypeComposite) {
+		if err == nil && (serviceConfig.Type == "configuration" || serviceConfig.Type == "composite") {
 			return nil
 		}
 
@@ -152,7 +152,7 @@ func (u *ServiceUtils) ExpandCompositeServices(selectedServices []string) ([]str
 			continue
 		}
 
-		if serviceConfig.Type == constants.ServiceTypeComposite && len(serviceConfig.Components) > 0 {
+		if serviceConfig.Type == "composite" && len(serviceConfig.Components) > 0 {
 			// Expand composite service to its components
 			expandedServices = append(expandedServices, serviceConfig.Components...)
 		} else {
@@ -416,17 +416,17 @@ func convertServiceConfiguration(serviceData map[string]any) []types.ServiceOpti
 }
 
 // convertOptionsData converts options from YAML to CLI ServiceOption format
-func convertOptionsData(data interface{}) []types.ServiceOption {
+func convertOptionsData(data any) []types.ServiceOption {
 	if data == nil {
 		return nil
 	}
 
 	// Handle both old string slice format and new structured format
 	switch v := data.(type) {
-	case []interface{}:
+	case []any:
 		var options []types.ServiceOption
 		for _, item := range v {
-			if optMap, ok := item.(map[interface{}]interface{}); ok {
+			if optMap, ok := item.(map[any]any); ok {
 				// New structured format
 				option := types.ServiceOption{
 					Name:        getStringFromInterface(optMap, "name"),
@@ -455,8 +455,8 @@ func convertOptionsData(data interface{}) []types.ServiceOption {
 	}
 }
 
-// getStringFromInterface safely extracts a string value from interface{} map
-func getStringFromInterface(data map[interface{}]interface{}, key string) string {
+// getStringFromInterface safely extracts a string value from any map
+func getStringFromInterface(data map[any]any, key string) string {
 	if val, exists := data[key]; exists {
 		if str, ok := val.(string); ok {
 			return str
@@ -466,7 +466,7 @@ func getStringFromInterface(data map[interface{}]interface{}, key string) string
 }
 
 // getBool safely extracts a boolean value from a map
-func getBool(data map[interface{}]interface{}, key string) bool {
+func getBool(data map[any]any, key string) bool {
 	if val, exists := data[key]; exists {
 		if b, ok := val.(bool); ok {
 			return b

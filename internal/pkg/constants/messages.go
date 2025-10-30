@@ -120,8 +120,29 @@ var (
 	MsgDirectoryValidationFailed = Message{LevelError, "directory validation failed: %w"}
 )
 
+// Version-related messages
+var (
+	MsgVersionDetected    = Message{LevelInfo, "Detected version: %s"}
+	MsgVersionUpdated     = Message{LevelSuccess, "Version updated to: %s"}
+	MsgVersionValidated   = Message{LevelSuccess, "Version validated: %s"}
+	MsgVersionFileCreated = Message{LevelSuccess, "Version file created: %s"}
+	MsgVersionCheck       = Message{LevelInfo, "Checking version..."}
+	MsgVersionUpdate      = Message{LevelInfo, "Updating version..."}
+	MsgCurrentVersionInfo = Message{LevelInfo, "Current version: %s"}
+	MsgLatestVersionInfo  = Message{LevelInfo, "Latest version: %s"}
+)
+
+// Version error messages
+var (
+	MsgInvalidVersion     = Message{LevelError, "Invalid version format: %s"}
+	MsgVersionNotFound    = Message{LevelError, "Version not found"}
+	MsgVersionFileInvalid = Message{LevelError, "Invalid version file format: %s"}
+	MsgConstraintInvalid  = Message{LevelError, "Invalid version constraint: %s"}
+	MsgComparisonFailed   = Message{LevelError, "Version comparison failed: %s vs %s"}
+)
+
 // Helper function to send message with appropriate UI method
-func SendMessage(msg Message, args ...interface{}) {
+func SendMessage(msg Message, args ...any) {
 	content := msg.Content
 	if len(args) > 0 {
 		content = fmt.Sprintf(msg.Content, args...)

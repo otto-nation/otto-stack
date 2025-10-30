@@ -5,14 +5,56 @@ import (
 	"runtime"
 	"runtime/debug"
 	"time"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
+
+// Default values
+const (
+	DefaultVersion   = "dev"
+	DefaultCommit    = "unknown"
+	DefaultBuildDate = "unknown"
+	DefaultBuildBy   = "unknown"
+	DevelVersion     = "(devel)"
+)
+
+// Use constants from brand.go
+var (
+	AppNameTemplate   = constants.AppNameTemplate
+	UserAgentTemplate = constants.UserAgentTemplate
+)
+
+// Version-specific templates (not branding)
+const (
+	VersionInfoTemplate = `Version:    %s
+Git Commit: %s
+Build Date: %s
+Built By:   %s
+Go Version: %s
+Platform:   %s/%s
+`
+)
+
+// Version comparison results
+const (
+	VersionEqual   = 0
+	VersionNewer   = 1
+	VersionOlder   = -1
+	VersionInvalid = -999
+)
+
+// Special version values
+var SpecialVersions = map[string]struct{}{
+	"latest": {},
+	"*":      {},
+}
 
 var (
 	// These variables are set by the build process using ldflags
-	AppVersion = "dev"
-	GitCommit  = "unknown"
-	BuildDate  = "unknown"
-	BuildBy    = "unknown"
+	AppVersion = DefaultVersion
+	GitCommit  = DefaultCommit
+	BuildDate  = DefaultBuildDate
+	BuildBy    = DefaultBuildBy
 )
 
 // BuildInfo contains comprehensive build information
@@ -56,7 +98,7 @@ func GetBuildInfo() *BuildInfo {
 
 // GetAppVersion returns the application version string
 func GetAppVersion() string {
-	if AppVersion == "dev" {
+	if AppVersion == DefaultVersion {
 		// Try to get version from module info
 		if buildInfo, ok := debug.ReadBuildInfo(); ok {
 			return buildInfo.Main.Version
@@ -68,8 +110,8 @@ func GetAppVersion() string {
 // GetShortVersion returns a short version string
 func GetShortVersion() string {
 	version := GetAppVersion()
-	if version == "(devel)" || version == "dev" {
-		return "dev"
+	if version == DevelVersion || version == DefaultVersion {
+		return DefaultVersion
 	}
 	return version
 }
@@ -79,13 +121,13 @@ func GetFullVersion() string {
 	info := GetBuildInfo()
 
 	version := info.Version
-	if version == "dev" || version == "(devel)" {
-		version = "dev"
+	if version == DefaultVersion || version == DevelVersion {
+		version = DefaultVersion
 	}
 
-	result := fmt.Sprintf("otto-stack %s", version)
+	result := fmt.Sprintf(AppNameTemplate, version)
 
-	if info.GitCommit != "unknown" && info.GitCommit != "" {
+	if info.GitCommit != DefaultCommit && info.GitCommit != "" {
 		if len(info.GitCommit) > 7 {
 			result += fmt.Sprintf(" (%s)", info.GitCommit[:7])
 		} else {
@@ -99,25 +141,19 @@ func GetFullVersion() string {
 // GetFormattedBuildInfo returns formatted build information
 func GetFormattedBuildInfo() string {
 	info := GetBuildInfo()
-
-	result := fmt.Sprintf("Version:    %s\n", info.Version)
-	result += fmt.Sprintf("Git Commit: %s\n", info.GitCommit)
-	result += fmt.Sprintf("Build Date: %s\n", info.BuildDate)
-	result += fmt.Sprintf("Built By:   %s\n", info.BuildBy)
-	result += fmt.Sprintf("Go Version: %s\n", info.GoVersion)
-	result += fmt.Sprintf("Platform:   %s/%s\n", info.Platform, info.Arch)
-
-	return result
+	return fmt.Sprintf(VersionInfoTemplate,
+		info.Version, info.GitCommit, info.BuildDate,
+		info.BuildBy, info.GoVersion, info.Platform, info.Arch)
 }
 
 // IsDevBuild returns true if this is a development build
 func IsDevBuild() bool {
-	return AppVersion == "dev" || AppVersion == "(devel)"
+	return AppVersion == DefaultVersion || AppVersion == DevelVersion
 }
 
 // GetUserAgent returns a user agent string for HTTP requests
 func GetUserAgent() string {
-	return fmt.Sprintf("otto-stack/%s (%s/%s)", GetShortVersion(), runtime.GOOS, runtime.GOARCH)
+	return fmt.Sprintf(UserAgentTemplate, GetShortVersion(), runtime.GOOS, runtime.GOARCH)
 }
 
 // IsAppVersionCompatible checks if the current version is compatible with required version

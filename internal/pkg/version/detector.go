@@ -1,54 +1,17 @@
 package version
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"gopkg.in/yaml.v3"
 )
 
-// VersionDetector handles detection of version requirements from project files
-type VersionDetector struct {
-	searchPaths []string
-	fileNames   []string
-}
-
-// NewVersionDetector creates a new version detector
-func NewVersionDetector() *VersionDetector {
-	return &VersionDetector{
-		searchPaths: []string{
-			".",
-			".otto-stack",
-			".config",
-			"config",
-		},
-		fileNames: []string{
-			".otto-stack-version",
-			".otto-stack-version.yaml",
-			".otto-stack-version.yml",
-			"otto-stack-version",
-			"otto-stack-version.yaml",
-			"otto-stack-version.yml",
-		},
-	}
-}
-
 // DetectProjectVersion detects the required version for a project
-func (d *VersionDetector) DetectProjectVersion(projectPath string) (*VersionConstraint, error) {
-	// First, try to find a version file
-	versionFile, err := d.findVersionFile(projectPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if versionFile != nil {
-		return d.parseVersionConstraintFromFile(versionFile)
-	}
-
-	// If no version file found, try to detect from other configuration files
-	constraint, err := d.detectFromConfigFiles(projectPath)
+func DetectProjectVersion(projectPath string) (*VersionConstraint, error) {
+	// Try to detect from main configuration file
+	constraint, err := detectFromConfigFiles(projectPath)
 	if err != nil {
 		return nil, err
 	}
@@ -65,180 +28,14 @@ func (d *VersionDetector) DetectProjectVersion(projectPath string) (*VersionCons
 	}, nil
 }
 
-// findVersionFile searches for version files in the project
-func (d *VersionDetector) findVersionFile(projectPath string) (*VersionFile, error) {
-	for _, searchPath := range d.searchPaths {
-		fullSearchPath := filepath.Join(projectPath, searchPath)
-
-		// Check if the search path exists
-		if _, err := os.Stat(fullSearchPath); os.IsNotExist(err) {
-			continue
-		}
-
-		for _, fileName := range d.fileNames {
-			filePath := filepath.Join(fullSearchPath, fileName)
-
-			if _, err := os.Stat(filePath); err == nil {
-				versionFile, err := d.parseVersionFile(filePath)
-				if err != nil {
-					continue // Try next file
-				}
-				return versionFile, nil
-			}
-		}
-	}
-
-	return nil, nil // No version file found
-}
-
-// parseVersionFile parses a version file
-func (d *VersionDetector) parseVersionFile(filePath string) (*VersionFile, error) {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil, NewVersionError(ErrProjectConfig,
-			fmt.Sprintf("failed to read version file: %s", filePath), err)
-	}
-
-	// Try to determine file format based on extension or content
-	if d.isYAMLFile(filePath, data) {
-		return d.parseYAMLVersionFile(data)
-	}
-
-	return d.parseTextVersionFile(data)
-}
-
-// isYAMLFile determines if a file is YAML format
-func (d *VersionDetector) isYAMLFile(filePath string, data []byte) bool {
-	ext := strings.ToLower(filepath.Ext(filePath))
-	if ext == ".yaml" || ext == ".yml" {
-		return true
-	}
-
-	// Check if content looks like YAML
-	content := strings.TrimSpace(string(data))
-	return strings.Contains(content, ":") || strings.Contains(content, "-")
-}
-
-// parseYAMLVersionFile parses a YAML version file
-func (d *VersionDetector) parseYAMLVersionFile(data []byte) (*VersionFile, error) {
-	var versionFile VersionFile
-	if err := yaml.Unmarshal(data, &versionFile); err != nil {
-		return nil, NewVersionError(ErrProjectConfig,
-			"failed to parse YAML version file", err)
-	}
-
-	if versionFile.Version == "" {
-		return nil, NewVersionError(ErrProjectConfig,
-			"version field is required in version file", nil)
-	}
-
-	return &versionFile, nil
-}
-
-// parseTextVersionFile parses a plain text version file
-func (d *VersionDetector) parseTextVersionFile(data []byte) (*VersionFile, error) {
-	content := strings.TrimSpace(string(data))
-	if content == "" {
-		return nil, NewVersionError(ErrProjectConfig,
-			"version file is empty", nil)
-	}
-
-	// Split by lines and take the first non-empty line as version
-	lines := strings.Split(content, "\n")
-	var version string
-	var constraints []string
-
-	for i, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-
-		if i == 0 || version == "" {
-			version = line
-		} else {
-			constraints = append(constraints, line)
-		}
-	}
-
-	if version == "" {
-		return nil, NewVersionError(ErrProjectConfig,
-			"no version found in version file", nil)
-	}
-
-	return &VersionFile{
-		Version:     version,
-		Constraints: constraints,
-	}, nil
-}
-
-// parseVersionConstraintFromFile creates a version constraint from a version file
-func (d *VersionDetector) parseVersionConstraintFromFile(versionFile *VersionFile) (*VersionConstraint, error) {
-	// Primary constraint from version field
-	constraint, err := ParseVersionConstraint(versionFile.Version)
-	if err != nil {
-		return nil, NewVersionError(ErrProjectConfig,
-			fmt.Sprintf("invalid version constraint in file: %s", versionFile.Version), err)
-	}
-
-	// Handle additional constraints from minimum/maximum version fields if present
-	if versionFile.MinimumVersion != "" {
-		minConstraint, err := ParseVersionConstraint(">=" + versionFile.MinimumVersion)
-		if err != nil {
-			return nil, NewVersionError(ErrProjectConfig,
-				fmt.Sprintf("invalid minimum version constraint: %s", versionFile.MinimumVersion), err)
-		}
-		// Combine constraints - both must be satisfied
-		if constraint.Operator == "==" {
-			// If we have an exact version, verify it meets the minimum
-			if !minConstraint.IsSatisfiedBy(constraint.Version) {
-				return nil, NewVersionError(ErrProjectConfig,
-					fmt.Sprintf("version %s does not meet minimum requirement %s", constraint.Version, versionFile.MinimumVersion), nil)
-			}
-		}
-	}
-
-	if versionFile.MaximumVersion != "" {
-		maxConstraint, err := ParseVersionConstraint("<=" + versionFile.MaximumVersion)
-		if err != nil {
-			return nil, NewVersionError(ErrProjectConfig,
-				fmt.Sprintf("invalid maximum version constraint: %s", versionFile.MaximumVersion), err)
-		}
-		// Combine constraints - both must be satisfied
-		if constraint.Operator == "==" {
-			// If we have an exact version, verify it meets the maximum
-			if !maxConstraint.IsSatisfiedBy(constraint.Version) {
-				return nil, NewVersionError(ErrProjectConfig,
-					fmt.Sprintf("version %s exceeds maximum requirement %s", constraint.Version, versionFile.MaximumVersion), nil)
-			}
-		}
-	}
-
-	return constraint, nil
-}
-
 // detectFromConfigFiles tries to detect version requirements from other config files
-func (d *VersionDetector) detectFromConfigFiles(projectPath string) (*VersionConstraint, error) {
-	// Check for otto-stack configuration files
-	configPaths := []string{
-		"otto-stack-config.yaml",
-		"otto-stack-config.yml",
-		".otto-stack.yaml",
-		".otto-stack.yml",
-		"otto-stack.yaml",
-		"otto-stack.yml",
-	}
-
-	for _, configPath := range configPaths {
-		fullPath := filepath.Join(projectPath, configPath)
-		if _, err := os.Stat(fullPath); err == nil {
-			constraint, err := d.parseVersionFromConfig(fullPath)
-			if err != nil {
-				continue // Try next config file
-			}
-			if constraint != nil {
-				return constraint, nil
-			}
+func detectFromConfigFiles(projectPath string) (*VersionConstraint, error) {
+	// Check for otto-stack configuration file
+	configPath := filepath.Join(projectPath, constants.ConfigFileName)
+	if _, err := os.Stat(configPath); err == nil {
+		constraint, err := parseVersionFromConfig(configPath)
+		if err == nil && constraint != nil {
+			return constraint, nil
 		}
 	}
 
@@ -246,7 +43,7 @@ func (d *VersionDetector) detectFromConfigFiles(projectPath string) (*VersionCon
 }
 
 // parseVersionFromConfig extracts version requirements from a config file
-func (d *VersionDetector) parseVersionFromConfig(configPath string) (*VersionConstraint, error) {
+func parseVersionFromConfig(configPath string) (*VersionConstraint, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
@@ -257,87 +54,41 @@ func (d *VersionDetector) parseVersionFromConfig(configPath string) (*VersionCon
 		return nil, err
 	}
 
-	// Look for version-related fields
-	versionFields := []string{
-		"dev_stack_version",
-		"devStackVersion",
-		"version",
-		"required_version",
-		"requiredVersion",
+	versionStr := getNestedString(config, "version_config", "required_version")
+	if versionStr == "" {
+		return nil, nil
 	}
 
-	for _, field := range versionFields {
-		if value, exists := config[field]; exists {
-			if versionStr, ok := value.(string); ok && versionStr != "" {
-				return ParseVersionConstraint(versionStr)
-			}
-		}
-	}
-
-	return nil, nil
+	return ParseVersionConstraint(versionStr)
 }
 
-// FindVersionFiles returns all version files found in a project
-func (d *VersionDetector) FindVersionFiles(projectPath string) ([]string, error) {
-	var files []string
-
-	for _, searchPath := range d.searchPaths {
-		fullSearchPath := filepath.Join(projectPath, searchPath)
-
-		if _, err := os.Stat(fullSearchPath); os.IsNotExist(err) {
-			continue
+// getNestedString safely extracts a nested string value from a map
+func getNestedString(data map[string]any, keys ...string) string {
+	current := data
+	for _, key := range keys[:len(keys)-1] {
+		next, exists := current[key]
+		if !exists {
+			return ""
 		}
-
-		for _, fileName := range d.fileNames {
-			filePath := filepath.Join(fullSearchPath, fileName)
-
-			if _, err := os.Stat(filePath); err == nil {
-				files = append(files, filePath)
-			}
+		if nextMap, ok := next.(map[string]any); ok {
+			current = nextMap
+		} else {
+			return ""
 		}
 	}
 
-	return files, nil
-}
-
-// CreateVersionFile creates a version file for a project
-func (d *VersionDetector) CreateVersionFile(projectPath, version string, format string) error {
-	var fileName string
-	var content []byte
-	var err error
-
-	switch strings.ToLower(format) {
-	case "yaml", "yml":
-		fileName = ".otto-stack-version.yaml"
-		versionFile := VersionFile{
-			Version: version,
-			Metadata: map[string]string{
-				"created_by": "otto-stack",
-			},
+	finalKey := keys[len(keys)-1]
+	if value, exists := current[finalKey]; exists {
+		if str, ok := value.(string); ok {
+			return str
 		}
-		content, err = yaml.Marshal(versionFile)
-		if err != nil {
-			return NewVersionError(ErrProjectConfig,
-				"failed to marshal version file", err)
-		}
-	default:
-		fileName = ".otto-stack-version"
-		content = []byte(version + "\n")
 	}
-
-	filePath := filepath.Join(projectPath, fileName)
-
-	if err := os.WriteFile(filePath, content, 0644); err != nil {
-		return NewVersionError(ErrProjectConfig,
-			fmt.Sprintf("failed to write version file: %s", filePath), err)
-	}
-
-	return nil
+	return ""
 }
 
 // ValidateProjectVersion validates the version constraint in a project
-func (d *VersionDetector) ValidateProjectVersion(projectPath string) error {
-	constraint, err := d.DetectProjectVersion(projectPath)
+func ValidateProjectVersion(projectPath string) error {
+	constraint, err := DetectProjectVersion(projectPath)
 	if err != nil {
 		return err
 	}
@@ -349,55 +100,4 @@ func (d *VersionDetector) ValidateProjectVersion(projectPath string) error {
 
 	// Validate the constraint format
 	return ValidateConstraint(constraint.Original)
-}
-
-// UpdateProjectVersion updates the version requirement for a project
-func (d *VersionDetector) UpdateProjectVersion(projectPath, newVersion string) error {
-	// Find existing version file
-	files, err := d.FindVersionFiles(projectPath)
-	if err != nil {
-		return err
-	}
-
-	if len(files) == 0 {
-		// Create new version file
-		return d.CreateVersionFile(projectPath, newVersion, "text")
-	}
-
-	// Update the first found version file
-	filePath := files[0]
-
-	// Determine file format
-	if d.isYAMLFile(filePath, nil) {
-		return d.updateYAMLVersionFile(filePath, newVersion)
-	}
-
-	return d.updateTextVersionFile(filePath, newVersion)
-}
-
-// updateYAMLVersionFile updates a YAML version file
-func (d *VersionDetector) updateYAMLVersionFile(filePath, newVersion string) error {
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return err
-	}
-
-	var versionFile VersionFile
-	if err := yaml.Unmarshal(data, &versionFile); err != nil {
-		return err
-	}
-
-	versionFile.Version = newVersion
-
-	updatedData, err := yaml.Marshal(versionFile)
-	if err != nil {
-		return err
-	}
-
-	return os.WriteFile(filePath, updatedData, 0644)
-}
-
-// updateTextVersionFile updates a text version file
-func (d *VersionDetector) updateTextVersionFile(filePath, newVersion string) error {
-	return os.WriteFile(filePath, []byte(newVersion+"\n"), 0644)
 }

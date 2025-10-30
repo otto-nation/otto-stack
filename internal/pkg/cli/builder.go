@@ -30,9 +30,6 @@ func createServiceManager() (*services.Manager, error) {
 func findProjectRoot(startDir string) string {
 	configFiles := []string{
 		constants.ConfigFileName,
-		constants.ConfigFileNameYAML,
-		constants.ConfigFileNameHidden,
-		constants.ConfigFileNameHiddenYAML,
 	}
 
 	dir := startDir

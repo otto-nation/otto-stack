@@ -42,6 +42,9 @@ jobs:
             exit 1
           fi
 
+      - name: Generate code
+        run: task generate
+
       - name: Run go vet
         run: go vet ./...
 

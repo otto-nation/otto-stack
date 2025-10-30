@@ -18,6 +18,15 @@ metadata:
   cli_version: "0.1.0"
   description: "Development stack management tool"
 
+# Handler type definitions
+handlers:
+  stack:
+    description: "Stack operational commands (lifecycle, monitoring, data)"
+    package: "stack"
+  project:
+    description: "Project management and utility commands"
+    package: "project"
+
 global:
   flags:
     config:
@@ -88,9 +97,16 @@ categories:
     icon: "🛠️"
     commands: ["validate", "services", "deps", "conflicts"]
 
+  utility:
+    name: "Utility Commands"
+    description: "General utility and information commands"
+    icon: "ℹ️"
+    commands: ["version", "help"]
+
 commands:
   up:
     category: "lifecycle"
+    handler: "stack"
     description: "Start development stack services"
     long_description: |
       Start one or more services in the development stack. Services are started
@@ -153,6 +169,7 @@ commands:
 
   down:
     category: "lifecycle"
+    handler: "stack"
     description: "Stop development stack services"
     long_description: |
       Stop one or more services in the development stack. By default, containers
@@ -195,6 +212,7 @@ commands:
 
   restart:
     category: "lifecycle"
+    handler: "stack"
     description: "Restart development stack services"
     long_description: |
       Restart one or more services. This is equivalent to running down followed
@@ -221,6 +239,7 @@ commands:
 
   status:
     category: "monitoring"
+    handler: "stack"
     description: "Show status of development stack services"
     long_description: |
       Display comprehensive status information for services including running
@@ -264,7 +283,7 @@ commands:
         type: "bool"
         description: "Don't truncate output"
         default: false
-    related_commands: ["logs", "monitor", "doctor"]
+    related_commands: ["logs", "status"]
     tips:
       - "Use --watch to monitor services in real-time"
       - "Try --format json for programmatic access"
@@ -272,6 +291,7 @@ commands:
 
   logs:
     category: "monitoring"
+    handler: "stack"
     description: "View logs from services"
     long_description: |
       View and follow logs from one or more services. Supports filtering,
@@ -314,16 +334,15 @@ commands:
         type: "bool"
         description: "Don't show service name prefix"
         default: false
-    related_commands: ["status", "monitor"]
+    related_commands: ["status"]
     tips:
       - "Use --follow to see logs in real-time"
       - "Combine --tail and --since for targeted log viewing"
       - "Use --timestamps to correlate events across services"
 
-
-
   doctor:
     category: "monitoring"
+    handler: "project"
     description: "Diagnose and troubleshoot stack health"
     long_description: |
       Run comprehensive health checks on your development stack. Identifies
@@ -360,6 +379,7 @@ commands:
 
   exec:
     category: "data"
+    handler: "stack"
     description: "Execute commands in running service containers"
     long_description: |
       Execute commands inside running service containers. Useful for database
@@ -411,6 +431,7 @@ commands:
 
   connect:
     category: "data"
+    handler: "stack"
     description: "Quick connect to service databases and interfaces"
     long_description: |
       Quickly connect to service databases and management interfaces using
@@ -454,10 +475,9 @@ commands:
       - "Automatically uses correct client tools for each service"
       - "Use --read-only for safe data exploration"
 
-
-
   cleanup:
     category: "maintenance"
+    handler: "stack"
     description: "Clean up unused resources and data"
     long_description: |
       Clean up unused Docker resources, temporary files, and orphaned data
@@ -506,10 +526,9 @@ commands:
       - "Use --dry-run first to see what will be removed"
       - "Be careful with --volumes as it removes all data"
 
-
-
   init:
     category: "maintenance"
+    handler: "project"
     description: "Initialize a new otto-stack project interactively"
     long_description: |
       Initialize a new otto-stack project in the current directory with an
@@ -530,16 +549,15 @@ commands:
         type: "bool"
         description: "Overwrite existing files"
         default: false
-    related_commands: ["docs", "validate"]
-
-
+    related_commands: ["validate"]
 
   services:
     category: "development"
+    handler: "project"
     description: "List available services by category"
     long_description: |
-      List all available services organized by category (database, cache, 
-      messaging, observability, cloud). Shows service descriptions and 
+      List all available services organized by category (database, cache,
+      messaging, observability, cloud). Shows service descriptions and
       dependencies for easy discovery and selection.
     usage: "services [flags]"
     examples:
@@ -560,6 +578,7 @@ commands:
 
   deps:
     category: "development"
+    handler: "project"
     description: "Show dependency tree for a service"
     long_description: |
       Display the complete dependency tree for a service, showing all required
@@ -575,6 +594,7 @@ commands:
 
   conflicts:
     category: "development"
+    handler: "project"
     description: "Check for conflicts between services"
     long_description: |
       Check if the specified services have any conflicts that would prevent
@@ -590,6 +610,7 @@ commands:
 
   validate:
     category: "development"
+    handler: "project"
     description: "Validate configurations and manifests"
     long_description: |
       Validate otto-stack configurations, service definitions, and YAML
@@ -619,9 +640,49 @@ commands:
         type: "bool"
         description: "Attempt to fix validation errors"
         default: false
-    related_commands: ["doctor", "docs"]
+    related_commands: ["doctor"]
 
+  version:
+    category: "utility"
+    handler: "project"
+    description: "Show version information"
+    long_description: |
+      Display version information for otto-stack including build details,
+      Git commit, and platform information. Can check for available updates.
+    usage: "version"
+    flags:
+      full:
+        type: "bool"
+        description: "Show detailed version information"
+        default: false
+      check-updates:
+        type: "bool"
+        description: "Check for available updates"
+        default: false
+      format:
+        type: "string"
+        description: "Output format (text, json, yaml)"
+        default: "text"
+    examples:
+      - command: "otto-stack version"
+        description: "Show basic version information"
+      - command: "otto-stack version --full"
+        description: "Show detailed build information"
+      - command: "otto-stack version --check-updates"
+        description: "Check for available updates"
 
+  help:
+    category: "utility"
+    handler: "project"
+    description: "Show help information"
+    long_description: |
+      Display help information for otto-stack commands and usage.
+    usage: "help [command]"
+    examples:
+      - command: "otto-stack help"
+        description: "Show general help"
+      - command: "otto-stack help up"
+        description: "Show help for up command"
 
 # Workflow definitions for common task sequences
 workflows:

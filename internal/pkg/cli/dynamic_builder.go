@@ -6,12 +6,9 @@ import (
 	"log/slog"
 
 	"github.com/otto-nation/otto-stack/internal/core/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/completion"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/core"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/doctor"
-	initHandler "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/init"
-	cliServices "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/validate"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers"
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/stack"
 	cliTypes "github.com/otto-nation/otto-stack/internal/pkg/cli/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
@@ -88,40 +85,23 @@ func buildCommandFromConfig(name string, cmdConfig config.Command, serviceManage
 }
 
 func getHandlerForCommand(name string, serviceManager *services.Manager) cliTypes.CommandHandler {
-	switch name {
-	case constants.CmdNameUp:
-		return core.NewUpHandler()
-	case constants.CmdNameDown:
-		return core.NewDownHandler()
-	case constants.CmdNameRestart:
-		return core.NewRestartHandler()
-	case constants.CmdNameStatus:
-		return core.NewStatusHandler()
-	case constants.CmdNameLogs:
-		return core.NewLogsHandler()
-	case constants.CmdNameExec:
-		return core.NewExecHandler()
-	case constants.CmdNameConnect:
-		return core.NewConnectHandler()
-	case constants.CmdNameCleanup:
-		return core.NewCleanupHandler()
-	case constants.CmdNameInit:
-		return initHandler.NewInitHandler()
-	case constants.CmdNameDoctor:
-		return doctor.NewDoctorHandler()
-	case constants.CmdNameCompletion:
-		return completion.NewCompletionHandler()
-	case constants.CmdNameServices:
-		return cliServices.NewServicesHandler()
-	case constants.CmdNameDeps:
-		return cliServices.NewDepsHandler()
-	case constants.CmdNameConflicts:
-		return cliServices.NewConflictsHandler()
-	case constants.CmdNameValidate:
-		return validate.NewValidateHandler()
-	default:
+	configLoader := config.NewLoader("")
+	commandConfig, err := configLoader.Load()
+	if err != nil {
 		return nil
 	}
+
+	cmdDef, exists := commandConfig.Commands[name]
+	if !exists {
+		return nil
+	}
+
+	handlerDef, exists := commandConfig.Handlers[cmdDef.Handler]
+	if !exists {
+		return nil
+	}
+
+	return handlers.Get(handlerDef.Package, name)
 }
 
 func addGlobalFlagsFromConfig(cmd *cobra.Command, config *config.CommandConfig) error {

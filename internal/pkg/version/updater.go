@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
@@ -45,10 +46,36 @@ func (u *UpdateChecker) CheckForUpdates() (*GitHubRelease, bool, error) {
 		return nil, false, nil
 	}
 
-	// Compare versions (simple string comparison for now)
-	hasUpdate := latest.TagName != u.currentVersion && latest.TagName > u.currentVersion
+	// Compare versions using semantic versioning
+	currentVer, err := ParseVersion(cleanVersionString(u.currentVersion))
+	if err != nil {
+		// Fallback to string comparison if parsing fails
+		hasUpdate := latest.TagName != u.currentVersion && latest.TagName > u.currentVersion
+		return latest, hasUpdate, nil
+	}
+
+	latestVer, err := ParseVersion(cleanVersionString(latest.TagName))
+	if err != nil {
+		// Fallback to string comparison if parsing fails
+		hasUpdate := latest.TagName != u.currentVersion && latest.TagName > u.currentVersion
+		return latest, hasUpdate, nil
+	}
+
+	hasUpdate := latestVer.Compare(*currentVer) > 0
 
 	return latest, hasUpdate, nil
+}
+
+// cleanVersionString removes common prefixes from version strings
+func cleanVersionString(version string) string {
+	// Common version prefixes to remove
+	prefixes := []string{constants.AppName + "-", "v"}
+
+	cleaned := version
+	for _, prefix := range prefixes {
+		cleaned = strings.TrimPrefix(cleaned, prefix)
+	}
+	return cleaned
 }
 
 // SelfUpdater handles self-updating the binary

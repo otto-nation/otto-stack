@@ -566,3 +566,40 @@ Global Flags:
   -v, --verbose           Enable verbose output
       --version           Show version information
 ```
+
+### version
+
+```
+Display version information for otto-stack including build details,
+Git commit, and platform information. Can check for available updates.
+
+Usage:
+  otto-stack version [flags]
+
+Examples:
+  otto-stack version
+    Show basic version information
+
+  otto-stack version --full
+    Show detailed build information
+
+  otto-stack version --check-updates
+    Check for available updates
+
+
+
+Flags:
+      --check-updates   Check for available updates
+      --format string   Output format (text, json, yaml) (default "text")
+      --full            Show detailed version information
+
+Global Flags:
+  -c, --config string     Config file (default: $HOME/.otto-stack.yaml)
+  -h, --help              Show help information
+      --json              Output in JSON format (CI-friendly)
+      --no-color          Disable colored output (CI-friendly)
+      --non-interactive   Run in non-interactive mode (CI-friendly)
+  -q, --quiet             Suppress non-essential output (CI-friendly)
+  -v, --verbose           Enable verbose output
+      --version           Show version information
+```

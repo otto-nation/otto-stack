@@ -5,6 +5,8 @@ import (
 	"io"
 	"strings"
 	"time"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 // TableFormatter implements table-based output formatting
@@ -85,7 +87,7 @@ func (f *TableFormatter) FormatValidation(result ValidationResult, options Valid
 // FormatVersion formats version information as a table
 func (f *TableFormatter) FormatVersion(info VersionInfo, options VersionOptions) error {
 	//nolint:errcheck
-	fmt.Fprintf(f.writer, "otto-stack version %s\n", info.Version)
+	fmt.Fprintf(f.writer, "%s version %s\n", constants.AppName, info.Version)
 
 	if options.Full {
 		//nolint:errcheck

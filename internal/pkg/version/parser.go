@@ -5,27 +5,26 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 var (
 	// Semantic version regex pattern
 	semverRegex = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z\-\.]+))?(?:\+([0-9A-Za-z\-\.]+))?$`)
-
-	// Version constraint regex pattern
-	constraintRegex = regexp.MustCompile(`^([~^<>=!]*)(.+)$`)
 )
 
 // ParseVersion parses a version string into a Version struct
 func ParseVersion(versionStr string) (*Version, error) {
 	if versionStr == "" {
-		return nil, NewVersionError(ErrVersionInvalid, "version string cannot be empty", nil)
+		return nil, NewVersionError(ErrVersionInvalid, constants.MsgInvalidVersion.Content, nil)
 	}
 
 	// Clean the version string
 	versionStr = strings.TrimSpace(versionStr)
 
 	// Handle special cases
-	if versionStr == "latest" || versionStr == "*" {
+	if _, isSpecial := SpecialVersions[versionStr]; isSpecial {
 		return &Version{
 			Major:    999,
 			Minor:    999,
@@ -37,25 +36,25 @@ func ParseVersion(versionStr string) (*Version, error) {
 	matches := semverRegex.FindStringSubmatch(versionStr)
 	if matches == nil {
 		return nil, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf("invalid semantic version: %s", versionStr), nil)
+			fmt.Sprintf(constants.MsgInvalidVersion.Content, versionStr), nil)
 	}
 
 	major, err := strconv.Atoi(matches[1])
 	if err != nil {
 		return nil, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf("invalid major version: %s", matches[1]), err)
+			fmt.Sprintf(constants.MsgInvalidVersion.Content, matches[1]), err)
 	}
 
 	minor, err := strconv.Atoi(matches[2])
 	if err != nil {
 		return nil, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf("invalid minor version: %s", matches[2]), err)
+			fmt.Sprintf(constants.MsgInvalidVersion.Content, matches[2]), err)
 	}
 
 	patch, err := strconv.Atoi(matches[3])
 	if err != nil {
 		return nil, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf("invalid patch version: %s", matches[3]), err)
+			fmt.Sprintf(constants.MsgInvalidVersion.Content, matches[3]), err)
 	}
 
 	version := &Version{
@@ -95,52 +94,34 @@ func ParseVersionConstraint(constraintStr string) (*VersionConstraint, error) {
 		}, nil
 	}
 
-	matches := constraintRegex.FindStringSubmatch(constraintStr)
-	if matches == nil {
-		// No operator, assume exact match
-		version, err := ParseVersion(constraintStr)
-		if err != nil {
-			return nil, NewVersionError(ErrVersionConstraint,
-				fmt.Sprintf("invalid version constraint: %s", constraintStr), err)
+	// Try to extract operator from the beginning
+	var operator, versionStr string
+
+	// Check for operators in order of precedence (longest first)
+	operators := []string{">=", "<=", "!=", "==", ">", "<", "~", "^", "="}
+	for _, op := range operators {
+		if strings.HasPrefix(constraintStr, op) {
+			operator = op
+			versionStr = strings.TrimSpace(constraintStr[len(op):])
+			break
 		}
-		return &VersionConstraint{
-			Operator: "=",
-			Version:  *version,
-			Original: constraintStr,
-		}, nil
 	}
 
-	operator := matches[1]
-	versionStr := matches[2]
-
-	// Default operator is =
+	// If no operator found, assume exact match
 	if operator == "" {
 		operator = "="
+		versionStr = constraintStr
 	}
 
-	// Handle compound operators
-	if strings.Contains(operator, "!") && strings.Contains(operator, "=") {
-		operator = "!="
-	} else if strings.Contains(operator, ">") && strings.Contains(operator, "=") {
-		operator = ">="
-	} else if strings.Contains(operator, "<") && strings.Contains(operator, "=") {
-		operator = "<="
-	} else if strings.Contains(operator, "~") {
-		operator = "~"
-	} else if strings.Contains(operator, "^") {
-		operator = "^"
-	} else if strings.Contains(operator, ">") {
-		operator = ">"
-	} else if strings.Contains(operator, "<") {
-		operator = "<"
-	} else if strings.Contains(operator, "=") {
+	// Normalize == to =
+	if operator == "==" {
 		operator = "="
 	}
 
 	version, err := ParseVersion(versionStr)
 	if err != nil {
 		return nil, NewVersionError(ErrVersionConstraint,
-			fmt.Sprintf("invalid version in constraint: %s", versionStr), err)
+			fmt.Sprintf(constants.MsgInvalidVersion.Content, versionStr), err)
 	}
 
 	return &VersionConstraint{

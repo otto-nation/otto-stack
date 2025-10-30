@@ -7,6 +7,7 @@ import (
 // CommandConfig represents the root structure of the enhanced commands.yaml
 type CommandConfig struct {
 	Metadata   Metadata            `yaml:"metadata"`
+	Handlers   map[string]Handler  `yaml:"handlers"`
 	Global     GlobalConfig        `yaml:"global"`
 	Categories map[string]Category `yaml:"categories"`
 	Commands   map[string]Command  `yaml:"commands"`
@@ -36,9 +37,16 @@ type Category struct {
 	Commands    []string `yaml:"commands"`
 }
 
+// Handler represents a command handler definition
+type Handler struct {
+	Description string `yaml:"description"`
+	Package     string `yaml:"package"`
+}
+
 // Command represents a complete command definition
 type Command struct {
 	Category        string           `yaml:"category"`
+	Handler         string           `yaml:"handler"`
 	Description     string           `yaml:"description"`
 	LongDescription string           `yaml:"long_description"`
 	Usage           string           `yaml:"usage"`

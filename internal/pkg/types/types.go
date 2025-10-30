@@ -66,14 +66,59 @@ type HealthCheck struct {
 	StartPeriod time.Duration `yaml:"start_period,omitempty" json:"start_period,omitempty"`
 }
 
+// OttoStackConfig represents the main otto-stack-config.yml structure
+type OttoStackConfig struct {
+	Project              ProjectInfo    `yaml:"project" json:"project"`
+	Stack                StackConfig    `yaml:"stack" json:"stack"`
+	ServiceConfiguration map[string]any `yaml:"service_configuration,omitempty" json:"service_configuration,omitempty"`
+	VersionConfig        *VersionConfig `yaml:"version_config,omitempty" json:"version_config,omitempty"`
+}
+
+// ProjectInfo represents project information
+type ProjectInfo struct {
+	Name        string `yaml:"name" json:"name"`
+	Environment string `yaml:"environment" json:"environment"`
+}
+
+// StackConfig represents stack configuration
+type StackConfig struct {
+	Enabled []string `yaml:"enabled" json:"enabled"`
+}
+
 // ProjectConfig represents project-level configuration
 type ProjectConfig struct {
-	Version    string             `yaml:"version" json:"version"`
-	Networks   map[string]Network `yaml:"networks,omitempty" json:"networks,omitempty"`
-	Volumes    map[string]Volume  `yaml:"volumes,omitempty" json:"volumes,omitempty"`
-	Secrets    map[string]Secret  `yaml:"secrets,omitempty" json:"secrets,omitempty"`
-	Profiles   []string           `yaml:"profiles,omitempty" json:"profiles,omitempty"`
-	Extensions map[string]any     `yaml:"x-*,omitempty" json:"x-*,omitempty"`
+	Version       string             `yaml:"version" json:"version"`
+	VersionConfig *VersionConfig     `yaml:"version_config,omitempty" json:"version_config,omitempty"`
+	Networks      map[string]Network `yaml:"networks,omitempty" json:"networks,omitempty"`
+	Volumes       map[string]Volume  `yaml:"volumes,omitempty" json:"volumes,omitempty"`
+	Secrets       map[string]Secret  `yaml:"secrets,omitempty" json:"secrets,omitempty"`
+	Profiles      []string           `yaml:"profiles,omitempty" json:"profiles,omitempty"`
+	Extensions    map[string]any     `yaml:"x-*,omitempty" json:"x-*,omitempty"`
+}
+
+// VersionConfig represents version management configuration
+type VersionConfig struct {
+	RequiredVersion string              `yaml:"required_version,omitempty" json:"required_version,omitempty"`
+	Notifications   *NotificationConfig `yaml:"notifications,omitempty" json:"notifications,omitempty"`
+	Enforcement     *EnforcementConfig  `yaml:"enforcement,omitempty" json:"enforcement,omitempty"`
+}
+
+// NotificationConfig represents notification settings
+type NotificationConfig struct {
+	Enabled        bool   `yaml:"enabled" json:"enabled"`
+	Frequency      string `yaml:"frequency" json:"frequency"`
+	MinSeverity    string `yaml:"min_severity" json:"min_severity"`
+	LastCheck      string `yaml:"last_check,omitempty" json:"last_check,omitempty"`
+	AutoCheck      bool   `yaml:"auto_check" json:"auto_check"`
+	ShowPrerelease bool   `yaml:"show_prerelease" json:"show_prerelease"`
+}
+
+// EnforcementConfig represents enforcement policy settings
+type EnforcementConfig struct {
+	StrictMode       bool   `yaml:"strict_mode" json:"strict_mode"`
+	AllowDrift       bool   `yaml:"allow_drift" json:"allow_drift"`
+	MaxDriftDuration string `yaml:"max_drift_duration" json:"max_drift_duration"`
+	AutoSync         bool   `yaml:"auto_sync" json:"auto_sync"`
 }
 
 // Network represents a Docker network configuration

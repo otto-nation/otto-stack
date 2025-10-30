@@ -26,4 +26,15 @@ const (
 	// GitHub repository information
 	GitHubOrg  = "otto-nation"
 	GitHubRepo = AppName
+
+	// GitHub URL templates
+	GitHubRepoURL     = "https://github.com/" + GitHubOrg + "/" + GitHubRepo
+	GitHubReleaseURL  = GitHubRepoURL + "/releases/tag/v%s"
+	GitHubDownloadURL = GitHubRepoURL + "/releases/download/v%s/" + AppName
+)
+
+// Version format templates
+const (
+	AppNameTemplate   = AppName + " %s"
+	UserAgentTemplate = AppName + "/%s (%s/%s)"
 )
