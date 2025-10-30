@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.2.0](https://github.com/otto-nation/otto-stack/compare/otto-stack-v1.1.0...otto-stack-v1.2.0) (2025-10-30)
+
+
+### Features
+
+* add configurable AI agent support for git automation ([#23](https://github.com/otto-nation/otto-stack/issues/23)) ([b431b63](https://github.com/otto-nation/otto-stack/commit/b431b6353b84fb47840335cfb4ec8ffe1eadd304))
+
+
+### Dependencies
+
+* **deps-dev:** bump vite from 7.1.9 to 7.1.12 in /docs-site ([#20](https://github.com/otto-nation/otto-stack/issues/20)) ([c8a0a1a](https://github.com/otto-nation/otto-stack/commit/c8a0a1a2182d2479747da6cce6dd8d06d93b3ec9))
+
 ## [1.1.0](https://github.com/otto-nation/otto-stack/compare/otto-stack-v1.0.1...otto-stack-v1.1.0) (2025-10-13)
 
 
