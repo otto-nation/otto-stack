@@ -123,6 +123,7 @@ tasks:
   # ============================================================================
   deps:
     desc: "📥 Download and tidy Go dependencies"
+    deps: [generate]
     silent: true
     cmds:
       - echo "📥 Downloading Go dependencies..."
