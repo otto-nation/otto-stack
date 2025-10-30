@@ -1,0 +1,80 @@
+metadata:
+  schema_version: "1.0"
+  generated_by: "otto-stack"
+  description: "Configuration schema for otto-stack projects"
+
+templates:
+  project_name: "{{project_name}}"
+  otto_version: "{{otto_version}}"
+  config_docs_url: "{{config_docs_url}}"
+  service_config_url: "{{service_config_url}}"
+
+schema:
+  version:
+    type: string
+    default: "{{otto_version}}"
+    description: "Otto-stack version that generated this config"
+
+  project:
+    type: object
+    description: "Project configuration settings"
+    properties:
+      name:
+        type: string
+        default: "{{project_name}}"
+        description: "Project name"
+
+  stack:
+    type: object
+    description: "Stack service configuration"
+    properties:
+      enabled:
+        type: array
+        items:
+          type: string
+        default: []
+        description: "List of enabled services"
+
+  service_configuration:
+    type: object
+    default: {}
+    description: "Service-specific configuration overrides"
+
+  validation:
+    type: object
+    description: "Validation and safety settings"
+    properties:
+      skip_warnings:
+        type: boolean
+        default: "{{default_skip_warnings}}"
+        description: "Skip validation warnings during startup"
+      allow_multiple_databases:
+        type: boolean
+        default: "{{default_allow_multiple_dbs}}"
+        description: "Allow multiple database services"
+
+  advanced:
+    type: object
+    description: "Advanced operational settings"
+    properties:
+      auto_start:
+        type: boolean
+        default: "{{default_auto_start}}"
+        description: "Start services automatically after setup"
+      pull_latest_images:
+        type: boolean
+        default: "{{default_pull_latest_images}}"
+        description: "Pull latest Docker images"
+      cleanup_on_recreate:
+        type: boolean
+        default: "{{default_cleanup_on_recreate}}"
+        description: "Keep data when recreating services"
+
+  version_config:
+    type: object
+    description: "Version management and update settings"
+    properties:
+      required_version:
+        type: string
+        default: ">=1.0.0"
+        description: "Required otto-stack version"

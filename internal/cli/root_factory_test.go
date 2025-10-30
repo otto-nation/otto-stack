@@ -7,6 +7,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 func TestCreateRootCommand(t *testing.T) {
@@ -76,7 +78,7 @@ help: {}
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, rootCmd)
-				assert.Equal(t, "otto-stack", rootCmd.Use)
+				assert.Equal(t, constants.AppName, rootCmd.Use)
 				assert.NotEmpty(t, rootCmd.Short)
 			}
 		})
@@ -93,7 +95,7 @@ func TestExecuteFactory(t *testing.T) {
 			name: "execute with help flag",
 			setupFunc: func(t *testing.T) {
 				// Set args to show help (which should not error)
-				os.Args = []string{"otto-stack", "--help"}
+				os.Args = []string{constants.AppName, "--help"}
 			},
 			expectError: false,
 		},
@@ -101,7 +103,7 @@ func TestExecuteFactory(t *testing.T) {
 			name: "execute with version flag",
 			setupFunc: func(t *testing.T) {
 				// Set args to show version
-				os.Args = []string{"otto-stack", "--version"}
+				os.Args = []string{constants.AppName, "--version"}
 			},
 			expectError: false,
 		},
@@ -125,7 +127,7 @@ func TestExecuteFactory(t *testing.T) {
 			require.NotNil(t, rootCmd)
 
 			// Test that the command has the expected structure
-			assert.Equal(t, "otto-stack", rootCmd.Use)
+			assert.Equal(t, constants.AppName, rootCmd.Use)
 			assert.NotEmpty(t, rootCmd.Short)
 			assert.True(t, rootCmd.HasSubCommands())
 		})

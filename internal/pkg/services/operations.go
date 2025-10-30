@@ -82,27 +82,46 @@ func (op *ConnectOperation) BuildCommand(options map[string]string) []string {
 	cmd := make([]string, len(op.Command))
 	copy(cmd, op.Command)
 
-	// Apply defaults first
+	// Apply defaults first, then override with provided options
+	params := op.mergeParameters(options)
+
+	// Add arguments based on parameters
+	for param, value := range params {
+		if value == "" {
+			continue
+		}
+		cmd = append(cmd, op.renderArguments(param, value)...)
+	}
+
+	return cmd
+}
+
+// mergeParameters merges defaults with provided options
+func (op *ConnectOperation) mergeParameters(options map[string]string) map[string]string {
 	params := make(map[string]string)
 	for k, v := range op.Defaults {
 		params[k] = v
 	}
-	// Override with provided options
 	for k, v := range options {
 		params[k] = v
 	}
+	return params
+}
 
-	// Add arguments based on parameters
-	for param, value := range params {
-		if argTemplate, exists := op.Args[param]; exists && value != "" {
-			for _, arg := range argTemplate {
-				rendered := strings.ReplaceAll(arg, "{{."+strings.ToUpper(param[:1])+param[1:]+"}}", value)
-				cmd = append(cmd, rendered)
-			}
-		}
+// renderArguments renders argument templates for a parameter
+func (op *ConnectOperation) renderArguments(param, value string) []string {
+	argTemplate, exists := op.Args[param]
+	if !exists {
+		return nil
 	}
 
-	return cmd
+	var rendered []string
+	for _, arg := range argTemplate {
+		template := "{{." + strings.ToUpper(param[:1]) + param[1:] + "}}"
+		renderedArg := strings.ReplaceAll(arg, template, value)
+		rendered = append(rendered, renderedArg)
+	}
+	return rendered
 }
 
 // BuildBackupCommand builds a backup command for a service
@@ -122,32 +141,56 @@ func (op *BackupOperation) BuildCommand(options map[string]string) ([][]string, 
 	var commands [][]string
 
 	if op.Type == "custom" && len(op.Commands) > 0 {
-		// Multi-step custom commands
-		for _, cmdTemplate := range op.Commands {
-			cmd := make([]string, len(cmdTemplate))
-			for i, part := range cmdTemplate {
-				cmd[i] = renderTemplate(part, params)
-			}
-			commands = append(commands, cmd)
-		}
+		commands = op.buildCustomCommands(params)
 	} else if len(op.Command) > 0 {
-		// Single command
-		cmd := make([]string, len(op.Command))
-		copy(cmd, op.Command)
-
-		// Add arguments
-		for param, value := range params {
-			if argTemplate, exists := op.Args[param]; exists && value != "" {
-				for _, arg := range argTemplate {
-					rendered := renderTemplate(arg, params)
-					cmd = append(cmd, rendered)
-				}
-			}
-		}
-		commands = append(commands, cmd)
+		commands = op.buildSingleCommand(params)
 	}
 
 	return commands, nil
+}
+
+// buildCustomCommands builds multi-step custom commands
+func (op *BackupOperation) buildCustomCommands(params map[string]string) [][]string {
+	var commands [][]string
+	for _, cmdTemplate := range op.Commands {
+		cmd := make([]string, len(cmdTemplate))
+		for i, part := range cmdTemplate {
+			cmd[i] = renderTemplate(part, params)
+		}
+		commands = append(commands, cmd)
+	}
+	return commands
+}
+
+// buildSingleCommand builds a single command with arguments
+func (op *BackupOperation) buildSingleCommand(params map[string]string) [][]string {
+	cmd := make([]string, len(op.Command))
+	copy(cmd, op.Command)
+
+	// Add arguments
+	for param, value := range params {
+		if value == "" {
+			continue
+		}
+		cmd = append(cmd, op.renderBackupArguments(param, value, params)...)
+	}
+
+	return [][]string{cmd}
+}
+
+// renderBackupArguments renders argument templates for backup operations
+func (op *BackupOperation) renderBackupArguments(param, value string, params map[string]string) []string {
+	argTemplate, exists := op.Args[param]
+	if !exists {
+		return nil
+	}
+
+	var rendered []string
+	for _, arg := range argTemplate {
+		renderedArg := renderTemplate(arg, params)
+		rendered = append(rendered, renderedArg)
+	}
+	return rendered
 }
 
 // GetBackupExtension returns the file extension for backups

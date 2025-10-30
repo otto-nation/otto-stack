@@ -3,7 +3,7 @@ title: "CLI Reference"
 description: "Complete command reference for otto-stack CLI"
 lead: "Comprehensive reference for all otto-stack CLI commands and their usage"
 date: "2025-10-01"
-lastmod: "2025-10-29"
+lastmod: "2025-10-31"
 draft: false
 weight: 50
 toc: true
@@ -416,10 +416,14 @@ Examples:
   otto-stack services --category cache
     List cache services
 
+  otto-stack services --format table
+    List services in table format
+
 
 
 Flags:
   -c, --category string   Show services in specific category
+  -f, --format string     Output format (group|table|json|yaml) (default "group")
 
 Global Flags:
   -c, --config string     Config file (default: $HOME/.otto-stack.yaml)
@@ -555,6 +559,43 @@ Flags:
       --fix             Attempt to fix validation errors
   -f, --format string   Output format (table|json) (default "table")
   -s, --strict          Use strict validation rules
+
+Global Flags:
+  -c, --config string     Config file (default: $HOME/.otto-stack.yaml)
+  -h, --help              Show help information
+      --json              Output in JSON format (CI-friendly)
+      --no-color          Disable colored output (CI-friendly)
+      --non-interactive   Run in non-interactive mode (CI-friendly)
+  -q, --quiet             Suppress non-essential output (CI-friendly)
+  -v, --verbose           Enable verbose output
+      --version           Show version information
+```
+
+### version
+
+```
+Display version information for otto-stack including build details,
+Git commit, and platform information. Can check for available updates.
+
+Usage:
+  otto-stack version [flags]
+
+Examples:
+  otto-stack version
+    Show basic version information
+
+  otto-stack version --full
+    Show detailed build information
+
+  otto-stack version --check-updates
+    Check for available updates
+
+
+
+Flags:
+      --check-updates   Check for available updates
+      --format string   Output format (text, json, yaml) (default "text")
+      --full            Show detailed version information
 
 Global Flags:
   -c, --config string     Config file (default: $HOME/.otto-stack.yaml)

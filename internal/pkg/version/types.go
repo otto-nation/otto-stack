@@ -141,11 +141,8 @@ type ProjectVersionConfig struct {
 
 // VersionFile represents the contents of a .otto-stack-version file
 type VersionFile struct {
-	Version        string            `yaml:"version" json:"version"`
-	MinimumVersion string            `yaml:"minimum_version,omitempty" json:"minimum_version,omitempty"`
-	MaximumVersion string            `yaml:"maximum_version,omitempty" json:"maximum_version,omitempty"`
-	Constraints    []string          `yaml:"constraints,omitempty" json:"constraints,omitempty"`
-	Metadata       map[string]string `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+	Version     string   `json:"version"`
+	Constraints []string `json:"constraints,omitempty"`
 }
 
 // VersionManager interface defines the contract for version management

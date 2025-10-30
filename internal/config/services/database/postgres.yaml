@@ -1,6 +1,14 @@
 name: postgres
 description: PostgreSQL relational database for persistent data storage
 category: database
+connection:
+  client: psql
+  default_user: postgres
+  default_port: 5432
+  user_flag: "-U"
+  host_flag: "-h"
+  port_flag: "-p"
+  database_flag: "-d"
 dependencies:
   required: []
   soft: []

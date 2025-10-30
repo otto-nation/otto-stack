@@ -7,18 +7,17 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/completion"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/core"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/doctor"
-	initHandler "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/init"
-	cliServices "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/stack"
 	cliTypes "github.com/otto-nation/otto-stack/internal/pkg/cli/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	pkgTypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
 // NewUpCommand creates the up command
 func NewUpCommand(serviceManager *services.Manager, logger *slog.Logger) *cobra.Command {
-	handler := core.NewUpHandler()
+	handler := stack.NewUpHandler()
 
 	cmd := &cobra.Command{
 		Use:   "up [services...]",
@@ -38,7 +37,7 @@ func NewUpCommand(serviceManager *services.Manager, logger *slog.Logger) *cobra.
 
 // NewDownCommand creates the down command
 func NewDownCommand(serviceManager *services.Manager, logger *slog.Logger) *cobra.Command {
-	handler := core.NewDownHandler()
+	handler := stack.NewDownHandler()
 
 	cmd := &cobra.Command{
 		Use:   "down [services...]",
@@ -59,7 +58,7 @@ func NewDownCommand(serviceManager *services.Manager, logger *slog.Logger) *cobr
 
 // NewStatusCommand creates the status command
 func NewStatusCommand(serviceManager *services.Manager, logger *slog.Logger) *cobra.Command {
-	handler := core.NewStatusHandler()
+	handler := stack.NewStatusHandler()
 
 	cmd := &cobra.Command{
 		Use:   "status [services...]",
@@ -78,7 +77,7 @@ func NewStatusCommand(serviceManager *services.Manager, logger *slog.Logger) *co
 
 // NewRestartCommand creates the restart command
 func NewRestartCommand(serviceManager *services.Manager, logger *slog.Logger) *cobra.Command {
-	handler := core.NewRestartHandler()
+	handler := stack.NewRestartHandler()
 
 	cmd := &cobra.Command{
 		Use:   "restart [services...]",
@@ -158,7 +157,7 @@ func NewExecCommand(serviceManager *services.Manager, logger *slog.Logger) *cobr
 
 // NewInitCommand creates the init command
 func NewInitCommand(logger *slog.Logger) *cobra.Command {
-	handler := initHandler.NewInitHandler()
+	handler := project.NewInitHandler()
 
 	cmd := &cobra.Command{
 		Use:   "init [template]",
@@ -183,12 +182,12 @@ func NewConfigCommand(logger *slog.Logger) *cobra.Command {
 		Short: "Show configuration",
 		Long:  "Show the current configuration",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("otto-stack Configuration")
+			fmt.Println(constants.AppNameTitle + " Configuration")
 			fmt.Println("======================")
 			fmt.Printf("Version: %s\n", cmd.Root().Version)
-			fmt.Printf("Config file: %s\n", "otto-stack-config.yaml")
-			fmt.Println("\nUse 'otto-stack services' to see available services")
-			fmt.Println("Use 'otto-stack status' to see running services")
+			fmt.Printf("Config file: %s\n", constants.ConfigFileName)
+			fmt.Printf("\nUse '%s services' to see available services\n", constants.AppName)
+			fmt.Printf("Use '%s status' to see running services\n", constants.AppName)
 			return nil
 		},
 	}
@@ -198,7 +197,7 @@ func NewConfigCommand(logger *slog.Logger) *cobra.Command {
 
 // NewServicesCommand creates the services command
 func NewServicesCommand(serviceManager *services.Manager, logger *slog.Logger) *cobra.Command {
-	handler := cliServices.NewServicesHandler()
+	handler := project.NewServicesHandler()
 
 	cmd := &cobra.Command{
 		Use:   "services",
@@ -295,7 +294,7 @@ func (l *loggerAdapter) SlogLogger() *slog.Logger {
 
 // NewDoctorCommand creates the doctor command
 func NewDoctorCommand(logger *slog.Logger) *cobra.Command {
-	handler := doctor.NewDoctorHandler()
+	handler := project.NewDoctorHandler()
 
 	cmd := &cobra.Command{
 		Use:   "doctor",

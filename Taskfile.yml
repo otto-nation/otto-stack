@@ -19,28 +19,48 @@ vars:
     sh: echo "{{OS}}"
   BUILD_ARCH:
     sh: echo "{{ARCH}}"
-  LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/cli.version={{.VERSION}} -X {{.MODULE_PATH}}/internal/cli.commit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/cli.date={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.Version={{.VERSION}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.BuildDate={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.GitCommit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.GoVersion={{.GO_VERSION}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.BuildOS={{.BUILD_OS}} -X {{.MODULE_PATH}}/internal/pkg/cli/handlers/version.BuildArch={{.BUILD_ARCH}}"'
+  LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/pkg/version.AppVersion={{.VERSION}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildDate={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/version.GitCommit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildBy=taskfile"'
   GOLANGCI_LINT_VERSION: "v2.4.0"
 
 # ============================================================================
 # TASKS
 # ============================================================================
 tasks:
-  # ----------------------------------------------------------------------------
-  # DEFAULT TASK
-  # ----------------------------------------------------------------------------
+  # ============================================================================
+  # DEFAULT
+  # ============================================================================
   default:
     desc: "🚀 Build the binary (default task)"
     silent: true
     cmds:
       - task: build
 
-  # ----------------------------------------------------------------------------
-  # BUILD TASKS
-  # ----------------------------------------------------------------------------
+  # ============================================================================
+  # GENERATE
+  # ============================================================================
+  generate:
+    desc: "🔧 Generate code from YAML configs"
+    sources:
+      - "internal/config/commands.yaml"
+      - "cmd/generate-flags/main.go"
+      - "cmd/generate-registers/main.go"
+    generates:
+      - "internal/pkg/constants/flags_generated.go"
+      - "internal/pkg/cli/handlers/*/register_generated.go"
+    silent: true
+    cmds:
+      - echo "🔧 Generating flag constants from commands.yaml..."
+      - go run cmd/generate-flags/main.go
+      - echo "🔧 Generating register files from commands.yaml..."
+      - go run cmd/generate-registers/main.go
+      - echo "✅ Generated code from YAML configs"
+
+  # ============================================================================
+  # BUILD
+  # ============================================================================
   build:
     desc: "🔨 Build the Go binary for current platform"
-    deps: [deps]
+    deps: [deps, generate]
     sources:
       - "**/*.go"
       - "go.mod"
@@ -77,9 +97,9 @@ tasks:
       - go install {{.LDFLAGS}} ./cmd/otto-stack
       - echo "✅ Installed to $(go env GOPATH)/bin/{{.BINARY_NAME}}"
 
-  # ----------------------------------------------------------------------------
-  # DEVELOPMENT TASKS
-  # ----------------------------------------------------------------------------
+  # ============================================================================
+  # DEVELOPMENT
+  # ============================================================================
   dev:
     desc: "🚀 Quick start - build and show help"
     deps: [build]
@@ -98,11 +118,12 @@ tasks:
       - echo "👀 Rebuilding due to changes..."
       - task: build
 
-  # ----------------------------------------------------------------------------
-  # DEPENDENCY MANAGEMENT
-  # ----------------------------------------------------------------------------
+  # ============================================================================
+  # DEPENDENCIES
+  # ============================================================================
   deps:
     desc: "📥 Download and tidy Go dependencies"
+    deps: [generate]
     silent: true
     cmds:
       - echo "📥 Downloading Go dependencies..."
@@ -110,29 +131,26 @@ tasks:
       - go mod tidy
       - echo "✅ Dependencies updated"
 
-  # ----------------------------------------------------------------------------
+  # ============================================================================
   # GIT AUTOMATION
-  # ----------------------------------------------------------------------------
+  # ============================================================================
   commit:
     desc: "🤖 Generate AI-powered commit message based on staged changes"
     silent: true
     cmds:
       - |
-        # Check if there are staged changes
         STAGED_FILES=$(git diff --cached --name-only)
         if [ -z "$STAGED_FILES" ]; then
           echo "❌ No staged changes found. Use 'git add' first."
           exit 1
         fi
-
+        
         echo "🤖 Analyzing staged changes with AI..."
-
-        # Get detailed diff for AI analysis
+        
         DIFF_CONTENT=$(git diff --cached --no-color)
         FILE_LIST=$(echo "$STAGED_FILES" | tr '\n' ', ' | sed 's/,$//')
         COMMITLINT_CONFIG=$(cat .github/.commitlintrc.json)
-
-        # Create AI prompt with commitlint config
+        
         AI_PROMPT="Generate a conventional commit message following these rules:
         - Header (first line) must be ≤72 characters (no exceptions)
         - Body lines must be ≤100 characters each
@@ -148,30 +166,23 @@ tasks:
         $DIFF_CONTENT
 
         Return only the commit message, nothing else."
-
-        # Use AI to generate commit message
-        if command -v q >/dev/null 2>&1; then
-          echo "🤖 Generating commit message..."
-          COMMIT_MSG=$(echo "$AI_PROMPT" | q chat --no-interactive | tr -d '\033' | sed 's/\[[0-9;]*m//g' | sed 's/^[> ]*//g')
-          echo "✨ AI Analysis Complete"
-        else
-          echo "⚠️  AI not available, using fallback..."
-          TYPE="feat"
-          if echo "$STAGED_FILES" | grep -q "_test\.go"; then TYPE="test"
-          elif echo "$STAGED_FILES" | grep -q "\.md$"; then TYPE="docs"
-          elif echo "$STAGED_FILES" | grep -q "Taskfile\.yml\|\.github/"; then TYPE="ci"
-          elif echo "$STAGED_FILES" | grep -q "go\.mod\|go\.sum"; then TYPE="deps"
-          fi
-          COMMIT_MSG="$TYPE: improve codebase"
+        
+        source ./scripts/ai-helper.sh
+        
+        if ! AI_COMMAND=$(check_ai_available 2>&1); then
+          echo "$AI_COMMAND"
+          exit 1
         fi
-
+        
+        echo "🤖 Generating commit message..."
+        COMMIT_MSG=$(echo "$AI_PROMPT" | $AI_COMMAND | tr -d '\033' | sed 's/\[[0-9;]*m//g' | sed 's/^[> ]*//g')
+        echo "✨ AI Analysis Complete"
         echo ""
         echo "📝 Generated: $COMMIT_MSG"
         echo "🚀 Committing..."
         git commit -m "$COMMIT_MSG"
         echo "✅ Committed successfully!"
 
-  # === GIT AUTOMATION ===
   create-pr:
     desc: "🤖 Create AI-powered pull request with smart title and description"
     silent: true
@@ -212,9 +223,15 @@ tasks:
         DESCRIPTION: <filled template>"
 
         # Use AI to generate PR content
-        if command -v q >/dev/null 2>&1; then
-          echo "🤖 Generating PR title and description..."
-          RAW_RESPONSE=$(echo "$AI_PROMPT" | q chat --no-interactive --trust-all-tools)
+        source ./scripts/ai-helper.sh
+        
+        if ! AI_COMMAND=$(check_ai_available 2>&1); then
+          echo "$AI_COMMAND"
+          exit 1
+        fi
+        
+        echo "🤖 Generating PR title and description..."
+          RAW_RESPONSE=$(echo "$AI_PROMPT" | $AI_COMMAND)
           # Strip all ANSI escape sequences and control characters
           AI_RESPONSE=$(echo "$RAW_RESPONSE" | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;]*R//g' | tr -d '\033\007\015' | sed 's/^[> ]*//g')
 
@@ -225,20 +242,14 @@ tasks:
           if [ -z "$DESCRIPTION" ]; then DESCRIPTION="## Summary\n\nBranch: $BRANCH\nCommits: $COMMIT_COUNT"; fi
 
           echo "✨ AI Analysis Complete"
-        else
-          echo "⚠️  AI not available, using template..."
-          TITLE="feat: improve codebase"
-          DESCRIPTION="## Summary\n\nBranch: $BRANCH\nCommits: $COMMIT_COUNT\n\nFiles changed: $CHANGED_FILES"
-        fi
+          echo ""
+          echo "📝 Title: $TITLE"
+          echo "🚀 Creating PR..."
 
-        echo ""
-        echo "📝 Title: $TITLE"
-        echo "🚀 Creating PR..."
+          PR_URL=$(gh pr create --title "$TITLE" --body "$DESCRIPTION" --assignee @me 2>&1 | grep -o 'https://github.com[^[:space:]]*' || echo "")
 
-        PR_URL=$(gh pr create --title "$TITLE" --body "$DESCRIPTION" --assignee @me 2>&1 | grep -o 'https://github.com[^[:space:]]*' || echo "")
-
-        echo "✅ Pull request created!"
-        if [ -n "$PR_URL" ]; then echo "🔗 View: $PR_URL"; fi
+          echo "✅ Pull request created!"
+          if [ -n "$PR_URL" ]; then echo "🔗 View: $PR_URL"; fi
 
   push-and-pr:
     desc: "🚀 Push current branch and create PR in one command"
@@ -404,9 +415,9 @@ tasks:
     cmds:
       - ./scripts/setup-hooks.sh
 
-  # ----------------------------------------------------------------------------
-  # TESTING TASKS
-  # ----------------------------------------------------------------------------
+  # ============================================================================
+  # TESTING
+  # ============================================================================
   test:
     desc: "🧪 Run all tests with coverage"
     deps: [deps]
@@ -512,9 +523,9 @@ tasks:
       - govulncheck ./...
       - echo "✅ Security scan complete"
 
-  # ----------------------------------------------------------------------------
+  # ============================================================================
   # DOCUMENTATION
-  # ----------------------------------------------------------------------------
+  # ============================================================================
   docs:
     desc: "📚 Generate documentation"
     deps: [build]
@@ -525,9 +536,9 @@ tasks:
       - cd docs-site && npm run docs:generate
       - echo "✅ Documentation generated"
 
-  # ----------------------------------------------------------------------------
+  # ============================================================================
   # DOCKER
-  # ----------------------------------------------------------------------------
+  # ============================================================================
   docker-build:
     desc: "🐳 Build Docker image"
     silent: true

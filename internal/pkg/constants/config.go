@@ -3,23 +3,7 @@ package constants
 // Default configuration values
 const (
 	DefaultEnvironment = "local"
-	DefaultProjectName = "otto-stack"
-)
-
-// Configuration sections
-const (
-	ProjectSection              = "project"
-	StackSection                = "stack"
-	ServiceConfigurationSection = "service-configuration"
-	ValidationSection           = "validation"
-	AdvancedSection             = "advanced"
-)
-
-// Service types
-const (
-	ServiceTypeContainer     = "container"
-	ServiceTypeConfiguration = "configuration"
-	ServiceTypeComposite     = "composite"
+	DefaultProjectName = AppName
 )
 
 // Service names
