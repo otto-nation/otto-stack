@@ -3,7 +3,7 @@ package constants
 // Default configuration values
 const (
 	DefaultEnvironment = "local"
-	DefaultProjectName = "otto-stack"
+	DefaultProjectName = AppName
 )
 
 // Service names

@@ -2,7 +2,7 @@ package constants
 
 // File names
 const (
-	ConfigFileName         = "otto-stack-config.yml"
+	ConfigFileName         = AppName + "-config.yml"
 	DockerComposeFileName  = "docker-compose.yml"
 	EnvGeneratedFileName   = ".env.generated"
 	GitignoreFileName      = ".gitignore"
@@ -15,7 +15,7 @@ const (
 
 // Directory names
 const (
-	DevStackDir = "otto-stack"
+	DevStackDir = AppName
 	DataDir     = "data"
 	LogsDir     = "logs"
 	TmpDir      = "tmp"

@@ -67,10 +67,12 @@ func (u *UpdateChecker) CheckForUpdates() (*GitHubRelease, bool, error) {
 }
 
 // cleanVersionString removes common prefixes from version strings
-// cleanVersionString removes common prefixes from version strings
 func cleanVersionString(version string) string {
+	// Common version prefixes to remove
+	prefixes := []string{constants.AppName + "-", "v"}
+
 	cleaned := version
-	for _, prefix := range VersionPrefixes {
+	for _, prefix := range prefixes {
 		cleaned = strings.TrimPrefix(cleaned, prefix)
 	}
 	return cleaned

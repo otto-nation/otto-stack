@@ -17,7 +17,7 @@ var standardHandlers = map[string]func() cliTypes.CommandHandler{
 }
 
 func init() {
-	handlers.Register(handlers.PackageStandard, func(name string) cliTypes.CommandHandler {
+	handlers.Register("standard", func(name string) cliTypes.CommandHandler {
 		if factory, exists := standardHandlers[name]; exists {
 			return factory()
 		}

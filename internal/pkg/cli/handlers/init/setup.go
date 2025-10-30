@@ -38,7 +38,7 @@ func (h *InitHandler) createConfigFile(projectName string, services []string, va
 	return nil
 }
 
-// createGitignoreEntries adds otto-stack entries to .gitignore
+// createGitignoreEntries adds entries to .gitignore
 func (h *InitHandler) createGitignoreEntries() error {
 	gitignorePath := constants.GitignoreFileName
 
@@ -80,7 +80,7 @@ func (h *InitHandler) createGitignoreEntries() error {
 	return nil
 }
 
-// createReadme creates a README file for the otto-stack
+// createReadme creates a README file for the project
 func (h *InitHandler) createReadme(projectName string, services []string) error {
 	readmeContent := fmt.Sprintf(`# %s Otto Stack
 
@@ -96,17 +96,17 @@ The following services are configured:
 
 1. Start the stack:
    `+"```bash"+`
-   otto-stack up
+   %s up
    `+"```"+`
 
 2. Check status:
    `+"```bash"+`
-   otto-stack status
+   %s status
    `+"```"+`
 
 3. Stop the stack:
    `+"```bash"+`
-   otto-stack down
+   %s down
    `+"```"+`
 
 ## Configuration
@@ -117,9 +117,10 @@ The following services are configured:
 
 ## Commands
 
-Run `+"`otto-stack --help`"+` for a full list of available commands.
+Run `+"`%s --help`"+` for a full list of available commands.
 `, projectName, projectName, formatServicesList(services),
-		constants.ConfigFileName, constants.DockerComposeFileName)
+		constants.AppName, constants.AppName, constants.AppName,
+		constants.ConfigFileName, constants.DockerComposeFileName, constants.AppName)
 
 	readmePath := constants.DevStackDir + "/" + constants.ReadmeFileName
 	if err := os.WriteFile(readmePath, []byte(readmeContent), 0644); err != nil {

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,7 +16,7 @@ import (
 
 func TestInitHandler_Handle_FullFlow(t *testing.T) {
 	// Create temporary directory for test
-	tempDir, err := os.MkdirTemp("", "otto-stack-integration-*")
+	tempDir, err := os.MkdirTemp("", constants.AppName+"-integration-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tempDir)
 

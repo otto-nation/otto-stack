@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,7 +18,7 @@ func TestDetectProjectVersion(t *testing.T) {
 		expectFound bool
 	}{
 		{
-			name: "detect from otto-stack-config.yml",
+			name: "detect from " + constants.ConfigFileName,
 			setupFunc: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				configContent := `project:
@@ -27,7 +28,7 @@ func TestDetectProjectVersion(t *testing.T) {
 version_config:
   required_version: ">=1.0.0"
 `
-				configPath := filepath.Join(tmpDir, "otto-stack-config.yml")
+				configPath := filepath.Join(tmpDir, constants.ConfigFileName)
 				require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
 				return tmpDir
 			},
@@ -42,7 +43,7 @@ version_config:
   name: test
   environment: development
 `
-				configPath := filepath.Join(tmpDir, "otto-stack-config.yml")
+				configPath := filepath.Join(tmpDir, constants.ConfigFileName)
 				require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
 				return tmpDir
 			},
@@ -95,7 +96,7 @@ func TestValidateProjectVersion(t *testing.T) {
 				configContent := `version_config:
   required_version: ">=1.0.0"
 `
-				configPath := filepath.Join(tmpDir, "otto-stack-config.yml")
+				configPath := filepath.Join(tmpDir, constants.ConfigFileName)
 				require.NoError(t, os.WriteFile(configPath, []byte(configContent), 0644))
 				return tmpDir
 			},

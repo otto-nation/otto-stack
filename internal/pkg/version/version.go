@@ -20,11 +20,8 @@ const (
 
 // Use constants from brand.go
 var (
-	AppNameTemplate    = constants.AppNameTemplate
-	UserAgentTemplate  = constants.UserAgentTemplate
-	VersionPrefixes    = constants.VersionPrefixes
-	VersionFileNames   = constants.VersionFilePatterns
-	VersionSearchPaths = constants.VersionSearchPaths
+	AppNameTemplate   = constants.AppNameTemplate
+	UserAgentTemplate = constants.UserAgentTemplate
 )
 
 // Version-specific templates (not branding)

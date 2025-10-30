@@ -5,7 +5,7 @@ import "github.com/otto-nation/otto-stack/internal/pkg/constants"
 // Test constants to eliminate magic strings and provide context
 const (
 	// Test directory patterns
-	TestTempDirPattern = "otto-stack-test-*"
+	TestTempDirPattern = constants.AppName + "-test-*"
 
 	// Test project names
 	TestProjectName        = "test-project"

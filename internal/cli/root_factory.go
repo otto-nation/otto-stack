@@ -6,6 +6,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -72,7 +73,7 @@ func initFactoryConfig(commandConfig *config.CommandConfig) {
 		viper.SetConfigType("yaml")
 
 		// Try to find config file with multiple names
-		configNames := []string{"otto-stack-config", ".otto-stack"}
+		configNames := []string{constants.AppName + "-config", "." + constants.AppName}
 		var configFound bool
 		for _, name := range configNames {
 			viper.SetConfigName(name)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
@@ -12,11 +13,14 @@ import (
 // validateInitEnvironment validates the environment before initialization
 func (h *InitHandler) validateInitEnvironment() error {
 	// Check if already initialized
-	if _, err := os.Stat("otto-stack/otto-stack-config.yml"); err == nil {
-		return fmt.Errorf("otto-stack is already initialized in this directory")
+	configPath := filepath.Join(constants.DevStackDir, constants.ConfigFileName)
+	if _, err := os.Stat(configPath); err == nil {
+		return fmt.Errorf("%s is already initialized in this directory", constants.AppNameLower)
 	}
-	if _, err := os.Stat("otto-stack/otto-stack-config.yaml"); err == nil {
-		return fmt.Errorf("otto-stack is already initialized in this directory")
+	// Also check for .yaml extension
+	yamlConfigPath := filepath.Join(constants.DevStackDir, constants.AppName+"-config.yaml")
+	if _, err := os.Stat(yamlConfigPath); err == nil {
+		return fmt.Errorf("%s is already initialized in this directory", constants.AppNameLower)
 	}
 
 	// Check for required tools

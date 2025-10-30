@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,9 +31,9 @@ func createTestFile(t *testing.T, path, content string) {
 	require.NoError(t, err)
 }
 
-// createTestConfig creates a otto-stack config file
+// createTestConfig creates a config file
 func createTestConfig(t *testing.T) {
-	err := os.MkdirAll("otto-stack", 0755)
+	err := os.MkdirAll(constants.DevStackDir, 0755)
 	require.NoError(t, err)
 	createTestFile(t, TestConfigFilePath, TestConfigContent)
 }

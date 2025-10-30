@@ -12,6 +12,7 @@ import (
 	initHandler "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/init"
 	cliServices "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/services"
 	cliTypes "github.com/otto-nation/otto-stack/internal/pkg/cli/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	pkgTypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -183,12 +184,12 @@ func NewConfigCommand(logger *slog.Logger) *cobra.Command {
 		Short: "Show configuration",
 		Long:  "Show the current configuration",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("otto-stack Configuration")
+			fmt.Println(constants.AppNameTitle + " Configuration")
 			fmt.Println("======================")
 			fmt.Printf("Version: %s\n", cmd.Root().Version)
-			fmt.Printf("Config file: %s\n", "otto-stack-config.yaml")
-			fmt.Println("\nUse 'otto-stack services' to see available services")
-			fmt.Println("Use 'otto-stack status' to see running services")
+			fmt.Printf("Config file: %s\n", constants.ConfigFileName)
+			fmt.Printf("\nUse '%s services' to see available services\n", constants.AppName)
+			fmt.Printf("Use '%s status' to see running services\n", constants.AppName)
 			return nil
 		},
 	}
