@@ -64,7 +64,7 @@ func (h *InitHandler) generateInitialComposeFiles(services []string, projectName
 
 // generateEnvFile generates .env.generated using programmatic generation
 func (h *InitHandler) generateEnvFile(services []string, config *ProjectConfig) error {
-	ui.Info("Generating environment file...")
+	constants.SendMessage(constants.MsgGeneratingEnv)
 
 	generator := env.NewGenerator(config.Project.Name, config.Project.Environment)
 
@@ -83,7 +83,7 @@ func (h *InitHandler) generateEnvFile(services []string, config *ProjectConfig) 
 
 // generateDockerCompose generates docker-compose.yml using programmatic generation
 func (h *InitHandler) generateDockerCompose(services []string, config *ProjectConfig) error {
-	ui.Info("Generating docker-compose files...")
+	constants.SendMessage(constants.MsgGeneratingCompose)
 
 	generator, err := compose.NewGenerator(config.Project.Name, constants.ServicesDir)
 	if err != nil {

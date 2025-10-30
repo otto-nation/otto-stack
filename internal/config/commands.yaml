@@ -18,6 +18,21 @@ metadata:
   cli_version: "0.1.0"
   description: "Development stack management tool"
 
+# Handler type definitions
+handlers:
+  core:
+    description: "Core operational commands (lifecycle, monitoring, data)"
+    package: "core"
+  services:
+    description: "Service management commands"
+    package: "services"
+  init:
+    description: "Project initialization command"
+    package: "init"
+  standard:
+    description: "Standard utility commands"
+    package: "standard"
+
 global:
   flags:
     config:
@@ -88,9 +103,16 @@ categories:
     icon: "🛠️"
     commands: ["validate", "services", "deps", "conflicts"]
 
+  utility:
+    name: "Utility Commands"
+    description: "General utility and information commands"
+    icon: "ℹ️"
+    commands: ["version", "help"]
+
 commands:
   up:
     category: "lifecycle"
+    handler: "core"
     description: "Start development stack services"
     long_description: |
       Start one or more services in the development stack. Services are started
@@ -264,7 +286,7 @@ commands:
         type: "bool"
         description: "Don't truncate output"
         default: false
-    related_commands: ["logs", "monitor", "doctor"]
+    related_commands: ["logs", "status"]
     tips:
       - "Use --watch to monitor services in real-time"
       - "Try --format json for programmatic access"
@@ -314,13 +336,11 @@ commands:
         type: "bool"
         description: "Don't show service name prefix"
         default: false
-    related_commands: ["status", "monitor"]
+    related_commands: ["status"]
     tips:
       - "Use --follow to see logs in real-time"
       - "Combine --tail and --since for targeted log viewing"
       - "Use --timestamps to correlate events across services"
-
-
 
   doctor:
     category: "monitoring"
@@ -454,8 +474,6 @@ commands:
       - "Automatically uses correct client tools for each service"
       - "Use --read-only for safe data exploration"
 
-
-
   cleanup:
     category: "maintenance"
     description: "Clean up unused resources and data"
@@ -506,10 +524,9 @@ commands:
       - "Use --dry-run first to see what will be removed"
       - "Be careful with --volumes as it removes all data"
 
-
-
   init:
     category: "maintenance"
+    handler: "init"
     description: "Initialize a new otto-stack project interactively"
     long_description: |
       Initialize a new otto-stack project in the current directory with an
@@ -530,16 +547,15 @@ commands:
         type: "bool"
         description: "Overwrite existing files"
         default: false
-    related_commands: ["docs", "validate"]
-
-
+    related_commands: ["validate"]
 
   services:
     category: "development"
+    handler: "services"
     description: "List available services by category"
     long_description: |
-      List all available services organized by category (database, cache, 
-      messaging, observability, cloud). Shows service descriptions and 
+      List all available services organized by category (database, cache,
+      messaging, observability, cloud). Shows service descriptions and
       dependencies for easy discovery and selection.
     usage: "services [flags]"
     examples:
@@ -619,9 +635,48 @@ commands:
         type: "bool"
         description: "Attempt to fix validation errors"
         default: false
-    related_commands: ["doctor", "docs"]
+    related_commands: ["doctor"]
 
+  version:
+    category: "utility"
+    handler: "standard"
+    description: "Show version information"
+    long_description: |
+      Display version information for otto-stack including build details,
+      Git commit, and platform information. Can check for available updates.
+    usage: "version"
+    flags:
+      full:
+        type: "bool"
+        description: "Show detailed version information"
+        default: false
+      check-updates:
+        type: "bool"
+        description: "Check for available updates"
+        default: false
+      format:
+        type: "string"
+        description: "Output format (text, json, yaml)"
+        default: "text"
+    examples:
+      - command: "otto-stack version"
+        description: "Show basic version information"
+      - command: "otto-stack version --full"
+        description: "Show detailed build information"
+      - command: "otto-stack version --check-updates"
+        description: "Check for available updates"
 
+  help:
+    category: "utility"
+    description: "Show help information"
+    long_description: |
+      Display help information for otto-stack commands and usage.
+    usage: "help [command]"
+    examples:
+      - command: "otto-stack help"
+        description: "Show general help"
+      - command: "otto-stack help up"
+        description: "Show help for up command"
 
 # Workflow definitions for common task sequences
 workflows:

@@ -2,18 +2,15 @@ package constants
 
 // File names
 const (
-	ConfigFileName           = "otto-stack-config.yml"
-	ConfigFileNameYAML       = "otto-stack-config.yaml"
-	ConfigFileNameHidden     = ".otto-stack-config.yml"
-	ConfigFileNameHiddenYAML = ".otto-stack-config.yaml"
-	DockerComposeFileName    = "docker-compose.yml"
-	EnvGeneratedFileName     = ".env.generated"
-	GitignoreFileName        = ".gitignore"
-	ReadmeFileName           = "README.md"
-	ServiceConfigExtension   = ".yaml"
-	KafkaTopicsInitScript    = "kafka-topics-init.sh"
-	LocalstackInitScript     = "localstack-init.sh"
-	StateFileName            = "state.json"
+	ConfigFileName         = "otto-stack-config.yml"
+	DockerComposeFileName  = "docker-compose.yml"
+	EnvGeneratedFileName   = ".env.generated"
+	GitignoreFileName      = ".gitignore"
+	ReadmeFileName         = "README.md"
+	ServiceConfigExtension = ".yaml"
+	KafkaTopicsInitScript  = "kafka-topics-init.sh"
+	LocalstackInitScript   = "localstack-init.sh"
+	StateFileName          = "state.json"
 )
 
 // Directory names

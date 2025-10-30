@@ -73,13 +73,13 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 
 	previousState, err := h.loadState()
 	if err != nil {
-		ui.Info("No previous state found, performing fresh setup")
+		constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "No previous state found, performing fresh setup"})
 		previousState = &StackState{}
 	}
 
 	configChanged := previousState.ConfigHash != configHash
 	if configChanged {
-		ui.Info("Configuration changes detected, updating stack...")
+		constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "Configuration changes detected, updating stack..."})
 
 		// Clean up removed services
 		if err := h.cleanupRemovedServices(ctx, setup, previousState.Services, filteredServices); err != nil {
@@ -129,7 +129,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	}
 
 	ui.Success(constants.MsgStartSuccess)
-	ui.Info("Run '%s' to check service status", constants.CmdStatus)
+	constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "Run '%s' to check service status"}, constants.AppName+" status")
 	return nil
 }
 

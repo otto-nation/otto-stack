@@ -88,14 +88,11 @@ func (h *DoctorHandler) checkProjectInit() bool {
 	h.output.Info("Checking project initialization...")
 
 	configPath := filepath.Join(constants.DevStackDir, constants.ConfigFileName)
-	configPathYAML := filepath.Join(constants.DevStackDir, constants.ConfigFileNameYAML)
 
 	if _, err := os.Stat(configPath); err != nil {
-		if _, err := os.Stat(configPathYAML); err != nil {
-			h.output.Error("Project not initialized")
-			h.output.Muted("Run '%s' to initialize", constants.CmdInit)
-			return false
-		}
+		h.output.Error("Project not initialized")
+		h.output.Muted("Run '%s' to initialize", constants.AppName+" init")
+		return false
 	}
 
 	h.output.Success("Project is initialized")
@@ -108,7 +105,7 @@ func (h *DoctorHandler) checkConfiguration() bool {
 	// Check if otto-stack directory exists
 	if _, err := os.Stat(constants.DevStackDir); os.IsNotExist(err) {
 		h.output.Error("Configuration directory missing")
-		h.output.Muted("Run '%s' to initialize", constants.CmdInit)
+		h.output.Muted("Run '%s' to initialize", constants.AppName+" init")
 		return false
 	}
 

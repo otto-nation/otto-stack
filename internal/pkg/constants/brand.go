@@ -26,4 +26,34 @@ const (
 	// GitHub repository information
 	GitHubOrg  = "otto-nation"
 	GitHubRepo = AppName
+
+	// GitHub URL templates
+	GitHubRepoURL     = "https://github.com/" + GitHubOrg + "/" + GitHubRepo
+	GitHubReleaseURL  = GitHubRepoURL + "/releases/tag/v%s"
+	GitHubDownloadURL = GitHubRepoURL + "/releases/download/v%s/" + AppName
+)
+
+// Version file patterns
+var VersionFilePatterns = []string{
+	".otto-stack-version",
+}
+
+// Version search paths
+var VersionSearchPaths = []string{
+	".",
+	".otto-stack",
+	".config",
+	"config",
+}
+
+// Version prefixes for cleaning
+var VersionPrefixes = []string{
+	"otto-stack-",
+	"v",
+}
+
+// Version format templates
+const (
+	AppNameTemplate   = "otto-stack %s"
+	UserAgentTemplate = "otto-stack/%s (%s/%s)"
 )

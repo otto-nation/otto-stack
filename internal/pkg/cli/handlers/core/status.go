@@ -68,7 +68,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 
 	// Display user-friendly status
 	if len(statuses) == 0 {
-		ui.Info("No services are currently running")
+		constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "No services are currently running"})
 		return nil
 	}
 

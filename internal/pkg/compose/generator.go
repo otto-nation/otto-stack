@@ -17,7 +17,7 @@ import (
 // QuotedStringSlice ensures strings are quoted in YAML output
 type QuotedStringSlice []string
 
-func (q QuotedStringSlice) MarshalYAML() (interface{}, error) {
+func (q QuotedStringSlice) MarshalYAML() (any, error) {
 	if len(q) == 0 {
 		return nil, nil
 	}
@@ -130,7 +130,7 @@ func (g *Generator) Generate(serviceNames []string) (*ComposeFile, error) {
 			return nil, fmt.Errorf("service %s not found", serviceName)
 		}
 
-		if serviceDef.Type == constants.ServiceTypeConfiguration {
+		if serviceDef.Type == "configuration" {
 			target := serviceDef.TargetService
 			configServices[target] = append(configServices[target], serviceDef)
 		} else {
@@ -164,24 +164,35 @@ func (g *Generator) GetRequiredPorts(serviceNames []string) (map[string][]string
 
 	ports := make(map[string][]string)
 	for serviceName, service := range compose.Services {
-		if len(service.Ports) > 0 {
-			var servicePorts []string
-			for _, port := range service.Ports {
-				// Extract host port from "host:container" format
-				if strings.Contains(port, ":") {
-					hostPort := strings.Split(port, ":")[0]
-					servicePorts = append(servicePorts, hostPort)
-				} else {
-					servicePorts = append(servicePorts, port)
-				}
-			}
-			if len(servicePorts) > 0 {
-				ports[serviceName] = servicePorts
-			}
+		if len(service.Ports) == 0 {
+			continue
+		}
+
+		servicePorts := g.extractServicePorts(service.Ports)
+		if len(servicePorts) > 0 {
+			ports[serviceName] = servicePorts
 		}
 	}
 
 	return ports, nil
+}
+
+// extractServicePorts extracts host ports from port definitions
+func (g *Generator) extractServicePorts(ports []string) []string {
+	var servicePorts []string
+	for _, port := range ports {
+		hostPort := g.extractHostPort(port)
+		servicePorts = append(servicePorts, hostPort)
+	}
+	return servicePorts
+}
+
+// extractHostPort extracts the host port from "host:container" format
+func (g *Generator) extractHostPort(port string) string {
+	if strings.Contains(port, ":") {
+		return strings.Split(port, ":")[0]
+	}
+	return port
 }
 
 // mergeConfigurations applies configuration services to a container service
@@ -267,7 +278,7 @@ func (g *Generator) expandCompositeServices(serviceNames []string) ([]string, er
 	for _, serviceName := range serviceNames {
 		if g.registry != nil {
 			if serviceDef, exists := g.registry.GetService(serviceName); exists {
-				if serviceDef.Type == constants.ServiceTypeComposite && len(serviceDef.Components) > 0 {
+				if serviceDef.Type == "composite" && len(serviceDef.Components) > 0 {
 					// Recursively expand composite services (in case components are also composite)
 					componentServices, err := g.expandCompositeServices(serviceDef.Components)
 					if err != nil {
@@ -315,7 +326,7 @@ func (g *Generator) addService(compose *ComposeFile, serviceName string) error {
 // addServiceFromDefinition creates a compose service from a service definition
 func (g *Generator) addServiceFromDefinition(compose *ComposeFile, serviceName string, def services.ServiceDefinition) error {
 	// Skip composite services - they don't have their own containers
-	if def.Type == constants.ServiceTypeComposite {
+	if def.Type == "composite" {
 		return nil
 	}
 
@@ -370,7 +381,7 @@ func (g *Generator) addServiceFromDefinition(compose *ComposeFile, serviceName s
 	// Configure complex volumes - process VolumeConfig to create volume mounts
 	for _, vol := range def.Docker.Volumes {
 		volumeName := fmt.Sprintf("%s-%s", g.projectName, vol.Name)
-		compose.Volumes[volumeName] = map[string]interface{}{}
+		compose.Volumes[volumeName] = map[string]any{}
 
 		// Add volume mount to service
 		volumeMount := fmt.Sprintf("%s:%s", volumeName, vol.Mount)
@@ -449,16 +460,4 @@ func (g *Generator) writeRequiredScripts(services []string) error {
 	}
 
 	return nil
-}
-
-// isServiceEnabled checks if a service is in the list of enabled services
-//
-//nolint:unused // Used by writeRequiredScripts method
-func (g *Generator) isServiceEnabled(services []string, serviceName string) bool {
-	for _, service := range services {
-		if service == serviceName {
-			return true
-		}
-	}
-	return false
 }

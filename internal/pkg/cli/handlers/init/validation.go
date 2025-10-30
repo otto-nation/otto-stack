@@ -6,7 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 // validateInitEnvironment validates the environment before initialization
@@ -90,7 +90,7 @@ func (h *InitHandler) validateServices(services []string) error {
 func (h *InitHandler) validateDirectoryStructure() error {
 	// Check if we're in a git repository (optional but recommended)
 	if _, err := os.Stat(".git"); os.IsNotExist(err) {
-		ui.Warning("Not in a git repository. Consider running 'git init' first.")
+		constants.SendMessage(constants.Message{Level: constants.LevelWarning, Content: "Not in a git repository. Consider running 'git init' first."})
 	}
 
 	// Check for conflicting files

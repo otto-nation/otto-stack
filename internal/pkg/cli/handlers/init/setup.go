@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
 
 // createDirectoryStructure creates the necessary directory structure
@@ -35,7 +34,7 @@ func (h *InitHandler) createConfigFile(projectName string, services []string, va
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	ui.Success("Created %s", configPath)
+	constants.SendMessage(constants.MsgCreatedFile, configPath)
 	return nil
 }
 
@@ -60,7 +59,7 @@ func (h *InitHandler) createGitignoreEntries() error {
 	}
 
 	if hasDevStackEntries {
-		ui.Info(".gitignore already contains otto-stack entries")
+		constants.SendMessage(constants.MsgGitignoreExists)
 		return nil
 	}
 
@@ -77,7 +76,7 @@ func (h *InitHandler) createGitignoreEntries() error {
 		}
 	}
 
-	ui.Success("Updated .gitignore with otto-stack entries")
+	constants.SendMessage(constants.MsgUpdatedGitignore)
 	return nil
 }
 
@@ -127,7 +126,7 @@ Run `+"`otto-stack --help`"+` for a full list of available commands.
 		return fmt.Errorf("failed to create README: %w", err)
 	}
 
-	ui.Success("Created %s", readmePath)
+	constants.SendMessage(constants.MsgCreatedFile, readmePath)
 	return nil
 }
 

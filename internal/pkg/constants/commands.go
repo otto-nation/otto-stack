@@ -1,24 +1,5 @@
 package constants
 
-// Command names
-const (
-	CmdNameUp         = "up"
-	CmdNameDown       = "down"
-	CmdNameRestart    = "restart"
-	CmdNameStatus     = "status"
-	CmdNameInit       = "init"
-	CmdNameDoctor     = "doctor"
-	CmdNameCompletion = "completion"
-	CmdNameServices   = "services"
-	CmdNameDeps       = "deps"
-	CmdNameConflicts  = "conflicts"
-	CmdNameLogs       = "logs"
-	CmdNameExec       = "exec"
-	CmdNameConnect    = "connect"
-	CmdNameCleanup    = "cleanup"
-	CmdNameValidate   = "validate"
-)
-
 // Service names for connection
 const (
 	ServicePostgres   = "postgres"
@@ -156,22 +137,9 @@ const (
 	DockerInstallURL = "https://docs.docker.com/get-docker/"
 )
 
-// Command reference builders
-func CmdRef(cmdName string) string {
-	return AppName + " " + cmdName
-}
-
-// Common command references
-var (
-	CmdUp     = CmdRef(CmdNameUp)
-	CmdDown   = CmdRef(CmdNameDown)
-	CmdStatus = CmdRef(CmdNameStatus)
-	CmdInit   = CmdRef(CmdNameInit)
-)
-
 // Error messages
 var (
-	ErrNotInitialized = AppName + " not initialized. Run '" + CmdInit + "' first"
+	ErrNotInitialized = AppName + " not initialized. Run '" + AppName + " init' first"
 )
 
 // Status formatting

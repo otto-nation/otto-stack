@@ -42,16 +42,15 @@ const (
 	TestGitignoreEntry = constants.DevStackDir + "/" + constants.EnvGeneratedFileName
 )
 
-// Test CLI commands (use variables since they're computed)
+// Test CLI commands
 var (
-	CmdDevStackUp     = constants.CmdUp
-	CmdDevStackDown   = constants.CmdDown
-	CmdDevStackStatus = constants.CmdStatus
+	CmdDevStackUp     = constants.AppName + " up"
+	CmdDevStackDown   = constants.AppName + " down"
+	CmdDevStackStatus = constants.AppName + " status"
 )
 
 // Test file paths (use actual constants for consistency)
 var (
-	TestConfigFilePath     = constants.DevStackDir + "/" + constants.ConfigFileName
-	TestConfigFilePathYAML = constants.DevStackDir + "/" + constants.ConfigFileNameYAML
-	TestReadmeFilePath     = constants.DevStackDir + "/" + constants.ReadmeFileName
+	TestConfigFilePath = constants.DevStackDir + "/" + constants.ConfigFileName
+	TestReadmeFilePath = constants.DevStackDir + "/" + constants.ReadmeFileName
 )

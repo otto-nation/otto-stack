@@ -17,10 +17,10 @@ type Handler struct {
 	output      *ui.Output
 }
 
-// NewHandler creates a new version handler
-func NewHandler(manager version.VersionManager) *Handler {
+// NewVersionHandler creates a new version handler
+func NewVersionHandler() *Handler {
 	return &Handler{
-		enforcement: NewEnforcementHandler(manager),
+		enforcement: NewEnforcementHandler(nil), // Can handle nil
 		output:      ui.NewOutput(),
 	}
 }
@@ -159,22 +159,19 @@ func (b BuildInfo) YAML() string {
 
 // getCurrentVersion returns the current version (set at build time)
 func getCurrentVersion() string {
-	// These will be set at build time via ldflags
-	// -ldflags "-X github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/version.Version=v1.0.0"
-	if Version != "" {
-		return Version
-	}
-	return "dev" // Development version
+	// Use the main version package which has proper build-time injection
+	return version.GetShortVersion()
 }
 
 // getBuildInfo returns build information (set at build time)
 func getBuildInfo() BuildInfo {
+	mainBuildInfo := version.GetBuildInfo()
 	return BuildInfo{
-		Date:      BuildDate,
-		Commit:    GitCommit,
-		GoVersion: GoVersion,
-		OS:        BuildOS,
-		Arch:      BuildArch,
+		Date:      mainBuildInfo.BuildDate,
+		Commit:    mainBuildInfo.GitCommit,
+		GoVersion: mainBuildInfo.GoVersion,
+		OS:        mainBuildInfo.Platform,
+		Arch:      mainBuildInfo.Arch,
 	}
 }
 
@@ -183,13 +180,3 @@ func isBrewInstalled() bool {
 	// Simple check - could be enhanced
 	return false // Placeholder
 }
-
-// Build-time variables (set via ldflags)
-var (
-	Version   = "dev"
-	BuildDate = "unknown"
-	GitCommit = "unknown"
-	GoVersion = "unknown"
-	BuildOS   = "unknown"
-	BuildArch = "unknown"
-)

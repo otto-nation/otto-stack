@@ -26,17 +26,16 @@ type EnforcementHandler struct {
 // NewEnforcementHandler creates a new enforcement handler
 func NewEnforcementHandler(manager version.VersionManager) *EnforcementHandler {
 	policy := version.EnforcementPolicy{
-		StrictMode:       constants.DefaultStrictMode,
-		AllowDrift:       constants.DefaultAllowDrift,
-		MaxDriftDuration: constants.DefaultMaxDriftDuration,
-		AutoSync:         constants.DefaultAutoSync,
-		NotifyUpdates:    constants.DefaultNotifyUpdates,
+		StrictMode:       version.DefaultStrictMode,
+		AllowDrift:       version.DefaultAllowDrift,
+		MaxDriftDuration: version.DefaultMaxDriftDuration,
+		AutoSync:         version.DefaultAutoSync,
 	}
 
 	enforcer := version.NewVersionEnforcer(manager, policy)
 
-	// Use proper config path with constants
-	configPath := filepath.Join(os.Getenv("HOME"), ".otto-stack", constants.NotificationConfigFile)
+	// Use main config file for notifications
+	configPath := filepath.Join(constants.DevStackDir, constants.ConfigFileName)
 	notifier := version.NewUpdateNotifier(manager, configPath)
 
 	return &EnforcementHandler{

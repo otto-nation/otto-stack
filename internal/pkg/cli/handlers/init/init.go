@@ -114,8 +114,8 @@ exitLoop:
 	ui.Success(constants.MsgInitSuccess)
 	constants.SendMessage(constants.MsgNextSteps)
 	constants.SendMessage(constants.MsgStep1, constants.DevStackDir, constants.ConfigFileName)
-	constants.SendMessage(constants.MsgStep2, constants.CmdUp)
-	constants.SendMessage(constants.MsgStep3, constants.CmdStatus)
+	constants.SendMessage(constants.MsgStep2, constants.AppName+" up")
+	constants.SendMessage(constants.MsgStep3, constants.AppName+" status")
 
 	return nil
 }

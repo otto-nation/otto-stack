@@ -62,7 +62,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Stop services first
-	ui.Info("Stopping services...")
+	constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "Stopping services..."})
 	stopOptions := types.StopOptions{
 		Timeout: timeout,
 	}
@@ -71,7 +71,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Start services
-	ui.Info("Starting services...")
+	constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "Starting services..."})
 	startOptions := types.StartOptions{
 		Build: build,
 	}
@@ -80,7 +80,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	ui.Success(constants.MsgRestartSuccess)
-	ui.Info("Run '%s' to check service status", constants.CmdStatus)
+	constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "Run '%s' to check service status"}, constants.AppName+" status")
 	return nil
 }
 
