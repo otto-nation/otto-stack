@@ -24,7 +24,7 @@ func (h *InitHandler) createDirectoryStructure() error {
 
 // createConfigFile creates the main configuration file
 func (h *InitHandler) createConfigFile(projectName string, services []string, validation, advanced map[string]bool) error {
-	configContent, err := h.generateConfig(projectName, constants.DefaultEnvironment, services, validation, advanced)
+	configContent, err := h.generateConfig(projectName, services, validation, advanced)
 	if err != nil {
 		return fmt.Errorf("failed to generate config: %w", err)
 	}
