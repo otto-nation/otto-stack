@@ -10,6 +10,9 @@ type Formatter interface {
 	// FormatStatus formats service status information
 	FormatStatus(services []ServiceStatus, options StatusOptions) error
 
+	// FormatServiceCatalog formats service catalog information
+	FormatServiceCatalog(catalog ServiceCatalog, options ServiceCatalogOptions) error
+
 	// FormatValidation formats validation results
 	FormatValidation(result ValidationResult, options ValidationOptions) error
 
@@ -119,4 +122,25 @@ type VersionOptions struct {
 type HealthOptions struct {
 	Verbose bool
 	AutoFix bool
+}
+
+// ServiceCatalog represents available services organized by category
+type ServiceCatalog struct {
+	Categories map[string][]ServiceInfo `json:"categories" yaml:"categories"`
+	Total      int                      `json:"total" yaml:"total"`
+}
+
+// ServiceInfo represents a service in the catalog
+type ServiceInfo struct {
+	Name        string   `json:"name" yaml:"name"`
+	Description string   `json:"description" yaml:"description"`
+	Category    string   `json:"category" yaml:"category"`
+	Tags        []string `json:"tags,omitempty" yaml:"tags,omitempty"`
+}
+
+// ServiceCatalogOptions controls service catalog display
+type ServiceCatalogOptions struct {
+	Category string
+	Format   string
+	Compact  bool
 }

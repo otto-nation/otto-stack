@@ -33,6 +33,33 @@ func (f *TableFormatter) FormatStatus(services []ServiceStatus, options StatusOp
 	return f.formatDetailedStatus(services, options.Quiet)
 }
 
+// FormatServiceCatalog formats service catalog as a table
+func (f *TableFormatter) FormatServiceCatalog(catalog ServiceCatalog, options ServiceCatalogOptions) error {
+	filteredCatalog := FilterCatalogByCategory(catalog, options.Category)
+
+	if filteredCatalog.Total == 0 {
+		if options.Category != "" {
+			_, _ = fmt.Fprintf(f.writer, constants.MsgNoServicesInCategory+"\n", options.Category)
+		} else {
+			_, _ = fmt.Fprintln(f.writer, "No services available")
+		}
+		return nil
+	}
+
+	// Table format
+	_, _ = fmt.Fprintf(f.writer, "%-15s %-20s %s\n", "CATEGORY", "SERVICE", "DESCRIPTION")
+	_, _ = fmt.Fprintln(f.writer, strings.Repeat("-", 80))
+
+	for categoryName, services := range filteredCatalog.Categories {
+		for _, service := range services {
+			_, _ = fmt.Fprintf(f.writer, "%-15s %-20s %s\n",
+				categoryName, service.Name, service.Description)
+		}
+	}
+
+	return nil
+}
+
 // FormatValidation formats validation results as a table
 func (f *TableFormatter) FormatValidation(result ValidationResult, options ValidationOptions) error {
 	if result.Valid {
@@ -139,14 +166,12 @@ func (f *TableFormatter) FormatHealth(report HealthReport, options HealthOptions
 	fmt.Fprintln(f.writer, strings.Repeat("-", 90))
 
 	for _, check := range report.Checks {
-		icon := f.getHealthIcon(check.Status)
-		//nolint:errcheck
-		fmt.Fprintf(f.writer, "%-25s %-10s %-15s %-40s\n",
+		icon := GetHealthIcon(check.Status)
+		_, _ = fmt.Fprintf(f.writer, "%-25s %-10s %-15s %-40s\n",
 			check.Name, icon+" "+check.Status, check.Category, check.Message)
 
 		if options.Verbose && check.Suggestion != "" {
-			//nolint:errcheck
-			fmt.Fprintf(f.writer, "   💡 %s\n", check.Suggestion)
+			_, _ = fmt.Fprintf(f.writer, "   💡 %s\n", check.Suggestion)
 		}
 	}
 
@@ -155,44 +180,66 @@ func (f *TableFormatter) FormatHealth(report HealthReport, options HealthOptions
 
 // Helper methods
 func (f *TableFormatter) formatCompactStatus(services []ServiceStatus) error {
-	//nolint:errcheck
-	fmt.Fprintf(f.writer, "%-20s %-10s %-12s\n", "SERVICE", "STATE", "HEALTH")
-	//nolint:errcheck
-	fmt.Fprintln(f.writer, strings.Repeat("-", 42))
+	_, _ = fmt.Fprintf(f.writer, "%-20s %-10s %-12s\n", "SERVICE", "STATE", "HEALTH")
+	_, _ = fmt.Fprintln(f.writer, strings.Repeat("-", 42))
 
 	for _, service := range services {
-		stateIcon := f.getStateIcon(service.State)
-		healthIcon := f.getHealthIcon(service.Health)
+		stateIcon := GetStateIcon(service.State)
+		healthIcon := GetHealthIcon(service.Health)
 
-		//nolint:errcheck
-		fmt.Fprintf(f.writer, "%-20s %-10s %-12s\n",
+		_, _ = fmt.Fprintf(f.writer, "%-20s %-10s %-12s\n",
 			service.Name, stateIcon+" "+service.State, healthIcon+" "+service.Health)
 	}
 
 	return nil
 }
 
+// ServiceRowData holds formatted service data for display
+type ServiceRowData struct {
+	Name    string
+	State   string
+	Health  string
+	Uptime  string
+	Ports   string
+	Updated string
+}
+
+// formatServiceRow converts ServiceStatus to display format
+func (f *TableFormatter) formatServiceRow(service ServiceStatus) ServiceRowData {
+	stateIcon := GetStateIcon(service.State)
+	healthIcon := GetHealthIcon(service.Health)
+	uptime := f.formatDuration(service.Uptime)
+	ports := f.formatPorts(service.Ports)
+	updated := service.UpdatedAt.Format("15:04:05")
+
+	return ServiceRowData{
+		Name:    service.Name,
+		State:   stateIcon + " " + service.State,
+		Health:  healthIcon + " " + service.Health,
+		Uptime:  uptime,
+		Ports:   ports,
+		Updated: updated,
+	}
+}
+
+// formatPorts truncates port list if too long
+func (f *TableFormatter) formatPorts(ports []string) string {
+	joined := strings.Join(ports, ",")
+	if len(joined) > 10 {
+		return joined[:10] + "..."
+	}
+	return joined
+}
+
 func (f *TableFormatter) formatDetailedStatus(services []ServiceStatus, quiet bool) error {
-	//nolint:errcheck
-	fmt.Fprintf(f.writer, "%-15s %-10s %-10s %-8s %-12s %-10s\n",
+	_, _ = fmt.Fprintf(f.writer, "%-15s %-10s %-10s %-8s %-12s %-10s\n",
 		"SERVICE", "STATE", "HEALTH", "UPTIME", "PORTS", "UPDATED")
-	//nolint:errcheck
-	fmt.Fprintln(f.writer, strings.Repeat("-", 75))
+	_, _ = fmt.Fprintln(f.writer, strings.Repeat("-", 75))
 
 	for _, service := range services {
-		stateIcon := f.getStateIcon(service.State)
-		healthIcon := f.getHealthIcon(service.Health)
-		uptime := f.formatDuration(service.Uptime)
-		ports := strings.Join(service.Ports, ",")
-		if len(ports) > 10 {
-			ports = ports[:10] + "..."
-		}
-		updated := service.UpdatedAt.Format("15:04:05")
-
-		//nolint:errcheck
-		fmt.Fprintf(f.writer, "%-15s %-10s %-10s %-8s %-12s %-10s\n",
-			service.Name, stateIcon+" "+service.State, healthIcon+" "+service.Health,
-			uptime, ports, updated)
+		row := f.formatServiceRow(service)
+		_, _ = fmt.Fprintf(f.writer, "%-15s %-10s %-10s %-8s %-12s %-10s\n",
+			row.Name, row.State, row.Health, row.Uptime, row.Ports, row.Updated)
 	}
 
 	if !quiet {
@@ -218,56 +265,14 @@ func (f *TableFormatter) formatValidationSummary(summary ValidationSummary) {
 }
 
 func (f *TableFormatter) formatResourceSummary(services []ServiceStatus) {
-	running := 0
-	healthy := 0
+	running := CountByState(services, constants.StateRunning)
+	healthy := CountByHealth(services, constants.HealthHealthy)
 
-	for _, service := range services {
-		if service.State == "running" {
-			running++
-		}
-		if service.Health == "healthy" {
-			healthy++
-		}
-	}
-
-	//nolint:errcheck
-	fmt.Fprintln(f.writer)
-	//nolint:errcheck
-	fmt.Fprintln(f.writer, "Resource Summary:")
-	//nolint:errcheck
-	fmt.Fprintf(f.writer, "  Total Services: %d\n", len(services))
-	//nolint:errcheck
-	fmt.Fprintf(f.writer, "  Running: %d\n", running)
-	//nolint:errcheck
-	fmt.Fprintf(f.writer, "  Healthy: %d\n", healthy)
-}
-
-func (f *TableFormatter) getStateIcon(state string) string {
-	switch state {
-	case "running":
-		return "🟢"
-	case "stopped", "exited":
-		return "🔴"
-	case "starting":
-		return "🟡"
-	case "paused":
-		return "⏸️"
-	default:
-		return "⚪"
-	}
-}
-
-func (f *TableFormatter) getHealthIcon(health string) string {
-	switch health {
-	case "healthy":
-		return "✅"
-	case "unhealthy":
-		return "❌"
-	case "starting":
-		return "🟡"
-	default:
-		return "❓"
-	}
+	_, _ = fmt.Fprintln(f.writer)
+	_, _ = fmt.Fprintln(f.writer, "Resource Summary:")
+	_, _ = fmt.Fprintf(f.writer, "  Total Services: %d\n", len(services))
+	_, _ = fmt.Fprintf(f.writer, "  Running: %d\n", running)
+	_, _ = fmt.Fprintf(f.writer, "  Healthy: %d\n", healthy)
 }
 
 func (f *TableFormatter) formatDuration(d time.Duration) string {

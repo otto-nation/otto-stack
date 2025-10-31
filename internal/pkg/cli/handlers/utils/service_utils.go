@@ -331,26 +331,40 @@ func parseDocumentation(serviceData map[string]any) types.ServiceDocumentation {
 }
 
 // parseWebInterfaces parses web interfaces from service data
+// WebInterfaceParser handles parsing of web interface data
+type WebInterfaceParser struct{}
+
+// parseWebInterface converts a single interface map to WebInterface
+func (p *WebInterfaceParser) parseWebInterface(data map[string]any) types.WebInterface {
+	return types.WebInterface{
+		Name:        getString(data, "name"),
+		URL:         getString(data, "url"),
+		Description: getString(data, "description"),
+	}
+}
+
 func parseWebInterfaces(data any) []types.WebInterface {
 	if data == nil {
 		return nil
 	}
 
-	if interfaces, ok := data.([]any); ok {
-		var result []types.WebInterface
-		for _, item := range interfaces {
-			if interfaceMap, ok := item.(map[string]any); ok {
-				result = append(result, types.WebInterface{
-					Name:        getString(interfaceMap, "name"),
-					URL:         getString(interfaceMap, "url"),
-					Description: getString(interfaceMap, "description"),
-				})
-			}
-		}
-		return result
+	interfaces, ok := data.([]any)
+	if !ok {
+		return nil
 	}
 
-	return nil
+	parser := &WebInterfaceParser{}
+	var result []types.WebInterface
+
+	for _, item := range interfaces {
+		interfaceMap, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		result = append(result, parser.parseWebInterface(interfaceMap))
+	}
+
+	return result
 }
 
 // Helper functions
@@ -415,43 +429,81 @@ func convertServiceConfiguration(serviceData map[string]any) []types.ServiceOpti
 	return nil
 }
 
+// OptionConverter handles conversion of YAML options to ServiceOption format
+type OptionConverter struct {
+	converters map[string]func(any) types.ServiceOption
+}
+
+// NewOptionConverter creates a new option converter with predefined converters
+func NewOptionConverter() *OptionConverter {
+	c := &OptionConverter{
+		converters: make(map[string]func(any) types.ServiceOption),
+	}
+
+	c.converters["map"] = c.convertMapOption
+	c.converters["string"] = c.convertStringOption
+
+	return c
+}
+
+// convertMapOption converts structured map format to ServiceOption
+func (c *OptionConverter) convertMapOption(item any) types.ServiceOption {
+	optMap := item.(map[any]any)
+	return types.ServiceOption{
+		Name:        getStringFromInterface(optMap, "name"),
+		Type:        getStringFromInterface(optMap, "type"),
+		Description: getStringFromInterface(optMap, "description"),
+		Default:     getStringFromInterface(optMap, "default"),
+		Example:     getStringFromInterface(optMap, "example"),
+		Required:    getBool(optMap, "required"),
+		Values:      getStringSlice(optMap["values"]),
+	}
+}
+
+// convertStringOption converts legacy string format to ServiceOption
+func (c *OptionConverter) convertStringOption(item any) types.ServiceOption {
+	str := item.(string)
+	return types.ServiceOption{
+		Name:        str,
+		Type:        "string",
+		Description: fmt.Sprintf("Configuration option: %s", str),
+		Required:    false,
+	}
+}
+
 // convertOptionsData converts options from YAML to CLI ServiceOption format
 func convertOptionsData(data any) []types.ServiceOption {
 	if data == nil {
 		return nil
 	}
 
-	// Handle both old string slice format and new structured format
-	switch v := data.(type) {
-	case []any:
-		var options []types.ServiceOption
-		for _, item := range v {
-			if optMap, ok := item.(map[any]any); ok {
-				// New structured format
-				option := types.ServiceOption{
-					Name:        getStringFromInterface(optMap, "name"),
-					Type:        getStringFromInterface(optMap, "type"),
-					Description: getStringFromInterface(optMap, "description"),
-					Default:     getStringFromInterface(optMap, "default"),
-					Example:     getStringFromInterface(optMap, "example"),
-					Required:    getBool(optMap, "required"),
-					Values:      getStringSlice(optMap["values"]),
-				}
-				options = append(options, option)
-			} else if str, ok := item.(string); ok {
-				// Old string format - convert to structured
-				option := types.ServiceOption{
-					Name:        str,
-					Type:        "string",
-					Description: fmt.Sprintf("Configuration option: %s", str),
-					Required:    false,
-				}
-				options = append(options, option)
-			}
-		}
-		return options
-	default:
+	slice, ok := data.([]any)
+	if !ok {
 		return nil
+	}
+
+	converter := NewOptionConverter()
+	var options []types.ServiceOption
+
+	for _, item := range slice {
+		option := converter.convertItem(item)
+		if option.Name != "" {
+			options = append(options, option)
+		}
+	}
+
+	return options
+}
+
+// convertItem determines type and converts item to ServiceOption
+func (c *OptionConverter) convertItem(item any) types.ServiceOption {
+	switch item.(type) {
+	case map[any]any:
+		return c.converters["map"](item)
+	case string:
+		return c.converters["string"](item)
+	default:
+		return types.ServiceOption{}
 	}
 }
 

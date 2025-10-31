@@ -153,7 +153,7 @@ func TestFormatterFactory(t *testing.T) {
 
 	// Test supported formats
 	formats := GetSupportedFormats()
-	expectedFormats := []string{"table", "json", "yaml"}
+	expectedFormats := []string{"table", "json", "yaml", "group"}
 	if len(formats) != len(expectedFormats) {
 		t.Errorf("Expected %d formats, got %d", len(expectedFormats), len(formats))
 	}

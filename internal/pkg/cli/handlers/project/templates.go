@@ -24,8 +24,8 @@ type ProjectConfig struct {
 }
 
 // generateConfig generates config using code generation
-func (h *InitHandler) generateConfig(name, environment string, services []string, validation, advanced map[string]bool) (string, error) {
-	return pkgConfig.GenerateConfig(name, environment, services, validation, advanced), nil
+func (h *InitHandler) generateConfig(name string, services []string, validation, advanced map[string]bool) (string, error) {
+	return pkgConfig.GenerateConfig(name, services, validation, advanced), nil
 }
 
 // generateInitialComposeFiles generates initial compose files during init

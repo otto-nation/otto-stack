@@ -20,14 +20,19 @@ func NewYAMLFormatter(writer io.Writer) *YAMLFormatter {
 func (f *YAMLFormatter) FormatStatus(services []ServiceStatus, options StatusOptions) error {
 	output := map[string]any{
 		"services": services,
-		"summary": map[string]any{
-			"total":   len(services),
-			"running": f.countByState(services, "running"),
-			"healthy": f.countByHealth(services, "healthy"),
-		},
+		"summary":  CreateSummary(services),
 	}
 
 	return f.writeYAML(output)
+}
+
+// FormatServiceCatalog formats service catalog as YAML
+func (f *YAMLFormatter) FormatServiceCatalog(catalog ServiceCatalog, options ServiceCatalogOptions) error {
+	encoder := yaml.NewEncoder(f.writer)
+	defer func() { _ = encoder.Close() }()
+
+	filteredCatalog := FilterCatalogByCategory(catalog, options.Category)
+	return encoder.Encode(filteredCatalog)
 }
 
 // FormatValidation formats validation results as YAML
@@ -52,24 +57,4 @@ func (f *YAMLFormatter) writeYAML(data any) error {
 		_ = encoder.Close()
 	}()
 	return encoder.Encode(data)
-}
-
-func (f *YAMLFormatter) countByState(services []ServiceStatus, state string) int {
-	count := 0
-	for _, service := range services {
-		if service.State == state {
-			count++
-		}
-	}
-	return count
-}
-
-func (f *YAMLFormatter) countByHealth(services []ServiceStatus, health string) int {
-	count := 0
-	for _, service := range services {
-		if service.Health == health {
-			count++
-		}
-	}
-	return count
 }
