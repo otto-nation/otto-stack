@@ -10,81 +10,93 @@ import (
 // GroupFormatter implements grouped output formatting for service catalogs
 type GroupFormatter struct {
 	writer io.Writer
+	table  *TableFormatter // Embedded for delegation
 }
 
 // NewGroupFormatter creates a new group formatter
 func NewGroupFormatter(writer io.Writer) *GroupFormatter {
-	return &GroupFormatter{writer: writer}
+	return &GroupFormatter{
+		writer: writer,
+		table:  NewTableFormatter(writer),
+	}
 }
 
 // FormatServiceCatalog formats service catalog grouped by category
-func (f *GroupFormatter) FormatServiceCatalog(catalog ServiceCatalog, options ServiceCatalogOptions) error {
-	if catalog.Total == 0 {
-		_, _ = fmt.Fprintln(f.writer, "No services available")
-		return nil
+// CategoryFormatter handles formatting of service categories
+type CategoryFormatter struct {
+	writer io.Writer
+}
+
+// formatCategoryHeader formats the category header with service count
+func (cf *CategoryFormatter) formatCategoryHeader(categoryName string, serviceCount int) {
+	displayInfo, exists := constants.CategoryDisplayInfo[categoryName]
+	if !exists {
+		displayInfo = struct{ Name, Icon string }{categoryName, "📦"}
 	}
 
-	// Filter by category if specified
-	categories := catalog.Categories
-	if options.Category != "" {
-		if services, exists := catalog.Categories[options.Category]; exists {
-			categories = map[string][]ServiceInfo{options.Category: services}
-		} else {
+	plural := ""
+	if serviceCount != 1 {
+		plural = "s"
+	}
+
+	_, _ = fmt.Fprintf(cf.writer, "%s %s\n", displayInfo.Icon,
+		fmt.Sprintf(constants.MsgServiceCount, displayInfo.Name, serviceCount, plural))
+}
+
+// formatServiceList formats the list of services in a category
+func (cf *CategoryFormatter) formatServiceList(services []ServiceInfo) {
+	for _, service := range services {
+		_, _ = fmt.Fprintf(cf.writer, "  %-15s %s\n", service.Name, service.Description)
+	}
+	_, _ = fmt.Fprintln(cf.writer)
+}
+
+// formatCategory formats a complete category with header and services
+func (cf *CategoryFormatter) formatCategory(categoryName string, services []ServiceInfo) {
+	if len(services) == 0 {
+		return
+	}
+
+	cf.formatCategoryHeader(categoryName, len(services))
+	cf.formatServiceList(services)
+}
+
+func (f *GroupFormatter) FormatServiceCatalog(catalog ServiceCatalog, options ServiceCatalogOptions) error {
+	filteredCatalog := FilterCatalogByCategory(catalog, options.Category)
+
+	if filteredCatalog.Total == 0 {
+		if options.Category != "" {
 			_, _ = fmt.Fprintf(f.writer, constants.MsgNoServicesInCategory+"\n", options.Category)
-			return nil
+		} else {
+			_, _ = fmt.Fprintln(f.writer, "No services available")
 		}
+		return nil
 	}
 
 	_, _ = fmt.Fprintln(f.writer, constants.MsgServiceCatalogHeader)
 	_, _ = fmt.Fprintln(f.writer)
 
-	for categoryName, services := range categories {
-		if len(services) == 0 {
-			continue
-		}
-
-		// Get category display info
-		displayInfo, exists := constants.CategoryDisplayInfo[categoryName]
-		if !exists {
-			displayInfo = struct{ Name, Icon string }{categoryName, "📦"}
-		}
-
-		// Category header with count
-		serviceCount := len(services)
-		plural := ""
-		if serviceCount != 1 {
-			plural = "s"
-		}
-		_, _ = fmt.Fprintf(f.writer, "%s %s\n", displayInfo.Icon,
-			fmt.Sprintf(constants.MsgServiceCount, displayInfo.Name, serviceCount, plural))
-
-		// List services in category
-		for _, service := range services {
-			_, _ = fmt.Fprintf(f.writer, "  %-15s %s\n", service.Name, service.Description)
-		}
-		_, _ = fmt.Fprintln(f.writer)
+	categoryFormatter := &CategoryFormatter{writer: f.writer}
+	for categoryName, services := range filteredCatalog.Categories {
+		categoryFormatter.formatCategory(categoryName, services)
 	}
 
 	return nil
 }
 
-// Implement other required methods (delegating to table formatter for now)
+// Delegate other methods to embedded table formatter
 func (f *GroupFormatter) FormatStatus(services []ServiceStatus, options StatusOptions) error {
-	tableFormatter := NewTableFormatter(f.writer)
-	return tableFormatter.FormatStatus(services, options)
+	return f.table.FormatStatus(services, options)
 }
 
 func (f *GroupFormatter) FormatValidation(result ValidationResult, options ValidationOptions) error {
-	tableFormatter := NewTableFormatter(f.writer)
-	return tableFormatter.FormatValidation(result, options)
+	return f.table.FormatValidation(result, options)
 }
 
 func (f *GroupFormatter) FormatVersion(info VersionInfo, options VersionOptions) error {
-	tableFormatter := NewTableFormatter(f.writer)
-	return tableFormatter.FormatVersion(info, options)
+	return f.table.FormatVersion(info, options)
 }
 
 func (f *GroupFormatter) FormatHealth(report HealthReport, options HealthOptions) error {
-	tableFormatter := NewTableFormatter(f.writer)
-	return tableFormatter.FormatHealth(report, options)
+	return f.table.FormatHealth(report, options)
 }

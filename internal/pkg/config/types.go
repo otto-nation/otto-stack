@@ -45,18 +45,17 @@ type Handler struct {
 
 // Command represents a complete command definition
 type Command struct {
-	Category        string           `yaml:"category"`
-	Handler         string           `yaml:"handler"`
-	Description     string           `yaml:"description"`
-	LongDescription string           `yaml:"long_description"`
-	Usage           string           `yaml:"usage"`
-	Aliases         []string         `yaml:"aliases"`
-	Examples        []Example        `yaml:"examples"`
-	Flags           map[string]Flag  `yaml:"flags"`
-	RelatedCommands []string         `yaml:"related_commands"`
-	Tips            []string         `yaml:"tips"`
-	Hidden          bool             `yaml:"hidden,omitempty"`
-	Deprecated      *DeprecationInfo `yaml:"deprecated,omitempty"`
+	Category        string          `yaml:"category"`
+	Handler         string          `yaml:"handler"`
+	Description     string          `yaml:"description"`
+	LongDescription string          `yaml:"long_description"`
+	Usage           string          `yaml:"usage"`
+	Aliases         []string        `yaml:"aliases"`
+	Examples        []Example       `yaml:"examples"`
+	Flags           map[string]Flag `yaml:"flags"`
+	RelatedCommands []string        `yaml:"related_commands"`
+	Tips            []string        `yaml:"tips"`
+	Hidden          bool            `yaml:"hidden,omitempty"`
 }
 
 // Flag represents a command line flag definition
@@ -69,20 +68,12 @@ type Flag struct {
 	Completion  string   `yaml:"completion,omitempty"`
 	Required    bool     `yaml:"required,omitempty"`
 	Hidden      bool     `yaml:"hidden,omitempty"`
-	Deprecated  string   `yaml:"deprecated,omitempty"`
 }
 
 // Example represents a command usage example
 type Example struct {
 	Command     string `yaml:"command"`
 	Description string `yaml:"description"`
-}
-
-// DeprecationInfo contains deprecation details
-type DeprecationInfo struct {
-	Since       string `yaml:"since"`
-	Reason      string `yaml:"reason"`
-	Alternative string `yaml:"alternative"`
 }
 
 // Workflow represents a sequence of commands for common tasks

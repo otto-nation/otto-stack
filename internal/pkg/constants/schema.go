@@ -1,31 +1,22 @@
 package constants
 
-// YAML type constants
+// Schema constants
 const (
 	YAMLTypeString  = "string"
 	YAMLTypeBoolean = "boolean"
 	YAMLTypeArray   = "array"
 	YAMLTypeObject  = "object"
-)
 
-// Schema section names
-const (
 	SectionStack         = "stack"
 	SectionProject       = "project"
 	SectionValidation    = "validation"
 	SectionAdvanced      = "advanced"
 	SectionVersionConfig = "version_config"
 	SectionServiceConfig = "service_configuration"
-)
 
-// Schema property names
-const (
 	PropertyEnabled = "enabled"
 	PropertyName    = "name"
-)
 
-// Template variables
-const (
 	TemplateProjectName             = "{{project_name}}"
 	TemplateOttoVersion             = "{{otto_version}}"
 	TemplateConfigDocsURL           = "{{config_docs_url}}"
@@ -35,10 +26,7 @@ const (
 	TemplateDefaultAutoStart        = "{{default_auto_start}}"
 	TemplateDefaultPullLatest       = "{{default_pull_latest_images}}"
 	TemplateDefaultCleanupRecreate  = "{{default_cleanup_on_recreate}}"
-)
 
-// Format strings
-const (
 	YAMLIndent   = "  "
 	YAMLComment  = "# %s\n"
 	YAMLProperty = "%s%s: "

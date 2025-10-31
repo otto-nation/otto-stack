@@ -19,11 +19,7 @@ func NewJSONFormatter(writer io.Writer) *JSONFormatter {
 func (f *JSONFormatter) FormatStatus(services []ServiceStatus, options StatusOptions) error {
 	output := map[string]any{
 		"services": services,
-		"summary": map[string]any{
-			"total":   len(services),
-			"running": f.countByState(services, "running"),
-			"healthy": f.countByHealth(services, "healthy"),
-		},
+		"summary":  CreateSummary(services),
 	}
 
 	return f.writeJSON(output)
@@ -34,21 +30,8 @@ func (f *JSONFormatter) FormatServiceCatalog(catalog ServiceCatalog, options Ser
 	encoder := json.NewEncoder(f.writer)
 	encoder.SetIndent("", "  ")
 
-	// Filter by category if specified
-	if options.Category != "" {
-		if services, exists := catalog.Categories[options.Category]; exists {
-			filteredCatalog := ServiceCatalog{
-				Categories: map[string][]ServiceInfo{options.Category: services},
-				Total:      len(services),
-			}
-			return encoder.Encode(filteredCatalog)
-		}
-		// Return empty catalog for non-existent category
-		emptyCatalog := ServiceCatalog{Categories: make(map[string][]ServiceInfo), Total: 0}
-		return encoder.Encode(emptyCatalog)
-	}
-
-	return encoder.Encode(catalog)
+	filteredCatalog := FilterCatalogByCategory(catalog, options.Category)
+	return encoder.Encode(filteredCatalog)
 }
 
 // FormatValidation formats validation results as JSON
@@ -71,24 +54,4 @@ func (f *JSONFormatter) writeJSON(data any) error {
 	encoder := json.NewEncoder(f.writer)
 	encoder.SetIndent("", "  ")
 	return encoder.Encode(data)
-}
-
-func (f *JSONFormatter) countByState(services []ServiceStatus, state string) int {
-	count := 0
-	for _, service := range services {
-		if service.State == state {
-			count++
-		}
-	}
-	return count
-}
-
-func (f *JSONFormatter) countByHealth(services []ServiceStatus, health string) int {
-	count := 0
-	for _, service := range services {
-		if service.Health == health {
-			count++
-		}
-	}
-	return count
 }

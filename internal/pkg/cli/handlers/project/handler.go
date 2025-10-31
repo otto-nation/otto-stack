@@ -77,9 +77,6 @@ func (h *Handler) handleCheckUpdates(ctx context.Context, cmd *cobra.Command, ar
 	h.output.Info("To update:")
 	h.output.Info("  • Using install script: curl -fsSL https://raw.githubusercontent.com/%s/%s/main/scripts/install.sh | bash",
 		constants.GitHubOrg, constants.GitHubRepo)
-	if isBrewInstalled() {
-		h.output.Info("  • Using Homebrew: brew upgrade %s", constants.AppName)
-	}
 	h.output.Info("  • Manual download: https://github.com/%s/%s/releases/latest",
 		constants.GitHubOrg, constants.GitHubRepo)
 
@@ -173,10 +170,4 @@ func getBuildInfo() BuildInfo {
 		OS:        mainBuildInfo.Platform,
 		Arch:      mainBuildInfo.Arch,
 	}
-}
-
-// isBrewInstalled checks if Homebrew is available
-func isBrewInstalled() bool {
-	// Simple check - could be enhanced
-	return false // Placeholder
 }
