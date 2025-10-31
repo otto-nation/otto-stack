@@ -567,6 +567,8 @@ commands:
         description: "List services in database category"
       - command: "otto-stack services --category cache"
         description: "List cache services"
+      - command: "otto-stack services --format table"
+        description: "List services in table format"
     flags:
       category:
         short: "c"
@@ -574,6 +576,12 @@ commands:
         description: "Show services in specific category"
         default: ""
         options: ["database", "cache", "messaging", "observability", "cloud"]
+      format:
+        short: "f"
+        type: "string"
+        description: "Output format (group|table|json|yaml)"
+        default: "group"
+        options: ["group", "table", "json", "yaml"]
     related_commands: ["deps", "conflicts", "init"]
 
   deps:

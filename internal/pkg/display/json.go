@@ -29,6 +29,28 @@ func (f *JSONFormatter) FormatStatus(services []ServiceStatus, options StatusOpt
 	return f.writeJSON(output)
 }
 
+// FormatServiceCatalog formats service catalog as JSON
+func (f *JSONFormatter) FormatServiceCatalog(catalog ServiceCatalog, options ServiceCatalogOptions) error {
+	encoder := json.NewEncoder(f.writer)
+	encoder.SetIndent("", "  ")
+
+	// Filter by category if specified
+	if options.Category != "" {
+		if services, exists := catalog.Categories[options.Category]; exists {
+			filteredCatalog := ServiceCatalog{
+				Categories: map[string][]ServiceInfo{options.Category: services},
+				Total:      len(services),
+			}
+			return encoder.Encode(filteredCatalog)
+		}
+		// Return empty catalog for non-existent category
+		emptyCatalog := ServiceCatalog{Categories: make(map[string][]ServiceInfo), Total: 0}
+		return encoder.Encode(emptyCatalog)
+	}
+
+	return encoder.Encode(catalog)
+}
+
 // FormatValidation formats validation results as JSON
 func (f *JSONFormatter) FormatValidation(result ValidationResult, options ValidationOptions) error {
 	return f.writeJSON(result)

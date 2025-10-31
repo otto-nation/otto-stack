@@ -33,6 +33,38 @@ func (f *TableFormatter) FormatStatus(services []ServiceStatus, options StatusOp
 	return f.formatDetailedStatus(services, options.Quiet)
 }
 
+// FormatServiceCatalog formats service catalog as a table
+func (f *TableFormatter) FormatServiceCatalog(catalog ServiceCatalog, options ServiceCatalogOptions) error {
+	if catalog.Total == 0 {
+		_, _ = fmt.Fprintln(f.writer, "No services available")
+		return nil
+	}
+
+	// Filter by category if specified
+	categories := catalog.Categories
+	if options.Category != "" {
+		if services, exists := catalog.Categories[options.Category]; exists {
+			categories = map[string][]ServiceInfo{options.Category: services}
+		} else {
+			_, _ = fmt.Fprintf(f.writer, constants.MsgNoServicesInCategory+"\n", options.Category)
+			return nil
+		}
+	}
+
+	// Table format
+	_, _ = fmt.Fprintf(f.writer, "%-15s %-20s %s\n", "CATEGORY", "SERVICE", "DESCRIPTION")
+	_, _ = fmt.Fprintln(f.writer, strings.Repeat("-", 80))
+
+	for categoryName, services := range categories {
+		for _, service := range services {
+			_, _ = fmt.Fprintf(f.writer, "%-15s %-20s %s\n",
+				categoryName, service.Name, service.Description)
+		}
+	}
+
+	return nil
+}
+
 // FormatValidation formats validation results as a table
 func (f *TableFormatter) FormatValidation(result ValidationResult, options ValidationOptions) error {
 	if result.Valid {

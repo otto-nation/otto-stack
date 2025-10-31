@@ -100,7 +100,7 @@ func TestCreateReadme(t *testing.T) {
 func TestGenerateConfig(t *testing.T) {
 	handler := NewInitHandler()
 
-	config, err := handler.generateConfig(TestProjectName, TestEnvironmentLocal, []string{TestServicePostgres},
+	config, err := handler.generateConfig(TestProjectName, []string{TestServicePostgres},
 		map[string]bool{"skip_warnings": false},
 		map[string]bool{"auto_start": true})
 

@@ -98,7 +98,7 @@ func generateSection(builder *strings.Builder, schema SchemaProperty, indent int
 	case constants.YAMLTypeObject:
 		for propName, propSchema := range schema.Properties {
 			if propSchema.Description != "" && indent > 0 {
-				builder.WriteString(fmt.Sprintf(constants.YAMLIndent+constants.YAMLComment, propSchema.Description))
+				fmt.Fprintf(builder, constants.YAMLIndent+constants.YAMLComment, propSchema.Description)
 			}
 
 			defaultValue := propSchema.Default
@@ -108,11 +108,11 @@ func generateSection(builder *strings.Builder, schema SchemaProperty, indent int
 					defaultValue = resolveTemplate(str, projectName)
 				}
 
-				builder.WriteString(fmt.Sprintf(constants.YAMLProperty, indentStr, propName))
+				fmt.Fprintf(builder, constants.YAMLProperty, indentStr, propName)
 				writeValue(builder, defaultValue, propSchema.Type)
 				builder.WriteString("\n")
 			} else if propSchema.Type == constants.YAMLTypeObject {
-				builder.WriteString(fmt.Sprintf(constants.YAMLProperty+"\n", indentStr, propName))
+				fmt.Fprintf(builder, constants.YAMLProperty+"\n", indentStr, propName)
 				generateSection(builder, propSchema, indent+1, projectName, overrides)
 			}
 		}
@@ -152,20 +152,20 @@ func resolveTemplate(template, projectName string) interface{} {
 func writeValue(builder *strings.Builder, value interface{}, valueType string) {
 	switch valueType {
 	case constants.YAMLTypeBoolean:
-		builder.WriteString(fmt.Sprintf("%t", value))
+		fmt.Fprintf(builder, "%t", value)
 	case constants.YAMLTypeArray:
 		if arr, ok := value.([]interface{}); ok && len(arr) == 0 {
 			builder.WriteString("[]")
 		} else {
-			builder.WriteString(fmt.Sprintf("%v", value))
+			fmt.Fprintf(builder, "%v", value)
 		}
 	case constants.YAMLTypeObject:
 		if obj, ok := value.(map[interface{}]interface{}); ok && len(obj) == 0 {
 			builder.WriteString("{}")
 		} else {
-			builder.WriteString(fmt.Sprintf("%v", value))
+			fmt.Fprintf(builder, "%v", value)
 		}
 	default:
-		builder.WriteString(fmt.Sprintf("%v", value))
+		fmt.Fprintf(builder, "%v", value)
 	}
 }

@@ -9,8 +9,10 @@ import (
 // CreateFormatter creates a formatter based on the specified format
 func CreateFormatter(format string, writer io.Writer) (Formatter, error) {
 	switch strings.ToLower(format) {
-	case "table", "":
+	case "table":
 		return NewTableFormatter(writer), nil
+	case "group", "":
+		return NewGroupFormatter(writer), nil
 	case "json":
 		return NewJSONFormatter(writer), nil
 	case "yaml", "yml":
@@ -22,5 +24,5 @@ func CreateFormatter(format string, writer io.Writer) (Formatter, error) {
 
 // GetSupportedFormats returns a list of supported output formats
 func GetSupportedFormats() []string {
-	return []string{"table", "json", "yaml"}
+	return []string{"group", "table", "json", "yaml"}
 }

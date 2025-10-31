@@ -3,7 +3,7 @@ title: "CLI Reference"
 description: "Complete command reference for otto-stack CLI"
 lead: "Comprehensive reference for all otto-stack CLI commands and their usage"
 date: "2025-10-01"
-lastmod: "2025-10-30"
+lastmod: "2025-10-31"
 draft: false
 weight: 50
 toc: true
@@ -416,10 +416,14 @@ Examples:
   otto-stack services --category cache
     List cache services
 
+  otto-stack services --format table
+    List services in table format
+
 
 
 Flags:
   -c, --category string   Show services in specific category
+  -f, --format string     Output format (group|table|json|yaml) (default "group")
 
 Global Flags:
   -c, --config string     Config file (default: $HOME/.otto-stack.yaml)
