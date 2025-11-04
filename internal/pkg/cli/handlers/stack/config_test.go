@@ -42,7 +42,7 @@ stack:
 	ottoStackDir := filepath.Join(tmpDir, constants.OttoStackDir)
 	err = os.MkdirAll(ottoStackDir, constants.DirPermReadWriteExec)
 	require.NoError(t, err)
-	
+
 	localConfig := `
 project:
   name: "local-project"
@@ -93,7 +93,7 @@ stack:
 	ottoStackDir := filepath.Join(tmpDir, constants.OttoStackDir)
 	err = os.MkdirAll(ottoStackDir, constants.DirPermReadWriteExec)
 	require.NoError(t, err)
-	
+
 	localConfig := `
 project:
   environment: "local"

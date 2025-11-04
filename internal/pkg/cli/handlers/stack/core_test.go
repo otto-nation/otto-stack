@@ -92,10 +92,10 @@ func TestUpHandler_Handle_ConfigNotFound(t *testing.T) {
 	assert.Error(t, err)
 	// The error might be empty or contain initialization-related message
 	if err.Error() != "" {
-		assert.True(t, 
+		assert.True(t,
 			strings.Contains(err.Error(), "not initialized") ||
-			strings.Contains(err.Error(), "config") ||
-			strings.Contains(err.Error(), "failed"),
+				strings.Contains(err.Error(), "config") ||
+				strings.Contains(err.Error(), "failed"),
 			"Expected initialization error, got: %s", err.Error())
 	}
 }
@@ -140,7 +140,7 @@ stack:
 		assert.Nil(t, cfg)
 		assert.True(t,
 			strings.Contains(err.Error(), "failed to parse config") ||
-			strings.Contains(err.Error(), "yaml:"),
+				strings.Contains(err.Error(), "yaml:"),
 			"Expected YAML parse error, got: %s", err.Error())
 	})
 

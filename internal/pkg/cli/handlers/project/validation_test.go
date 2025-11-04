@@ -98,7 +98,7 @@ func TestValidateDirectoryStructure(t *testing.T) {
 	assert.Error(t, err)
 	assert.True(t,
 		strings.Contains(err.Error(), "conflicting file") ||
-		strings.Contains(err.Error(), constants.DockerComposeFileName),
+			strings.Contains(err.Error(), constants.DockerComposeFileName),
 		"Expected conflicting file error, got: %s", err.Error())
 }
 

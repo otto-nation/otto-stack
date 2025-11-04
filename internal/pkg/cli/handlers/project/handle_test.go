@@ -76,6 +76,6 @@ func TestHandle_AlreadyInitialized(t *testing.T) {
 	assert.Error(t, err)
 	assert.True(t,
 		strings.Contains(err.Error(), "validation failed") ||
-		strings.Contains(err.Error(), "already initialized"),
+			strings.Contains(err.Error(), "already initialized"),
 		"Expected validation or initialization error, got: %s", err.Error())
 }
