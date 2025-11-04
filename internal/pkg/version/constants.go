@@ -14,11 +14,17 @@ const (
 )
 
 // Severity levels with their numeric values for comparison
+const (
+	SeverityLow    = "low"
+	SeverityMedium = "medium"
+	SeverityHigh   = "high"
+)
+
 // nolint: mnd
 var SeverityLevels = map[string]int{
-	"low":    1, // Optional updates, minor drift
-	"medium": 2, // Recommended updates, moderate drift
-	"high":   3, // Critical updates, major drift
+	SeverityLow:    1, // Optional updates, minor drift
+	SeverityMedium: 2, // Recommended updates, moderate drift
+	SeverityHigh:   3, // Critical updates, major drift
 }
 
 // Enforcement actions

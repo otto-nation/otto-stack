@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 )
 
@@ -13,9 +12,9 @@ var driftClassificationRules = []struct {
 	condition            func(required, active Version) bool
 	changeType, severity string
 }{
-	{func(r, a Version) bool { return a.Major != r.Major }, ChangeTypeMajor, "high"},
-	{func(r, a Version) bool { return a.Minor != r.Minor }, ChangeTypeMinor, "medium"},
-	{func(r, a Version) bool { return a.Patch != r.Patch }, ChangeTypePatch, constants.SeverityLow},
+	{func(r, a Version) bool { return a.Major != r.Major }, ChangeTypeMajor, SeverityHigh},
+	{func(r, a Version) bool { return a.Minor != r.Minor }, ChangeTypeMinor, SeverityMedium},
+	{func(r, a Version) bool { return a.Patch != r.Patch }, ChangeTypePatch, SeverityLow},
 }
 
 // Policy enforcement rules
@@ -202,7 +201,7 @@ func (e *VersionEnforcer) detectDrift(projectPath string, required, active Versi
 // classifyVersionDrift determines the type and severity of version drift
 func (e *VersionEnforcer) classifyVersionDrift(required, active Version) (string, string) {
 	if active.Compare(required) == 0 {
-		return ChangeTypeNone, constants.SeverityLow
+		return ChangeTypeNone, SeverityLow
 	}
 
 	for _, rule := range driftClassificationRules {
@@ -211,7 +210,7 @@ func (e *VersionEnforcer) classifyVersionDrift(required, active Version) (string
 		}
 	}
 
-	return ChangeTypePrerelease, constants.SeverityLow
+	return ChangeTypePrerelease, SeverityLow
 }
 
 func (e *VersionEnforcer) autoSwitchVersion(projectPath string) error {

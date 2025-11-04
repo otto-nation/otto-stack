@@ -42,22 +42,20 @@ tasks:
     desc: "🔧 Generate code from YAML configs"
     sources:
       - "internal/config/commands.yaml"
-      - "cmd/generate-cli/main.go"
-      - "cmd/generate-registers/main.go"
-    generates:
-      - "internal/pkg/constants/flags_generated.go"
-      - "internal/pkg/cli/handlers/*/register_generated.go"
+      - "cmd/generate-*/main.go"
+      - "cmd/generate-*/templates/*.tmpl"
     silent: true
     cmds:
-      - echo "🔧 Generating flag constants from commands.yaml..."
-      - go run ./cmd/generate-cli
-      - echo "🔧 Generating register files from commands.yaml..."
-      - go run ./cmd/generate-registers
-      - echo "🔧 Generating commands from commands.yaml..."
-      - go run ./cmd/generate-commands
+      - echo "🔧 Generating code from YAML configs..."
+      - |
+        for generator in cmd/generate-*; do
+          if [ -d "$generator" ] && [ -f "$generator/main.go" ]; then
+            echo "🔧 Running $(basename $generator)..."
+            go run ./$generator
+          fi
+        done
       - echo "🔧 Formatting generated code..."
-      - gofmt -w internal/pkg/constants/cli_generated.go
-      - gofmt -w internal/pkg/cli/handlers/*/register_generated.go
+      - task: fmt
       - echo "✅ Generated code from YAML configs"
 
   # ============================================================================

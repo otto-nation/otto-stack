@@ -1,9 +1,10 @@
 package constants
 
 const (
-	TypeBool   = "bool"
-	TypeString = "string"
-	TypeInt    = "int"
+	TypeBool        = "bool"
+	TypeString      = "string"
+	TypeStringArray = "[]string"
+	TypeInt         = "int"
 )
 
 // Severity constants
