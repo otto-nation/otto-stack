@@ -1,5 +1,12 @@
 package constants
 
+// Service type constants
+const (
+	ServiceTypeContainer     = "container"
+	ServiceTypeConfiguration = "configuration"
+	ServiceTypeComposite     = "composite"
+)
+
 // Service category constants
 const (
 	CategoryDatabase      = "database"
