@@ -2,6 +2,8 @@ package version
 
 import (
 	"testing"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 func TestParseVersion(t *testing.T) {
@@ -67,9 +69,9 @@ func TestParseVersion(t *testing.T) {
 		{
 			input: "latest",
 			expected: Version{
-				Major:    999,
-				Minor:    999,
-				Patch:    999,
+				Major:    constants.MaxVersionNumber,
+				Minor:    constants.MaxVersionNumber,
+				Patch:    constants.MaxVersionNumber,
 				Original: "latest",
 			},
 			wantErr: false,

@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 // OS constants
@@ -72,7 +74,7 @@ func GetProcessPID(name string) (int, error) {
 		lines := strings.Split(outputStr, "\n")
 		if len(lines) > 0 {
 			fields := strings.Split(lines[0], ",")
-			if len(fields) >= 2 {
+			if len(fields) >= constants.MinFieldCount {
 				pidStr := strings.Trim(fields[1], "\"")
 				return strconv.Atoi(pidStr)
 			}

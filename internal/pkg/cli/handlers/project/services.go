@@ -21,30 +21,32 @@ func NewServicesHandler() *ServicesHandler {
 
 // Handle executes the services command
 func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	// Get flags
-	format, _ := cmd.Flags().GetString(constants.FlagFormat)
-	category, _ := cmd.Flags().GetString(constants.FlagCategory)
+	// Parse all flags with validation - single line!
+	flags, err := constants.ParseServicesFlags(cmd)
+	if err != nil {
+		return err
+	}
 
 	// Load services by category
 	serviceUtils := utils.NewServiceUtils()
 	categorizedServices, err := serviceUtils.GetServicesByCategory()
 	if err != nil {
-		return fmt.Errorf(constants.MsgFailedLoadServices.Content, err)
+		return fmt.Errorf(constants.Messages[constants.MsgErrors_failed_load_services], err)
 	}
 
 	// Build service catalog
 	catalog := h.buildServiceCatalog(categorizedServices)
 
 	// Create formatter
-	formatter, err := display.CreateFormatter(format, cmd.OutOrStdout())
+	formatter, err := display.CreateFormatter(flags.Format, cmd.OutOrStdout())
 	if err != nil {
 		return fmt.Errorf("failed to create formatter: %w", err)
 	}
 
 	// Format and display
 	options := display.ServiceCatalogOptions{
-		Category: category,
-		Format:   format,
+		Category: flags.Category,
+		Format:   flags.Format,
 	}
 
 	return formatter.FormatServiceCatalog(catalog, options)

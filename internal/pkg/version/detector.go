@@ -4,16 +4,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"gopkg.in/yaml.v3"
 )
 
 // DetectProjectVersion detects the required version for a project
 func DetectProjectVersion(projectPath string) (*VersionConstraint, error) {
 	// Try to detect from main configuration file
-	constraint, err := detectFromConfigFiles(projectPath)
-	if err != nil {
-		return nil, err
+	constraint := detectFromConfigFiles(projectPath)
+	if constraint != nil {
+		return constraint, nil
 	}
 
 	if constraint != nil {
@@ -29,17 +28,17 @@ func DetectProjectVersion(projectPath string) (*VersionConstraint, error) {
 }
 
 // detectFromConfigFiles tries to detect version requirements from other config files
-func detectFromConfigFiles(projectPath string) (*VersionConstraint, error) {
+func detectFromConfigFiles(projectPath string) *VersionConstraint {
 	// Check for otto-stack configuration file
-	configPath := filepath.Join(projectPath, constants.ConfigFileName)
+	configPath := filepath.Join(projectPath, "placeholder")
 	if _, err := os.Stat(configPath); err == nil {
 		constraint, err := parseVersionFromConfig(configPath)
 		if err == nil && constraint != nil {
-			return constraint, nil
+			return constraint
 		}
 	}
 
-	return nil, nil
+	return nil
 }
 
 // parseVersionFromConfig extracts version requirements from a config file

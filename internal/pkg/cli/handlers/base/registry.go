@@ -33,7 +33,7 @@ func (r *Registry) RegisterHandler(name string, handler types.CommandHandler) {
 func (r *Registry) GetHandler(name string) (types.CommandHandler, error) {
 	handler, exists := r.handlers[name]
 	if !exists {
-		return nil, fmt.Errorf("handler not found for command: %s", name)
+		return nil, fmt.Errorf(constants.Messages[constants.MsgBase_handler_not_found], name)
 	}
 	return handler, nil
 }

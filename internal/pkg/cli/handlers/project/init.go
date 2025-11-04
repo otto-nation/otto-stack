@@ -25,18 +25,32 @@ func NewInitHandler() *InitHandler {
 
 // Handle executes the init command
 func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	force, _ := cmd.Flags().GetBool(constants.FlagForce)
+	finishOp := logger.StartOperation("project_init")
+	defer func() {
+		if r := recover(); r != nil {
+			finishOp(fmt.Errorf("panic: %v", r))
+			panic(r)
+		}
+	}()
 
-	ui.Header(constants.MsgInitializing)
+	// Parse all flags with validation - single line!
+	flags, err := constants.ParseInitFlags(cmd)
+	if err != nil {
+		finishOp(err)
+		return err
+	}
+
+	base.Output.Header("%s", constants.Messages[constants.MsgProcess_initializing])
+	logger.LogProjectAction("init", "current_directory")
 
 	// Validate environment
-	if err := h.validateInitEnvironment(); err != nil && !force {
-		return fmt.Errorf("%s", constants.MsgValidationFailed.Content)
+	if err := h.validateInitEnvironment(base); err != nil && !flags.Force {
+		return fmt.Errorf(constants.Messages[constants.MsgValidation_failed], err)
 	}
 
 	// Validate directory structure
-	if err := h.validateDirectoryStructure(); err != nil && !force {
-		return fmt.Errorf("%s", constants.MsgDirectoryValidationFailed.Content)
+	if err := h.validateDirectoryStructure(base); err != nil && !flags.Force {
+		return fmt.Errorf(constants.Messages[constants.MsgValidation_directory_failed], err)
 	}
 
 	// Prompt for project details
@@ -51,7 +65,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	for {
 		// Prompt for services
-		services, err = h.promptForServices()
+		services, err = h.promptForServices(base)
 		if err != nil {
 			return fmt.Errorf("failed to select services: %w", err)
 		}
@@ -68,7 +82,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		}
 
 		// Confirm initialization (with back option)
-		action, err := h.confirmInitializationWithBack(projectName, services, validation, advanced)
+		action, err := h.confirmInitializationWithBack(projectName, services, validation, advanced, base)
 		if err != nil {
 			return fmt.Errorf("failed to get confirmation: %w", err)
 		}
@@ -77,10 +91,10 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		case constants.ActionProceed:
 			goto exitLoop
 		case constants.ActionBack:
-			constants.SendMessage(constants.MsgGoingBack)
+			base.Output.Info("%s", constants.Messages[constants.MsgInit_going_back])
 			continue
 		default:
-			constants.SendMessage(constants.MsgInitCancelled)
+			base.Output.Info("%s", constants.Messages[constants.MsgInit_cancelled])
 			return nil
 		}
 	}
@@ -92,30 +106,30 @@ exitLoop:
 	}
 
 	// Create configuration file
-	if err := h.createConfigFile(projectName, services, validation, advanced); err != nil {
+	if err := h.createConfigFile(projectName, services, validation, advanced, base); err != nil {
 		return fmt.Errorf("failed to create config file: %w", err)
 	}
 
 	// Generate initial compose files
-	if err := h.generateInitialComposeFiles(services, projectName, validation, advanced); err != nil {
+	if err := h.generateInitialComposeFiles(services, projectName, validation, advanced, base); err != nil {
 		return fmt.Errorf("failed to generate compose files: %w", err)
 	}
 
 	// Create .gitignore entries
-	if err := h.createGitignoreEntries(); err != nil {
-		constants.SendMessage(constants.MsgFailedGitignore, err)
+	if err := h.createGitignoreEntries(base); err != nil {
+		base.Output.Warning(constants.Messages[constants.MsgWarnings_failed_gitignore], err)
 	}
 
 	// Create README
-	if err := h.createReadme(projectName, services); err != nil {
-		constants.SendMessage(constants.MsgFailedReadme, err)
+	if err := h.createReadme(projectName, services, base); err != nil {
+		base.Output.Warning(constants.Messages[constants.MsgWarnings_failed_readme], err)
 	}
 
-	ui.Success(constants.MsgInitSuccess)
-	constants.SendMessage(constants.MsgNextSteps)
-	constants.SendMessage(constants.MsgStep1, constants.DevStackDir, constants.ConfigFileName)
-	constants.SendMessage(constants.MsgStep2, constants.AppName+" up")
-	constants.SendMessage(constants.MsgStep3, constants.AppName+" status")
+	base.Output.Success("%s", constants.Messages[constants.MsgSuccess_init])
+	base.Output.Info("%s", constants.Messages[constants.MsgInit_next_steps])
+	base.Output.Info(constants.Messages[constants.MsgInit_step_review_config], constants.OttoStackDir, constants.ConfigFileName)
+	base.Output.Info(constants.Messages[constants.MsgInit_step_start_stack], constants.AppName)
+	base.Output.Info(constants.Messages[constants.MsgInit_step_check_status], constants.AppName)
 
 	return nil
 }

@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 // FileExists checks if a file exists and is not a directory
@@ -29,7 +31,7 @@ func DirExists(dirname string) bool {
 // EnsureDir creates a directory if it doesn't exist
 func EnsureDir(dirname string) error {
 	if !DirExists(dirname) {
-		return os.MkdirAll(dirname, 0755)
+		return os.MkdirAll(dirname, constants.DirPermReadWriteExec)
 	}
 	return nil
 }

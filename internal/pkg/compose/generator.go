@@ -14,6 +14,10 @@ import (
 	"github.com/otto-nation/otto-stack/internal/scripts"
 )
 
+const (
+	serviceTypeComposite = "composite"
+)
+
 // QuotedStringSlice ensures strings are quoted in YAML output
 type QuotedStringSlice []string
 
@@ -146,9 +150,7 @@ func (g *Generator) Generate(serviceNames []string) (*ComposeFile, error) {
 
 		// Apply configuration services
 		if configs, exists := configServices[serviceName]; exists {
-			if err := g.mergeConfigurations(compose, serviceName, configs); err != nil {
-				return nil, fmt.Errorf("failed to merge configurations for %s: %w", serviceName, err)
-			}
+			g.mergeConfigurations(compose, serviceName, configs)
 		}
 	}
 
@@ -196,32 +198,15 @@ func (g *Generator) extractHostPort(port string) string {
 }
 
 // mergeConfigurations applies configuration services to a container service
-func (g *Generator) mergeConfigurations(compose *ComposeFile, serviceName string, configs []services.ServiceDefinition) error {
+func (g *Generator) mergeConfigurations(compose *ComposeFile, serviceName string, configs []services.ServiceDefinition) {
 	service := compose.Services[serviceName]
 
 	for _, config := range configs {
 		// Merge environment additions
-		if len(config.EnvironmentAdditions) > 0 {
-			if service.Environment == nil {
-				service.Environment = make(map[string]string)
-			}
-			for key, value := range config.EnvironmentAdditions {
-				// For SERVICES key, append instead of replace
-				if key == "SERVICES" {
-					if existing, exists := service.Environment[key]; exists && existing != "" {
-						service.Environment[key] = existing + "," + value
-					} else {
-						service.Environment[key] = value
-					}
-				} else {
-					service.Environment[key] = value
-				}
-			}
-		}
+		g.mergeEnvironmentAdditions(&service, config.EnvironmentAdditions)
 	}
 
 	compose.Services[serviceName] = service
-	return nil
 }
 
 // resolveDependencies resolves all dependencies recursively and returns a unique list
@@ -276,25 +261,28 @@ func (g *Generator) expandCompositeServices(serviceNames []string) ([]string, er
 	var expandedServices []string
 
 	for _, serviceName := range serviceNames {
-		if g.registry != nil {
-			if serviceDef, exists := g.registry.GetService(serviceName); exists {
-				if serviceDef.Type == "composite" && len(serviceDef.Components) > 0 {
-					// Recursively expand composite services (in case components are also composite)
-					componentServices, err := g.expandCompositeServices(serviceDef.Components)
-					if err != nil {
-						return nil, fmt.Errorf("failed to expand components of %s: %w", serviceName, err)
-					}
-					expandedServices = append(expandedServices, componentServices...)
-				} else {
-					// Regular service, keep as-is
-					expandedServices = append(expandedServices, serviceName)
-				}
-			} else {
-				// Service not found in registry, keep as-is
-				expandedServices = append(expandedServices, serviceName)
+		// No registry, keep as-is
+		if g.registry == nil {
+			expandedServices = append(expandedServices, serviceName)
+			continue
+		}
+
+		serviceDef, exists := g.registry.GetService(serviceName)
+		if !exists {
+			// Service not found in registry, keep as-is
+			expandedServices = append(expandedServices, serviceName)
+			continue
+		}
+
+		if serviceDef.Type == serviceTypeComposite && len(serviceDef.Components) > 0 {
+			// Recursively expand composite services
+			componentServices, err := g.expandCompositeServices(serviceDef.Components)
+			if err != nil {
+				return nil, fmt.Errorf("failed to expand components of %s: %w", serviceName, err)
 			}
+			expandedServices = append(expandedServices, componentServices...)
 		} else {
-			// No registry, keep as-is
+			// Regular service, keep as-is
 			expandedServices = append(expandedServices, serviceName)
 		}
 	}
@@ -326,7 +314,7 @@ func (g *Generator) addService(compose *ComposeFile, serviceName string) error {
 // addServiceFromDefinition creates a compose service from a service definition
 func (g *Generator) addServiceFromDefinition(compose *ComposeFile, serviceName string, def services.ServiceDefinition) error {
 	// Skip composite services - they don't have their own containers
-	if def.Type == "composite" {
+	if def.Type == serviceTypeComposite {
 		return nil
 	}
 
@@ -357,8 +345,8 @@ func (g *Generator) addServiceFromDefinition(compose *ComposeFile, serviceName s
 		}
 		for _, env := range def.Docker.Environment {
 			// Parse KEY=VALUE format
-			parts := strings.SplitN(env, "=", 2)
-			if len(parts) == 2 {
+			parts := strings.SplitN(env, "=", constants.KeyValueParts)
+			if len(parts) == constants.KeyValueParts {
 				service.Environment[parts[0]] = parts[1]
 			}
 		}
@@ -447,17 +435,62 @@ func (g *Generator) writeRequiredScripts(services []string) error {
 	}
 
 	scriptsDir := filepath.Join(constants.OttoStackDir, constants.ScriptsDir)
-	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
+	if err := os.MkdirAll(scriptsDir, constants.DirPermReadWriteExec); err != nil {
 		return fmt.Errorf("failed to create scripts directory: %w", err)
 	}
 
 	for _, scriptFile := range scriptsToWrite {
 		scriptPath := filepath.Join(scriptsDir, scriptFile)
 		content := scriptContent[scriptFile]
-		if err := os.WriteFile(scriptPath, []byte(content), 0755); err != nil {
+		if err := os.WriteFile(scriptPath, []byte(content), constants.DirPermReadWriteExec); err != nil {
 			return fmt.Errorf("failed to write script %s: %w", scriptFile, err)
 		}
 	}
 
 	return nil
+}
+
+func (g *Generator) mergeEnvironmentAdditions(service *ComposeService, additions map[string]string) {
+	if len(additions) == 0 {
+		return
+	}
+
+	if service.Environment == nil {
+		service.Environment = make(map[string]string)
+	}
+
+	for key, value := range additions {
+		// For SERVICES key, append instead of replace
+		if key == "SERVICES" {
+			if existing, exists := service.Environment[key]; exists && existing != "" {
+				service.Environment[key] = existing + "," + value
+			} else {
+				service.Environment[key] = value
+			}
+		} else {
+			service.Environment[key] = value
+		}
+	}
+}
+
+//nolint:unused // False positive - method is used in expandCompositeServices
+func (g *Generator) expandSingleService(serviceName string) ([]string, error) {
+	if g.registry == nil {
+		return []string{serviceName}, nil
+	}
+
+	serviceDef, exists := g.registry.GetService(serviceName)
+	if !exists {
+		return []string{serviceName}, nil
+	}
+
+	if serviceDef.Type == serviceTypeComposite && len(serviceDef.Components) > 0 {
+		componentServices, err := g.expandCompositeServices(serviceDef.Components)
+		if err != nil {
+			return nil, fmt.Errorf("failed to expand components of %s: %w", serviceName, err)
+		}
+		return componentServices, nil
+	}
+
+	return []string{serviceName}, nil
 }

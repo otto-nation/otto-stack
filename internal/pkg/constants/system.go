@@ -26,11 +26,6 @@ const (
 	ServiceLocalhost = "localhost"
 )
 
-// Error messages
-var (
-	ErrNotInitialized = AppName + " not initialized. Run '" + AppName + " init' first"
-)
-
 // Status formatting
 const (
 	StatusHeaderService = "SERVICE"

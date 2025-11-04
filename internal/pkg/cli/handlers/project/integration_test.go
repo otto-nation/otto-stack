@@ -63,7 +63,7 @@ func TestCreateConfigFile(t *testing.T) {
 
 	err = handler.createConfigFile(TestProjectName, []string{TestServicePostgres},
 		map[string]bool{"skip_warnings": false},
-		map[string]bool{"auto_start": true})
+		map[string]bool{"auto_start": true}, &types.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	_, err = os.Stat(TestConfigFilePath)
@@ -75,7 +75,7 @@ func TestCreateGitignoreEntries(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.createGitignoreEntries()
+	err := handler.createGitignoreEntries(&types.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	_, err = os.Stat(constants.GitignoreFileName)
@@ -90,7 +90,7 @@ func TestCreateReadme(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis})
+	err = handler.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis}, &types.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	readmePath := filepath.Join(constants.OttoStackDir, constants.ReadmeFileName)

@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+
 	"github.com/briandowns/spinner"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 )
@@ -122,7 +124,7 @@ func (o *Output) Progress(msg string, fn func() error) error {
 		return fn()
 	}
 
-	s := spinner.New(spinner.CharSets[14], 100*time.Millisecond)
+	s := spinner.New(spinner.CharSets[14], constants.SpinnerIntervalMilliseconds*time.Millisecond)
 	s.Suffix = " " + msg
 	s.Start()
 	defer s.Stop()

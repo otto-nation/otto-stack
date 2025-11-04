@@ -49,7 +49,7 @@ func (h *ValidateHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	if flags.JSON {
 		h.outputJSON(*result, exitCode)
 	} else if !flags.Quiet {
-		h.outputTable(*result, exitCode)
+		h.outputTable(*result, exitCode, base)
 	} else if exitCode != constants.ExitSuccess {
 		// Quiet mode with error
 		os.Exit(exitCode)
@@ -73,23 +73,23 @@ func (h *ValidateHandler) outputJSON(result config.ValidationResult, exitCode in
 	}
 }
 
-func (h *ValidateHandler) outputTable(result config.ValidationResult, exitCode int) {
+func (h *ValidateHandler) outputTable(result config.ValidationResult, exitCode int, base *types.BaseCommand) {
 	if result.Valid && len(result.Warnings) == 0 {
-		fmt.Println("✅ Configuration is valid")
+		base.Output.Success("%s", constants.Messages[constants.MsgSuccess_config_valid])
 		return
 	}
 
 	if !result.Valid {
-		fmt.Printf("❌ Configuration validation failed with %d errors:\n", len(result.Errors))
+		base.Output.Error(constants.Messages[constants.MsgValidation_config_failed], len(result.Errors))
 		for _, err := range result.Errors {
-			fmt.Printf("  - %s: %s\n", err.Field, err.Message)
+			base.Output.Error("  - %s: %s", err.Field, err.Message)
 		}
 	}
 
 	if len(result.Warnings) > 0 {
-		fmt.Printf("⚠️  %d warnings:\n", len(result.Warnings))
+		base.Output.Warning(constants.Messages[constants.MsgValidation_warnings], len(result.Warnings))
 		for _, warning := range result.Warnings {
-			fmt.Printf("  - %s: %s\n", warning.Field, warning.Message)
+			base.Output.Warning("  - %s: %s", warning.Field, warning.Message)
 		}
 	}
 

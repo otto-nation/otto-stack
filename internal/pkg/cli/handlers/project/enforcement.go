@@ -55,7 +55,7 @@ func (h *EnforcementHandler) HandleCheck(ctx context.Context, cmd *cobra.Command
 
 	result, err := h.enforcer.CheckCompliance(projectPath)
 	if err != nil {
-		utils.HandleError(flags, fmt.Errorf("compliance check failed: %w", err))
+		utils.HandleError(flags, fmt.Errorf(constants.Messages[constants.MsgErrors_compliance_check_failed], err))
 		return nil
 	}
 
@@ -83,12 +83,12 @@ func (h *EnforcementHandler) HandleEnforce(ctx context.Context, cmd *cobra.Comma
 
 	err := h.enforcer.EnforceCompliance(projectPath)
 	if err != nil {
-		utils.HandleError(flags, fmt.Errorf("enforcement failed: %w", err))
+		utils.HandleError(flags, fmt.Errorf(constants.Messages[constants.MsgErrors_enforcement_failed], err))
 		return nil
 	}
 
 	if !flags.Quiet {
-		fmt.Println("✅ Version compliance enforced")
+		base.Output.Success("%s", constants.Messages[constants.MsgSuccess_version_compliance_enforced])
 	}
 
 	return nil
@@ -100,7 +100,7 @@ func (h *EnforcementHandler) HandleDrift(ctx context.Context, cmd *cobra.Command
 
 	drifts, err := h.enforcer.DetectAllDrift()
 	if err != nil {
-		utils.HandleError(flags, fmt.Errorf("drift detection failed: %w", err))
+		utils.HandleError(flags, fmt.Errorf(constants.Messages[constants.MsgErrors_drift_detection_failed], err))
 		return nil
 	}
 
@@ -119,14 +119,14 @@ func (h *EnforcementHandler) HandleNotify(ctx context.Context, cmd *cobra.Comman
 	}
 
 	switch args[0] {
-	case "check":
-		return h.handleNotifyCheck(cmd)
-	case "config":
-		return h.handleNotifyConfig(cmd, args[1:])
-	case "suppress":
-		return h.handleNotifySuppress(cmd, args[1:])
+	case constants.Messages[constants.MsgCommands_check]:
+		return h.handleNotifyCheck(cmd, base)
+	case constants.Messages[constants.MsgCommands_config]:
+		return h.handleNotifyConfig(cmd, args[1:], base)
+	case constants.Messages[constants.MsgCommands_suppress]:
+		return h.handleNotifySuppress(cmd, args[1:], base)
 	default:
-		return fmt.Errorf("unknown notify command: %s", args[0])
+		return fmt.Errorf(constants.Messages[constants.MsgErrors_unknown_notify_command], args[0])
 	}
 }
 
@@ -135,7 +135,7 @@ func (h *EnforcementHandler) handleNotifyCheck(cmd *cobra.Command, base *types.B
 
 	notification, err := h.notifier.CheckForUpdates()
 	if err != nil {
-		utils.HandleError(flags, fmt.Errorf("update check failed: %w", err))
+		utils.HandleError(flags, fmt.Errorf(constants.Messages[constants.MsgErrors_update_check_failed], err))
 		return nil
 	}
 
@@ -145,12 +145,12 @@ func (h *EnforcementHandler) handleNotifyCheck(cmd *cobra.Command, base *types.B
 
 	if notification == nil {
 		if !flags.Quiet {
-			fmt.Println("✅ No updates available")
+			base.Output.Success("%s", constants.Messages[constants.MsgSuccess_no_updates_available])
 		}
 	} else {
-		fmt.Printf("🔔 Update available: %s → %s (%s)\n",
+		base.Output.Warning(constants.Messages[constants.MsgWarnings_update_available],
 			notification.CurrentVersion, notification.LatestVersion, notification.Severity)
-		fmt.Printf("   %s\n", notification.Message)
+		base.Output.Info("   %s", notification.Message)
 	}
 
 	return nil
@@ -174,37 +174,37 @@ func (h *EnforcementHandler) handleNotifyConfig(cmd *cobra.Command, args []strin
 	config := h.notifier.GetConfig()
 
 	for _, arg := range args {
-		parts := strings.SplitN(arg, "=", 2)
-		if len(parts) != 2 {
-			return fmt.Errorf("invalid config format: %s (expected key=value)", arg)
+		parts := strings.SplitN(arg, "=", constants.KeyValueParts)
+		if len(parts) != constants.KeyValueParts {
+			return fmt.Errorf(constants.Messages[constants.MsgErrors_invalid_config_format], arg)
 		}
 
 		key, value := parts[0], parts[1]
 
 		switch key {
-		case "enabled":
-			config.Enabled = value == "true"
-		case "frequency":
+		case constants.Messages[constants.MsgConfig_keys_enabled]:
+			config.Enabled = value == constants.BoolTrue
+		case constants.Messages[constants.MsgConfig_keys_frequency]:
 			config.Frequency = value
-		case "min-severity":
+		case constants.Messages[constants.MsgConfig_keys_min_severity]:
 			config.MinSeverity = value
-		case "auto-check":
+		case constants.Messages[constants.MsgConfig_keys_auto_check]:
 			config.AutoCheck = value == "true"
-		case "show-prerelease":
+		case constants.Messages[constants.MsgConfig_keys_show_prerelease]:
 			config.ShowPrerelease = value == "true"
 		default:
-			return fmt.Errorf("unknown config key: %s", key)
+			return fmt.Errorf(constants.Messages[constants.MsgErrors_unknown_config_key], key)
 		}
 	}
 
 	err := h.notifier.SetConfig(config)
 	if err != nil {
-		utils.HandleError(flags, fmt.Errorf("failed to save config: %w", err))
+		utils.HandleError(flags, fmt.Errorf(constants.Messages[constants.MsgErrors_failed_save_config], err))
 		return nil
 	}
 
 	if !flags.Quiet {
-		fmt.Println("✅ Notification config updated")
+		base.Output.Success("%s", constants.Messages[constants.MsgSuccess_notification_config_updated])
 	}
 
 	return nil
@@ -214,23 +214,23 @@ func (h *EnforcementHandler) handleNotifySuppress(cmd *cobra.Command, args []str
 	flags := utils.GetCIFlags(cmd)
 
 	if len(args) == 0 {
-		return fmt.Errorf("suppress duration required (e.g., 1d, 1w, 1h)")
+		return fmt.Errorf("%s", constants.Messages[constants.MsgErrors_suppress_duration_required])
 	}
 
 	duration, err := parseDuration(args[0])
 	if err != nil {
-		utils.HandleError(flags, fmt.Errorf("invalid duration: %w", err))
+		utils.HandleError(flags, fmt.Errorf(constants.Messages[constants.MsgErrors_invalid_duration], err))
 		return nil
 	}
 
 	err = h.notifier.SuppressNotifications(duration)
 	if err != nil {
-		utils.HandleError(flags, fmt.Errorf("failed to suppress notifications: %w", err))
+		utils.HandleError(flags, fmt.Errorf(constants.Messages[constants.MsgErrors_failed_suppress_notifications], err))
 		return nil
 	}
 
 	if !flags.Quiet {
-		fmt.Printf("✅ Notifications suppressed for %v\n", duration)
+		base.Output.Success(constants.Messages[constants.MsgSuccess_notifications_suppressed], duration)
 	}
 
 	return nil
@@ -238,59 +238,60 @@ func (h *EnforcementHandler) handleNotifySuppress(cmd *cobra.Command, args []str
 
 func (h *EnforcementHandler) displayComplianceResult(result *version.EnforcementResult, base *types.BaseCommand) {
 	if result.Compliant {
-		fmt.Println("✅ Version compliance satisfied")
+		base.Output.Success("%s", constants.Messages[constants.MsgSuccess_version_compliance_satisfied])
 		return
 	}
 
-	fmt.Printf("❌ Version compliance failed\n")
-	fmt.Printf("   %s\n", result.Message)
+	base.Output.Error("%s", constants.Messages[constants.MsgErrors_version_compliance_failed])
+	base.Output.Error("   %s", result.Message)
 
 	if result.Drift != nil {
-		fmt.Printf("   Required: %s\n", result.Drift.RequiredVersion)
-		fmt.Printf("   Active:   %s\n", result.Drift.ActiveVersion)
-		fmt.Printf("   Drift:    %s (%s)\n", result.Drift.DriftType, result.Drift.Severity)
-		fmt.Printf("   Duration: %v\n", result.Drift.DriftDuration)
+		base.Output.Error(constants.Messages[constants.MsgDrift_required_version], result.Drift.RequiredVersion)
+		base.Output.Error(constants.Messages[constants.MsgDrift_active_version], result.Drift.ActiveVersion)
+		base.Output.Error(constants.Messages[constants.MsgDrift_drift_type], result.Drift.DriftType, result.Drift.Severity)
+		base.Output.Error(constants.Messages[constants.MsgDrift_duration], result.Drift.DriftDuration)
 	}
 
-	fmt.Printf("   Action:   %s\n", result.Action)
+	base.Output.Error(constants.Messages[constants.MsgDrift_action], result.Action)
 }
 
 func (h *EnforcementHandler) displayDriftResults(drifts []version.DriftDetection, base *types.BaseCommand) {
 	if len(drifts) == 0 {
-		fmt.Println("✅ No version drift detected")
+		base.Output.Success("%s", constants.Messages[constants.MsgSuccess_no_version_drift])
 		return
 	}
 
-	fmt.Printf("⚠️  Version drift detected in %d projects:\n\n", len(drifts))
+	base.Output.Warning(constants.Messages[constants.MsgErrors_version_drift_detected], len(drifts))
+	base.Output.Info("")
 
 	for _, drift := range drifts {
-		fmt.Printf("📁 %s\n", drift.ProjectPath)
-		fmt.Printf("   Required: %s\n", drift.RequiredVersion)
-		fmt.Printf("   Active:   %s\n", drift.ActiveVersion)
-		fmt.Printf("   Type:     %s (%s)\n", drift.DriftType, drift.Severity)
-		fmt.Printf("   Duration: %v\n", drift.DriftDuration)
-		fmt.Println()
+		base.Output.Info(constants.Messages[constants.MsgDrift_project_path], drift.ProjectPath)
+		base.Output.Info(constants.Messages[constants.MsgDrift_required_version], drift.RequiredVersion)
+		base.Output.Info(constants.Messages[constants.MsgDrift_active_version], drift.ActiveVersion)
+		base.Output.Info(constants.Messages[constants.MsgDrift_drift_type], drift.DriftType, drift.Severity)
+		base.Output.Info(constants.Messages[constants.MsgDrift_duration], drift.DriftDuration)
+		base.Output.Info("")
 	}
 }
 
-func (h *EnforcementHandler) displayNotificationConfig(config version.NotificationConfig) {
-	fmt.Printf("Notification Configuration:\n")
-	fmt.Printf("  Enabled:         %t\n", config.Enabled)
-	fmt.Printf("  Frequency:       %s\n", config.Frequency)
-	fmt.Printf("  Min Severity:    %s\n", config.MinSeverity)
-	fmt.Printf("  Auto Check:      %t\n", config.AutoCheck)
-	fmt.Printf("  Show Prerelease: %t\n", config.ShowPrerelease)
-	fmt.Printf("  Last Check:      %s\n", config.LastCheck.Format(time.RFC3339))
+func (h *EnforcementHandler) displayNotificationConfig(config version.NotificationConfig, base *types.BaseCommand) {
+	base.Output.Info("%s", constants.Messages[constants.MsgNotifications_config_header])
+	base.Output.Info(constants.Messages[constants.MsgNotifications_enabled], config.Enabled)
+	base.Output.Info(constants.Messages[constants.MsgNotifications_frequency], config.Frequency)
+	base.Output.Info(constants.Messages[constants.MsgNotifications_min_severity], config.MinSeverity)
+	base.Output.Info(constants.Messages[constants.MsgNotifications_auto_check], config.AutoCheck)
+	base.Output.Info(constants.Messages[constants.MsgNotifications_show_prerelease], config.ShowPrerelease)
+	base.Output.Info(constants.Messages[constants.MsgNotifications_last_check], config.LastCheck.Format(time.RFC3339))
 
 	if !config.SuppressedUntil.IsZero() {
-		fmt.Printf("  Suppressed Until: %s\n", config.SuppressedUntil.Format(time.RFC3339))
+		base.Output.Info(constants.Messages[constants.MsgNotifications_suppressed_until], config.SuppressedUntil.Format(time.RFC3339))
 	}
 }
 
 func parseDuration(s string) (time.Duration, error) {
 	// Handle simple formats like "1d", "2w", "3h"
-	if len(s) < 2 {
-		return 0, fmt.Errorf("invalid duration format")
+	if len(s) < constants.KeyValueParts {
+		return 0, fmt.Errorf("%s", constants.Messages[constants.MsgErrors_invalid_duration_format])
 	}
 
 	unit := s[len(s)-1:]
@@ -302,13 +303,13 @@ func parseDuration(s string) (time.Duration, error) {
 	}
 
 	switch unit {
-	case "d":
+	case constants.Messages[constants.MsgDuration_units_days]:
 		return time.Duration(value) * 24 * time.Hour, nil
-	case "w":
+	case constants.Messages[constants.MsgDuration_units_weeks]:
 		return time.Duration(value) * 7 * 24 * time.Hour, nil
-	case "h":
+	case constants.Messages[constants.MsgDuration_units_hours]:
 		return time.Duration(value) * time.Hour, nil
-	case "m":
+	case constants.Messages[constants.MsgDuration_units_minutes]:
 		return time.Duration(value) * time.Minute, nil
 	default:
 		return time.ParseDuration(s)

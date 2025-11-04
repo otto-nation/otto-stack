@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +18,7 @@ func TestLoader_LoadWithRealFiles_Integration(t *testing.T) {
 		// Create a temporary directory structure
 		tmpDir := t.TempDir()
 		configDir := filepath.Join(tmpDir, "internal", "config")
-		err := os.MkdirAll(configDir, 0755)
+		err := os.MkdirAll(configDir, constants.DirPermReadWriteExec)
 		require.NoError(t, err)
 
 		// Create a realistic config file
@@ -70,7 +72,7 @@ help:
   getting_started: "Run 'otto-stack init' to get started"
 `
 		configFile := filepath.Join(configDir, "commands.yaml")
-		err = os.WriteFile(configFile, []byte(configContent), 0644)
+		err = os.WriteFile(configFile, []byte(configContent), constants.FilePermReadWrite)
 		require.NoError(t, err)
 
 		// Change to the temp directory so the loader can find the config

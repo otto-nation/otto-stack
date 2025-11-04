@@ -25,12 +25,12 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	ciFlags := utils.GetCIFlags(cmd)
 
 	if len(args) < 1 {
-		utils.HandleError(ciFlags, fmt.Errorf("%s", constants.MsgRequiresServiceName.Content))
+		utils.HandleError(ciFlags, fmt.Errorf("%s", constants.Messages[constants.MsgErrors_requires_service_name]))
 		return nil
 	}
 
 	if !ciFlags.Quiet {
-		ui.Header("Connecting to %s", args[0])
+		base.Output.Header(constants.Messages[constants.MsgStack_connecting_to], args[0])
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
@@ -42,22 +42,21 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 
 	serviceName := args[0]
 
-	// Get flags
-	database, _ := cmd.Flags().GetString(constants.FlagDatabase)
-	user, _ := cmd.Flags().GetString(constants.FlagUser)
-	host, _ := cmd.Flags().GetString(constants.FlagHost)
-	port, _ := cmd.Flags().GetInt(constants.FlagPort)
-	readOnly, _ := cmd.Flags().GetBool(constants.FlagReadOnly)
+	// Parse all flags with validation - single line!
+	flags, err := constants.ParseConnectFlags(cmd)
+	if err != nil {
+		return err
+	}
 
 	// Create connection command based on service type
-	command, err := h.getConnectionCommand(serviceName, database, user, host, port, readOnly)
+	command, err := h.getConnectionCommand(serviceName, flags.Database, flags.User, flags.Host, flags.Port, flags.ReadOnly)
 	if err != nil {
 		utils.HandleError(ciFlags, err)
 		return nil
 	}
 
 	// Execute connection command
-	options := pkgTypes.ExecOptions{
+	options := types.ExecOptions{
 		Interactive: true,
 		TTY:         true,
 	}
@@ -66,10 +65,10 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 }
 
 // getConnectionCommand returns the appropriate connection command for the service
-func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host string, port int, readOnly bool) ([]string, error) {
+func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host string, port int, _ bool) ([]string, error) {
 	config, err := services.GetServiceConnectionConfig(serviceName)
 	if err != nil {
-		return nil, fmt.Errorf(constants.MsgUnsupportedServiceType.Content, serviceName)
+		return nil, fmt.Errorf("unsupported service type: %s", serviceName)
 	}
 
 	cmd := []string{config.Client}
@@ -107,7 +106,7 @@ func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host 
 // ValidateArgs validates the command arguments
 func (h *ConnectHandler) ValidateArgs(args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("%s", constants.MsgRequiresServiceName.Content)
+		return fmt.Errorf("%s", constants.Messages[constants.MsgErrors_requires_service_name])
 	}
 	return nil
 }

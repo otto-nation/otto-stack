@@ -34,19 +34,19 @@ func (h *HelpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Show general help
-	fmt.Println("otto-stack - Development stack management tool")
-	fmt.Println("")
-	fmt.Println("Usage:")
-	fmt.Println("  otto-stack [command]")
-	fmt.Println("")
-	fmt.Println("Available Commands:")
-	fmt.Println("  up        Start services")
-	fmt.Println("  down      Stop services")
-	fmt.Println("  status    Show service status")
-	fmt.Println("  init      Initialize project")
-	fmt.Println("  services  List available services")
-	fmt.Println("")
-	fmt.Println("Use \"otto-stack [command] --help\" for more information about a command.")
+	base.Output.Info("%s", constants.Messages[constants.MsgHelp_app_description])
+	base.Output.Info("")
+	base.Output.Info("%s", constants.Messages[constants.MsgHelp_usage])
+	base.Output.Info("%s", constants.Messages[constants.MsgHelp_usage_example])
+	base.Output.Info("")
+	base.Output.Info("%s", constants.Messages[constants.MsgHelp_available_commands])
+	base.Output.Info("%s", constants.Messages[constants.MsgHelp_command_up])
+	base.Output.Info("%s", constants.Messages[constants.MsgHelp_command_down])
+	base.Output.Info("%s", constants.Messages[constants.MsgHelp_command_status])
+	base.Output.Info("%s", constants.Messages[constants.MsgHelp_command_init])
+	base.Output.Info("%s", constants.Messages[constants.MsgHelp_command_services])
+	base.Output.Info("")
+	base.Output.Info("%s", constants.Messages[constants.MsgHelp_more_info])
 
 	return nil
 }

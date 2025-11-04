@@ -3,6 +3,8 @@ package utils
 import (
 	"fmt"
 	"time"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 // FormatBytes formats bytes into human readable format
@@ -30,5 +32,5 @@ func FormatDuration(d time.Duration) string {
 	if d < 24*time.Hour {
 		return fmt.Sprintf("%.1fh", d.Hours())
 	}
-	return fmt.Sprintf("%.1fd", d.Hours()/24)
+	return fmt.Sprintf("%.1fd", d.Hours()/constants.HoursPerDay)
 }

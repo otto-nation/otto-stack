@@ -18,14 +18,14 @@ func NewCompletionHandler() *CompletionHandler {
 
 func (h *CompletionHandler) ValidateArgs(args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf(constants.MsgCompletionRequiresOneArg.Content,
+		return fmt.Errorf(constants.Messages[constants.MsgCompletion_requires_one_arg],
 			fmt.Sprintf("%v", types.AllShellTypeStrings()))
 	}
 
 	shell := types.ShellType(args[0])
 	if !shell.IsValid() {
-		return fmt.Errorf(constants.MsgUnsupportedShell.Content,
-			args[0], pkgTypes.AllShellTypeStrings())
+		return fmt.Errorf(constants.Messages[constants.MsgCompletion_unsupported_shell],
+			args[0])
 	}
 
 	return nil
@@ -51,6 +51,6 @@ func (h *CompletionHandler) Handle(ctx context.Context, cmd *cobra.Command, args
 	case types.ShellTypePowerShell:
 		return rootCmd.GenPowerShellCompletion(os.Stdout)
 	default:
-		return fmt.Errorf("unsupported shell: %s", shell)
+		return fmt.Errorf(constants.Messages[constants.MsgCompletion_unsupported_shell], shell)
 	}
 }

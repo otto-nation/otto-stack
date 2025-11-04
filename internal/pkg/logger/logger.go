@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/spf13/viper"
 )
 
@@ -61,7 +62,7 @@ func Init(config Config) error {
 		writer = os.Stderr
 	default:
 		// Treat as file path
-		file, err := os.OpenFile(config.Output, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		file, err := os.OpenFile(config.Output, os.O_CREATE|os.O_WRONLY|os.O_APPEND, constants.FilePermReadWriteAll)
 		if err != nil {
 			return fmt.Errorf("failed to open log file %s: %w", config.Output, err)
 		}

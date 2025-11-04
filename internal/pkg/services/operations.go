@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -99,12 +100,8 @@ func (op *ConnectOperation) BuildCommand(options map[string]string) []string {
 // mergeParameters merges defaults with provided options
 func (op *ConnectOperation) mergeParameters(options map[string]string) map[string]string {
 	params := make(map[string]string)
-	for k, v := range op.Defaults {
-		params[k] = v
-	}
-	for k, v := range options {
-		params[k] = v
-	}
+	maps.Copy(params, op.Defaults)
+	maps.Copy(params, options)
 	return params
 }
 
@@ -131,12 +128,8 @@ func (op *BackupOperation) BuildCommand(options map[string]string) ([][]string, 
 	}
 
 	params := make(map[string]string)
-	for k, v := range op.Defaults {
-		params[k] = v
-	}
-	for k, v := range options {
-		params[k] = v
-	}
+	maps.Copy(params, op.Defaults)
+	maps.Copy(params, options)
 
 	var commands [][]string
 
@@ -179,7 +172,7 @@ func (op *BackupOperation) buildSingleCommand(params map[string]string) [][]stri
 }
 
 // renderBackupArguments renders argument templates for backup operations
-func (op *BackupOperation) renderBackupArguments(param, value string, params map[string]string) []string {
+func (op *BackupOperation) renderBackupArguments(param, _ string, params map[string]string) []string {
 	argTemplate, exists := op.Args[param]
 	if !exists {
 		return nil

@@ -20,8 +20,8 @@ const (
 
 // Use constants from brand.go
 var (
-	AppNameTemplate   = constants.AppNameTemplate
-	UserAgentTemplate = constants.UserAgentTemplate
+	AppNameTemplate   = "placeholder"
+	UserAgentTemplate = "placeholder"
 )
 
 // Version-specific templates (not branding)
@@ -40,7 +40,7 @@ const (
 	VersionEqual   = 0
 	VersionNewer   = 1
 	VersionOlder   = -1
-	VersionInvalid = -999
+	VersionInvalid = -constants.MaxVersionNumber
 )
 
 // Special version values
@@ -128,7 +128,7 @@ func GetFullVersion() string {
 	result := fmt.Sprintf(AppNameTemplate, version)
 
 	if info.GitCommit != DefaultCommit && info.GitCommit != "" {
-		if len(info.GitCommit) > 7 {
+		if len(info.GitCommit) > constants.GitCommitHashLength {
 			result += fmt.Sprintf(" (%s)", info.GitCommit[:7])
 		} else {
 			result += fmt.Sprintf(" (%s)", info.GitCommit)

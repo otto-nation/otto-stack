@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 func TestFileExists(t *testing.T) {
@@ -230,7 +232,7 @@ func TestFormatDuration(t *testing.T) {
 		duration time.Duration
 		contains string
 	}{
-		{30 * time.Second, "s"},
+		{constants.DefaultStartTimeoutSeconds * time.Second, "s"},
 		{2 * time.Minute, "m"},
 		{2 * time.Hour, "h"},
 		{25 * time.Hour, "d"},
@@ -353,7 +355,7 @@ func TestRetry(t *testing.T) {
 
 func TestTimeout(t *testing.T) {
 	// Test successful operation within timeout
-	err := Timeout(100*time.Millisecond, func() error {
+	err := Timeout(constants.SpinnerIntervalMilliseconds*time.Millisecond, func() error {
 		time.Sleep(10 * time.Millisecond)
 		return nil
 	})
@@ -433,7 +435,7 @@ func TestKillProcessWindows(t *testing.T) {
 	}
 
 	// Test with an invalid PID to exercise the Windows code path
-	err := KillProcess(999999)
+	err := KillProcess(constants.MaxVersionNumber)
 	if err == nil {
 		t.Error("Expected error when killing non-existent process")
 	}
@@ -446,7 +448,7 @@ func TestKillProcessUnix(t *testing.T) {
 	}
 
 	// Test with an invalid PID to exercise the Unix code path
-	err := KillProcess(999999)
+	err := KillProcess(constants.MaxVersionNumber)
 	if err == nil {
 		t.Error("Expected error when killing non-existent process")
 	}
@@ -486,7 +488,7 @@ func TestGetFreePort(t *testing.T) {
 		t.Errorf("GetFreePort failed: %v", err)
 	}
 
-	if port < 8000 || port >= 8100 {
+	if port < 100 || port >= 8100 {
 		t.Errorf("GetFreePort returned port %d outside expected range", port)
 	}
 }

@@ -23,26 +23,42 @@ func NewDownHandler() *DownHandler {
 }
 
 // Handle executes the down command
-func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *cliTypes.BaseCommand) error {
-	ui.Header(constants.MsgStopping)
+func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+	finishOp := logger.StartOperation("stack_down", "services", args)
+	defer func() {
+		if r := recover(); r != nil {
+			finishOp(fmt.Errorf("panic: %v", r))
+			panic(r)
+		}
+	}()
+
+	base.Output.Header(constants.MsgStopping)
+	logger.LogServiceAction("stop", "stack", "services", args)
+
+	// Parse all flags with validation - single line!
+	flags, err := constants.ParseDownFlags(cmd)
+	if err != nil {
+		finishOp(err)
+		return err
+	}
 
 	// Check if otto-stack is initialized
-	configPath := filepath.Join(constants.DevStackDir, constants.ConfigFileName)
+	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
 	if !utils.FileExists(configPath) {
-		return errors.New(constants.ErrNotInitialized)
+		return errors.New(constants.Messages[constants.MsgErrors_not_initialized])
 	}
 
 	// Load project configuration
 	cfg, err := LoadProjectConfig(configPath)
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_load_config], err)
 	}
 
 	// Create Docker client
 	logger := base.Logger.(loggerAdapter)
 	dockerClient, err := docker.NewClient(logger.SlogLogger())
 	if err != nil {
-		return fmt.Errorf("failed to create Docker client: %w", err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_create_docker_client], err)
 	}
 	defer func() {
 		if err := dockerClient.Close(); err != nil {
@@ -56,12 +72,21 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		serviceNames = cfg.Stack.Enabled
 	}
 
-	// Stop services
-	if err := dockerClient.Containers().Stop(ctx, cfg.Project.Name, serviceNames, options); err != nil {
-		return fmt.Errorf("failed to stop services: %w", err)
+	// Convert CLI options to internal options
+	internalOptions := types.StopOptions{
+		Timeout:       flags.Timeout,
+		Remove:        true,
+		RemoveVolumes: flags.Volumes,
 	}
 
-	ui.Success(constants.MsgStopSuccess)
+	// Stop services
+	if err := dockerClient.Containers().Stop(ctx, cfg.Project.Name, serviceNames, internalOptions); err != nil {
+		finishOp(err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_stop_services], err)
+	}
+
+	base.Output.Success(constants.MsgStopSuccess)
+	finishOp(nil)
 	return nil
 }
 

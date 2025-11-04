@@ -3,6 +3,7 @@ package constants
 // File names
 const (
 	ConfigFileName         = AppName + "-config.yml"
+	LocalConfigFileName    = AppName + "-config.local.yml"
 	DockerComposeFileName  = "docker-compose.yml"
 	EnvGeneratedFileName   = ".env.generated"
 	GitignoreFileName      = ".gitignore"

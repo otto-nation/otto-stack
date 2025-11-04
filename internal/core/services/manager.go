@@ -240,7 +240,7 @@ func (m *Manager) waitForHealthy(ctx context.Context, _ string, serviceNames []s
 	m.logger.Info("Waiting for services to become healthy", "services", serviceNames, "timeout", timeout)
 
 	deadline := time.Now().Add(timeout)
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(constants.HealthCheckIntervalSeconds * time.Second)
 	defer ticker.Stop()
 
 	for {

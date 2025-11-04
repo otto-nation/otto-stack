@@ -69,7 +69,7 @@ func (u *UpdateChecker) CheckForUpdates() (*GitHubRelease, bool, error) {
 // cleanVersionString removes common prefixes from version strings
 func cleanVersionString(version string) string {
 	// Common version prefixes to remove
-	prefixes := []string{constants.AppName + "-", "v"}
+	prefixes := []string{"placeholder" + "-", "v"}
 
 	cleaned := version
 	for _, prefix := range prefixes {
@@ -106,7 +106,7 @@ func (u *SelfUpdater) Update(release *GitHubRelease) error {
 
 	// Find the right asset for current platform
 	platform := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
-	assetName := fmt.Sprintf("%s-%s", constants.AppName, platform)
+	assetName := fmt.Sprintf("%s-%s", "placeholder", platform)
 	if runtime.GOOS == "windows" {
 		assetName += ".exe"
 	}
@@ -142,7 +142,7 @@ func (u *SelfUpdater) Update(release *GitHubRelease) error {
 	}
 
 	// Make executable
-	if err := os.Chmod(execPath, 0755); err != nil {
+	if err := os.Chmod(execPath, constants.DirPermReadWriteExec); err != nil {
 		return fmt.Errorf("failed to set executable permissions: %w", err)
 	}
 
@@ -170,7 +170,7 @@ func (u *SelfUpdater) Rollback() error {
 	}
 
 	// Make executable
-	if err := os.Chmod(execPath, 0755); err != nil {
+	if err := os.Chmod(execPath, constants.DirPermReadWriteExec); err != nil {
 		return fmt.Errorf("failed to set executable permissions: %w", err)
 	}
 
@@ -183,7 +183,7 @@ func (u *SelfUpdater) Rollback() error {
 // getLatestRelease gets the latest release from GitHub API
 func (u *UpdateChecker) getLatestRelease() (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest",
-		constants.GitHubOrg, constants.GitHubRepo)
+		"placeholder", "placeholder")
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -224,7 +224,7 @@ func (u *SelfUpdater) downloadFile(url string) (string, error) {
 	}
 
 	// Create temporary file
-	tempFile, err := os.CreateTemp("", constants.AppName+"-update-*")
+	tempFile, err := os.CreateTemp("", "placeholder"+"-update-*")
 	if err != nil {
 		return "", err
 	}

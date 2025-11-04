@@ -9,7 +9,7 @@ import (
 	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/env"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // ProjectConfig represents the project configuration structure
@@ -24,12 +24,12 @@ type ProjectConfig struct {
 }
 
 // generateConfig generates config using code generation
-func (h *InitHandler) generateConfig(name string, services []string, validation, advanced map[string]bool) (string, error) {
-	return pkgConfig.GenerateConfig(name, services, validation, advanced), nil
+func (h *InitHandler) generateConfig(name string, services []string, validation, advanced map[string]bool) string {
+	return pkgConfig.GenerateConfig(name, services, validation, advanced)
 }
 
 // generateInitialComposeFiles generates initial compose files during init
-func (h *InitHandler) generateInitialComposeFiles(services []string, projectName string, validation, advanced map[string]bool) error {
+func (h *InitHandler) generateInitialComposeFiles(services []string, projectName string, _, _ map[string]bool, base *types.BaseCommand) error {
 	projectConfig := &ProjectConfig{
 		Project: struct {
 			Name        string
@@ -46,16 +46,16 @@ func (h *InitHandler) generateInitialComposeFiles(services []string, projectName
 	}
 
 	// Generate .env.generated
-	if err := h.generateEnvFile(services, projectConfig); err != nil {
+	if err := h.generateEnvFile(services, projectConfig, base); err != nil {
 		return fmt.Errorf("failed to generate .env file: %w", err)
 	}
 
 	// Generate docker-compose.yml
-	if err := h.generateDockerCompose(services, projectConfig); err != nil {
+	if err := h.generateDockerCompose(services, projectConfig, base); err != nil {
 		return fmt.Errorf("failed to generate docker-compose.yml: %w", err)
 	}
 
-	ui.Success("Generated %s and %s",
+	base.Output.Success(constants.Messages[constants.MsgSuccess_generated_files],
 		filepath.Join(constants.OttoStackDir, constants.DockerComposeFileName),
 		filepath.Join(constants.OttoStackDir, constants.EnvGeneratedFileName))
 
@@ -63,8 +63,8 @@ func (h *InitHandler) generateInitialComposeFiles(services []string, projectName
 }
 
 // generateEnvFile generates .env.generated using programmatic generation
-func (h *InitHandler) generateEnvFile(services []string, config *ProjectConfig) error {
-	constants.SendMessage(constants.MsgGeneratingEnv)
+func (h *InitHandler) generateEnvFile(services []string, config *ProjectConfig, base *types.BaseCommand) error {
+	base.Output.Info("%s", constants.Messages[constants.MsgProcess_generating_env])
 
 	generator := env.NewGenerator(config.Project.Name, config.Project.Environment)
 
@@ -74,7 +74,7 @@ func (h *InitHandler) generateEnvFile(services []string, config *ProjectConfig) 
 	}
 
 	envPath := filepath.Join(constants.OttoStackDir, constants.EnvGeneratedFileName)
-	if err := os.WriteFile(envPath, envContent, 0644); err != nil {
+	if err := os.WriteFile(envPath, envContent, constants.FilePermReadWrite); err != nil {
 		return fmt.Errorf("failed to write %s: %w", envPath, err)
 	}
 
@@ -82,8 +82,8 @@ func (h *InitHandler) generateEnvFile(services []string, config *ProjectConfig) 
 }
 
 // generateDockerCompose generates docker-compose.yml using programmatic generation
-func (h *InitHandler) generateDockerCompose(services []string, config *ProjectConfig) error {
-	constants.SendMessage(constants.MsgGeneratingCompose)
+func (h *InitHandler) generateDockerCompose(services []string, config *ProjectConfig, base *types.BaseCommand) error {
+	base.Output.Info("%s", constants.Messages[constants.MsgProcess_generating_compose])
 
 	generator, err := compose.NewGenerator(config.Project.Name, constants.ServicesDir)
 	if err != nil {
@@ -96,7 +96,7 @@ func (h *InitHandler) generateDockerCompose(services []string, config *ProjectCo
 	}
 
 	composePath := filepath.Join(constants.OttoStackDir, constants.DockerComposeFileName)
-	if err := os.WriteFile(composePath, composeYAML, 0644); err != nil {
+	if err := os.WriteFile(composePath, composeYAML, constants.FilePermReadWrite); err != nil {
 		return fmt.Errorf("failed to write %s: %w", composePath, err)
 	}
 

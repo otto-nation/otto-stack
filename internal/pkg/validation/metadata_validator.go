@@ -1,9 +1,11 @@
 package validation
 
 import (
+	"slices"
 	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 // MetadataValidator validates metadata and global configuration
@@ -70,7 +72,7 @@ func (v *MetadataValidator) validateFlagDefinition(result *ValidationResult, pre
 		AddError(result, "flags", prefix+".short", "Short flag must be single character", "INVALID_SHORT_FLAG", "medium", "Use single character for short flag")
 	}
 
-	if len(flag.Options) > 0 && flag.Type != "string" {
+	if len(flag.Options) > 0 && flag.Type != constants.TypeString {
 		AddWarning(result, "flags", prefix+".options", "Options should typically be used with string type flags", "OPTIONS_TYPE_MISMATCH", "Consider using string type for flags with options")
 	}
 }
@@ -81,10 +83,5 @@ func isValidVersionFormat(version string) bool {
 }
 
 func contains(slice []string, item string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, item)
 }

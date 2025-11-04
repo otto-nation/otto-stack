@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
@@ -75,7 +77,7 @@ func (so *ServiceOperations) BackupService(ctx context.Context, serviceName, bac
 	}
 
 	// Ensure backup directory exists
-	if err := os.MkdirAll(backupDir, 0755); err != nil {
+	if err := os.MkdirAll(backupDir, constants.DirPermReadWriteExec); err != nil {
 		return fmt.Errorf("failed to create backup directory: %w", err)
 	}
 
@@ -200,7 +202,7 @@ func (so *ServiceOperations) RestoreService(ctx context.Context, serviceName, ba
 
 	// Restart service if required
 	if ops.Restore.RequiresRestart {
-		if err := so.manager.StopServices(ctx, []string{serviceName}, types.StopOptions{Timeout: 10}); err != nil {
+		if err := so.manager.StopServices(ctx, []string{serviceName}, types.StopOptions{Timeout: constants.DefaultStopTimeoutSeconds}); err != nil {
 			return fmt.Errorf("failed to stop %s for restart: %w", serviceName, err)
 		}
 
@@ -208,7 +210,7 @@ func (so *ServiceOperations) RestoreService(ctx context.Context, serviceName, ba
 			Build:         false,
 			ForceRecreate: false,
 			Detach:        true,
-			Timeout:       30 * time.Second,
+			Timeout:       constants.DefaultStartTimeoutSeconds * time.Second,
 		}
 
 		if err := so.manager.StartServices(ctx, []string{serviceName}, startOptions); err != nil {

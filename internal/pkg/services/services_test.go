@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -263,7 +265,7 @@ postgres:
   default_port: 5432
   tags: ["database", "sql"]`
 
-	err := os.WriteFile(servicesFile, []byte(servicesContent), 0644)
+	err := os.WriteFile(servicesFile, []byte(servicesContent), constants.FilePermReadWrite)
 	assert.NoError(t, err)
 
 	registry := &ServiceRegistry{

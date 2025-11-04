@@ -23,8 +23,8 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	// Get CI-friendly flags
 	ciFlags := utils.GetCIFlags(cmd)
 
-	if len(args) < 2 {
-		utils.HandleError(ciFlags, fmt.Errorf("%s", constants.MsgRequiresServiceAndCommand.Content))
+	if len(args) < constants.MinArgumentCount {
+		utils.HandleError(ciFlags, fmt.Errorf("%s", constants.Messages[constants.MsgErrors_requires_service_and_command]))
 		return nil
 	}
 
@@ -38,18 +38,18 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	serviceName := args[0]
 	command := args[1:]
 
-	// Get flags
-	interactive, _ := cmd.Flags().GetBool(constants.FlagInteractive)
-	tty, _ := cmd.Flags().GetBool(constants.FlagTTY)
-	user, _ := cmd.Flags().GetString(constants.FlagUser)
-	workdir, _ := cmd.Flags().GetString(constants.FlagWorkdir)
+	// Parse all flags with validation - single line!
+	flags, err := constants.ParseExecFlags(cmd)
+	if err != nil {
+		return err
+	}
 
-	// Create exec options
-	options := pkgTypes.ExecOptions{
-		Interactive: interactive,
-		TTY:         tty,
-		User:        user,
-		WorkingDir:  workdir,
+	// Create exec options - clean usage with no repetitive error handling
+	options := types.ExecOptions{
+		Interactive: flags.Interactive,
+		TTY:         flags.TTY,
+		User:        flags.User,
+		WorkingDir:  flags.Workdir,
 	}
 
 	// Execute command using Docker client
@@ -58,8 +58,8 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 // ValidateArgs validates the command arguments
 func (h *ExecHandler) ValidateArgs(args []string) error {
-	if len(args) < 2 {
-		return fmt.Errorf("%s", constants.MsgRequiresServiceAndCommand.Content)
+	if len(args) < constants.MinArgumentCount {
+		return fmt.Errorf("%s", constants.Messages[constants.MsgErrors_requires_service_and_command])
 	}
 	return nil
 }

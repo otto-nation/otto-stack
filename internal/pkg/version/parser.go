@@ -17,7 +17,7 @@ var (
 // ParseVersion parses a version string into a Version struct
 func ParseVersion(versionStr string) (*Version, error) {
 	if versionStr == "" {
-		return nil, NewVersionError(ErrVersionInvalid, constants.MsgInvalidVersion.Content, nil)
+		return nil, NewVersionError(ErrVersionInvalid, "invalid version format", nil)
 	}
 
 	// Clean the version string
@@ -26,9 +26,9 @@ func ParseVersion(versionStr string) (*Version, error) {
 	// Handle special cases
 	if _, isSpecial := SpecialVersions[versionStr]; isSpecial {
 		return &Version{
-			Major:    999,
-			Minor:    999,
-			Patch:    999,
+			Major:    constants.MaxVersionNumber,
+			Minor:    constants.MaxVersionNumber,
+			Patch:    constants.MaxVersionNumber,
 			Original: versionStr,
 		}, nil
 	}
@@ -36,25 +36,25 @@ func ParseVersion(versionStr string) (*Version, error) {
 	matches := semverRegex.FindStringSubmatch(versionStr)
 	if matches == nil {
 		return nil, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf(constants.MsgInvalidVersion.Content, versionStr), nil)
+			"invalid version format", nil)
 	}
 
 	major, err := strconv.Atoi(matches[1])
 	if err != nil {
 		return nil, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf(constants.MsgInvalidVersion.Content, matches[1]), err)
+			"invalid version format", err)
 	}
 
 	minor, err := strconv.Atoi(matches[2])
 	if err != nil {
 		return nil, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf(constants.MsgInvalidVersion.Content, matches[2]), err)
+			"invalid version format", err)
 	}
 
 	patch, err := strconv.Atoi(matches[3])
 	if err != nil {
 		return nil, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf(constants.MsgInvalidVersion.Content, matches[3]), err)
+			"invalid version format", err)
 	}
 
 	version := &Version{
@@ -121,7 +121,7 @@ func ParseVersionConstraint(constraintStr string) (*VersionConstraint, error) {
 	version, err := ParseVersion(versionStr)
 	if err != nil {
 		return nil, NewVersionError(ErrVersionConstraint,
-			fmt.Sprintf(constants.MsgInvalidVersion.Content, versionStr), err)
+			"invalid version format", err)
 	}
 
 	return &VersionConstraint{

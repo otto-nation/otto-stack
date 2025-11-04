@@ -3,6 +3,8 @@ package validation
 import (
 	"sort"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/spf13/cobra"
 )
@@ -73,14 +75,14 @@ func (v *CLIValidator) calculateSummary(result *ValidationResult) {
 
 	totalIssues := result.Summary.ErrorCount + result.Summary.WarningCount
 	if totalIssues == 0 {
-		result.Summary.ConfigurationScore = 100.0
+		result.Summary.ConfigurationScore = constants.BaseValidationScore
 	} else {
-		weightedScore := 100.0 - float64(result.Summary.ErrorCount*10+result.Summary.WarningCount*2)
+		weightedScore := constants.BaseValidationScore - float64(result.Summary.ErrorCount*10+result.Summary.WarningCount*2)
 		if weightedScore < 0 {
 			weightedScore = 0
 		}
 		result.Summary.ConfigurationScore = weightedScore
 	}
 
-	result.Valid = result.Summary.CriticalErrors == 0 && result.Summary.ErrorCount < 5
+	result.Valid = result.Summary.CriticalErrors == 0 && result.Summary.ErrorCount < constants.MaxValidationErrors
 }

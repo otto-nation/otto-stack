@@ -2,8 +2,12 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 
 	"github.com/otto-nation/otto-stack/internal/config"
 	"gopkg.in/yaml.v3"
@@ -56,9 +60,7 @@ func (l *Loader) Load() (*CommandConfig, error) {
 	}
 
 	// Post-process configuration
-	if err := l.postProcessConfig(&config); err != nil {
-		return nil, fmt.Errorf("configuration post-processing failed: %w", err)
-	}
+	l.postProcessConfig(&config)
 
 	l.cache = &config
 	return &config, nil
@@ -137,10 +139,9 @@ func (l *Loader) validateConfig(config *CommandConfig) error {
 }
 
 // postProcessConfig performs post-processing tasks
-func (l *Loader) postProcessConfig(config *CommandConfig) error {
+func (l *Loader) postProcessConfig(config *CommandConfig) {
 	l.addCommandsToCategories(config)
 	l.setDefaultFlagTypes(config)
-	return nil
 }
 
 // addCommandsToCategories ensures all commands are added to their categories
@@ -164,12 +165,7 @@ func (l *Loader) addCommandsToCategories(config *CommandConfig) {
 
 // categoryContainsCommand checks if a category already contains a command
 func (l *Loader) categoryContainsCommand(category Category, cmdName string) bool {
-	for _, catCmd := range category.Commands {
-		if catCmd == cmdName {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(category.Commands, cmdName)
 }
 
 // setDefaultFlagTypes sets default types for flags that don't have them
@@ -203,9 +199,7 @@ func LoadFromBytes(data []byte) (*CommandConfig, error) {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}
 
-	if err := loader.postProcessConfig(&config); err != nil {
-		return nil, fmt.Errorf("configuration post-processing failed: %w", err)
-	}
+	loader.postProcessConfig(&config)
 
 	return &config, nil
 }
@@ -219,12 +213,12 @@ func SaveConfig(config *CommandConfig, path string) error {
 
 	// Ensure directory exists
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, constants.DirPermReadWriteExec); err != nil {
 		return fmt.Errorf("failed to create directory %s: %w", dir, err)
 	}
 
 	// Write file
-	if err := os.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, constants.FilePermReadWrite); err != nil {
 		return fmt.Errorf("failed to write config file %s: %w", path, err)
 	}
 
@@ -250,34 +244,16 @@ func MergeConfigs(configs ...*CommandConfig) (*CommandConfig, error) {
 		result.Metadata = config.Metadata
 
 		// Merge global flags
-		for name, flag := range config.Global.Flags {
-			result.Global.Flags[name] = flag
-		}
+		maps.Copy(result.Global.Flags, config.Global.Flags)
 
 		// Merge categories
-		for name, category := range config.Categories {
-			result.Categories[name] = category
-		}
+		maps.Copy(result.Categories, config.Categories)
 
 		// Merge commands
-		for name, command := range config.Commands {
-			result.Commands[name] = command
-		}
-
-		// Merge workflows
-		for name, workflow := range config.Workflows {
-			result.Workflows[name] = workflow
-		}
-
-		// Merge profiles
-		for name, profile := range config.Profiles {
-			result.Profiles[name] = profile
-		}
+		maps.Copy(result.Commands, config.Commands)
 
 		// Merge help
-		for name, help := range config.Help {
-			result.Help[name] = help
-		}
+		maps.Copy(result.Help, config.Help)
 	}
 
 	return result, nil

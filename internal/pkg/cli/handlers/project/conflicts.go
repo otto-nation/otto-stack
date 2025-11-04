@@ -18,8 +18,8 @@ func NewConflictsHandler() *ConflictsHandler {
 
 // Handle executes the conflicts command
 func (h *ConflictsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	ui.Header("Service Conflicts")
-	ui.Info("Conflict detection not yet implemented")
+	base.Output.Header("%s", constants.Messages[constants.MsgConflicts_header])
+	base.Output.Info("%s", constants.Messages[constants.MsgConflicts_not_implemented])
 	return nil
 }
 

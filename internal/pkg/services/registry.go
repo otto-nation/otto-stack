@@ -2,7 +2,9 @@ package services
 
 import (
 	"fmt"
+	"maps"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -214,9 +216,7 @@ func (r *ServiceRegistry) GetService(name string) (ServiceDefinition, bool) {
 func (r *ServiceRegistry) GetAllServices() map[string]ServiceDefinition {
 	// Return a copy to prevent modification
 	result := make(map[string]ServiceDefinition)
-	for name, service := range r.services {
-		result[name] = service
-	}
+	maps.Copy(result, r.services)
 	return result
 }
 
@@ -246,11 +246,8 @@ func (r *ServiceRegistry) GetServicesByCategory(category string) []string {
 func (r *ServiceRegistry) GetServicesByTag(tag string) []string {
 	var services []string
 	for name, service := range r.services {
-		for _, serviceTag := range service.Tags {
-			if serviceTag == tag {
-				services = append(services, name)
-				break
-			}
+		if slices.Contains(service.Tags, tag) {
+			services = append(services, name)
 		}
 	}
 	sort.Strings(services)
@@ -420,7 +417,7 @@ func (r *ServiceRegistry) GetServiceInfo(name string) (string, error) {
 }
 
 // validateServiceDefinition validates a service definition
-func (r *ServiceRegistry) validateServiceDefinition(name string, definition ServiceDefinition) error {
+func (r *ServiceRegistry) validateServiceDefinition(_ string, definition ServiceDefinition) error {
 	if definition.Description == "" {
 		return fmt.Errorf("description is required")
 	}

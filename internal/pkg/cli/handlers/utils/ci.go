@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -80,5 +81,6 @@ func outputJSON(result any, exitCode int) {
 }
 
 func outputTable(result any) {
+	logger.Debug("Outputting table result", "result", result)
 	fmt.Printf("%+v\n", result)
 }

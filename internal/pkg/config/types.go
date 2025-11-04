@@ -7,6 +7,8 @@ import (
 // CommandConfig represents the root structure of the enhanced commands.yaml
 type CommandConfig struct {
 	Metadata   Metadata            `yaml:"metadata"`
+	Messages   map[string]any      `yaml:"messages"`
+	Icons      map[string]any      `yaml:"icons"`
 	Handlers   map[string]Handler  `yaml:"handlers"`
 	Global     GlobalConfig        `yaml:"global"`
 	Categories map[string]Category `yaml:"categories"`

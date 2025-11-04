@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/charmbracelet/lipgloss"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 var (
@@ -40,7 +41,7 @@ var (
 	HeaderStyle = lipgloss.NewStyle().
 			Foreground(primaryColor).
 			Bold(true).
-			Padding(1, 2).
+			Padding(1, constants.UIPadding).
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(primaryColor)
 
@@ -51,7 +52,7 @@ var (
 
 	// List styles
 	ListItemStyle = lipgloss.NewStyle().
-			Padding(0, 2)
+			Padding(0, constants.UIPadding)
 
 	SelectedItemStyle = ListItemStyle.
 				Foreground(primaryColor).
@@ -61,7 +62,7 @@ var (
 	BoxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(mutedColor).
-			Padding(1, 2).
+			Padding(1, constants.UIPadding).
 			Margin(1, 0)
 
 	HighlightBoxStyle = BoxStyle.

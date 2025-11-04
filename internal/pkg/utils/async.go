@@ -8,7 +8,7 @@ import (
 // Retry executes a function with retry logic
 func Retry(attempts int, delay time.Duration, fn func() error) error {
 	var err error
-	for i := 0; i < attempts; i++ {
+	for i := range attempts {
 		if err = fn(); err == nil {
 			return nil
 		}

@@ -3,12 +3,15 @@ package utils
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"slices"
 	"strings"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 // GenerateRandomString generates a random string of the given length
 func GenerateRandomString(length int) (string, error) {
-	bytes := make([]byte, length/2)
+	bytes := make([]byte, length/constants.HexDivisor)
 	if _, err := rand.Read(bytes); err != nil {
 		return "", err
 	}
@@ -17,12 +20,7 @@ func GenerateRandomString(length int) (string, error) {
 
 // StringInSlice checks if a string exists in a slice
 func StringInSlice(str string, slice []string) bool {
-	for _, s := range slice {
-		if s == str {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, str)
 }
 
 // RemoveStringFromSlice removes a string from a slice
@@ -51,7 +49,7 @@ func UniqueStrings(slice []string) []string {
 
 // TrimQuotes removes surrounding quotes from a string
 func TrimQuotes(s string) string {
-	if len(s) >= 2 {
+	if len(s) >= constants.MinFieldCount {
 		if (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'') {
 			return s[1 : len(s)-1]
 		}

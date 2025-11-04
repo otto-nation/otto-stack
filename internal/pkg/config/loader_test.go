@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -61,7 +63,7 @@ commands:
     usage: "test [options]"
 help: {}
 `
-				err := os.WriteFile(configFile, []byte(validYAML), 0644)
+				err := os.WriteFile(configFile, []byte(validYAML), constants.FilePermReadWrite)
 				require.NoError(t, err)
 				return configFile
 			},
@@ -78,7 +80,7 @@ metadata:
   version: "1.0.0"
   invalid_yaml: [unclosed
 `
-				err := os.WriteFile(configFile, []byte(invalidYAML), 0644)
+				err := os.WriteFile(configFile, []byte(invalidYAML), constants.FilePermReadWrite)
 				require.NoError(t, err)
 				return configFile
 			},
@@ -112,7 +114,7 @@ commands:
     usage: "test [options]"
 help: {}
 `
-				err := os.WriteFile(configFile, []byte(invalidYAML), 0644)
+				err := os.WriteFile(configFile, []byte(invalidYAML), constants.FilePermReadWrite)
 				require.NoError(t, err)
 				return configFile
 			},
@@ -160,7 +162,7 @@ commands:
     usage: "test [options]"
 help: {}
 `
-	err := os.WriteFile(configFile, []byte(validYAML), 0644)
+	err := os.WriteFile(configFile, []byte(validYAML), constants.FilePermReadWrite)
 	require.NoError(t, err)
 
 	loader := NewLoader(configFile)
@@ -190,7 +192,7 @@ func TestLoader_resolveConfigPath(t *testing.T) {
 			setupFunc: func(t *testing.T) *Loader {
 				tmpDir := t.TempDir()
 				configFile := filepath.Join(tmpDir, "config.yaml")
-				err := os.WriteFile(configFile, []byte("test"), 0644)
+				err := os.WriteFile(configFile, []byte("test"), constants.FilePermReadWrite)
 				require.NoError(t, err)
 				return NewLoader(configFile)
 			},
@@ -208,7 +210,7 @@ func TestLoader_resolveConfigPath(t *testing.T) {
 			setupFunc: func(t *testing.T) *Loader {
 				// Create config in current directory
 				configFile := "test-config.yaml"
-				err := os.WriteFile(configFile, []byte("test"), 0644)
+				err := os.WriteFile(configFile, []byte("test"), constants.FilePermReadWrite)
 				require.NoError(t, err)
 				t.Cleanup(func() {
 					_ = os.Remove(configFile)

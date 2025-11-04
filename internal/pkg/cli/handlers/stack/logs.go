@@ -24,7 +24,7 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	ciFlags := utils.GetCIFlags(cmd)
 
 	if !ciFlags.Quiet {
-		ui.Header(constants.MsgLogs)
+		base.Output.Header(constants.MsgLogs)
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
@@ -34,10 +34,11 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 	defer cleanup()
 
-	// Get flags
-	follow, _ := cmd.Flags().GetBool(constants.FlagFollow)
-	tail, _ := cmd.Flags().GetString(constants.FlagTail)
-	timestamps, _ := cmd.Flags().GetBool(constants.FlagTimestamps)
+	// Parse all flags with validation - single line!
+	flags, err := constants.ParseLogsFlags(cmd)
+	if err != nil {
+		return err
+	}
 
 	// Determine services
 	serviceNames := args
@@ -49,15 +50,15 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	serviceUtils := utils.NewServiceUtils()
 	resolvedServices, err := serviceUtils.ResolveServices(serviceNames)
 	if err != nil {
-		utils.HandleError(ciFlags, fmt.Errorf(constants.MsgFailedResolveServices.Content, err))
+		utils.HandleError(ciFlags, fmt.Errorf("failed to resolve services: %w", err))
 		return nil
 	}
 
-	// Create log options
-	options := pkgTypes.LogOptions{
-		Follow:     follow,
-		Tail:       tail,
-		Timestamps: timestamps,
+	// Create log options - clean usage with no repetitive error handling
+	options := types.LogOptions{
+		Follow:     flags.Follow,
+		Timestamps: flags.Timestamps,
+		Tail:       flags.Tail,
 	}
 
 	// Get logs using Docker client

@@ -13,7 +13,7 @@ import (
 // SchemaProperty represents a property in the config schema
 type SchemaProperty struct {
 	Type        string                    `yaml:"type"`
-	Default     interface{}               `yaml:"default"`
+	Default     any                       `yaml:"default"`
 	Description string                    `yaml:"description"`
 	Enum        []string                  `yaml:"enum,omitempty"`
 	Items       *SchemaProperty           `yaml:"items,omitempty"`
@@ -47,7 +47,7 @@ func LoadSchema() (*ConfigSchema, error) {
 }
 
 // GenerateConfigFromSchema generates a config YAML from schema with defaults
-func GenerateConfigFromSchema(projectName string, services []string, overrides map[string]interface{}) (string, error) {
+func GenerateConfigFromSchema(projectName string, services []string, overrides map[string]any) (string, error) {
 	schema, err := LoadSchema()
 	if err != nil {
 		return "", err
@@ -77,10 +77,10 @@ func GenerateConfigFromSchema(projectName string, services []string, overrides m
 			builder.WriteString(fmt.Sprintf("%s:", sectionName))
 			if sectionSchema.Type == constants.YAMLTypeObject {
 				builder.WriteString("\n")
-				generateSection(&builder, sectionSchema, 1, projectName, overrides)
+				generateSection(&builder, sectionSchema, 1, projectName, nil)
 			} else {
 				builder.WriteString(" ")
-				generateSection(&builder, sectionSchema, 0, projectName, overrides)
+				generateSection(&builder, sectionSchema, 0, projectName, nil)
 				builder.WriteString("\n")
 			}
 		}
@@ -91,7 +91,7 @@ func GenerateConfigFromSchema(projectName string, services []string, overrides m
 }
 
 // generateSection recursively generates YAML for a schema section
-func generateSection(builder *strings.Builder, schema SchemaProperty, indent int, projectName string, overrides map[string]interface{}) {
+func generateSection(builder *strings.Builder, schema SchemaProperty, indent int, projectName string, _ map[string]any) {
 	indentStr := strings.Repeat(constants.YAMLIndent, indent)
 
 	switch schema.Type {
@@ -113,7 +113,7 @@ func generateSection(builder *strings.Builder, schema SchemaProperty, indent int
 				builder.WriteString("\n")
 			} else if propSchema.Type == constants.YAMLTypeObject {
 				fmt.Fprintf(builder, constants.YAMLProperty+"\n", indentStr, propName)
-				generateSection(builder, propSchema, indent+1, projectName, overrides)
+				generateSection(builder, propSchema, indent+1, projectName, nil)
 			}
 		}
 	default:
@@ -129,8 +129,8 @@ func generateSection(builder *strings.Builder, schema SchemaProperty, indent int
 }
 
 // resolveTemplate resolves template variables to actual values using a map
-func resolveTemplate(template, projectName string) interface{} {
-	resolvers := map[string]interface{}{
+func resolveTemplate(template, projectName string) any {
+	resolvers := map[string]any{
 		constants.TemplateProjectName:             projectName,
 		constants.TemplateOttoVersion:             version.GetShortVersion(),
 		constants.TemplateConfigDocsURL:           constants.ConfigDocsURL,
@@ -149,18 +149,18 @@ func resolveTemplate(template, projectName string) interface{} {
 }
 
 // writeValue writes a value in the appropriate YAML format
-func writeValue(builder *strings.Builder, value interface{}, valueType string) {
+func writeValue(builder *strings.Builder, value any, valueType string) {
 	switch valueType {
 	case constants.YAMLTypeBoolean:
 		fmt.Fprintf(builder, "%t", value)
 	case constants.YAMLTypeArray:
-		if arr, ok := value.([]interface{}); ok && len(arr) == 0 {
+		if arr, ok := value.([]any); ok && len(arr) == 0 {
 			builder.WriteString("[]")
 		} else {
 			fmt.Fprintf(builder, "%v", value)
 		}
 	case constants.YAMLTypeObject:
-		if obj, ok := value.(map[interface{}]interface{}); ok && len(obj) == 0 {
+		if obj, ok := value.(map[any]any); ok && len(obj) == 0 {
 			builder.WriteString("{}")
 		} else {
 			fmt.Fprintf(builder, "%v", value)

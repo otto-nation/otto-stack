@@ -22,26 +22,26 @@ func NewRestartHandler() *RestartHandler {
 }
 
 // Handle executes the restart command
-func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *cliTypes.BaseCommand) error {
-	ui.Header(constants.MsgRestarting)
+func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+	base.Output.Header(constants.MsgRestarting)
 
 	// Check if otto-stack is initialized
-	configPath := filepath.Join(constants.DevStackDir, constants.ConfigFileName)
+	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
 	if !utils.FileExists(configPath) {
-		return errors.New(constants.ErrNotInitialized)
+		return errors.New(constants.Messages[constants.MsgErrors_not_initialized])
 	}
 
 	// Load project configuration
 	cfg, err := LoadProjectConfig(configPath)
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_load_config], err)
 	}
 
 	// Create Docker client
 	logger := base.Logger.(loggerAdapter)
 	dockerClient, err := docker.NewClient(logger.SlogLogger())
 	if err != nil {
-		return fmt.Errorf("failed to create Docker client: %w", err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_create_docker_client], err)
 	}
 	defer func() {
 		if err := dockerClient.Close(); err != nil {
@@ -49,9 +49,11 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		}
 	}()
 
-	// Parse flags
-	timeout, _ := cmd.Flags().GetInt("timeout")
-	build, _ := cmd.Flags().GetBool("build")
+	// Parse all flags with validation - single line!
+	flags, err := constants.ParseRestartFlags(cmd)
+	if err != nil {
+		return err
+	}
 
 	// Determine services to restart
 	serviceNames := args
@@ -60,25 +62,25 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Stop services first
-	constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "Stopping services..."})
+	// Restart operation
+	// Stop services
 	stopOptions := types.StopOptions{
-		Timeout: timeout,
+		Timeout: flags.Timeout,
 	}
 	if err := dockerClient.Containers().Stop(ctx, cfg.Project.Name, serviceNames, stopOptions); err != nil {
-		return fmt.Errorf("failed to stop services: %w", err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_stop_services], err)
 	}
 
 	// Start services
-	constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "Starting services..."})
 	startOptions := types.StartOptions{
-		Build: build,
+		Detach: true,
 	}
 	if err := dockerClient.Containers().Start(ctx, cfg.Project.Name, serviceNames, startOptions); err != nil {
-		return fmt.Errorf("failed to start services: %w", err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_start_services], err)
 	}
 
-	ui.Success(constants.MsgRestartSuccess)
-	constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "Run '%s' to check service status"}, constants.AppName+" status")
+	base.Output.Success(constants.MsgRestartSuccess)
+	// Restart operation
 	return nil
 }
 

@@ -27,7 +27,7 @@ func setupTestDir(t *testing.T) (cleanup func()) {
 
 // createTestFile creates a file with given content
 func createTestFile(t *testing.T, path, content string) {
-	err := os.WriteFile(path, []byte(content), 0644)
+	err := os.WriteFile(path, []byte(content), constants.FilePermReadWrite)
 	require.NoError(t, err)
 }
 

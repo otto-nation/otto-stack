@@ -3,6 +3,8 @@ package validation
 import (
 	"fmt"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 )
 
@@ -47,7 +49,7 @@ func (v *BestPracticesValidator) validateCategoryBalance(result *ValidationResul
 	}
 
 	for catName, category := range v.config.Categories {
-		if len(category.Commands) > 10 {
+		if len(category.Commands) > constants.MaxCategoryCommands {
 			AddWarning(result, "categories", "categories."+catName, "Category has many commands, consider splitting", "LARGE_CATEGORY", "Consider splitting large categories for better organization")
 		}
 	}
@@ -72,19 +74,19 @@ func (v *BestPracticesValidator) validateDocumentationCompleteness(result *Valid
 		}
 	}
 
-	exampleCoverage := float64(commandsWithExamples) / float64(totalCommands) * 100
-	tipsCoverage := float64(commandsWithTips) / float64(totalCommands) * 100
-	longDescCoverage := float64(commandsWithLongDescription) / float64(totalCommands) * 100
+	exampleCoverage := float64(commandsWithExamples) / float64(totalCommands) * constants.PercentageMultiplier
+	tipsCoverage := float64(commandsWithTips) / float64(totalCommands) * constants.PercentageMultiplier
+	longDescCoverage := float64(commandsWithLongDescription) / float64(totalCommands) * constants.PercentageMultiplier
 
-	if exampleCoverage < 80 {
+	if exampleCoverage < constants.MinExampleCoverage {
 		AddWarning(result, "documentation", "commands.examples", fmt.Sprintf("Only %.1f%% of commands have examples", exampleCoverage), "LOW_EXAMPLE_COVERAGE", "Add examples to more commands")
 	}
 
-	if tipsCoverage < 50 {
+	if tipsCoverage < constants.MinTipsCoverage {
 		AddWarning(result, "documentation", "commands.tips", fmt.Sprintf("Only %.1f%% of commands have tips", tipsCoverage), "LOW_TIPS_COVERAGE", "Add helpful tips to more commands")
 	}
 
-	if longDescCoverage < 60 {
+	if longDescCoverage < constants.MinDescriptionCoverage {
 		AddWarning(result, "documentation", "commands.long_description", fmt.Sprintf("Only %.1f%% of commands have detailed descriptions", longDescCoverage), "LOW_DESCRIPTION_COVERAGE", "Add detailed descriptions to more commands")
 	}
 }

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 func TestError_Error(t *testing.T) {
@@ -186,7 +188,7 @@ func TestServiceStructure(t *testing.T) {
 func TestHealthCheckStructure(t *testing.T) {
 	healthCheck := HealthCheck{
 		Test:        []string{"CMD", "curl", "-f", "http://localhost/health"},
-		Interval:    30 * time.Second,
+		Interval:    constants.DefaultStartTimeoutSeconds * time.Second,
 		Timeout:     10 * time.Second,
 		Retries:     3,
 		StartPeriod: 60 * time.Second,

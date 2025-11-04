@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"maps"
 	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/config"
@@ -58,7 +59,7 @@ func (u *ServiceUtils) LoadServiceConfig(serviceName string) (*types.ServiceConf
 		}
 	}
 
-	return nil, fmt.Errorf("service %s not found", serviceName)
+	return nil, fmt.Errorf(constants.Messages[constants.MsgUtils_service_not_found], serviceName)
 }
 
 // LoadAllServiceDependencies loads dependencies for all services
@@ -74,9 +75,7 @@ func (u *ServiceUtils) LoadAllServiceDependencies() (map[string][]string, error)
 		if err != nil {
 			continue
 		}
-		for service, serviceDeps := range deps {
-			result[service] = serviceDeps
-		}
+		maps.Copy(result, deps)
 	}
 
 	return result, nil
@@ -106,7 +105,7 @@ func (u *ServiceUtils) ResolveDependencies(selectedServices []string) ([]string,
 	var visit func(string) error
 	visit = func(serviceName string) error {
 		if visiting[serviceName] {
-			return fmt.Errorf("circular dependency detected: %s", serviceName)
+			return fmt.Errorf(constants.Messages[constants.MsgUtils_circular_dependency], serviceName)
 		}
 		if visited[serviceName] {
 			return nil

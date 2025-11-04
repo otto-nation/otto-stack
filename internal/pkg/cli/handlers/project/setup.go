@@ -3,8 +3,10 @@ package project
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // createDirectoryStructure creates the necessary directory structure
@@ -14,7 +16,7 @@ func (h *InitHandler) createDirectoryStructure() error {
 	}
 
 	for _, dir := range directories {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, constants.DirPermReadWriteExec); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
@@ -23,23 +25,20 @@ func (h *InitHandler) createDirectoryStructure() error {
 }
 
 // createConfigFile creates the main configuration file
-func (h *InitHandler) createConfigFile(projectName string, services []string, validation, advanced map[string]bool) error {
-	configContent, err := h.generateConfig(projectName, services, validation, advanced)
-	if err != nil {
-		return fmt.Errorf("failed to generate config: %w", err)
-	}
+func (h *InitHandler) createConfigFile(projectName string, services []string, validation, advanced map[string]bool, base *types.BaseCommand) error {
+	configContent := h.generateConfig(projectName, services, validation, advanced)
 
 	configPath := constants.OttoStackDir + "/" + constants.ConfigFileName
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), constants.FilePermReadWrite); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	constants.SendMessage(constants.MsgCreatedFile, configPath)
+	base.Output.Success(constants.Messages[constants.MsgSuccess_created_file], configPath)
 	return nil
 }
 
 // createGitignoreEntries adds entries to .gitignore
-func (h *InitHandler) createGitignoreEntries() error {
+func (h *InitHandler) createGitignoreEntries(base *types.BaseCommand) error {
 	gitignorePath := constants.GitignoreFileName
 
 	// Check if .gitignore exists
@@ -59,12 +58,12 @@ func (h *InitHandler) createGitignoreEntries() error {
 	}
 
 	if hasDevStackEntries {
-		constants.SendMessage(constants.MsgGitignoreExists)
+		base.Output.Info("%s", constants.Messages[constants.MsgFiles_gitignore_exists])
 		return nil
 	}
 
 	// Append entries
-	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, constants.FilePermReadWrite)
 	if err != nil {
 		return fmt.Errorf("failed to open .gitignore: %w", err)
 	}
@@ -76,12 +75,12 @@ func (h *InitHandler) createGitignoreEntries() error {
 		}
 	}
 
-	constants.SendMessage(constants.MsgUpdatedGitignore)
+	base.Output.Success("%s", constants.Messages[constants.MsgSuccess_updated_gitignore])
 	return nil
 }
 
 // createReadme creates a README file for the project
-func (h *InitHandler) createReadme(projectName string, services []string) error {
+func (h *InitHandler) createReadme(projectName string, services []string, base *types.BaseCommand) error {
 	readmeContent := fmt.Sprintf(`# %s Otto Stack
 
 This directory contains the development stack configuration for %s.
@@ -123,11 +122,11 @@ Run `+"`%s --help`"+` for a full list of available commands.
 		constants.ConfigFileName, constants.DockerComposeFileName, constants.AppName)
 
 	readmePath := constants.OttoStackDir + "/" + constants.ReadmeFileName
-	if err := os.WriteFile(readmePath, []byte(readmeContent), 0644); err != nil {
+	if err := os.WriteFile(readmePath, []byte(readmeContent), constants.FilePermReadWrite); err != nil {
 		return fmt.Errorf("failed to create README: %w", err)
 	}
 
-	constants.SendMessage(constants.MsgCreatedFile, readmePath)
+	base.Output.Success(constants.Messages[constants.MsgSuccess_created_file], readmePath)
 	return nil
 }
 
@@ -137,11 +136,11 @@ func formatServicesList(services []string) string {
 		return "- No services configured"
 	}
 
-	result := ""
+	var builder strings.Builder
 	for _, service := range services {
-		result += fmt.Sprintf("- %s\n", service)
+		builder.WriteString(fmt.Sprintf("- %s\n", service))
 	}
-	return result
+	return builder.String()
 }
 
 // contains checks if a string contains a substring

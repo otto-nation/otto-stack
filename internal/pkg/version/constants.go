@@ -1,6 +1,8 @@
 package version
 
-import "time"
+import (
+	"time"
+)
 
 // Version change types (used for both drift and updates)
 const (
@@ -12,6 +14,7 @@ const (
 )
 
 // Severity levels with their numeric values for comparison
+// nolint: mnd
 var SeverityLevels = map[string]int{
 	"low":    1, // Optional updates, minor drift
 	"medium": 2, // Recommended updates, moderate drift

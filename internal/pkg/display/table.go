@@ -48,7 +48,7 @@ func (f *TableFormatter) FormatServiceCatalog(catalog ServiceCatalog, options Se
 
 	// Table format
 	_, _ = fmt.Fprintf(f.writer, "%-15s %-20s %s\n", "CATEGORY", "SERVICE", "DESCRIPTION")
-	_, _ = fmt.Fprintln(f.writer, strings.Repeat("-", 80))
+	_, _ = fmt.Fprintln(f.writer, strings.Repeat("-", constants.TableWidth80))
 
 	for categoryName, services := range filteredCatalog.Categories {
 		for _, service := range services {
@@ -79,7 +79,7 @@ func (f *TableFormatter) FormatValidation(result ValidationResult, options Valid
 		//nolint:errcheck
 		fmt.Fprintf(f.writer, "%-15s %-20s %-50s\n", "SEVERITY", "FIELD", "MESSAGE")
 		//nolint:errcheck
-		fmt.Fprintln(f.writer, strings.Repeat("-", 85))
+		fmt.Fprintln(f.writer, strings.Repeat("-", constants.TableWidth85))
 
 		for _, err := range result.Errors {
 			//nolint:errcheck
@@ -96,7 +96,7 @@ func (f *TableFormatter) FormatValidation(result ValidationResult, options Valid
 		//nolint:errcheck
 		fmt.Fprintf(f.writer, "%-15s %-20s %-50s\n", "TYPE", "FIELD", "MESSAGE")
 		//nolint:errcheck
-		fmt.Fprintln(f.writer, strings.Repeat("-", 85))
+		fmt.Fprintln(f.writer, strings.Repeat("-", constants.TableWidth85))
 
 		for _, warn := range result.Warnings {
 			//nolint:errcheck
@@ -163,10 +163,10 @@ func (f *TableFormatter) FormatHealth(report HealthReport, options HealthOptions
 	fmt.Fprintf(f.writer, "%-25s %-10s %-15s %-40s\n",
 		"CHECK", "STATUS", "CATEGORY", "MESSAGE")
 	//nolint:errcheck
-	fmt.Fprintln(f.writer, strings.Repeat("-", 90))
+	fmt.Fprintln(f.writer, strings.Repeat("-", constants.TableWidth90))
 
 	for _, check := range report.Checks {
-		icon := GetHealthIcon(check.Status)
+		icon := getHealthIcon(check.Status)
 		_, _ = fmt.Fprintf(f.writer, "%-25s %-10s %-15s %-40s\n",
 			check.Name, icon+" "+check.Status, check.Category, check.Message)
 
@@ -181,11 +181,11 @@ func (f *TableFormatter) FormatHealth(report HealthReport, options HealthOptions
 // Helper methods
 func (f *TableFormatter) formatCompactStatus(services []ServiceStatus) error {
 	_, _ = fmt.Fprintf(f.writer, "%-20s %-10s %-12s\n", "SERVICE", "STATE", "HEALTH")
-	_, _ = fmt.Fprintln(f.writer, strings.Repeat("-", 42))
+	_, _ = fmt.Fprintln(f.writer, strings.Repeat("-", constants.TableWidth42))
 
 	for _, service := range services {
-		stateIcon := GetStateIcon(service.State)
-		healthIcon := GetHealthIcon(service.Health)
+		stateIcon := getStateIcon(service.State)
+		healthIcon := getHealthIcon(service.Health)
 
 		_, _ = fmt.Fprintf(f.writer, "%-20s %-10s %-12s\n",
 			service.Name, stateIcon+" "+service.State, healthIcon+" "+service.Health)
@@ -206,8 +206,8 @@ type ServiceRowData struct {
 
 // formatServiceRow converts ServiceStatus to display format
 func (f *TableFormatter) formatServiceRow(service ServiceStatus) ServiceRowData {
-	stateIcon := GetStateIcon(service.State)
-	healthIcon := GetHealthIcon(service.Health)
+	stateIcon := getStateIcon(service.State)
+	healthIcon := getHealthIcon(service.Health)
 	uptime := f.formatDuration(service.Uptime)
 	ports := f.formatPorts(service.Ports)
 	updated := service.UpdatedAt.Format("15:04:05")
@@ -225,7 +225,7 @@ func (f *TableFormatter) formatServiceRow(service ServiceStatus) ServiceRowData 
 // formatPorts truncates port list if too long
 func (f *TableFormatter) formatPorts(ports []string) string {
 	joined := strings.Join(ports, ",")
-	if len(joined) > 10 {
+	if len(joined) > constants.MaxCategoryCommands {
 		return joined[:10] + "..."
 	}
 	return joined
@@ -234,7 +234,7 @@ func (f *TableFormatter) formatPorts(ports []string) string {
 func (f *TableFormatter) formatDetailedStatus(services []ServiceStatus, quiet bool) error {
 	_, _ = fmt.Fprintf(f.writer, "%-15s %-10s %-10s %-8s %-12s %-10s\n",
 		"SERVICE", "STATE", "HEALTH", "UPTIME", "PORTS", "UPDATED")
-	_, _ = fmt.Fprintln(f.writer, strings.Repeat("-", 75))
+	_, _ = fmt.Fprintln(f.writer, strings.Repeat("-", constants.TableWidth75))
 
 	for _, service := range services {
 		row := f.formatServiceRow(service)
@@ -285,5 +285,39 @@ func (f *TableFormatter) formatDuration(d time.Duration) string {
 	if d < 24*time.Hour {
 		return fmt.Sprintf("%dh", int(d.Hours()))
 	}
-	return fmt.Sprintf("%dd", int(d.Hours()/24))
+	return fmt.Sprintf("%dd", int(d.Hours()/constants.HoursPerDay))
+}
+
+// getStateIcon returns the icon for a given state using generated constants
+func getStateIcon(state string) string {
+	switch state {
+	case constants.StateRunning:
+		return constants.Icons[constants.IconState_running]
+	case constants.StateStopped:
+		return constants.Icons[constants.IconState_stopped]
+	case constants.StateCreated:
+		return constants.Icons[constants.IconState_created]
+	case "starting":
+		return constants.Icons[constants.IconState_starting]
+	case "paused":
+		return constants.Icons[constants.IconState_paused]
+	default:
+		return constants.Icons[constants.IconState_default]
+	}
+}
+
+// getHealthIcon returns the icon for a given health status using generated constants
+func getHealthIcon(health string) string {
+	switch health {
+	case constants.HealthHealthy:
+		return constants.Icons[constants.IconHealth_healthy]
+	case constants.HealthUnhealthy:
+		return constants.Icons[constants.IconHealth_unhealthy]
+	case constants.HealthStarting:
+		return constants.Icons[constants.IconHealth_starting]
+	case constants.HealthNone:
+		return constants.Icons[constants.IconHealth_none]
+	default:
+		return constants.Icons[constants.IconHealth_default]
+	}
 }

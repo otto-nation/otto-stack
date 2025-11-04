@@ -4,11 +4,13 @@ import "time"
 
 // StartOptions defines options for starting services
 type StartOptions struct {
-	Build         bool
-	ForceRecreate bool
-	NoDeps        bool
-	Detach        bool
-	Timeout       time.Duration
+	Build          bool
+	ForceRecreate  bool
+	NoDeps         bool
+	Detach         bool
+	Timeout        time.Duration
+	ResolveDeps    bool
+	CheckConflicts bool
 }
 
 // StopOptions defines options for stopping services
@@ -16,6 +18,8 @@ type StopOptions struct {
 	Timeout       int
 	Remove        bool
 	RemoveVolumes bool
+	RemoveOrphans bool
+	RemoveImages  string
 }
 
 // ExecOptions defines options for executing commands in containers

@@ -44,20 +44,18 @@ func (g *Generator) Generate(services []string) ([]byte, error) {
 
 	// Service-specific environment variables
 	for _, serviceName := range services {
-		if err := g.addServiceEnv(&content, serviceName); err != nil {
-			return nil, fmt.Errorf("failed to add env for service %s: %w", serviceName, err)
-		}
+		g.addServiceEnv(&content, serviceName)
 	}
 
 	return []byte(content.String()), nil
 }
 
 // addServiceEnv adds environment variables for a specific service
-func (g *Generator) addServiceEnv(content *strings.Builder, serviceName string) error {
+func (g *Generator) addServiceEnv(content *strings.Builder, serviceName string) {
 	serviceConfig, err := utils.NewServiceUtils().LoadServiceConfig(serviceName)
 	if err != nil {
 		// Skip services that can't be loaded
-		return nil
+		return
 	}
 
 	// Generate env vars in a temporary buffer first
@@ -89,7 +87,6 @@ func (g *Generator) addServiceEnv(content *strings.Builder, serviceName string) 
 		hasEnvVars = true
 	default:
 		// No environment variables for this service
-		return nil
 	}
 
 	// Only add section if we have environment variables
@@ -101,7 +98,6 @@ func (g *Generator) addServiceEnv(content *strings.Builder, serviceName string) 
 		content.WriteString("\n")
 	}
 
-	return nil
 }
 
 // Service-specific environment variable generators

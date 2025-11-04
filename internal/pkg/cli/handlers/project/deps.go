@@ -21,10 +21,10 @@ func NewDepsHandler() *DepsHandler {
 
 // Handle executes the deps command
 func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	ui.Header("Service Dependencies")
+	base.Output.Header("%s", constants.Messages[constants.MsgDependencies_header])
 
 	// Get output format
-	format, _ := cmd.Flags().GetString("output")
+	format, _ := cmd.Flags().GetString(constants.FlagFormat)
 
 	// Load service dependencies
 	serviceUtils := utils.NewServiceUtils()
@@ -34,7 +34,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	if len(dependencies) == 0 {
-		ui.Info("No service dependencies found")
+		base.Output.Info("%s", constants.Messages[constants.MsgDependencies_none_found])
 		return nil
 	}
 

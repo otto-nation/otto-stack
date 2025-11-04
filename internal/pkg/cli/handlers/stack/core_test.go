@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -86,7 +88,7 @@ stack:
     - postgres`
 
 		configPath := filepath.Join(tmpDir, "config.yml")
-		err := os.WriteFile(configPath, []byte(configContent), 0644)
+		err := os.WriteFile(configPath, []byte(configContent), constants.FilePermReadWrite)
 		assert.NoError(t, err)
 
 		cfg, err := LoadProjectConfig(configPath)
@@ -105,7 +107,7 @@ stack:
 
 	t.Run("invalid YAML", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "invalid.yml")
-		err := os.WriteFile(configPath, []byte("invalid: yaml: [unclosed"), 0644)
+		err := os.WriteFile(configPath, []byte("invalid: yaml: [unclosed"), constants.FilePermReadWrite)
 		assert.NoError(t, err)
 
 		cfg, err := LoadProjectConfig(configPath)
@@ -116,7 +118,7 @@ stack:
 
 	t.Run("empty config", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "empty.yml")
-		err := os.WriteFile(configPath, []byte(""), 0644)
+		err := os.WriteFile(configPath, []byte(""), constants.FilePermReadWrite)
 		assert.NoError(t, err)
 
 		cfg, err := LoadProjectConfig(configPath)

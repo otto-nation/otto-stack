@@ -43,7 +43,7 @@ func (h *InitHandler) promptForProjectDetails() (string, error) {
 }
 
 // promptForServices prompts user to select services with category navigation
-func (h *InitHandler) promptForServices() ([]string, error) {
+func (h *InitHandler) promptForServices(base *types.BaseCommand) ([]string, error) {
 	serviceUtils := utils.NewServiceUtils()
 
 	// Get available services by category
@@ -74,13 +74,13 @@ func (h *InitHandler) promptForServices() ([]string, error) {
 		categoryName := categoryNames[categoryIndex]
 		services := categoryServicesList[categoryIndex]
 
-		constants.SendMessage(constants.MsgSelectServices, categoryName)
+		base.Output.Info(constants.Messages[constants.MsgServices_select], categoryName)
 
 		var serviceOptions []string
 		for _, service := range services {
 			description := service.Description
 			if description == "" {
-				description = constants.MsgNoDescription.Content
+				description = constants.Messages[constants.MsgServices_no_description]
 			}
 			serviceOptions = append(serviceOptions, fmt.Sprintf("%s - %s", service.Name, description))
 		}
@@ -91,7 +91,7 @@ func (h *InitHandler) promptForServices() ([]string, error) {
 
 		var selected []string
 		prompt := &survey.MultiSelect{
-			Message: fmt.Sprintf(constants.MsgSelectServices.Content, categoryName),
+			Message: fmt.Sprintf(constants.Messages[constants.MsgServices_select], categoryName),
 			Options: serviceOptions,
 			Help:    constants.HelpServiceSelection,
 		}
@@ -203,17 +203,17 @@ func (h *InitHandler) promptForAdvancedOptions() (map[string]bool, map[string]bo
 }
 
 // confirmInitializationWithBack shows a summary and asks for confirmation with back option
-func (h *InitHandler) confirmInitializationWithBack(projectName string, services []string, validation, advanced map[string]bool) (string, error) {
-	constants.SendMessage(constants.MsgInitSummary)
-	constants.SendMessage(constants.MsgProject, projectName)
-	constants.SendMessage(constants.MsgServices, strings.Join(services, ", "))
+func (h *InitHandler) confirmInitializationWithBack(projectName string, services []string, validation, advanced map[string]bool, base *types.BaseCommand) (string, error) {
+	base.Output.Info("%s", constants.Messages[constants.MsgInit_summary])
+	base.Output.Info(constants.Messages[constants.MsgInit_project_summary], projectName)
+	base.Output.Info(constants.Messages[constants.MsgInit_services_summary], strings.Join(services, ", "))
 
 	if len(validation) > 0 {
 		var validationFeatures []string
 		for feature := range validation {
 			validationFeatures = append(validationFeatures, feature)
 		}
-		constants.SendMessage(constants.MsgValidation, strings.Join(validationFeatures, ", "))
+		base.Output.Info(constants.Messages[constants.MsgInit_validation_summary], strings.Join(validationFeatures, ", "))
 	}
 
 	if len(advanced) > 0 {
@@ -221,7 +221,7 @@ func (h *InitHandler) confirmInitializationWithBack(projectName string, services
 		for feature := range advanced {
 			advancedFeatures = append(advancedFeatures, feature)
 		}
-		constants.SendMessage(constants.MsgAdvanced, strings.Join(advancedFeatures, ", "))
+		base.Output.Info(constants.Messages[constants.MsgInit_advanced_summary], strings.Join(advancedFeatures, ", "))
 	}
 
 	var action string

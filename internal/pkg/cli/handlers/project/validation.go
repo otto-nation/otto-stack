@@ -8,10 +8,11 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // validateInitEnvironment validates the environment before initialization
-func (h *InitHandler) validateInitEnvironment() error {
+func (h *InitHandler) validateInitEnvironment(_ *types.BaseCommand) error {
 	// Check if already initialized
 	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
 	if _, err := os.Stat(configPath); err == nil {
@@ -27,7 +28,7 @@ func (h *InitHandler) validateInitEnvironment() error {
 	requiredTools := []string{"docker"}
 	for _, tool := range requiredTools {
 		if !h.isCommandAvailable(tool) {
-			return fmt.Errorf("required tool '%s' is not available", tool)
+			return fmt.Errorf(constants.Messages[constants.MsgValidation_required_tool_unavailable], tool)
 		}
 	}
 
@@ -37,28 +38,28 @@ func (h *InitHandler) validateInitEnvironment() error {
 // validateProjectName validates the project name
 func (h *InitHandler) validateProjectName(name string) error {
 	if name == "" {
-		return fmt.Errorf("project name cannot be empty")
+		return fmt.Errorf("%s", constants.Messages[constants.MsgValidation_project_name_empty])
 	}
 
-	if len(name) < 2 {
-		return fmt.Errorf("project name must be at least 2 characters long")
+	if len(name) < constants.MinProjectNameLength {
+		return fmt.Errorf("%s", constants.Messages[constants.MsgValidation_project_name_too_short])
 	}
 
-	if len(name) > 50 {
-		return fmt.Errorf("project name must be less than 50 characters")
+	if len(name) > constants.MaxProjectNameLength {
+		return fmt.Errorf("%s", constants.Messages[constants.MsgValidation_project_name_too_long])
 	}
 
 	// Check for valid characters (alphanumeric, hyphens, underscores)
 	for _, char := range name {
 		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') &&
 			(char < '0' || char > '9') && char != '-' && char != '_' {
-			return fmt.Errorf("project name can only contain letters, numbers, hyphens, and underscores")
+			return fmt.Errorf("%s", constants.Messages[constants.MsgValidation_project_name_invalid_chars])
 		}
 	}
 
 	// Cannot start with hyphen or underscore
 	if name[0] == '-' || name[0] == '_' {
-		return fmt.Errorf("project name cannot start with a hyphen or underscore")
+		return fmt.Errorf("%s", constants.Messages[constants.MsgValidation_project_name_invalid_start])
 	}
 
 	return nil
@@ -67,14 +68,14 @@ func (h *InitHandler) validateProjectName(name string) error {
 // validateServices validates the selected services
 func (h *InitHandler) validateServices(services []string) error {
 	if len(services) == 0 {
-		return fmt.Errorf("at least one service must be selected")
+		return fmt.Errorf("%s", constants.Messages[constants.MsgValidation_no_services_selected])
 	}
 
 	// Check for duplicates
 	seen := make(map[string]bool)
 	for _, serviceName := range services {
 		if seen[serviceName] {
-			return fmt.Errorf("duplicate service '%s' found", serviceName)
+			return fmt.Errorf(constants.Messages[constants.MsgValidation_duplicate_service], serviceName)
 		}
 		seen[serviceName] = true
 	}
@@ -83,7 +84,7 @@ func (h *InitHandler) validateServices(services []string) error {
 	serviceUtils := utils.NewServiceUtils()
 	for _, serviceName := range services {
 		if _, err := serviceUtils.LoadServiceConfig(serviceName); err != nil {
-			return fmt.Errorf("invalid service '%s': %w", serviceName, err)
+			return fmt.Errorf(constants.Messages[constants.MsgValidation_invalid_service], serviceName, err)
 		}
 	}
 
@@ -91,10 +92,10 @@ func (h *InitHandler) validateServices(services []string) error {
 }
 
 // validateDirectoryStructure ensures the directory structure is valid for initialization
-func (h *InitHandler) validateDirectoryStructure() error {
+func (h *InitHandler) validateDirectoryStructure(base *types.BaseCommand) error {
 	// Check if we're in a git repository (optional but recommended)
 	if _, err := os.Stat(".git"); os.IsNotExist(err) {
-		constants.SendMessage(constants.Message{Level: constants.LevelWarning, Content: "Not in a git repository. Consider running 'git init' first."})
+		base.Output.Warning("%s", constants.Messages[constants.MsgWarnings_not_git_repository])
 	}
 
 	// Check for conflicting files
@@ -105,7 +106,7 @@ func (h *InitHandler) validateDirectoryStructure() error {
 
 	for _, file := range conflictingFiles {
 		if _, err := os.Stat(file); err == nil {
-			return fmt.Errorf("conflicting file '%s' already exists. Please remove or rename it before initializing", file)
+			return fmt.Errorf(constants.Messages[constants.MsgValidation_conflicting_file_exists], file)
 		}
 	}
 

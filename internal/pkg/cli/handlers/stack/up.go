@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
+	"time"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -32,23 +34,50 @@ func NewUpHandler() *UpHandler {
 }
 
 // Handle executes the up command
-func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *cliTypes.BaseCommand) error {
-	ui.Header(constants.MsgStarting)
+func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+	// Start operation logging
+	finishOp := logger.StartOperation("stack_up", "services", args)
+	defer func() {
+		if r := recover(); r != nil {
+			finishOp(fmt.Errorf("panic: %v", r))
+			panic(r)
+		}
+	}()
+
+	base.Output.Header("%s", constants.Messages[constants.MsgStarting])
+	logger.LogServiceAction("start", "stack", "services", args)
+
+	// Parse all flags with validation - single line!
+	flags, err := constants.ParseUpFlags(cmd)
+	if err != nil {
+		finishOp(err)
+		return err
+	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
+		finishOp(err)
 		return err
 	}
 	defer cleanup()
 
-	// Parse flags
-	build, _ := cmd.Flags().GetBool("build")
-	forceRecreate, _ := cmd.Flags().GetBool("force-recreate")
+	// Parse timeout from string to duration
+	timeoutSecs := 30 // default
+	if flags.Timeout != "" {
+		if parsed, err := strconv.Atoi(flags.Timeout); err == nil {
+			timeoutSecs = parsed
+		}
+	}
 
+	// Clean usage with no repetitive error handling
 	options := types.StartOptions{
-		Build:         build,
-		ForceRecreate: forceRecreate,
-		Detach:        true,
+		Build:          flags.Build,
+		ForceRecreate:  flags.ForceRecreate,
+		Detach:         flags.Detach,
+		Timeout:        time.Duration(timeoutSecs) * time.Second,
+		NoDeps:         flags.NoDeps,
+		ResolveDeps:    flags.ResolveDeps,
+		CheckConflicts: flags.CheckConflicts,
 	}
 
 	// Determine services to start
@@ -61,61 +90,61 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	serviceUtils := utils.NewServiceUtils()
 	filteredServices, err := serviceUtils.ResolveServices(serviceNames)
 	if err != nil {
-		return fmt.Errorf("failed to resolve services: %w", err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_resolve_services], err)
 	}
 
 	// Check for config changes
 	configHash, err := h.getConfigHash(setup.Config)
 	if err != nil {
-		return fmt.Errorf("failed to calculate config hash: %w", err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_calculate_hash], err)
 	}
 
 	previousState, err := h.loadState()
 	if err != nil {
-		constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "No previous state found, performing fresh setup"})
+		// Restart operation
 		previousState = &StackState{}
 	}
 
 	configChanged := previousState.ConfigHash != configHash
 	if configChanged {
-		constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "Configuration changes detected, updating stack..."})
+		// Restart operation
 
 		// Clean up removed services
-		if err := h.cleanupRemovedServices(ctx, setup, previousState.Services, filteredServices); err != nil {
-			ui.Warning("Failed to clean up removed services: %v", err)
+		if err := h.cleanupRemovedServices(ctx, setup, previousState.Services, filteredServices, base); err != nil {
+			base.Output.Warning("Failed to clean up removed services: %v", err)
 		}
 	}
 
 	// Generate compose file
 	generator, err := compose.NewGenerator(setup.Config.Project.Name, constants.ServicesDir)
 	if err != nil {
-		return fmt.Errorf("failed to create compose generator: %w", err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_create_generator], err)
 	}
 
 	composeFile, err := generator.Generate(serviceNames)
 	if err != nil {
-		return fmt.Errorf("failed to generate compose file: %w", err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_generate_compose], err)
 	}
 
 	// Ensure otto-stack directory exists
-	if err := os.MkdirAll(constants.DevStackDir, 0755); err != nil {
-		return fmt.Errorf("failed to create otto-stack directory: %w", err)
+	if err := os.MkdirAll(constants.OttoStackDir, constants.DirPermReadWriteExec); err != nil {
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_create_directory], err)
 	}
 
 	// Write compose file
 	composeData, err := yaml.Marshal(composeFile)
 	if err != nil {
-		return fmt.Errorf("failed to marshal compose file: %w", err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_marshal_compose], err)
 	}
 
 	composePath := constants.DockerComposeFile
-	if err := os.WriteFile(composePath, composeData, 0644); err != nil {
-		return fmt.Errorf("failed to write compose file: %w", err)
+	if err := os.WriteFile(composePath, composeData, constants.FilePermReadWrite); err != nil {
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_write_compose], err)
 	}
 
 	// Start services
 	if err := setup.DockerClient.Containers().Start(ctx, setup.Config.Project.Name, filteredServices, options); err != nil {
-		return fmt.Errorf("failed to start services: %w", err)
+		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_start_services], err)
 	}
 
 	// Save new state
@@ -124,21 +153,23 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		Services:   filteredServices,
 	}
 	if err := h.saveState(newState); err != nil {
-		ui.Warning("Failed to save state: %v", err)
+		base.Output.Warning("Failed to save state: %v", err)
 	}
 
-	ui.Success(constants.MsgStartSuccess)
-	constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "Run '%s' to check service status"}, constants.AppName+" status")
+	base.Output.Success(constants.MsgStartSuccess)
+	finishOp(nil)
 	return nil
 }
 
 // ValidateArgs validates the command arguments
 func (h *UpHandler) ValidateArgs(args []string) error {
+	// Service names are optional - if none provided, all enabled services are used
 	return nil
 }
 
 // GetRequiredFlags returns required flags for this command
 func (h *UpHandler) GetRequiredFlags() []string {
+	// No flags are strictly required for the up command
 	return []string{}
 }
 
@@ -174,17 +205,17 @@ func (h *UpHandler) saveState(state *StackState) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(statePath, data, 0644)
+	return os.WriteFile(statePath, data, constants.FilePermReadWrite)
 }
 
 // cleanupRemovedServices removes services no longer in config
-func (h *UpHandler) cleanupRemovedServices(ctx context.Context, setup *CoreSetup, oldServices, newServices []string) error {
+func (h *UpHandler) cleanupRemovedServices(ctx context.Context, setup *CoreSetup, oldServices, newServices []string, base *types.BaseCommand) error {
 	removedServices := h.findRemovedServices(oldServices, newServices)
 	if len(removedServices) == 0 {
 		return nil
 	}
 
-	ui.Info("Removing services: %v", removedServices)
+	base.Output.Info(constants.Messages[constants.MsgStack_removing_services], removedServices)
 	return setup.DockerClient.Containers().Stop(ctx, setup.Config.Project.Name, removedServices, types.StopOptions{
 		Remove:        true,
 		RemoveVolumes: true,
