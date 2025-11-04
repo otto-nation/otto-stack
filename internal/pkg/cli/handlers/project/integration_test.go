@@ -62,8 +62,7 @@ func TestCreateConfigFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = handler.createConfigFile(TestProjectName, []string{TestServicePostgres},
-		map[string]bool{"skip_warnings": false},
-		map[string]bool{"auto_start": true}, &types.BaseCommand{Output: ui.NewOutput()})
+		&types.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	_, err = os.Stat(TestConfigFilePath)
@@ -101,9 +100,7 @@ func TestCreateReadme(t *testing.T) {
 func TestGenerateConfig(t *testing.T) {
 	handler := NewInitHandler()
 
-	config := handler.generateConfig(TestProjectName, []string{TestServicePostgres},
-		map[string]bool{"skip_warnings": false},
-		map[string]bool{"auto_start": true})
+	config := handler.generateConfig(TestProjectName, []string{TestServicePostgres})
 
 	assert.Contains(t, config, TestProjectName)
 	assert.Contains(t, config, TestServicePostgres)

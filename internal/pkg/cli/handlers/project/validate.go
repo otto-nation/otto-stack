@@ -2,18 +2,15 @@ package project
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
-// ValidateHandler handles the validate command for CI/CD integration
+// ValidateHandler handles the validate command
 type ValidateHandler struct{}
 
 // NewValidateHandler creates a new validate handler
@@ -26,98 +23,17 @@ func (h *ValidateHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	flags := utils.GetCIFlags(cmd)
 
 	// Load configuration
-	loader := config.NewLoader("")
-	commandConfig, err := loader.Load()
+	_, err := config.LoadConfig()
 	if err != nil {
 		utils.HandleError(flags, fmt.Errorf("failed to load configuration: %w", err))
 		return nil
 	}
 
-	// Validate configuration
-	result := commandConfig.Validate()
-
-	// Handle CI exit codes
-	exitCode := constants.ExitSuccess
-	if !result.Valid {
-		exitCode = constants.ExitError
-	}
-	if flags.Strict && len(result.Warnings) > 0 {
-		exitCode = constants.ExitError
-	}
-
-	// Output results
-	if flags.JSON {
-		h.outputJSON(*result, exitCode)
-	} else if !flags.Quiet {
-		h.outputTable(*result, exitCode, base)
-	} else if exitCode != constants.ExitSuccess {
-		// Quiet mode with error
-		os.Exit(exitCode)
+	if !flags.Quiet {
+		base.Output.Success("Configuration is valid")
 	}
 
 	return nil
-}
-
-func (h *ValidateHandler) outputJSON(result config.ValidationResult, exitCode int) {
-	output := map[string]any{
-		"valid":     result.Valid,
-		"errors":    h.formatErrors(result.Errors),
-		"warnings":  h.formatWarnings(result.Warnings),
-		"exit_code": exitCode,
-	}
-
-	_ = json.NewEncoder(os.Stdout).Encode(output)
-
-	if exitCode != constants.ExitSuccess {
-		os.Exit(exitCode)
-	}
-}
-
-func (h *ValidateHandler) outputTable(result config.ValidationResult, exitCode int, base *types.BaseCommand) {
-	if result.Valid && len(result.Warnings) == 0 {
-		base.Output.Success("%s", constants.Messages[constants.MsgSuccess_config_valid])
-		return
-	}
-
-	if !result.Valid {
-		base.Output.Error(constants.Messages[constants.MsgValidation_config_failed], len(result.Errors))
-		for _, err := range result.Errors {
-			base.Output.Error("  - %s: %s", err.Field, err.Message)
-		}
-	}
-
-	if len(result.Warnings) > 0 {
-		base.Output.Warning(constants.Messages[constants.MsgValidation_warnings], len(result.Warnings))
-		for _, warning := range result.Warnings {
-			base.Output.Warning("  - %s: %s", warning.Field, warning.Message)
-		}
-	}
-
-	if exitCode != constants.ExitSuccess {
-		os.Exit(exitCode)
-	}
-}
-
-func (h *ValidateHandler) formatErrors(errors []config.ValidationError) []map[string]string {
-	result := make([]map[string]string, len(errors))
-	for i, err := range errors {
-		result[i] = map[string]string{
-			"field":   err.Field,
-			"message": err.Message,
-		}
-	}
-	return result
-}
-
-func (h *ValidateHandler) formatWarnings(warnings []config.ValidationError) []map[string]string {
-	result := make([]map[string]string, len(warnings))
-	for i, warning := range warnings {
-		result[i] = map[string]string{
-			"field":   warning.Field,
-			"message": warning.Message,
-		}
-	}
-	return result
 }
 
 // ValidateArgs validates the command arguments

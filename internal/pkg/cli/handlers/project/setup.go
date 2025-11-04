@@ -25,8 +25,8 @@ func (h *InitHandler) createDirectoryStructure() error {
 }
 
 // createConfigFile creates the main configuration file
-func (h *InitHandler) createConfigFile(projectName string, services []string, validation, advanced map[string]bool, base *types.BaseCommand) error {
-	configContent := h.generateConfig(projectName, services, validation, advanced)
+func (h *InitHandler) createConfigFile(projectName string, services []string, base *types.BaseCommand) error {
+	configContent := h.generateConfig(projectName, services)
 
 	configPath := constants.OttoStackDir + "/" + constants.ConfigFileName
 	if err := os.WriteFile(configPath, []byte(configContent), constants.FilePermReadWrite); err != nil {
