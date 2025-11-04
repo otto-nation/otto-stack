@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // MockCommandHandler implements the CommandHandler interface for testing

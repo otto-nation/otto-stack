@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/version"
 	"github.com/spf13/cobra"
 )
@@ -63,7 +63,7 @@ func (h *EnforcementHandler) HandleCheck(ctx context.Context, cmd *cobra.Command
 		return json.NewEncoder(os.Stdout).Encode(result)
 	}
 
-	h.displayComplianceResult(result)
+	h.displayComplianceResult(result, base)
 
 	if result.ExitCode != constants.ExitSuccess {
 		os.Exit(result.ExitCode)
@@ -108,14 +108,14 @@ func (h *EnforcementHandler) HandleDrift(ctx context.Context, cmd *cobra.Command
 		return json.NewEncoder(os.Stdout).Encode(drifts)
 	}
 
-	h.displayDriftResults(drifts)
+	h.displayDriftResults(drifts, base)
 	return nil
 }
 
 // HandleNotify handles update notification commands
 func (h *EnforcementHandler) HandleNotify(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
 	if len(args) == 0 {
-		return h.handleNotifyCheck(cmd)
+		return h.handleNotifyCheck(cmd, base)
 	}
 
 	switch args[0] {
@@ -130,7 +130,7 @@ func (h *EnforcementHandler) HandleNotify(ctx context.Context, cmd *cobra.Comman
 	}
 }
 
-func (h *EnforcementHandler) handleNotifyCheck(cmd *cobra.Command) error {
+func (h *EnforcementHandler) handleNotifyCheck(cmd *cobra.Command, base *types.BaseCommand) error {
 	flags := utils.GetCIFlags(cmd)
 
 	notification, err := h.notifier.CheckForUpdates()
@@ -156,7 +156,7 @@ func (h *EnforcementHandler) handleNotifyCheck(cmd *cobra.Command) error {
 	return nil
 }
 
-func (h *EnforcementHandler) handleNotifyConfig(cmd *cobra.Command, args []string) error {
+func (h *EnforcementHandler) handleNotifyConfig(cmd *cobra.Command, args []string, base *types.BaseCommand) error {
 	flags := utils.GetCIFlags(cmd)
 
 	if len(args) == 0 {
@@ -166,7 +166,7 @@ func (h *EnforcementHandler) handleNotifyConfig(cmd *cobra.Command, args []strin
 			return json.NewEncoder(os.Stdout).Encode(config)
 		}
 
-		h.displayNotificationConfig(config)
+		h.displayNotificationConfig(config, base)
 		return nil
 	}
 
@@ -210,7 +210,7 @@ func (h *EnforcementHandler) handleNotifyConfig(cmd *cobra.Command, args []strin
 	return nil
 }
 
-func (h *EnforcementHandler) handleNotifySuppress(cmd *cobra.Command, args []string) error {
+func (h *EnforcementHandler) handleNotifySuppress(cmd *cobra.Command, args []string, base *types.BaseCommand) error {
 	flags := utils.GetCIFlags(cmd)
 
 	if len(args) == 0 {
@@ -236,7 +236,7 @@ func (h *EnforcementHandler) handleNotifySuppress(cmd *cobra.Command, args []str
 	return nil
 }
 
-func (h *EnforcementHandler) displayComplianceResult(result *version.EnforcementResult) {
+func (h *EnforcementHandler) displayComplianceResult(result *version.EnforcementResult, base *types.BaseCommand) {
 	if result.Compliant {
 		fmt.Println("✅ Version compliance satisfied")
 		return
@@ -255,7 +255,7 @@ func (h *EnforcementHandler) displayComplianceResult(result *version.Enforcement
 	fmt.Printf("   Action:   %s\n", result.Action)
 }
 
-func (h *EnforcementHandler) displayDriftResults(drifts []version.DriftDetection) {
+func (h *EnforcementHandler) displayDriftResults(drifts []version.DriftDetection, base *types.BaseCommand) {
 	if len(drifts) == 0 {
 		fmt.Println("✅ No version drift detected")
 		return

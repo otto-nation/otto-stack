@@ -1,8 +1,11 @@
 package types
 
 import (
+	"context"
 	"fmt"
 	"time"
+
+	"github.com/spf13/cobra"
 )
 
 // Project represents a development stack project
@@ -22,7 +25,7 @@ type Service struct {
 	Name          string            `yaml:"name" json:"name"`
 	Type          string            `yaml:"type" json:"type"`
 	Image         string            `yaml:"image,omitempty" json:"image,omitempty"`
-	Build         BuildConfig       `yaml:"build,omitempty" json:"build,omitempty"`
+	Build         BuildConfig       `yaml:"build" json:"build"`
 	Ports         []PortMapping     `yaml:"ports,omitempty" json:"ports,omitempty"`
 	Environment   map[string]string `yaml:"environment,omitempty" json:"environment,omitempty"`
 	Volumes       []VolumeMapping   `yaml:"volumes,omitempty" json:"volumes,omitempty"`
@@ -245,6 +248,90 @@ type BaseCommand struct {
 	Output  Output
 }
 
+// Logger interface for logging
+type Logger interface {
+	Info(msg string, args ...any)
+	Error(msg string, args ...any)
+	Debug(msg string, args ...any)
+}
+
+// Output interface for UI output
+type Output interface {
+	Success(msg string, args ...any)
+	Error(msg string, args ...any)
+	Warning(msg string, args ...any)
+	Info(msg string, args ...any)
+	Header(msg string, args ...any)
+	Muted(msg string, args ...any)
+}
+
+// ServiceManager interface for service management
+type ServiceManager interface {
+	StartServices(ctx context.Context, serviceNames []string, options StartOptions) error
+	StopServices(ctx context.Context, serviceNames []string, options StopOptions) error
+	GetServiceStatus(ctx context.Context, serviceNames []string) ([]ServiceStatus, error)
+}
+
+// CommandHandler interface for command handlers
+type CommandHandler interface {
+	Handle(ctx context.Context, cmd *cobra.Command, args []string, base *BaseCommand) error
+}
+
+// ServiceInfo represents service information
+type ServiceInfo struct {
+	Name                 string
+	Description          string
+	Category             string
+	Status               string
+	Type                 string
+	Visibility           string
+	Components           []string
+	Dependencies         []string
+	ServiceConfiguration any
+	Documentation        any
+}
+
+// ServiceConfig represents service configuration
+type ServiceConfig struct {
+	Name        string
+	Description string
+	Image       string
+	Ports       []string
+	Volumes     []string
+	Environment map[string]string
+	Type        string
+	Components  []string
+}
+
+// ServiceDocumentation represents service documentation
+type ServiceDocumentation struct {
+	Name          string
+	Description   string
+	Usage         string
+	Examples      []string
+	UsageNotes    string
+	Links         []string
+	UseCases      []string
+	WebInterfaces []WebInterface
+}
+
+// WebInterface represents a web interface
+type WebInterface struct {
+	Name        string
+	URL         string
+	Port        int
+	Description string
+}
+
+// ServiceOption represents a service option
+type ServiceOption struct {
+	Name        string
+	Description string
+	Default     any
+	Type        string
+	Example     string
+	Required    bool
+	Values      []string
 }
 
 // Error represents an application error with context

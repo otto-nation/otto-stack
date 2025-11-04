@@ -7,10 +7,8 @@ import (
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
-	cliTypes "github.com/otto-nation/otto-stack/internal/pkg/cli/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/otto-nation/otto-stack/internal/pkg/utils"
 	"github.com/spf13/cobra"
 )

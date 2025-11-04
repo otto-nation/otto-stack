@@ -6,7 +6,8 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/completion"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/stack"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // Registry manages command handlers

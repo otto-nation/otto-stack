@@ -6,8 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
@@ -100,11 +101,10 @@ func TestCreateReadme(t *testing.T) {
 func TestGenerateConfig(t *testing.T) {
 	handler := NewInitHandler()
 
-	config, err := handler.generateConfig(TestProjectName, []string{TestServicePostgres},
+	config := handler.generateConfig(TestProjectName, []string{TestServicePostgres},
 		map[string]bool{"skip_warnings": false},
 		map[string]bool{"auto_start": true})
 
-	assert.NoError(t, err)
 	assert.Contains(t, config, TestProjectName)
 	assert.Contains(t, config, TestServicePostgres)
 }

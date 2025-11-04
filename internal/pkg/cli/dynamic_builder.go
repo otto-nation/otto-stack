@@ -4,15 +4,16 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/core/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers"
 	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
 	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/stack"
-	cliTypes "github.com/otto-nation/otto-stack/internal/pkg/cli/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	types "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -28,9 +29,7 @@ func BuildDynamicRootCommand(config *config.CommandConfig) (*cobra.Command, erro
 	}
 
 	// Add global flags from config
-	if err := addGlobalFlagsFromConfig(rootCmd, config); err != nil {
-		return nil, fmt.Errorf("failed to add global flags: %w", err)
-	}
+	addGlobalFlagsFromConfig(rootCmd, config)
 
 	serviceManager, err := createServiceManager()
 	if err != nil {
@@ -39,17 +38,14 @@ func BuildDynamicRootCommand(config *config.CommandConfig) (*cobra.Command, erro
 
 	// Build commands dynamically from config
 	for cmdName, cmdConfig := range config.Commands {
-		cmd, err := buildCommandFromConfig(cmdName, cmdConfig, serviceManager, log)
-		if err != nil {
-			return nil, fmt.Errorf("failed to build command %s: %w", cmdName, err)
-		}
+		cmd := buildCommandFromConfig(cmdName, cmdConfig, serviceManager, log)
 		rootCmd.AddCommand(cmd)
 	}
 
 	return rootCmd, nil
 }
 
-func buildCommandFromConfig(name string, cmdConfig config.Command, serviceManager *services.Manager, logger *slog.Logger) (*cobra.Command, error) {
+func buildCommandFromConfig(name string, cmdConfig config.Command, serviceManager *services.Manager, logger *slog.Logger) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   cmdConfig.Usage,
 		Short: cmdConfig.Description,
@@ -70,7 +66,7 @@ func buildCommandFromConfig(name string, cmdConfig config.Command, serviceManage
 	handler := getHandlerForCommand(name, serviceManager)
 	if handler != nil {
 		cmd.RunE = func(cmd *cobra.Command, args []string) error {
-			base := &cliTypes.BaseCommand{
+			base := &types.BaseCommand{
 				Logger: &loggerAdapter{logger: logger},
 			}
 			return handler.Handle(context.Background(), cmd, args, base)
@@ -82,10 +78,10 @@ func buildCommandFromConfig(name string, cmdConfig config.Command, serviceManage
 		cmd.Example = buildExamplesString(cmdConfig.Examples)
 	}
 
-	return cmd, nil
+	return cmd
 }
 
-func getHandlerForCommand(name string, serviceManager *services.Manager) cliTypes.CommandHandler {
+func getHandlerForCommand(name string, _ *services.Manager) types.CommandHandler {
 	configLoader := config.NewLoader("")
 	commandConfig, err := configLoader.Load()
 	if err != nil {
@@ -105,7 +101,7 @@ func getHandlerForCommand(name string, serviceManager *services.Manager) cliType
 	return handlers.Get(handlerDef.Package, name)
 }
 
-func addGlobalFlagsFromConfig(cmd *cobra.Command, config *config.CommandConfig) error {
+func addGlobalFlagsFromConfig(cmd *cobra.Command, config *config.CommandConfig) {
 	for name, flag := range config.Global.Flags {
 		switch flag.Type {
 		case "bool":
@@ -130,7 +126,6 @@ func addGlobalFlagsFromConfig(cmd *cobra.Command, config *config.CommandConfig) 
 			}
 		}
 	}
-	return nil
 }
 
 func addFlagFromConfig(cmd *cobra.Command, name string, flag config.Flag) {
@@ -163,9 +158,9 @@ func addFlagFromConfig(cmd *cobra.Command, name string, flag config.Flag) {
 }
 
 func buildExamplesString(examples []config.Example) string {
-	var result string
+	var builder strings.Builder
 	for _, example := range examples {
-		result += fmt.Sprintf("  %s\n    %s\n\n", example.Command, example.Description)
+		builder.WriteString(fmt.Sprintf("  %s\n    %s\n\n", example.Command, example.Description))
 	}
-	return result
+	return builder.String()
 }

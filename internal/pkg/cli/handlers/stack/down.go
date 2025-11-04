@@ -7,10 +7,9 @@ import (
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
-	cliTypes "github.com/otto-nation/otto-stack/internal/pkg/cli/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/otto-nation/otto-stack/internal/pkg/utils"
 	"github.com/spf13/cobra"
 )
@@ -50,14 +49,6 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 			base.Logger.Error("Failed to close Docker client", "error", err)
 		}
 	}()
-
-	// Parse flags
-	timeout, _ := cmd.Flags().GetInt("timeout")
-
-	options := types.StopOptions{
-		Timeout: timeout,
-		Remove:  true,
-	}
 
 	// Determine services to stop
 	serviceNames := args

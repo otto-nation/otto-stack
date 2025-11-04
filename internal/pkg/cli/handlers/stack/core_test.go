@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	cliTypes "github.com/otto-nation/otto-stack/internal/pkg/cli/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // MockLogger implements the Logger interface for testing
@@ -57,7 +57,6 @@ func TestUpHandler_GetRequiredFlags(t *testing.T) {
 }
 
 func TestUpHandler_Handle_ConfigNotFound(t *testing.T) {
-	tmpDir := t.TempDir()
 	handler := NewUpHandler()
 	mockLogger := &MockLogger{}
 
@@ -65,9 +64,8 @@ func TestUpHandler_Handle_ConfigNotFound(t *testing.T) {
 	cmd.Flags().Bool("build", false, "")
 	cmd.Flags().Bool("force-recreate", false, "")
 
-	base := &cliTypes.BaseCommand{
-		ProjectDir: tmpDir,
-		Logger:     mockLogger,
+	base := &types.BaseCommand{
+		Logger: mockLogger,
 	}
 
 	err := handler.Handle(context.Background(), cmd, []string{}, base)

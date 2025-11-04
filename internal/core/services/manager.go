@@ -223,7 +223,7 @@ func (m *Manager) validateServices(serviceNames []string) error {
 	return nil
 }
 
-func (m *Manager) checkPortConflicts(ctx context.Context, serviceNames []string) error {
+func (m *Manager) checkPortConflicts(_ context.Context, serviceNames []string) error {
 	// Load service configurations dynamically to get ports
 	conflicts := []string{}
 	for _, serviceName := range serviceNames {
@@ -236,7 +236,7 @@ func (m *Manager) checkPortConflicts(ctx context.Context, serviceNames []string)
 	return nil
 }
 
-func (m *Manager) waitForHealthy(ctx context.Context, projectName string, serviceNames []string, timeout time.Duration) error {
+func (m *Manager) waitForHealthy(ctx context.Context, _ string, serviceNames []string, timeout time.Duration) error {
 	m.logger.Info("Waiting for services to become healthy", "services", serviceNames, "timeout", timeout)
 
 	deadline := time.Now().Add(timeout)
