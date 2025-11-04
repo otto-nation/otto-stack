@@ -57,10 +57,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Display results
-	formatter, err := display.CreateFormatter(format, cmd.OutOrStdout())
-	if err != nil {
-		return fmt.Errorf("failed to create formatter: %w", err)
-	}
+	formatter := display.New(cmd.OutOrStdout(), base.Output)
 
 	// Convert to ServiceStatus format for display
 	var services []display.ServiceStatus
@@ -71,7 +68,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		})
 	}
 
-	if err := formatter.FormatStatus(services, display.StatusOptions{}); err != nil {
+	if err := formatter.FormatStatus(services, display.Options{Format: format}); err != nil {
 		return fmt.Errorf("failed to format output: %w", err)
 	}
 

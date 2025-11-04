@@ -37,16 +37,15 @@ func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	// Build service catalog
 	catalog := h.buildServiceCatalog(categorizedServices)
 
-	// Create formatter
-	formatter, err := display.CreateFormatter(flags.Format, cmd.OutOrStdout())
-	if err != nil {
-		return fmt.Errorf("failed to create formatter: %w", err)
+	// Create formatter and display
+	formatter := display.New(cmd.OutOrStdout(), base.Output)
+	options := display.Options{
+		Format: flags.Format,
 	}
 
-	// Format and display
-	options := display.ServiceCatalogOptions{
-		Category: flags.Category,
-		Format:   flags.Format,
+	// Filter by category if specified
+	if flags.Category != "" {
+		catalog = display.FilterCatalogByCategory(catalog, flags.Category)
 	}
 
 	return formatter.FormatServiceCatalog(catalog, options)

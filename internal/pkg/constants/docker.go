@@ -2,9 +2,11 @@ package constants
 
 // Docker container states
 const (
-	StateRunning = "running"
-	StateStopped = "exited"
-	StateCreated = "created"
+	StateRunning  = "running"
+	StateStopped  = "exited"
+	StateCreated  = "created"
+	StateStarting = "starting"
+	StatePaused   = "paused"
 )
 
 // Health statuses
@@ -13,6 +15,13 @@ const (
 	HealthUnhealthy = "unhealthy"
 	HealthStarting  = "starting"
 	HealthNone      = "none"
+)
+
+// Summary keys
+const (
+	SummaryTotal   = "total"
+	SummaryRunning = "running"
+	SummaryHealthy = "healthy"
 )
 
 // Docker Compose labels
