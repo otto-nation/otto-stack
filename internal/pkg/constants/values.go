@@ -58,7 +58,45 @@ const (
 	HexDivisor       = 2 // For hex string conversion
 )
 
+// Version defaults
+const (
+	DefaultVersion   = "dev"
+	DefaultCommit    = "unknown"
+	DefaultBuildDate = "unknown"
+	DefaultBuildBy   = "unknown"
+	DevelVersion     = "(devel)"
+)
+
+// Version comparison results
+const (
+	VersionEqual   = 0
+	VersionNewer   = 1
+	VersionOlder   = -1
+	VersionInvalid = -999
+)
+
 // UI padding and spacing
 const (
 	UIPadding = 2
+)
+
+// UI ANSI color codes
+const (
+	ColorReset  = "\033[0m"
+	ColorGreen  = "\033[32m"
+	ColorRed    = "\033[31m"
+	ColorYellow = "\033[33m"
+	ColorBlue   = "\033[34m"
+	ColorGray   = "\033[90m"
+	ColorBold   = "\033[1m"
+)
+
+// UI message prefixes
+const (
+	IconSuccess = "✅"
+	IconError   = "❌"
+	IconWarning = "⚠️ "
+	IconInfo    = "ℹ️ "
+	IconHeader  = "🚀"
+	IconBox     = "📦"
 )
