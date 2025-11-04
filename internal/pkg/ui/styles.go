@@ -1,70 +1,44 @@
 package ui
 
-import (
-	"github.com/charmbracelet/lipgloss"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-)
+import "github.com/otto-nation/otto-stack/internal/pkg/constants"
 
-var (
-	// Colors
-	primaryColor = lipgloss.Color("#00D4AA")
-	successColor = lipgloss.Color("#00C851")
-	warningColor = lipgloss.Color("#FF8800")
-	errorColor   = lipgloss.Color("#FF4444")
-	infoColor    = lipgloss.Color("#33B5E5")
-	mutedColor   = lipgloss.Color("#666666")
+// formatColored applies color if color is enabled
+func formatColored(text, color string, noColor bool) string {
+	if noColor {
+		return text
+	}
+	return color + text + constants.ColorReset
+}
 
-	// Base styles
-	baseStyle = lipgloss.NewStyle().
-			Padding(0, 1)
+// formatSuccess formats success messages
+func formatSuccess(text string, noColor bool) string {
+	return formatColored(constants.IconSuccess+" "+text, constants.ColorGreen+constants.ColorBold, noColor)
+}
 
-	// Message styles
-	SuccessStyle = baseStyle.
-			Foreground(successColor).
-			Bold(true)
+// formatError formats error messages
+func formatError(text string, noColor bool) string {
+	return formatColored(constants.IconError+" "+text, constants.ColorRed+constants.ColorBold, noColor)
+}
 
-	ErrorStyle = baseStyle.
-			Foreground(errorColor).
-			Bold(true)
+// formatWarning formats warning messages
+func formatWarning(text string, noColor bool) string {
+	return formatColored(constants.IconWarning+" "+text, constants.ColorYellow+constants.ColorBold, noColor)
+}
 
-	WarningStyle = baseStyle.
-			Foreground(warningColor).
-			Bold(true)
+// formatInfo formats info messages
+func formatInfo(text string, noColor bool) string {
+	return formatColored(constants.IconInfo+" "+text, constants.ColorBlue, noColor)
+}
 
-	InfoStyle = baseStyle.
-			Foreground(infoColor)
+// formatHeader formats header messages
+func formatHeader(text string, noColor bool) string {
+	if noColor {
+		return "\n=== " + text + " ===\n"
+	}
+	return formatColored("\n"+constants.IconHeader+" "+text+"\n", constants.ColorGreen+constants.ColorBold, noColor)
+}
 
-	MutedStyle = baseStyle.
-			Foreground(mutedColor)
-
-	// Header styles
-	HeaderStyle = lipgloss.NewStyle().
-			Foreground(primaryColor).
-			Bold(true).
-			Padding(1, constants.UIPadding).
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(primaryColor)
-
-	SubHeaderStyle = lipgloss.NewStyle().
-			Foreground(primaryColor).
-			Bold(true).
-			Padding(0, 1)
-
-	// List styles
-	ListItemStyle = lipgloss.NewStyle().
-			Padding(0, constants.UIPadding)
-
-	SelectedItemStyle = ListItemStyle.
-				Foreground(primaryColor).
-				Bold(true)
-
-	// Box styles
-	BoxStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(mutedColor).
-			Padding(1, constants.UIPadding).
-			Margin(1, 0)
-
-	HighlightBoxStyle = BoxStyle.
-				BorderForeground(primaryColor)
-)
+// formatMuted formats muted text
+func formatMuted(text string, noColor bool) string {
+	return formatColored(text, constants.ColorGray, noColor)
+}

@@ -5,9 +5,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-
 	"github.com/briandowns/spinner"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 )
 
@@ -24,82 +23,38 @@ func NewOutput() *Output {
 
 // Success prints a success message
 func (o *Output) Success(msg string, args ...any) {
-	if o.Quiet {
-		return
-	}
-	formatted := fmt.Sprintf(msg, args...)
-	logger.Info("Success", "message", formatted)
-	if o.NoColor {
-		fmt.Printf("✅ %s\n", formatted)
-	} else {
-		fmt.Println(SuccessStyle.Render("✅ " + formatted))
-	}
+	o.print(formatSuccess(fmt.Sprintf(msg, args...), o.NoColor), "Success")
 }
 
 // Error prints an error message
 func (o *Output) Error(msg string, args ...any) {
-	formatted := fmt.Sprintf(msg, args...)
+	formatted := formatError(fmt.Sprintf(msg, args...), o.NoColor)
 	logger.Error("UI Error", "message", formatted)
-	if o.NoColor {
-		fmt.Fprintf(os.Stderr, "❌ %s\n", formatted)
-	} else {
-		fmt.Fprintln(os.Stderr, ErrorStyle.Render("❌ "+formatted))
-	}
+	fmt.Fprintln(os.Stderr, formatted)
 }
 
 // Warning prints a warning message
 func (o *Output) Warning(msg string, args ...any) {
-	if o.Quiet {
-		return
-	}
-	formatted := fmt.Sprintf(msg, args...)
-	logger.Warn("UI Warning", "message", formatted)
-	if o.NoColor {
-		fmt.Printf("⚠️  %s\n", formatted)
-	} else {
-		fmt.Println(WarningStyle.Render("⚠️  " + formatted))
-	}
+	o.print(formatWarning(fmt.Sprintf(msg, args...), o.NoColor), "Warning")
 }
 
 // Info prints an info message
 func (o *Output) Info(msg string, args ...any) {
-	if o.Quiet {
-		return
-	}
-	formatted := fmt.Sprintf(msg, args...)
-	logger.Info("UI Info", "message", formatted)
-	if o.NoColor {
-		fmt.Printf("ℹ️  %s\n", formatted)
-	} else {
-		fmt.Println(InfoStyle.Render("ℹ️  " + formatted))
-	}
+	o.print(formatInfo(fmt.Sprintf(msg, args...), o.NoColor), "Info")
 }
 
 // Header prints a styled header
 func (o *Output) Header(msg string, args ...any) {
-	if o.Quiet {
-		return
-	}
-	formatted := fmt.Sprintf(msg, args...)
-	logger.Info("UI Header", "message", formatted)
-	if o.NoColor {
-		fmt.Printf("\n=== %s ===\n\n", formatted)
-	} else {
-		fmt.Println(HeaderStyle.Render("🚀 " + formatted))
-	}
+	o.print(formatHeader(fmt.Sprintf(msg, args...), o.NoColor), "Header")
 }
 
 // SubHeader prints a styled sub-header
 func (o *Output) SubHeader(msg string, args ...any) {
-	if o.Quiet {
-		return
-	}
 	formatted := fmt.Sprintf(msg, args...)
-	logger.Info("UI SubHeader", "message", formatted)
 	if o.NoColor {
-		fmt.Printf("\n--- %s ---\n", formatted)
+		o.print("\n--- "+formatted+" ---\n", "SubHeader")
 	} else {
-		fmt.Println(SubHeaderStyle.Render("📦 " + formatted))
+		o.print(formatColored("\n"+constants.IconBox+" "+formatted+"\n", constants.ColorGreen+constants.ColorBold, o.NoColor), "SubHeader")
 	}
 }
 
@@ -110,11 +65,7 @@ func (o *Output) List(items []string) {
 	}
 	logger.Info("UI List", "items", items)
 	for _, item := range items {
-		if o.NoColor {
-			fmt.Printf("  • %s\n", item)
-		} else {
-			fmt.Println(ListItemStyle.Render("• " + item))
-		}
+		fmt.Printf("  • %s\n", item)
 	}
 }
 
@@ -134,16 +85,7 @@ func (o *Output) Progress(msg string, fn func() error) error {
 
 // Muted prints muted text
 func (o *Output) Muted(msg string, args ...any) {
-	if o.Quiet {
-		return
-	}
-	formatted := fmt.Sprintf(msg, args...)
-	logger.Debug("UI Muted", "message", formatted)
-	if o.NoColor {
-		fmt.Printf("  %s\n", formatted)
-	} else {
-		fmt.Println(MutedStyle.Render(formatted))
-	}
+	o.print(formatMuted(fmt.Sprintf(msg, args...), o.NoColor), "Muted")
 }
 
 // Box prints content in a styled box
@@ -155,22 +97,18 @@ func (o *Output) Box(title, content string) {
 	if o.NoColor {
 		fmt.Printf("\n┌─ %s ─\n│ %s\n└─\n", title, content)
 	} else {
-		boxContent := fmt.Sprintf("%s\n\n%s", SubHeaderStyle.Render(title), content)
-		fmt.Println(BoxStyle.Render(boxContent))
+		fmt.Printf("\n%s\n\n%s\n", formatColored(title, constants.ColorGreen+constants.ColorBold, false), content)
 	}
+}
+
+// print is a helper method to reduce repetition
+func (o *Output) print(formatted, logType string) {
+	if o.Quiet {
+		return
+	}
+	logger.Info("UI "+logType, "message", formatted)
+	fmt.Println(formatted)
 }
 
 // Global output instance
 var DefaultOutput = NewOutput()
-
-// Convenience functions for global use
-func Success(msg string, args ...any)            { DefaultOutput.Success(msg, args...) }
-func Error(msg string, args ...any)              { DefaultOutput.Error(msg, args...) }
-func Warning(msg string, args ...any)            { DefaultOutput.Warning(msg, args...) }
-func Info(msg string, args ...any)               { DefaultOutput.Info(msg, args...) }
-func Header(msg string, args ...any)             { DefaultOutput.Header(msg, args...) }
-func SubHeader(msg string, args ...any)          { DefaultOutput.SubHeader(msg, args...) }
-func List(items []string)                        { DefaultOutput.List(items) }
-func Progress(msg string, fn func() error) error { return DefaultOutput.Progress(msg, fn) }
-func Muted(msg string, args ...any)              { DefaultOutput.Muted(msg, args...) }
-func Box(title, content string)                  { DefaultOutput.Box(title, content) }
