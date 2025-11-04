@@ -4,8 +4,18 @@ package constants
 
 import (
 	"reflect"
-	"time"
 	"github.com/spf13/cobra"
+{{- $hasTimeoutFields := false -}}
+{{- range .CommandsData -}}
+	{{- range .Fields -}}
+		{{- if and (eq .FlagName "timeout") (eq .YAMLType "int") -}}
+			{{- $hasTimeoutFields = true -}}
+		{{- end -}}
+	{{- end -}}
+{{- end -}}
+{{- if $hasTimeoutFields}}
+	"time"
+{{- end}}
 )
 
 // Command constants
