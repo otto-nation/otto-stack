@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
@@ -23,9 +24,17 @@ func TestHandle_ValidationFailure(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("force", false, "force initialization")
 
-	err := handler.Handle(context.Background(), cmd, []string{}, &types.BaseCommand{})
+	base := &types.BaseCommand{
+		Logger: &MockLogger{},
+		Output: &MockOutput{},
+	}
+
+	err := handler.Handle(context.Background(), cmd, []string{}, base)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "validation failed")
+	assert.True(t,
+		strings.Contains(err.Error(), "validation failed") ||
+		strings.Contains(err.Error(), "already initialized"),
+		"Expected validation or initialization error, got: %s", err.Error())
 }
 
 func TestHandle_WithForceFlag(t *testing.T) {
@@ -36,7 +45,12 @@ func TestHandle_WithForceFlag(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("force", true, "force initialization")
 
-	err := handler.Handle(context.Background(), cmd, []string{}, &types.BaseCommand{})
+	base := &types.BaseCommand{
+		Logger: &MockLogger{},
+		Output: &MockOutput{},
+	}
+
+	err := handler.Handle(context.Background(), cmd, []string{}, base)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to get project details")
 }

@@ -38,7 +38,11 @@ stack:
 	assert.Equal(t, "development", cfg.Project.Environment)
 	assert.Equal(t, []string{"postgres", "redis"}, cfg.Stack.Enabled)
 
-	// Create local override config
+	// Create local override config in otto-stack directory
+	ottoStackDir := filepath.Join(tmpDir, constants.OttoStackDir)
+	err = os.MkdirAll(ottoStackDir, constants.DirPermReadWriteExec)
+	require.NoError(t, err)
+	
 	localConfig := `
 project:
   name: "local-project"
@@ -48,9 +52,14 @@ stack:
     - postgres
     - mongodb
 `
-	localConfigPath := filepath.Join(tmpDir, "otto-stack-config.local.yaml")
+	localConfigPath := filepath.Join(ottoStackDir, constants.LocalConfigFileName)
 	err = os.WriteFile(localConfigPath, []byte(localConfig), constants.FilePermReadWrite)
 	require.NoError(t, err)
+
+	// Change to temp directory so LoadProjectConfig can find the local config
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	os.Chdir(tmpDir)
 
 	// Test loading with local override
 	cfg, err = LoadProjectConfig(baseConfigPath)
@@ -80,14 +89,23 @@ stack:
 	err = os.WriteFile(baseConfigPath, []byte(baseConfig), constants.FilePermReadWrite)
 	require.NoError(t, err)
 
-	// Create partial local override (only environment)
+	// Create partial local override (only environment) in otto-stack directory
+	ottoStackDir := filepath.Join(tmpDir, constants.OttoStackDir)
+	err = os.MkdirAll(ottoStackDir, constants.DirPermReadWriteExec)
+	require.NoError(t, err)
+	
 	localConfig := `
 project:
   environment: "local"
 `
-	localConfigPath := filepath.Join(tmpDir, "otto-stack-config.local.yaml")
+	localConfigPath := filepath.Join(ottoStackDir, constants.LocalConfigFileName)
 	err = os.WriteFile(localConfigPath, []byte(localConfig), constants.FilePermReadWrite)
 	require.NoError(t, err)
+
+	// Change to temp directory so LoadProjectConfig can find the local config
+	originalDir, _ := os.Getwd()
+	defer os.Chdir(originalDir)
+	os.Chdir(tmpDir)
 
 	// Test loading with partial override
 	cfg, err := LoadProjectConfig(baseConfigPath)

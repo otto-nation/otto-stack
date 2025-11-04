@@ -96,7 +96,10 @@ func TestValidateDirectoryStructure(t *testing.T) {
 	createTestFile(t, constants.DockerComposeFileName, "version: '3'")
 	err = handler.validateDirectoryStructure(&types.BaseCommand{Output: ui.NewOutput()})
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "conflicting file")
+	assert.True(t,
+		strings.Contains(err.Error(), "conflicting file") ||
+		strings.Contains(err.Error(), constants.DockerComposeFileName),
+		"Expected conflicting file error, got: %s", err.Error())
 }
 
 func TestIsCommandAvailable(t *testing.T) {

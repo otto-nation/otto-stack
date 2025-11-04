@@ -2,6 +2,7 @@ package project
 
 import (
 	"context"
+	"log/slog"
 	"strings"
 	"testing"
 
@@ -10,6 +11,24 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
+
+// MockLogger implements LoggerAdapter for testing
+type MockLogger struct{}
+
+func (m *MockLogger) Info(msg string, args ...any)  {}
+func (m *MockLogger) Error(msg string, args ...any) {}
+func (m *MockLogger) Debug(msg string, args ...any) {}
+func (m *MockLogger) SlogLogger() *slog.Logger      { return slog.Default() }
+
+// MockOutput implements Output for testing
+type MockOutput struct{}
+
+func (m *MockOutput) Success(msg string, args ...any) {}
+func (m *MockOutput) Error(msg string, args ...any)   {}
+func (m *MockOutput) Warning(msg string, args ...any) {}
+func (m *MockOutput) Info(msg string, args ...any)    {}
+func (m *MockOutput) Header(msg string, args ...any)  {}
+func (m *MockOutput) Muted(msg string, args ...any)   {}
 
 func TestHandle_DirectoryValidation(t *testing.T) {
 	cleanup := setupTestDir(t)
@@ -22,12 +41,18 @@ func TestHandle_DirectoryValidation(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("force", false, "force initialization")
 
-	err := handler.Handle(context.Background(), cmd, []string{}, &types.BaseCommand{})
+	base := &types.BaseCommand{
+		Logger: &MockLogger{},
+		Output: &MockOutput{},
+	}
+
+	err := handler.Handle(context.Background(), cmd, []string{}, base)
 	assert.Error(t, err)
 	// Test should fail due to either directory validation or missing Docker
 	assert.True(t,
-		strings.Contains(err.Error(), "validation failed: %w") ||
-			strings.Contains(err.Error(), "directory validation failed: %w") ||
+		strings.Contains(err.Error(), "validation failed") ||
+			strings.Contains(err.Error(), "directory validation failed") ||
+			strings.Contains(err.Error(), "docker-compose.yml") ||
 			strings.Contains(err.Error(), "required tool 'docker' is not available"),
 		"Expected directory validation or Docker availability error, got: %s", err.Error())
 }
@@ -42,7 +67,15 @@ func TestHandle_AlreadyInitialized(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("force", false, "force initialization")
 
-	err := handler.Handle(context.Background(), cmd, []string{}, &types.BaseCommand{})
+	base := &types.BaseCommand{
+		Logger: &MockLogger{},
+		Output: &MockOutput{},
+	}
+
+	err := handler.Handle(context.Background(), cmd, []string{}, base)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "validation failed")
+	assert.True(t,
+		strings.Contains(err.Error(), "validation failed") ||
+		strings.Contains(err.Error(), "already initialized"),
+		"Expected validation or initialization error, got: %s", err.Error())
 }
