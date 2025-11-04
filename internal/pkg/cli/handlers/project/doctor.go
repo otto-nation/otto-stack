@@ -33,7 +33,7 @@ func (h *DoctorHandler) GetRequiredFlags() []string {
 }
 
 func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	logger.LogProjectAction("doctor", "health_check")
+	logger.Info(constants.LogMsgProjectAction, constants.LogFieldAction, constants.CommandDoctor, constants.LogFieldProject, "health_check")
 
 	base.Output.Header("🩺 Otto Stack Health Check")
 	logger.Info("Starting health checks")

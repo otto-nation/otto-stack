@@ -24,21 +24,21 @@ func NewDownHandler() *DownHandler {
 
 // Handle executes the down command
 func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	finishOp := logger.StartOperation("stack_down", "services", args)
+	logger.Info(constants.LogMsgStartingOperation, constants.LogFieldOperation, constants.OperationStackDown, constants.LogFieldServices, args)
 	defer func() {
 		if r := recover(); r != nil {
-			finishOp(fmt.Errorf("panic: %v", r))
+			logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationStackDown, constants.LogFieldError, fmt.Errorf("panic: %v", r))
 			panic(r)
 		}
 	}()
 
 	base.Output.Header(constants.MsgStopping)
-	logger.LogServiceAction("stop", "stack", "services", args)
+	logger.Info(constants.LogMsgServiceAction, constants.LogFieldAction, constants.ActionStop, constants.LogFieldService, "stack", constants.LogFieldServices, args)
 
 	// Parse all flags with validation - single line!
 	flags, err := constants.ParseDownFlags(cmd)
 	if err != nil {
-		finishOp(err)
+		logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationStackDown, constants.LogFieldError, err)
 		return err
 	}
 
@@ -55,8 +55,8 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Create Docker client
-	logger := base.Logger.(loggerAdapter)
-	dockerClient, err := docker.NewClient(logger.SlogLogger())
+	dockerLogger := base.Logger.(loggerAdapter)
+	dockerClient, err := docker.NewClient(dockerLogger.SlogLogger())
 	if err != nil {
 		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_create_docker_client], err)
 	}
@@ -76,12 +76,12 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	// Stop services
 	if err := dockerClient.ComposeDown(ctx, cfg.Project.Name, internalOptions); err != nil {
-		finishOp(err)
+		logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationStackDown, constants.LogFieldError, err)
 		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_stop_services], err)
 	}
 
 	base.Output.Success(constants.MsgStopSuccess)
-	finishOp(nil)
+	logger.Info(constants.LogMsgOperationCompleted, constants.LogFieldOperation, constants.OperationStackDown)
 	return nil
 }
 

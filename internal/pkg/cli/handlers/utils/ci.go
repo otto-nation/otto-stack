@@ -81,6 +81,6 @@ func outputJSON(result any, exitCode int) {
 }
 
 func outputTable(result any) {
-	logger.Debug("Outputting table result", "result", result)
+	logger.Debug("Outputting table result", constants.LogFieldResult, result)
 	fmt.Printf("%+v\n", result)
 }

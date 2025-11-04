@@ -100,3 +100,55 @@ const (
 	IconHeader  = "🚀"
 	IconBox     = "📦"
 )
+
+// Log levels
+const (
+	LogLevelDebug = "debug"
+	LogLevelInfo  = "info"
+	LogLevelWarn  = "warn"
+	LogLevelError = "error"
+)
+
+// Log formats
+const (
+	LogFormatText = "text"
+	LogFormatJSON = "json"
+)
+
+// Operation names for logging
+const (
+	OperationStackUp   = "stack_up"
+	OperationStackDown = "stack_down"
+	OperationInit      = "project_init"
+	OperationDoctor    = "project_doctor"
+)
+
+// Action names for logging
+const (
+	ActionStart = "start"
+	ActionStop  = "stop"
+	ActionCheck = "check"
+)
+
+// Log message templates
+const (
+	LogMsgStartingOperation  = "Starting operation"
+	LogMsgOperationCompleted = "Operation completed"
+	LogMsgOperationFailed    = "Operation failed"
+	LogMsgServiceAction      = "Service action"
+	LogMsgProjectAction      = "Project action"
+)
+
+// Log field names
+const (
+	LogFieldError     = "error"
+	LogFieldOperation = "operation"
+	LogFieldAction    = "action"
+	LogFieldProject   = "project"
+	LogFieldService   = "service"
+	LogFieldServices  = "services"
+	LogFieldResult    = "result"
+	LogFieldVersion   = "version"
+	LogFieldFormat    = "format"
+	LogFieldBuildInfo = "build_info"
+)

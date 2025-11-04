@@ -109,7 +109,7 @@ func (h *Handler) handleVersionDisplay(_ context.Context, cmd *cobra.Command, _ 
 
 // displayBasicVersion displays basic version information
 func (h *Handler) displayBasicVersion(version, format string) error {
-	h.logger.Info("Displaying basic version", "version", version, "format", format)
+	h.logger.Info("Displaying basic version", constants.LogFieldVersion, version, constants.LogFieldFormat, format)
 	switch format {
 	case "json":
 		fmt.Printf(`{"version":"%s","app":"%s"}%s`, version, constants.AppNameTitle, "\n")
@@ -124,7 +124,7 @@ func (h *Handler) displayBasicVersion(version, format string) error {
 // displayFullVersion displays detailed version information
 func (h *Handler) displayFullVersion(version, format string) error {
 	buildInfo := getBuildInfo()
-	h.logger.Info("Displaying full version", "version", version, "format", format, "build_info", buildInfo)
+	h.logger.Info("Displaying full version", constants.LogFieldVersion, version, constants.LogFieldFormat, format, constants.LogFieldBuildInfo, buildInfo)
 
 	switch format {
 	case "json":

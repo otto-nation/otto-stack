@@ -25,10 +25,10 @@ func NewInitHandler() *InitHandler {
 
 // Handle executes the init command
 func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	finishOp := logger.StartOperation("project_init")
+	logger.Info(constants.LogMsgStartingOperation, constants.LogFieldOperation, constants.OperationInit)
 	defer func() {
 		if r := recover(); r != nil {
-			finishOp(fmt.Errorf("panic: %v", r))
+			logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationInit, constants.LogFieldError, fmt.Errorf("panic: %v", r))
 			panic(r)
 		}
 	}()
@@ -36,12 +36,12 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	// Parse all flags with validation - single line!
 	flags, err := constants.ParseInitFlags(cmd)
 	if err != nil {
-		finishOp(err)
+		logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationInit, constants.LogFieldError, err)
 		return err
 	}
 
 	base.Output.Header("%s", constants.Messages[constants.MsgProcess_initializing])
-	logger.LogProjectAction("init", "current_directory")
+	logger.Info(constants.LogMsgProjectAction, constants.LogFieldAction, constants.CommandInit, constants.LogFieldProject, "current_directory")
 
 	// Validate environment
 	if err := h.validateInitEnvironment(base); err != nil && !flags.Force {

@@ -36,27 +36,27 @@ func NewUpHandler() *UpHandler {
 // Handle executes the up command
 func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
 	// Start operation logging
-	finishOp := logger.StartOperation("stack_up", "services", args)
+	logger.Info(constants.LogMsgStartingOperation, constants.LogFieldOperation, constants.OperationStackUp, constants.LogFieldServices, args)
 	defer func() {
 		if r := recover(); r != nil {
-			finishOp(fmt.Errorf("panic: %v", r))
+			logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationStackUp, constants.LogFieldError, fmt.Errorf("panic: %v", r))
 			panic(r)
 		}
 	}()
 
 	base.Output.Header("%s", constants.Messages[constants.MsgStarting])
-	logger.LogServiceAction("start", "stack", "services", args)
+	logger.Info(constants.LogMsgServiceAction, constants.LogFieldAction, constants.ActionStart, constants.LogFieldService, "stack", constants.LogFieldServices, args)
 
 	// Parse all flags with validation - single line!
 	flags, err := constants.ParseUpFlags(cmd)
 	if err != nil {
-		finishOp(err)
+		logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationStackUp, constants.LogFieldError, err)
 		return err
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		finishOp(err)
+		logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationStackUp, constants.LogFieldError, err)
 		return err
 	}
 	defer cleanup()
@@ -157,7 +157,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	}
 
 	base.Output.Success(constants.MsgStartSuccess)
-	finishOp(nil)
+	logger.Info(constants.LogMsgOperationCompleted, constants.LogFieldOperation, constants.OperationStackUp)
 	return nil
 }
 
