@@ -34,8 +34,6 @@ type ValidationWarning struct {
 type ValidationSummary struct {
 	TotalCommands      int     `yaml:"total_commands"`
 	TotalCategories    int     `yaml:"total_categories"`
-	TotalWorkflows     int     `yaml:"total_workflows"`
-	TotalProfiles      int     `yaml:"total_profiles"`
 	ErrorCount         int     `yaml:"error_count"`
 	WarningCount       int     `yaml:"warning_count"`
 	CriticalErrors     int     `yaml:"critical_errors"`

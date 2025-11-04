@@ -10,7 +10,6 @@ type Validator struct {
 	config             *config.CommandConfig
 	metadataValidator  *MetadataValidator
 	commandValidator   *CommandValidator
-	workflowValidator  *WorkflowValidator
 	practicesValidator *BestPracticesValidator
 	cliValidator       *CLIValidator
 }
@@ -21,7 +20,6 @@ func NewValidator(config *config.CommandConfig) *Validator {
 		config:             config,
 		metadataValidator:  NewMetadataValidator(config),
 		commandValidator:   NewCommandValidator(config),
-		workflowValidator:  NewWorkflowValidator(config),
 		practicesValidator: NewBestPracticesValidator(config),
 		cliValidator:       NewCLIValidator(config),
 	}
@@ -34,8 +32,6 @@ func (v *Validator) ValidateAll() *ValidationResult {
 		Summary: ValidationSummary{
 			TotalCommands:   len(v.config.Commands),
 			TotalCategories: len(v.config.Categories),
-			TotalWorkflows:  len(v.config.Workflows),
-			TotalProfiles:   len(v.config.Profiles),
 		},
 	}
 
@@ -43,8 +39,6 @@ func (v *Validator) ValidateAll() *ValidationResult {
 	v.metadataValidator.ValidateGlobalConfiguration(result)
 	v.commandValidator.ValidateCategories(result)
 	v.commandValidator.ValidateCommands(result)
-	v.workflowValidator.ValidateWorkflows(result)
-	v.workflowValidator.ValidateProfiles(result)
 	v.commandValidator.ValidateReferences(result)
 	v.practicesValidator.ValidateBestPractices(result)
 
@@ -98,11 +92,4 @@ func (v *Validator) generateSuggestions(result *ValidationResult) {
 		result.Suggestions = append(result.Suggestions, "Organize commands into categories for better CLI structure")
 	}
 
-	if len(v.config.Workflows) == 0 {
-		result.Suggestions = append(result.Suggestions, "Add workflows to help users with common task sequences")
-	}
-
-	if len(v.config.Profiles) == 0 {
-		result.Suggestions = append(result.Suggestions, "Define service profiles for quick environment setup")
-	}
 }

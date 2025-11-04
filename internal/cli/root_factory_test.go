@@ -45,16 +45,14 @@ commands:
     description: "Test command"
     usage: "test [options]"
     category: "general"
-workflows: {}
-profiles: {}
 help: {}
 `
 				configDir := "internal/config"
-				err := os.MkdirAll(configDir, 0755)
+				err := os.MkdirAll(configDir, constants.DirPermReadWriteExec)
 				require.NoError(t, err)
 
 				configFile := filepath.Join(configDir, "commands.yaml")
-				err = os.WriteFile(configFile, []byte(configContent), 0644)
+				err = os.WriteFile(configFile, []byte(configContent), constants.FilePermReadWrite)
 				require.NoError(t, err)
 
 				t.Cleanup(func() {
@@ -151,16 +149,14 @@ commands:
   test:
     description: "Test command"
     usage: "test [options]"
-workflows: {}
-profiles: {}
 help: {}
 `
 		configDir := "internal/config"
-		err := os.MkdirAll(configDir, 0755)
+		err := os.MkdirAll(configDir, constants.DirPermReadWriteExec)
 		require.NoError(t, err)
 
 		configFile := filepath.Join(configDir, "commands.yaml")
-		err = os.WriteFile(configFile, []byte(configContent), 0644)
+		err = os.WriteFile(configFile, []byte(configContent), constants.FilePermReadWrite)
 		require.NoError(t, err)
 
 		t.Cleanup(func() {

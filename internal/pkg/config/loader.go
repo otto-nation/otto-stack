@@ -242,8 +242,6 @@ func MergeConfigs(configs ...*CommandConfig) (*CommandConfig, error) {
 		Global:     GlobalConfig{Flags: make(map[string]Flag)},
 		Categories: make(map[string]Category),
 		Commands:   make(map[string]Command),
-		Workflows:  make(map[string]Workflow),
-		Profiles:   make(map[string]Profile),
 		Help:       make(map[string]string),
 	}
 

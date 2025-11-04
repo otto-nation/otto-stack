@@ -92,7 +92,6 @@ type ProjectConfig struct {
 	Networks      map[string]Network `yaml:"networks,omitempty" json:"networks,omitempty"`
 	Volumes       map[string]Volume  `yaml:"volumes,omitempty" json:"volumes,omitempty"`
 	Secrets       map[string]Secret  `yaml:"secrets,omitempty" json:"secrets,omitempty"`
-	Profiles      []string           `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 	Extensions    map[string]any     `yaml:"x-*,omitempty" json:"x-*,omitempty"`
 }
 
@@ -226,7 +225,6 @@ type TemplateVar struct {
 type Config struct {
 	Global   GlobalConfig             `yaml:"global" json:"global"`
 	Projects map[string]ProjectConfig `yaml:"projects,omitempty" json:"projects,omitempty"`
-	Profiles map[string]Profile       `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 }
 
 // GlobalConfig represents global application settings
@@ -240,13 +238,13 @@ type GlobalConfig struct {
 	Environment        map[string]string `yaml:"environment,omitempty" json:"environment,omitempty"`
 }
 
-// Profile represents a configuration profile
-type Profile struct {
-	Name                 string            `yaml:"name" json:"name"`
-	Description          string            `yaml:"description,omitempty" json:"description,omitempty"`
-	Services             []string          `yaml:"services" json:"services"`
-	Environment          map[string]string `yaml:"environment,omitempty" json:"environment,omitempty"`
-	ServiceConfiguration map[string]any    `yaml:"service-configuration,omitempty" json:"service-configuration,omitempty"`
+// BaseCommand provides common dependencies for command handlers
+type BaseCommand struct {
+	Manager ServiceManager
+	Logger  Logger
+	Output  Output
+}
+
 }
 
 // Error represents an application error with context

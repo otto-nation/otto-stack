@@ -110,8 +110,7 @@ commands:
     description: "Start development stack services"
     long_description: |
       Start one or more services in the development stack. Services are started
-      with their configured dependencies and health checks. Use profiles to start
-      predefined service combinations.
+      with their configured dependencies and health checks.
     usage: "up [service...]"
     aliases: ["start", "run"]
     examples:
@@ -119,8 +118,6 @@ commands:
         description: "Start all configured services"
       - command: "otto-stack up postgres redis"
         description: "Start specific services"
-      - command: "otto-stack up --profile web"
-        description: "Start services using the 'web' profile"
       - command: "otto-stack up --detach --build"
         description: "Build images and start services in background"
     flags:
@@ -134,12 +131,6 @@ commands:
         type: "bool"
         description: "Build images before starting services"
         default: false
-      profile:
-        short: "p"
-        type: "string"
-        description: "Use a specific service profile"
-        default: ""
-        completion: "profiles"
       force-recreate:
         type: "bool"
         description: "Recreate containers even if config hasn't changed"
@@ -163,7 +154,6 @@ commands:
         default: false
     related_commands: ["down", "restart", "status"]
     tips:
-      - "Use --profile to quickly start predefined service combinations"
       - "Add --build if you've made changes to Dockerfiles"
       - "Use --detach to free up your terminal while services run"
 
@@ -711,7 +701,7 @@ workflows:
     steps:
       - command: "init web"
         description: "Initialize web project"
-      - command: "up --profile web"
+      - command: "up postgres redis"
         description: "Start web development services"
       - command: "status"
         description: "Check service status"
@@ -726,33 +716,6 @@ workflows:
         description: "Clean up all resources"
       - command: "up"
         description: "Start fresh services"
-
-# Service profiles for common combinations
-profiles:
-  web:
-    name: "Web Development"
-    description: "Services for web application development"
-    services: ["postgres", "redis", "jaeger"]
-
-  api:
-    name: "API Development"
-    description: "Services for API development and testing"
-    services: ["postgres", "redis", "prometheus"]
-
-  microservices:
-    name: "Microservices"
-    description: "Full microservices development stack"
-    services: ["postgres", "redis", "kafka", "jaeger", "prometheus"]
-
-  data:
-    name: "Data Engineering"
-    description: "Services for data processing and analytics"
-    services: ["postgres", "redis", "kafka", "localstack"]
-
-  minimal:
-    name: "Minimal Stack"
-    description: "Minimal services for basic development"
-    services: ["postgres"]
 
 # Help and documentation sections
 help:
@@ -777,7 +740,7 @@ help:
     ## Common Tasks
 
     **Start services for web development:**
-    otto-stack up --profile web
+    otto-stack up postgres redis
 
     **Connect to database:**
     otto-stack connect postgres

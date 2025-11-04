@@ -38,7 +38,6 @@ func TestNewValidator(t *testing.T) {
 			assert.Equal(t, tt.config, validator.config)
 			assert.NotNil(t, validator.metadataValidator)
 			assert.NotNil(t, validator.commandValidator)
-			assert.NotNil(t, validator.workflowValidator)
 			assert.NotNil(t, validator.practicesValidator)
 			assert.NotNil(t, validator.cliValidator)
 		})
@@ -77,9 +76,7 @@ func TestValidator_ValidateAll(t *testing.T) {
 						Category:    "general",
 					},
 				},
-				Workflows: make(map[string]config.Workflow),
-				Profiles:  make(map[string]config.Profile),
-				Help:      make(map[string]string),
+				Help: make(map[string]string),
 			},
 			expectValid:    true,
 			expectErrors:   false,
@@ -94,8 +91,6 @@ func TestValidator_ValidateAll(t *testing.T) {
 				Global:     config.GlobalConfig{},
 				Categories: make(map[string]config.Category),
 				Commands:   make(map[string]config.Command),
-				Workflows:  make(map[string]config.Workflow),
-				Profiles:   make(map[string]config.Profile),
 				Help:       make(map[string]string),
 			},
 			expectValid:  false,
@@ -118,9 +113,7 @@ func TestValidator_ValidateAll(t *testing.T) {
 						Category:    "nonexistent", // This should cause validation error
 					},
 				},
-				Workflows: make(map[string]config.Workflow),
-				Profiles:  make(map[string]config.Profile),
-				Help:      make(map[string]string),
+				Help: make(map[string]string),
 			},
 			expectValid:  true, // May still be valid if errors < 5 and no critical errors
 			expectErrors: true,
@@ -150,8 +143,6 @@ func TestValidator_ValidateAll(t *testing.T) {
 			assert.NotNil(t, result.Summary)
 			assert.Equal(t, len(tt.config.Commands), result.Summary.TotalCommands)
 			assert.Equal(t, len(tt.config.Categories), result.Summary.TotalCategories)
-			assert.Equal(t, len(tt.config.Workflows), result.Summary.TotalWorkflows)
-			assert.Equal(t, len(tt.config.Profiles), result.Summary.TotalProfiles)
 		})
 	}
 }

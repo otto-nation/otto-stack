@@ -56,14 +56,12 @@ commands:
     usage: "up [services...]"
     category: "services"
     aliases: ["start"]
-workflows:
   dev:
     name: "Development"
     description: "Development workflow"
     steps:
       - command: "init"
       - command: "up"
-profiles:
   minimal:
     name: "Minimal"
     description: "Minimal configuration"

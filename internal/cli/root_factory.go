@@ -7,6 +7,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -56,7 +57,7 @@ func ExecuteFactory() error {
 }
 
 // initFactoryConfig reads in config file and ENV variables if set
-func initFactoryConfig(commandConfig *config.CommandConfig) {
+func initFactoryConfig(_ *config.CommandConfig) {
 	var cfgFile string
 	if cfgFile != "" {
 		// Use config file from the flag
@@ -98,6 +99,25 @@ func initFactoryConfig(commandConfig *config.CommandConfig) {
 			fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 		}
 	}
+
+	// Configure logger based on flags
+	configureLogger()
+}
+
+// configureLogger sets up logger based on command line flags
+func configureLogger() {
+	config := logger.DefaultConfig()
+
+	if viper.GetBool("verbose") {
+		config.Level = logger.LevelInfo
+	} else {
+		config.Level = logger.LevelWarn
+	}
+
+	// Reinitialize logger with new config
+	if err := logger.Init(config); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to configure logger: %v\n", err)
+	}
 }
 
 // GetCommandConfig loads and returns the command configuration
@@ -115,18 +135,18 @@ func ValidateConfig() error {
 
 	result := commandConfig.Validate()
 	if !result.Valid {
-		fmt.Printf("Configuration validation failed with %d errors:\n", len(result.Errors))
+		logger.Error("Configuration validation failed", "error_count", len(result.Errors))
 		for _, err := range result.Errors {
-			fmt.Printf("  - %s: %s\n", err.Field, err.Message)
+			logger.Error("Validation error", "field", err.Field, "message", err.Message)
 		}
 		return fmt.Errorf("configuration validation failed")
 	}
 
-	fmt.Println("✅ Configuration is valid")
+	logger.Info("Configuration is valid")
 	if len(result.Warnings) > 0 {
-		fmt.Printf("⚠️  %d warnings:\n", len(result.Warnings))
+		logger.Warn("Configuration warnings", "warning_count", len(result.Warnings))
 		for _, warning := range result.Warnings {
-			fmt.Printf("  - %s: %s\n", warning.Field, warning.Message)
+			logger.Warn("Validation warning", "field", warning.Field, "message", warning.Message)
 		}
 	}
 

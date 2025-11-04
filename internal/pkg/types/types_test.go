@@ -291,13 +291,6 @@ func TestConfigStructure(t *testing.T) {
 		Projects: map[string]ProjectConfig{
 			"test-project": {},
 		},
-		Profiles: map[string]Profile{
-			"development": {
-				Name:        "development",
-				Description: "Development profile",
-				Services:    []string{"web", "database"},
-			},
-		},
 	}
 
 	if config.Global.DefaultProjectType != "web" {
@@ -311,8 +304,5 @@ func TestConfigStructure(t *testing.T) {
 	}
 	if len(config.Projects) != 1 {
 		t.Errorf("Config.Projects length = %d, expected 1", len(config.Projects))
-	}
-	if len(config.Profiles) != 1 {
-		t.Errorf("Config.Profiles length = %d, expected 1", len(config.Profiles))
 	}
 }

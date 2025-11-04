@@ -11,8 +11,6 @@ type CommandConfig struct {
 	Global     GlobalConfig        `yaml:"global"`
 	Categories map[string]Category `yaml:"categories"`
 	Commands   map[string]Command  `yaml:"commands"`
-	Workflows  map[string]Workflow `yaml:"workflows"`
-	Profiles   map[string]Profile  `yaml:"profiles"`
 	Help       map[string]string   `yaml:"help"`
 }
 
@@ -76,27 +74,6 @@ type Example struct {
 	Description string `yaml:"description"`
 }
 
-// Workflow represents a sequence of commands for common tasks
-type Workflow struct {
-	Name        string         `yaml:"name"`
-	Description string         `yaml:"description"`
-	Steps       []WorkflowStep `yaml:"steps"`
-}
-
-// WorkflowStep represents a single step in a workflow
-type WorkflowStep struct {
-	Command     string `yaml:"command"`
-	Description string `yaml:"description"`
-	Optional    bool   `yaml:"optional,omitempty"`
-}
-
-// Profile represents a predefined service combination
-type Profile struct {
-	Name        string   `yaml:"name"`
-	Description string   `yaml:"description"`
-	Services    []string `yaml:"services"`
-}
-
 // ValidationResult represents the result of configuration validation
 type ValidationResult struct {
 	Valid    bool              `yaml:"valid"`
@@ -145,18 +122,6 @@ func (c *CommandConfig) GetCategory(name string) (*Category, bool) {
 	return &cat, exists
 }
 
-// GetProfile returns a profile by name
-func (c *CommandConfig) GetProfile(name string) (*Profile, bool) {
-	profile, exists := c.Profiles[name]
-	return &profile, exists
-}
-
-// GetWorkflow returns a workflow by name
-func (c *CommandConfig) GetWorkflow(name string) (*Workflow, bool) {
-	workflow, exists := c.Workflows[name]
-	return &workflow, exists
-}
-
 // GetAllCommandNames returns all command names
 func (c *CommandConfig) GetAllCommandNames() []string {
 	names := make([]string, 0, len(c.Commands))
@@ -179,24 +144,6 @@ func (c *CommandConfig) GetCommandsByCategory(categoryName string) []string {
 func (c *CommandConfig) GetAllCategories() []string {
 	names := make([]string, 0, len(c.Categories))
 	for name := range c.Categories {
-		names = append(names, name)
-	}
-	return names
-}
-
-// GetAllProfiles returns all profile names
-func (c *CommandConfig) GetAllProfiles() []string {
-	names := make([]string, 0, len(c.Profiles))
-	for name := range c.Profiles {
-		names = append(names, name)
-	}
-	return names
-}
-
-// GetAllWorkflows returns all workflow names
-func (c *CommandConfig) GetAllWorkflows() []string {
-	names := make([]string, 0, len(c.Workflows))
-	for name := range c.Workflows {
 		names = append(names, name)
 	}
 	return names

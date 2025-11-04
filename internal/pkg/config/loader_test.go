@@ -59,8 +59,6 @@ commands:
   test:
     description: "Test command"
     usage: "test [options]"
-workflows: {}
-profiles: {}
 help: {}
 `
 				err := os.WriteFile(configFile, []byte(validYAML), 0644)
@@ -112,8 +110,6 @@ commands:
   test:
     description: "Test command"
     usage: "test [options]"
-workflows: {}
-profiles: {}
 help: {}
 `
 				err := os.WriteFile(configFile, []byte(invalidYAML), 0644)
@@ -162,8 +158,6 @@ commands:
   test:
     description: "Test command"
     usage: "test [options]"
-workflows: {}
-profiles: {}
 help: {}
 `
 	err := os.WriteFile(configFile, []byte(validYAML), 0644)
