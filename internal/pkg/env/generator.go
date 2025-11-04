@@ -2,16 +2,25 @@ package env
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
+	"gopkg.in/yaml.v3"
 )
 
-// Generator handles .env file generation
+// Generator handles .env file generation using service YAML data
 type Generator struct {
 	projectName string
 	environment string
+}
+
+// ServiceYAML represents a service configuration (simplified)
+type ServiceYAML struct {
+	Name        string         `yaml:"name"`
+	Description string         `yaml:"description"`
+	Environment map[string]any `yaml:"environment"`
 }
 
 // NewGenerator creates a new env generator
@@ -22,7 +31,7 @@ func NewGenerator(projectName, environment string) *Generator {
 	}
 }
 
-// Generate creates environment file content for the specified services
+// Generate creates environment file content for only the enabled services
 func (g *Generator) Generate(services []string) ([]byte, error) {
 	var content strings.Builder
 
@@ -42,118 +51,86 @@ func (g *Generator) Generate(services []string) ([]byte, error) {
 	content.WriteString(fmt.Sprintf("ENVIRONMENT=%s\n", g.environment))
 	content.WriteString(fmt.Sprintf("COMPOSE_PROJECT_NAME=%s\n\n", g.projectName))
 
-	// Service-specific environment variables
+	// Add environment variables for enabled services only
 	for _, serviceName := range services {
-		g.addServiceEnv(&content, serviceName)
+		if err := g.addServiceEnv(&content, serviceName); err != nil {
+			// Log error but continue with other services
+			continue
+		}
 	}
 
 	return []byte(content.String()), nil
 }
 
-// addServiceEnv adds environment variables for a specific service
-func (g *Generator) addServiceEnv(content *strings.Builder, serviceName string) {
-	serviceConfig, err := utils.NewServiceUtils().LoadServiceConfig(serviceName)
+// addServiceEnv adds environment variables for a specific service by reading its YAML
+func (g *Generator) addServiceEnv(content *strings.Builder, serviceName string) error {
+	// Find and load the service YAML file
+	serviceFile, err := g.findServiceFile(serviceName)
 	if err != nil {
-		// Skip services that can't be loaded
-		return
+		return err
 	}
 
-	// Generate env vars in a temporary buffer first
-	var envVars strings.Builder
-	hasEnvVars := false
-
-	// Add service-specific environment variables
-	switch serviceName {
-	case "postgres":
-		g.addPostgresEnv(&envVars)
-		hasEnvVars = true
-	case "mysql":
-		g.addMySQLEnv(&envVars)
-		hasEnvVars = true
-	case "redis":
-		g.addRedisEnv(&envVars)
-		hasEnvVars = true
-	case "kafka-broker":
-		g.addKafkaEnv(&envVars)
-		hasEnvVars = true
-	case "localstack-core":
-		g.addLocalstackEnv(&envVars)
-		hasEnvVars = true
-	case "prometheus":
-		g.addPrometheusEnv(&envVars)
-		hasEnvVars = true
-	case "jaeger":
-		g.addJaegerEnv(&envVars)
-		hasEnvVars = true
-	default:
-		// No environment variables for this service
+	data, err := os.ReadFile(serviceFile)
+	if err != nil {
+		return err
 	}
 
-	// Only add section if we have environment variables
-	if hasEnvVars {
-		content.WriteString("# ============================================================================\n")
-		fmt.Fprintf(content, "# %s (%s)\n", strings.ToUpper(serviceName), serviceConfig.Description)
-		content.WriteString("# ============================================================================\n")
-		content.WriteString(envVars.String())
-		content.WriteString("\n")
+	var service ServiceYAML
+	if err := yaml.Unmarshal(data, &service); err != nil {
+		return err
 	}
 
+	// Only add section if service has environment variables
+	if len(service.Environment) == 0 {
+		return nil
+	}
+
+	content.WriteString("# ============================================================================\n")
+	fmt.Fprintf(content, "# %s (%s)\n", strings.ToUpper(service.Name), service.Description)
+	content.WriteString("# ============================================================================\n")
+
+	// Add environment variables
+	for key, value := range service.Environment {
+		if strValue, ok := value.(string); ok {
+			fmt.Fprintf(content, "%s=%s\n", key, strValue)
+		}
+	}
+	content.WriteString("\n")
+
+	return nil
 }
 
-// Service-specific environment variable generators
-func (g *Generator) addPostgresEnv(content *strings.Builder) {
-	content.WriteString("POSTGRES_HOST=localhost\n")
-	content.WriteString("POSTGRES_PORT=5432\n")
-	fmt.Fprintf(content, "POSTGRES_DB=%s\n", g.projectName)
-	content.WriteString("POSTGRES_USER=postgres\n")
-	content.WriteString("POSTGRES_PASSWORD=postgres\n")
-	fmt.Fprintf(content, "DATABASE_URL=postgresql://postgres:postgres@localhost:5432/%s\n", g.projectName)
-}
+// findServiceFile finds the YAML file for a given service name
+func (g *Generator) findServiceFile(serviceName string) (string, error) {
+	servicesDir := "internal/config/services"
+	var foundFile string
 
-func (g *Generator) addMySQLEnv(content *strings.Builder) {
-	content.WriteString("MYSQL_HOST=localhost\n")
-	content.WriteString("MYSQL_PORT=3306\n")
-	fmt.Fprintf(content, "MYSQL_DATABASE=%s\n", g.projectName)
-	content.WriteString("MYSQL_USER=mysql\n")
-	content.WriteString("MYSQL_PASSWORD=mysql\n")
-	content.WriteString("MYSQL_ROOT_PASSWORD=root\n")
-	fmt.Fprintf(content, "DATABASE_URL=mysql://mysql:mysql@localhost:3306/%s\n", g.projectName)
-}
+	err := filepath.Walk(servicesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 
-func (g *Generator) addRedisEnv(content *strings.Builder) {
-	content.WriteString("REDIS_HOST=localhost\n")
-	content.WriteString("REDIS_PORT=6379\n")
-	content.WriteString("REDIS_URL=redis://localhost:6379\n")
-}
+		if !strings.HasSuffix(path, ".yaml") {
+			return nil
+		}
 
-func (g *Generator) addKafkaEnv(content *strings.Builder) {
-	content.WriteString("KAFKA_BOOTSTRAP_SERVERS=localhost:9092\n")
-	content.WriteString("KAFKA_BROKER_HOST=localhost\n")
-	content.WriteString("KAFKA_BROKER_PORT=9092\n")
-	content.WriteString("ZOOKEEPER_HOST=localhost\n")
-	content.WriteString("ZOOKEEPER_PORT=2181\n")
-}
+		// Check if filename matches service name
+		filename := strings.TrimSuffix(filepath.Base(path), ".yaml")
+		if filename == serviceName {
+			foundFile = path
+			return filepath.SkipDir // Stop walking once found
+		}
 
-func (g *Generator) addLocalstackEnv(content *strings.Builder) {
-	content.WriteString("LOCALSTACK_ENDPOINT=http://localhost:4566\n")
-	content.WriteString("AWS_ENDPOINT_URL=http://localhost:4566\n")
-	content.WriteString("AWS_ACCESS_KEY_ID=test\n")
-	content.WriteString("AWS_SECRET_ACCESS_KEY=test\n")
-	content.WriteString("AWS_DEFAULT_REGION=us-east-1\n")
-	content.WriteString("AWS_REGION=us-east-1\n")
-}
+		return nil
+	})
 
-func (g *Generator) addPrometheusEnv(content *strings.Builder) {
-	content.WriteString("PROMETHEUS_HOST=localhost\n")
-	content.WriteString("PROMETHEUS_PORT=9090\n")
-	content.WriteString("PROMETHEUS_URL=http://localhost:9090\n")
-}
+	if err != nil {
+		return "", err
+	}
 
-func (g *Generator) addJaegerEnv(content *strings.Builder) {
-	content.WriteString("JAEGER_HOST=localhost\n")
-	content.WriteString("JAEGER_UI_PORT=16686\n")
-	content.WriteString("JAEGER_COLLECTOR_PORT=14268\n")
-	content.WriteString("JAEGER_UI_URL=http://localhost:16686\n")
-	content.WriteString("JAEGER_ENDPOINT=http://localhost:14268/api/traces\n")
-	content.WriteString("OTEL_EXPORTER_JAEGER_ENDPOINT=http://localhost:14268/api/traces\n")
+	if foundFile == "" {
+		return "", fmt.Errorf("service file not found for: %s", serviceName)
+	}
+
+	return foundFile, nil
 }

@@ -152,3 +152,10 @@ const (
 	LogFieldFormat    = "format"
 	LogFieldBuildInfo = "build_info"
 )
+
+// Environment file constants
+const (
+	EnvFileExtension = ".env"
+	EnvLocalFile     = ".env.local"
+	EnvExampleFile   = ".env.example"
+)
