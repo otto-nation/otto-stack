@@ -4,15 +4,86 @@ package cli
 import (
 	"context"
 	"log/slog"
+	"os"
+	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/stack"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
+	"github.com/otto-nation/otto-stack/internal/pkg/version"
 	"github.com/spf13/cobra"
 )
+
+// BuildRootCommand creates the root command with all subcommands
+func BuildRootCommand() (*cobra.Command, error) {
+	log := logger.GetLogger()
+	serviceManager, err := createServiceManager()
+	if err != nil {
+		return nil, err
+	}
+
+	rootCmd := &cobra.Command{
+		Use:     constants.AppName,
+		Short:   constants.Messages[constants.MsgHelp_app_description],
+		Version: version.GetAppVersion(),
+	}
+
+	// Add global flags
+	addGlobalFlags(rootCmd)
+
+	// Add all generated commands
+	rootCmd.AddCommand(
+{{range .Commands}}		New{{.FuncName}}Command(serviceManager, log),
+{{end}}	)
+
+	return rootCmd, nil
+}
+
+func addGlobalFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().Bool(constants.FlagQuiet, false, "Suppress output")
+	cmd.PersistentFlags().Bool(constants.FlagJSON, false, "Output in JSON format")
+	cmd.PersistentFlags().Bool(constants.FlagNoColor, false, "Disable colored output")
+	cmd.PersistentFlags().Bool(constants.FlagNonInteractive, false, "Run in non-interactive mode")
+	cmd.PersistentFlags().Bool(constants.FlagStrict, false, "Enable strict validation")
+}
+
+func createServiceManager() (*services.Manager, error) {
+	projectRoot := findProjectRoot(".")
+	log := logger.New(slog.LevelInfo)
+	return services.NewManager(log, projectRoot)
+}
+
+func findProjectRoot(startDir string) string {
+	dir := startDir
+	for {
+		absDir, err := filepath.Abs(dir)
+		if err != nil {
+			break
+		}
+
+		configPath := filepath.Join(absDir, constants.ConfigFileName)
+		if _, err := os.Stat(configPath); err == nil {
+			return absDir
+		}
+
+		parent := filepath.Dir(absDir)
+		if parent == absDir {
+			break
+		}
+		dir = parent
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
+	return wd
+}
+
 {{range .Commands}}
 func New{{.FuncName}}Command(serviceManager *services.Manager, logger *slog.Logger) *cobra.Command {
 {{if eq .Handler "stack"}}	handler := stack.New{{.HandlerName}}Handler()

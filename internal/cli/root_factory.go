@@ -12,36 +12,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-// CreateRootCommand creates the root command using the functional builder
+// CreateRootCommand creates the root command using the simplified builder
 func CreateRootCommand() (*cobra.Command, error) {
-	loader := config.NewLoader("")
-	commandConfig, err := loader.Load()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load command configuration: %w", err)
-	}
-
-	validationResult := commandConfig.Validate()
-	if !validationResult.Valid {
-		fmt.Fprintf(os.Stderr, "Warning: Command configuration has validation errors:\n")
-		for _, err := range validationResult.Errors {
-			fmt.Fprintf(os.Stderr, "  - %s: %s\n", err.Field, err.Message)
-		}
-		if len(validationResult.Warnings) > 0 {
-			fmt.Fprintf(os.Stderr, "Warnings:\n")
-			for _, warning := range validationResult.Warnings {
-				fmt.Fprintf(os.Stderr, "  - %s: %s\n", warning.Field, warning.Message)
-			}
-		}
-	}
-
-	rootCmd, err := cli.BuildRootCommand(commandConfig)
+	rootCmd, err := cli.BuildRootCommand()
 	if err != nil {
 		return nil, fmt.Errorf("failed to build root command: %w", err)
 	}
 
-	cobra.OnInitialize(func() {
-		initFactoryConfig(commandConfig)
-	})
+	cobra.OnInitialize(initFactoryConfig)
 
 	return rootCmd, nil
 }
@@ -57,7 +35,7 @@ func ExecuteFactory() error {
 }
 
 // initFactoryConfig reads in config file and ENV variables if set
-func initFactoryConfig(_ *config.CommandConfig) {
+func initFactoryConfig() {
 	var cfgFile string
 	if cfgFile != "" {
 		// Use config file from the flag
