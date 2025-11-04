@@ -14,11 +14,11 @@ func IsPortInUse(port int) bool {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
-	case OSLinux, OSDarwin:
+	case constants.OSLinux, constants.OSDarwin:
 		args := []string{"-i", fmt.Sprintf(":%d", port)}
-		cmd = exec.Command("lsof", args...)
-	case OSWindows:
-		cmd = exec.Command("netstat", "-an")
+		cmd = exec.Command(constants.CmdLsof, args...)
+	case constants.OSWindows:
+		cmd = exec.Command(constants.CmdNetstat, "-an")
 	default:
 		return false
 	}
@@ -28,7 +28,7 @@ func IsPortInUse(port int) bool {
 		return false
 	}
 
-	if runtime.GOOS == OSWindows {
+	if runtime.GOOS == constants.OSWindows {
 		return strings.Contains(string(output), fmt.Sprintf(":%d", port))
 	}
 
@@ -42,5 +42,5 @@ func GetFreePort(startPort int) (int, error) {
 			return port, nil
 		}
 	}
-	return 0, fmt.Errorf("no free port found in range %d-%d", startPort, startPort+constants.PortSearchRange)
+	return 0, fmt.Errorf(constants.ErrNoFreePort, startPort, startPort+constants.PortSearchRange)
 }

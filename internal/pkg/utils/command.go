@@ -8,15 +8,9 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-)
-
-// OS constants
-const (
-	OSWindows = "windows"
-	OSLinux   = "linux"
-	OSDarwin  = "darwin"
 )
 
 // RunCommand executes a command and returns its output
@@ -46,18 +40,18 @@ func IsCommandAvailable(name string) bool {
 	return err == nil
 }
 
-// GetProcessPID gets the PID of a running process by name (Linux/macOS only)
+// GetProcessPID gets the PID of a running process by name
 func GetProcessPID(name string) (int, error) {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
-	case "linux", "darwin":
-		cmd = exec.Command("pgrep", "-f", name)
-	case OSWindows:
+	case constants.OSLinux, constants.OSDarwin:
+		cmd = exec.Command(constants.CmdPgrep, "-f", name)
+	case constants.OSWindows:
 		args := []string{"/FI", fmt.Sprintf("IMAGENAME eq %s.exe", name), "/FO", "CSV", "/NH"}
-		cmd = exec.Command("tasklist", args...)
+		cmd = exec.Command(constants.CmdTasklist, args...)
 	default:
-		return 0, fmt.Errorf("unsupported operating system: %s", runtime.GOOS)
+		return 0, fmt.Errorf(constants.ErrUnsupportedOS, runtime.GOOS)
 	}
 
 	output, err := cmd.Output()
@@ -67,10 +61,10 @@ func GetProcessPID(name string) (int, error) {
 
 	outputStr := strings.TrimSpace(string(output))
 	if outputStr == "" {
-		return 0, fmt.Errorf("process not found: %s", name)
+		return 0, fmt.Errorf(constants.ErrProcessNotFound, name)
 	}
 
-	if runtime.GOOS == OSWindows {
+	if runtime.GOOS == constants.OSWindows {
 		lines := strings.Split(outputStr, "\n")
 		if len(lines) > 0 {
 			fields := strings.Split(lines[0], ",")
@@ -88,9 +82,9 @@ func GetProcessPID(name string) (int, error) {
 
 // KillProcess kills a process by PID
 func KillProcess(pid int) error {
-	if runtime.GOOS == OSWindows {
+	if runtime.GOOS == constants.OSWindows {
 		args := []string{"/F", "/PID", strconv.Itoa(pid)}
-		cmd := exec.Command("taskkill", args...)
+		cmd := exec.Command(constants.CmdTaskkill, args...)
 		return cmd.Run()
 	}
 
@@ -99,4 +93,33 @@ func KillProcess(pid int) error {
 		return err
 	}
 	return process.Signal(syscall.SIGTERM)
+}
+
+// Retry executes a function with retry logic
+func Retry(attempts int, delay time.Duration, fn func() error) error {
+	var err error
+	for i := range attempts {
+		if err = fn(); err == nil {
+			return nil
+		}
+		if i < attempts-1 {
+			time.Sleep(delay)
+		}
+	}
+	return fmt.Errorf(constants.ErrFailedAfterRetry, attempts, err)
+}
+
+// Timeout executes a function with timeout
+func Timeout(timeout time.Duration, fn func() error) error {
+	done := make(chan error, 1)
+	go func() {
+		done <- fn()
+	}()
+
+	select {
+	case err := <-done:
+		return err
+	case <-time.After(timeout):
+		return fmt.Errorf(constants.ErrOperationTimeout, timeout)
+	}
 }
