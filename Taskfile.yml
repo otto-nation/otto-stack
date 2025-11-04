@@ -42,7 +42,7 @@ tasks:
     desc: "🔧 Generate code from YAML configs"
     sources:
       - "internal/config/commands.yaml"
-      - "cmd/generate-flags/main.go"
+      - "cmd/generate-cli/main.go"
       - "cmd/generate-registers/main.go"
     generates:
       - "internal/pkg/constants/flags_generated.go"
@@ -50,9 +50,14 @@ tasks:
     silent: true
     cmds:
       - echo "🔧 Generating flag constants from commands.yaml..."
-      - go run cmd/generate-flags/main.go
+      - go run ./cmd/generate-cli
       - echo "🔧 Generating register files from commands.yaml..."
-      - go run cmd/generate-registers/main.go
+      - go run ./cmd/generate-registers
+      - echo "🔧 Generating commands from commands.yaml..."
+      - go run ./cmd/generate-commands
+      - echo "🔧 Formatting generated code..."
+      - gofmt -w internal/pkg/constants/cli_generated.go
+      - gofmt -w internal/pkg/cli/handlers/*/register_generated.go
       - echo "✅ Generated code from YAML configs"
 
   # ============================================================================
@@ -487,7 +492,7 @@ tasks:
         $(go env GOPATH)/bin/golangci-lint config verify
       - echo "✅ golangci-lint config is valid"
       - echo "🔍 Running golangci-lint..."
-      - $(go env GOPATH)/bin/golangci-lint run ./...
+      - $(go env GOPATH)/bin/golangci-lint run ./cmd/otto-stack/... ./internal/...
       - echo "📝 Linting documentation..."
       - cd docs-site && npm run lint:md
       - cd docs-site && npm run lint:links

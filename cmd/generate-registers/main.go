@@ -59,22 +59,24 @@ func generateRegisterFile(handler string, commands []string) {
 	_, _ = fmt.Fprintln(file)
 	_, _ = fmt.Fprintln(file, "import (")
 	_, _ = fmt.Fprintln(file, "\t\"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers\"")
-	_, _ = fmt.Fprintln(file, "\tcliTypes \"github.com/otto-nation/otto-stack/internal/pkg/cli/types\"")
+	_, _ = fmt.Fprintln(file, "\t\"github.com/otto-nation/otto-stack/internal/pkg/constants\"")
+	_, _ = fmt.Fprintln(file, "\t\"github.com/otto-nation/otto-stack/internal/pkg/types\"")
 	_, _ = fmt.Fprintln(file, ")")
 	_, _ = fmt.Fprintln(file)
 
 	// Generate handler map
-	_, _ = fmt.Fprintf(file, "var %sHandlers = map[string]func() cliTypes.CommandHandler{\n", handler)
+	_, _ = fmt.Fprintf(file, "var %sHandlers = map[string]func() types.CommandHandler{\n", handler)
 	for _, cmd := range commands {
 		handlerCall := "New" + toPascalCase(cmd) + "Handler"
-		_, _ = fmt.Fprintf(file, "\t%q: func() cliTypes.CommandHandler { return %s() },\n", cmd, handlerCall)
+		constName := "constants.Command" + toPascalCase(cmd)
+		_, _ = fmt.Fprintf(file, "\t%s: func() types.CommandHandler { return %s() },\n", constName, handlerCall)
 	}
 	_, _ = fmt.Fprintln(file, "}")
 	_, _ = fmt.Fprintln(file)
 
 	// Generate init function
 	_, _ = fmt.Fprintln(file, "func init() {")
-	_, _ = fmt.Fprintf(file, "\thandlers.Register(%q, func(name string) cliTypes.CommandHandler {\n", handler)
+	_, _ = fmt.Fprintf(file, "\thandlers.Register(%q, func(name string) types.CommandHandler {\n", handler)
 	_, _ = fmt.Fprintf(file, "\t\tif factory, exists := %sHandlers[name]; exists {\n", handler)
 	_, _ = fmt.Fprintln(file, "\t\t\treturn factory()")
 	_, _ = fmt.Fprintln(file, "\t\t}")
