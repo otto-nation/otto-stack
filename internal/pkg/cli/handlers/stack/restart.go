@@ -67,7 +67,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	stopOptions := types.StopOptions{
 		Timeout: flags.Timeout,
 	}
-	if err := dockerClient.Containers().Stop(ctx, cfg.Project.Name, serviceNames, stopOptions); err != nil {
+	if err := dockerClient.ComposeDown(ctx, cfg.Project.Name, stopOptions); err != nil {
 		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_stop_services], err)
 	}
 
@@ -75,7 +75,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	startOptions := types.StartOptions{
 		Detach: true,
 	}
-	if err := dockerClient.Containers().Start(ctx, cfg.Project.Name, serviceNames, startOptions); err != nil {
+	if err := dockerClient.ComposeUp(ctx, cfg.Project.Name, serviceNames, startOptions); err != nil {
 		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_start_services], err)
 	}
 

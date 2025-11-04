@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
@@ -71,7 +72,18 @@ func (m *Manager) GetLogs(ctx context.Context, services []string, options types.
 }
 
 func (m *Manager) ExecCommand(ctx context.Context, service string, cmd []string, options types.ExecOptions) error {
-	return m.docker.Containers().Exec(ctx, m.getProjectName(), service, cmd, options)
+	// Use docker compose exec for better integration
+	args := []string{"compose", "-f", constants.DockerComposeFile, "-p", m.getProjectName(), "exec"}
+	if options.User != "" {
+		args = append(args, "--user", options.User)
+	}
+	if options.WorkingDir != "" {
+		args = append(args, "--workdir", options.WorkingDir)
+	}
+	args = append(args, service)
+	args = append(args, cmd...)
+
+	return m.docker.RunCommand(ctx, args...)
 }
 
 // Resource cleanup
@@ -104,46 +116,6 @@ func (m *Manager) CleanupResources(ctx context.Context, options types.CleanupOpt
 	}
 
 	return nil
-}
-
-// Legacy compatibility methods for existing code
-func (m *Manager) ConnectToService(ctx context.Context, serviceName string, options types.ConnectOptions) error {
-	// Simplified connect - just exec into the service
-	cmd := []string{"sh"}
-	if options.Database != "" {
-		// For databases, try common CLI tools
-		switch serviceName {
-		case "postgres", "postgresql":
-			cmd = []string{"psql", "-U", options.User, "-d", options.Database}
-		case "mysql", "mariadb":
-			cmd = []string{"mysql", "-u", options.User, "-p", options.Database}
-		case "redis":
-			cmd = []string{"redis-cli"}
-		case "mongodb", "mongo":
-			cmd = []string{"mongosh", options.Database}
-		}
-	}
-
-	return m.ExecCommand(ctx, serviceName, cmd, types.ExecOptions{
-		Interactive: true,
-		TTY:         true,
-		User:        options.User,
-	})
-}
-
-func (m *Manager) BackupService(ctx context.Context, serviceName, backupName string, options types.BackupOptions) error {
-	return fmt.Errorf("backup functionality moved to separate backup tool")
-}
-
-func (m *Manager) RestoreService(ctx context.Context, serviceName, backupFile string, options types.RestoreOptions) error {
-	return fmt.Errorf("restore functionality moved to separate backup tool")
-}
-
-func (m *Manager) ScaleService(ctx context.Context, serviceName string, replicas int, options types.ScaleOptions) error {
-	if replicas == 0 {
-		return m.StopServices(ctx, []string{serviceName}, types.StopOptions{Remove: true})
-	}
-	return m.StartServices(ctx, []string{serviceName}, types.StartOptions{Detach: true})
 }
 
 func (m *Manager) getProjectName() string {

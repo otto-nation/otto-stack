@@ -59,7 +59,7 @@ func (c *Client) ComposeUp(ctx context.Context, project string, services []strin
 	}
 	args = append(args, services...)
 
-	return c.runCommand(ctx, args...)
+	return c.RunCommand(ctx, args...)
 }
 
 func (c *Client) ComposeDown(ctx context.Context, project string, options types.StopOptions) error {
@@ -71,7 +71,7 @@ func (c *Client) ComposeDown(ctx context.Context, project string, options types.
 		args = append(args, "--volumes")
 	}
 
-	return c.runCommand(ctx, args...)
+	return c.RunCommand(ctx, args...)
 }
 
 func (c *Client) ComposeLogs(ctx context.Context, project string, services []string, options types.LogOptions) error {
@@ -87,7 +87,7 @@ func (c *Client) ComposeLogs(ctx context.Context, project string, services []str
 	}
 	args = append(args, services...)
 
-	return c.runCommand(ctx, args...)
+	return c.RunCommand(ctx, args...)
 }
 
 // Resource management
@@ -129,24 +129,7 @@ func (c *Client) GetServiceStatus(ctx context.Context, project string, services 
 	return statuses, nil
 }
 
-// Legacy compatibility methods for existing code
-func (c *Client) Containers() *ContainerService {
-	return &ContainerService{client: c}
-}
-
-func (c *Client) Volumes() *VolumeService {
-	return &VolumeService{client: c}
-}
-
-func (c *Client) Networks() *NetworkService {
-	return &NetworkService{client: c}
-}
-
-func (c *Client) Images() *ImageService {
-	return &ImageService{client: c}
-}
-
-func (c *Client) runCommand(ctx context.Context, args ...string) error {
+func (c *Client) RunCommand(ctx context.Context, args ...string) error {
 	cmd := exec.CommandContext(ctx, "docker", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -154,69 +137,6 @@ func (c *Client) runCommand(ctx context.Context, args ...string) error {
 		return fmt.Errorf("docker command failed: %w", err)
 	}
 	return nil
-}
-
-// ContainerService provides backward compatibility
-type ContainerService struct {
-	client *Client
-}
-
-func (cs *ContainerService) Start(ctx context.Context, project string, services []string, options types.StartOptions) error {
-	return cs.client.ComposeUp(ctx, project, services, options)
-}
-
-func (cs *ContainerService) Stop(ctx context.Context, project string, services []string, options types.StopOptions) error {
-	return cs.client.ComposeDown(ctx, project, options)
-}
-
-func (cs *ContainerService) List(ctx context.Context, project string, services []string) ([]types.ServiceStatus, error) {
-	return cs.client.GetServiceStatus(ctx, project, services)
-}
-
-func (cs *ContainerService) Exec(ctx context.Context, project, service string, cmd []string, options types.ExecOptions) error {
-	// Use docker compose exec for better integration
-	args := []string{"compose", "-f", constants.DockerComposeFile, "-p", project, "exec"}
-	if options.User != "" {
-		args = append(args, "--user", options.User)
-	}
-	if options.WorkingDir != "" {
-		args = append(args, "--workdir", options.WorkingDir)
-	}
-	args = append(args, service)
-	args = append(args, cmd...)
-
-	return cs.client.runCommand(ctx, args...)
-}
-
-func (cs *ContainerService) Logs(ctx context.Context, project string, services []string, options types.LogOptions) error {
-	return cs.client.ComposeLogs(ctx, project, services, options)
-}
-
-// VolumeService provides backward compatibility
-type VolumeService struct {
-	client *Client
-}
-
-func (vs *VolumeService) Remove(ctx context.Context, project string) error {
-	return vs.client.RemoveResources(ctx, ResourceVolume, project)
-}
-
-// NetworkService provides backward compatibility
-type NetworkService struct {
-	client *Client
-}
-
-func (ns *NetworkService) Remove(ctx context.Context, project string) error {
-	return ns.client.RemoveResources(ctx, ResourceNetwork, project)
-}
-
-// ImageService provides backward compatibility
-type ImageService struct {
-	client *Client
-}
-
-func (is *ImageService) Remove(ctx context.Context, project string) error {
-	return is.client.RemoveResources(ctx, ResourceImage, project)
 }
 
 func contains(slice []string, item string) bool {

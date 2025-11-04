@@ -62,7 +62,7 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Get logs using Docker client
-	return setup.DockerClient.Containers().Logs(ctx, setup.Config.Project.Name, resolvedServices, options)
+	return setup.DockerClient.ComposeLogs(ctx, setup.Config.Project.Name, resolvedServices, options)
 }
 
 // ValidateArgs validates the command arguments

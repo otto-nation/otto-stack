@@ -89,7 +89,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 func (h *CleanupHandler) performCleanup(ctx context.Context, setup *CoreSetup) error {
 	// Clean up stopped containers
 	// Cleanup operation
-	if err := setup.DockerClient.Containers().Stop(ctx, setup.Config.Project.Name, []string{}, types.StopOptions{
+	if err := setup.DockerClient.ComposeDown(ctx, setup.Config.Project.Name, types.StopOptions{
 		Remove: true,
 	}); err != nil {
 		return fmt.Errorf("failed to stop containers: %w", err)

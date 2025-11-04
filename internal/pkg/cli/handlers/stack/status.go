@@ -56,7 +56,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	}
 
 	// Get service status
-	statuses, err := setup.DockerClient.Containers().List(ctx, setup.Config.Project.Name, resolvedServices)
+	statuses, err := setup.DockerClient.GetServiceStatus(ctx, setup.Config.Project.Name, resolvedServices)
 	if err != nil {
 		utils.HandleError(ciFlags, fmt.Errorf(constants.Messages[constants.MsgStack_failed_get_service_status], err))
 		return nil

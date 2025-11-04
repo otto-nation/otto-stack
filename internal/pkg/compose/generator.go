@@ -105,15 +105,10 @@ func (g *Generator) Generate(serviceNames []string) (*ComposeFile, error) {
 	// Use service utils for proper dependency resolution and composite expansion
 	serviceUtils := utils.NewServiceUtils()
 
-	// First expand composite services, then resolve dependencies
-	expandedServices, err := serviceUtils.ExpandCompositeServices(serviceNames)
+	// Resolve services (expands composites and resolves dependencies)
+	resolvedServices, err := serviceUtils.ResolveServices(serviceNames)
 	if err != nil {
-		return nil, fmt.Errorf("failed to expand composite services: %w", err)
-	}
-
-	resolvedServices, err := serviceUtils.ResolveDependencies(expandedServices)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve dependencies: %w", err)
+		return nil, fmt.Errorf("failed to resolve services: %w", err)
 	}
 
 	// Use the resolved services list (which excludes configuration and composite services)

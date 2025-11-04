@@ -53,7 +53,18 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Execute command using Docker client
-	return setup.DockerClient.Containers().Exec(ctx, setup.Config.Project.Name, serviceName, command, options)
+	// Execute command in service container
+	dockerArgs := []string{"compose", "-f", constants.DockerComposeFile, "-p", setup.Config.Project.Name, "exec"}
+	if options.User != "" {
+		dockerArgs = append(dockerArgs, "--user", options.User)
+	}
+	if options.WorkingDir != "" {
+		dockerArgs = append(dockerArgs, "--workdir", options.WorkingDir)
+	}
+	dockerArgs = append(dockerArgs, serviceName)
+	dockerArgs = append(dockerArgs, command...)
+
+	return setup.DockerClient.RunCommand(ctx, dockerArgs...)
 }
 
 // ValidateArgs validates the command arguments

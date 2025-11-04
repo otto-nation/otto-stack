@@ -67,11 +67,6 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}()
 
 	// Determine services to stop
-	serviceNames := args
-	if len(serviceNames) == 0 {
-		serviceNames = cfg.Stack.Enabled
-	}
-
 	// Convert CLI options to internal options
 	internalOptions := types.StopOptions{
 		Timeout:       flags.Timeout,
@@ -80,7 +75,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Stop services
-	if err := dockerClient.Containers().Stop(ctx, cfg.Project.Name, serviceNames, internalOptions); err != nil {
+	if err := dockerClient.ComposeDown(ctx, cfg.Project.Name, internalOptions); err != nil {
 		finishOp(err)
 		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_stop_services], err)
 	}

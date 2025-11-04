@@ -143,7 +143,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	}
 
 	// Start services
-	if err := setup.DockerClient.Containers().Start(ctx, setup.Config.Project.Name, filteredServices, options); err != nil {
+	if err := setup.DockerClient.ComposeUp(ctx, setup.Config.Project.Name, filteredServices, options); err != nil {
 		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_start_services], err)
 	}
 
@@ -216,7 +216,7 @@ func (h *UpHandler) cleanupRemovedServices(ctx context.Context, setup *CoreSetup
 	}
 
 	base.Output.Info(constants.Messages[constants.MsgStack_removing_services], removedServices)
-	return setup.DockerClient.Containers().Stop(ctx, setup.Config.Project.Name, removedServices, types.StopOptions{
+	return setup.DockerClient.ComposeDown(ctx, setup.Config.Project.Name, types.StopOptions{
 		Remove:        true,
 		RemoveVolumes: true,
 	})

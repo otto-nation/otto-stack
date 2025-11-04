@@ -61,7 +61,17 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		TTY:         true,
 	}
 
-	return setup.DockerClient.Containers().Exec(ctx, setup.Config.Project.Name, serviceName, command, options)
+	dockerArgs := []string{"compose", "-f", constants.DockerComposeFile, "-p", setup.Config.Project.Name, "exec"}
+	if options.User != "" {
+		dockerArgs = append(dockerArgs, "--user", options.User)
+	}
+	if options.WorkingDir != "" {
+		dockerArgs = append(dockerArgs, "--workdir", options.WorkingDir)
+	}
+	dockerArgs = append(dockerArgs, serviceName)
+	dockerArgs = append(dockerArgs, command...)
+
+	return setup.DockerClient.RunCommand(ctx, dockerArgs...)
 }
 
 // getConnectionCommand returns the appropriate connection command for the service
