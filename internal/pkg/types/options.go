@@ -1,6 +1,10 @@
 package types
 
-import "time"
+import (
+	"time"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+)
 
 // StartOptions defines options for starting services
 type StartOptions struct {
@@ -55,13 +59,6 @@ type ConnectOptions struct {
 	ReadOnly bool
 }
 
-// ScaleOptions defines options for scaling services
-type ScaleOptions struct {
-	Detach     bool
-	Timeout    time.Duration
-	NoRecreate bool
-}
-
 // BackupOptions defines options for backing up service data
 type BackupOptions struct {
 	OutputDir string
@@ -69,18 +66,14 @@ type BackupOptions struct {
 	Format    string
 	Database  string
 	User      string
-	NoOwner   bool
-	Clean     bool
 }
 
 // RestoreOptions defines options for restoring service data
 type RestoreOptions struct {
-	Database          string
-	User              string
-	Clean             bool
-	CreateDB          bool
-	DropDB            bool
-	SingleTransaction bool
+	Database string
+	User     string
+	Clean    bool
+	CreateDB bool
 }
 
 // CleanupOptions defines options for cleaning up resources
@@ -90,4 +83,34 @@ type CleanupOptions struct {
 	RemoveNetworks bool
 	All            bool
 	DryRun         bool
+}
+
+// NewStartOptions returns StartOptions with default values
+func NewStartOptions() *StartOptions {
+	return &StartOptions{
+		Timeout: time.Duration(constants.DefaultStartTimeoutSeconds) * time.Second,
+	}
+}
+
+// NewStopOptions returns StopOptions with default values
+func NewStopOptions() *StopOptions {
+	return &StopOptions{
+		Timeout: constants.DefaultStopTimeoutSeconds,
+	}
+}
+
+// NewExecOptions returns ExecOptions with default values
+func NewExecOptions() *ExecOptions {
+	return &ExecOptions{
+		Interactive: true,
+		TTY:         true,
+	}
+}
+
+// NewBackupOptions returns BackupOptions with default values
+func NewBackupOptions() *BackupOptions {
+	return &BackupOptions{
+		Format:   constants.FormatJSON,
+		Compress: true,
+	}
 }
