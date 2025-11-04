@@ -28,21 +28,6 @@ const (
 {{range .Flags}}	{{.Name}} = "{{.Value}}"
 {{end}})
 
-// Service client constants
-const (
-{{range .ServiceClients}}	{{.Name}} = "{{.Value}}"
-{{end}})
-
-// Service port constants
-const (
-{{range .ServicePorts}}	{{.Name}} = {{.Value}}
-{{end}})
-
-// Service name constants
-const (
-{{range .ServiceNames}}	{{.Name}} = "{{.Value}}"
-{{end}})
-
 // Message constants
 const (
 {{range .Messages}}	{{.Name}} = "{{.Value}}"

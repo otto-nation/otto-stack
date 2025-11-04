@@ -20,7 +20,7 @@ func TestService(t *testing.T) {
 		Connection: ConnectionConfig{
 			Client:      constants.ClientPsql,
 			DefaultUser: "postgres",
-			DefaultPort: constants.DefaultPortPOSTGRES_port,
+			DefaultPort: constants.DefaultPortPOSTGRES_PORT,
 		},
 	}
 
@@ -90,7 +90,7 @@ func TestManager_BuildConnectCommand(t *testing.T) {
 				Connection: ConnectionConfig{
 					Client:      constants.ClientPsql,
 					DefaultUser: "postgres",
-					DefaultPort: constants.DefaultPortPOSTGRES_port,
+					DefaultPort: constants.DefaultPortPOSTGRES_PORT,
 					UserFlag:    "-U",
 					HostFlag:    "-h",
 					PortFlag:    "-p",

@@ -11,7 +11,7 @@ func TestConnectionConfig(t *testing.T) {
 	config := ConnectionConfig{
 		Client:      constants.ClientPsql,
 		DefaultUser: "postgres",
-		DefaultPort: constants.DefaultPortPOSTGRES_port,
+		DefaultPort: constants.DefaultPortPOSTGRES_PORT,
 		UserFlag:    "-U",
 		HostFlag:    "-h",
 		PortFlag:    "-p",
@@ -21,7 +21,7 @@ func TestConnectionConfig(t *testing.T) {
 
 	assert.Equal(t, constants.ClientPsql, config.Client)
 	assert.Equal(t, "postgres", config.DefaultUser)
-	assert.Equal(t, constants.DefaultPortPOSTGRES_port, config.DefaultPort)
+	assert.Equal(t, constants.DefaultPortPOSTGRES_PORT, config.DefaultPort)
 	assert.Equal(t, "-U", config.UserFlag)
 	assert.Contains(t, config.ExtraFlags, "--no-password")
 }

@@ -1,21 +1,5 @@
 package constants
 
-// Service type constants
-const (
-	ServiceTypeContainer     = "container"
-	ServiceTypeConfiguration = "configuration"
-	ServiceTypeComposite     = "composite"
-)
-
-// Service category constants
-const (
-	CategoryDatabase      = "database"
-	CategoryCache         = "cache"
-	CategoryMessaging     = "messaging"
-	CategoryObservability = "observability"
-	CategoryCloud         = "cloud"
-)
-
 // Service category display names and icons
 var CategoryDisplayInfo = map[string]struct {
 	Name string
