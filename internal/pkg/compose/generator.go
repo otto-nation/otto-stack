@@ -13,19 +13,19 @@ import (
 // Generator handles docker-compose file generation
 type Generator struct {
 	projectName string
-	registry    *services.ServiceRegistry
+	manager     *services.Manager
 }
 
 // NewGenerator creates a new compose generator
 func NewGenerator(projectName string, servicesPath string) (*Generator, error) {
-	registry, err := services.NewServiceRegistry(servicesPath)
+	manager, err := services.New()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create service registry: %w", err)
+		return nil, fmt.Errorf("failed to create service manager: %w", err)
 	}
 
 	return &Generator{
 		projectName: projectName,
-		registry:    registry,
+		manager:     manager,
 	}, nil
 }
 
@@ -56,8 +56,8 @@ func (g *Generator) buildServices(serviceNames []string) map[string]any {
 	services := make(map[string]any)
 
 	for _, serviceName := range serviceNames {
-		serviceDef, exists := g.registry.GetService(serviceName)
-		if !exists {
+		serviceDef, err := g.manager.GetService(serviceName)
+		if err != nil {
 			continue
 		}
 
@@ -73,7 +73,7 @@ func (g *Generator) buildServices(serviceNames []string) map[string]any {
 }
 
 // buildService creates a single service definition
-func (g *Generator) buildService(def services.ServiceDefinition) map[string]any {
+func (g *Generator) buildService(def services.Service) map[string]any {
 	service := map[string]any{
 		constants.ComposeFieldImage: def.Docker.Image,
 	}

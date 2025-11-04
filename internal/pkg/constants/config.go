@@ -6,12 +6,6 @@ const (
 	DefaultProjectName = AppName
 )
 
-// Service names
-const (
-	ServiceKafkaTopics    = "kafka-topics"
-	ServiceLocalstackInit = "localstack-init"
-)
-
 // User action responses
 const (
 	ActionProceed = "proceed"

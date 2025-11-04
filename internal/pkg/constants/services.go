@@ -42,3 +42,11 @@ const (
 	MsgNoServicesInCategory = "No services found in category: %s"
 	MsgServiceCount         = "%s (%d service%s)"
 )
+
+// Service restart policies
+const (
+	RestartPolicyNo        = "no"
+	RestartPolicyAlways    = "always"
+	RestartPolicyOnFailure = "on-failure"
+	RestartPolicyUnless    = "unless-stopped"
+)

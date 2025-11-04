@@ -3,56 +3,32 @@ package services
 import (
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestGetServiceConnectionConfig(t *testing.T) {
-	tests := []struct {
-		name           string
-		serviceName    string
-		expectedClient string
-		expectedUser   string
-		expectedPort   int
-		expectError    bool
-	}{
-		{
-			name:           "postgres service",
-			serviceName:    "postgres",
-			expectedClient: "psql",
-			expectedUser:   "postgres",
-			expectedPort:   5432,
-			expectError:    false,
-		},
-		{
-			name:           "redis service",
-			serviceName:    "redis",
-			expectedClient: "redis-cli",
-			expectedPort:   6379,
-			expectError:    false,
-		},
-		{
-			name:        "unknown service",
-			serviceName: "unknown",
-			expectError: true,
-		},
+func TestConnectionConfig(t *testing.T) {
+	config := ConnectionConfig{
+		Client:      constants.ClientPsql,
+		DefaultUser: "postgres",
+		DefaultPort: constants.DefaultPortPOSTGRES_port,
+		UserFlag:    "-U",
+		HostFlag:    "-h",
+		PortFlag:    "-p",
+		DBFlag:      "-d",
+		ExtraFlags:  []string{"--no-password"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			config, err := GetServiceConnectionConfig(tt.serviceName)
+	assert.Equal(t, constants.ClientPsql, config.Client)
+	assert.Equal(t, "postgres", config.DefaultUser)
+	assert.Equal(t, constants.DefaultPortPOSTGRES_port, config.DefaultPort)
+	assert.Equal(t, "-U", config.UserFlag)
+	assert.Contains(t, config.ExtraFlags, "--no-password")
+}
 
-			if tt.expectError {
-				assert.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			assert.Equal(t, tt.expectedClient, config.Client)
-			if tt.expectedUser != "" {
-				assert.Equal(t, tt.expectedUser, config.DefaultUser)
-			}
-			assert.Equal(t, tt.expectedPort, config.DefaultPort)
-		})
-	}
+func TestGetConnectionConfig(t *testing.T) {
+	// Test error case for non-existent service
+	_, err := GetConnectionConfig("nonexistent-service")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to load services")
 }

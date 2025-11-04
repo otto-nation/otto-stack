@@ -3,11 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 
 	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -67,18 +69,30 @@ func generateConstants() error {
 	}
 	defer func() { _ = file.Close() }()
 
+	// Extract service constants
+	serviceConstants, err := extractServiceConstants()
+	if err != nil {
+		return fmt.Errorf("failed to extract service constants: %w", err)
+	}
+
 	data := struct {
-		Commands     []constantData
-		Flags        []constantData
-		Messages     []constantData
-		Icons        []constantData
-		CommandsData []commandData
+		Commands       []constantData
+		Flags          []constantData
+		Messages       []constantData
+		Icons          []constantData
+		CommandsData   []commandData
+		ServiceClients []constantData
+		ServicePorts   []constantData
+		ServiceNames   []constantData
 	}{
-		Commands:     collectCommandConstants(rawConfig),
-		Flags:        collectFlagsData(rawConfig),
-		Messages:     collectMessagesData(rawConfig),
-		Icons:        collectIconsData(rawConfig),
-		CommandsData: collectCommandsData(rawConfig),
+		Commands:       collectCommandConstants(rawConfig),
+		Flags:          collectFlagsData(rawConfig),
+		Messages:       collectMessagesData(rawConfig),
+		Icons:          collectIconsData(rawConfig),
+		CommandsData:   collectCommandsData(rawConfig),
+		ServiceClients: serviceConstants.Clients,
+		ServicePorts:   serviceConstants.Ports,
+		ServiceNames:   serviceConstants.Names,
 	}
 
 	return tmpl.Execute(file, data)
@@ -328,4 +342,100 @@ func goTypeFromYAML(yamlType string) string {
 	default:
 		return constants.TypeString
 	}
+}
+
+// ServiceConstants holds extracted service constants
+type ServiceConstants struct {
+	Clients []constantData
+	Ports   []constantData
+	Names   []constantData
+}
+
+// ServiceYAML represents service YAML structure for constant extraction
+type ServiceYAML struct {
+	Name       string `yaml:"name"`
+	Connection struct {
+		Client      string `yaml:"client"`
+		DefaultPort int    `yaml:"default_port"`
+	} `yaml:"connection"`
+}
+
+// extractServiceConstants extracts constants from service YAML files
+func extractServiceConstants() (*ServiceConstants, error) {
+	const servicesDir = "internal/config/services"
+
+	clients := make(map[string]bool)
+	ports := make(map[string]int)
+	names := make(map[string]bool)
+
+	err := filepath.Walk(servicesDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !strings.HasSuffix(path, ".yaml") {
+			return nil
+		}
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		var service ServiceYAML
+		if err := yaml.Unmarshal(data, &service); err != nil {
+			return err
+		}
+
+		// Extract service name
+		if service.Name != "" {
+			names[service.Name] = true
+		}
+
+		// Extract client
+		if service.Connection.Client != "" {
+			clients[service.Connection.Client] = true
+		}
+
+		// Extract port
+		if service.Connection.DefaultPort > 0 {
+			portKey := fmt.Sprintf("%s_port", strings.ToUpper(service.Name))
+			ports[portKey] = service.Connection.DefaultPort
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	result := &ServiceConstants{}
+
+	// Convert to constantData
+	for client := range clients {
+		constName := "Client" + toPascalCase(strings.ReplaceAll(client, "-", "_"))
+		result.Clients = append(result.Clients, constantData{
+			Name:  constName,
+			Value: client,
+		})
+	}
+
+	for portKey, port := range ports {
+		constName := "DefaultPort" + toPascalCase(portKey)
+		result.Ports = append(result.Ports, constantData{
+			Name:  constName,
+			Value: fmt.Sprintf("%d", port),
+		})
+	}
+
+	for name := range names {
+		constName := "Service" + toPascalCase(name)
+		result.Names = append(result.Names, constantData{
+			Name:  constName,
+			Value: name,
+		})
+	}
+
+	return result, nil
 }
