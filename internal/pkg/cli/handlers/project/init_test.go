@@ -53,7 +53,7 @@ func TestCreateGitignoreEntries_ExistingContent(t *testing.T) {
 
 	content, err := os.ReadFile(constants.GitignoreFileName)
 	assert.NoError(t, err)
-	assert.Contains(t, string(content), constants.DevStackDir+"/")
+	assert.Contains(t, string(content), constants.OttoStackDir+"/")
 }
 
 func TestCreateReadme_WithServices(t *testing.T) {
@@ -67,7 +67,7 @@ func TestCreateReadme_WithServices(t *testing.T) {
 	err = handler.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis})
 	assert.NoError(t, err)
 
-	readmePath := filepath.Join(constants.DevStackDir, constants.ReadmeFileName)
+	readmePath := filepath.Join(constants.OttoStackDir, constants.ReadmeFileName)
 	content, err := os.ReadFile(readmePath)
 	assert.NoError(t, err)
 	assert.Contains(t, string(content), TestProjectName)

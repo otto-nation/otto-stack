@@ -373,7 +373,7 @@ func (g *Generator) addServiceFromDefinition(compose *ComposeFile, serviceName s
 	if len(def.Docker.SimpleVolumes) > 0 {
 		for _, vol := range def.Docker.SimpleVolumes {
 			// Resolve relative paths to prevent nested otto-stack directories
-			resolvedVol := strings.Replace(vol, "./"+constants.DevStackDir+"/", "./", 1)
+			resolvedVol := strings.Replace(vol, "./"+constants.OttoStackDir+"/", "./", 1)
 			service.Volumes = append(service.Volumes, resolvedVol)
 		}
 	}
@@ -446,7 +446,7 @@ func (g *Generator) writeRequiredScripts(services []string) error {
 		return nil
 	}
 
-	scriptsDir := filepath.Join(constants.DevStackDir, constants.ScriptsDir)
+	scriptsDir := filepath.Join(constants.OttoStackDir, constants.ScriptsDir)
 	if err := os.MkdirAll(scriptsDir, 0755); err != nil {
 		return fmt.Errorf("failed to create scripts directory: %w", err)
 	}

@@ -39,7 +39,7 @@ const (
 	TestEnvironmentProd  = "production"
 
 	// Test gitignore entries (use actual constants)
-	TestGitignoreEntry = constants.DevStackDir + "/" + constants.EnvGeneratedFileName
+	TestGitignoreEntry = constants.OttoStackDir + "/" + constants.EnvGeneratedFileName
 )
 
 // Test CLI commands
@@ -51,6 +51,6 @@ var (
 
 // Test file paths (use actual constants for consistency)
 var (
-	TestConfigFilePath = constants.DevStackDir + "/" + constants.ConfigFileName
-	TestReadmeFilePath = constants.DevStackDir + "/" + constants.ReadmeFileName
+	TestConfigFilePath = constants.OttoStackDir + "/" + constants.ConfigFileName
+	TestReadmeFilePath = constants.OttoStackDir + "/" + constants.ReadmeFileName
 )

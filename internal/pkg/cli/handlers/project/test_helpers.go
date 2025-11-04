@@ -33,7 +33,7 @@ func createTestFile(t *testing.T, path, content string) {
 
 // createTestConfig creates a config file
 func createTestConfig(t *testing.T) {
-	err := os.MkdirAll(constants.DevStackDir, 0755)
+	err := os.MkdirAll(constants.OttoStackDir, constants.DirPermReadWriteExec)
 	require.NoError(t, err)
 	createTestFile(t, TestConfigFilePath, TestConfigContent)
 }

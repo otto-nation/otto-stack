@@ -13,12 +13,12 @@ import (
 // validateInitEnvironment validates the environment before initialization
 func (h *InitHandler) validateInitEnvironment() error {
 	// Check if already initialized
-	configPath := filepath.Join(constants.DevStackDir, constants.ConfigFileName)
+	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
 	if _, err := os.Stat(configPath); err == nil {
 		return fmt.Errorf("%s is already initialized in this directory", constants.AppNameLower)
 	}
 	// Also check for .yaml extension
-	yamlConfigPath := filepath.Join(constants.DevStackDir, constants.AppName+"-config.yaml")
+	yamlConfigPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
 	if _, err := os.Stat(yamlConfigPath); err == nil {
 		return fmt.Errorf("%s is already initialized in this directory", constants.AppNameLower)
 	}

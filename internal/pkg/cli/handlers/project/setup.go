@@ -10,7 +10,7 @@ import (
 // createDirectoryStructure creates the necessary directory structure
 func (h *InitHandler) createDirectoryStructure() error {
 	directories := []string{
-		constants.DevStackDir,
+		constants.OttoStackDir,
 	}
 
 	for _, dir := range directories {
@@ -29,7 +29,7 @@ func (h *InitHandler) createConfigFile(projectName string, services []string, va
 		return fmt.Errorf("failed to generate config: %w", err)
 	}
 
-	configPath := constants.DevStackDir + "/" + constants.ConfigFileName
+	configPath := constants.OttoStackDir + "/" + constants.ConfigFileName
 	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
@@ -122,7 +122,7 @@ Run `+"`%s --help`"+` for a full list of available commands.
 		constants.AppName, constants.AppName, constants.AppName,
 		constants.ConfigFileName, constants.DockerComposeFileName, constants.AppName)
 
-	readmePath := constants.DevStackDir + "/" + constants.ReadmeFileName
+	readmePath := constants.OttoStackDir + "/" + constants.ReadmeFileName
 	if err := os.WriteFile(readmePath, []byte(readmeContent), 0644); err != nil {
 		return fmt.Errorf("failed to create README: %w", err)
 	}

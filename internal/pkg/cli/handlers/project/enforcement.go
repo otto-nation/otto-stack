@@ -35,7 +35,7 @@ func NewEnforcementHandler(manager version.VersionManager) *EnforcementHandler {
 	enforcer := version.NewVersionEnforcer(manager, policy)
 
 	// Use main config file for notifications
-	configPath := filepath.Join(constants.DevStackDir, constants.ConfigFileName)
+	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
 	notifier := version.NewUpdateNotifier(manager, configPath)
 
 	return &EnforcementHandler{

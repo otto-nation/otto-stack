@@ -48,7 +48,7 @@ func TestCreateDirectoryStructure(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	_, err = os.Stat(constants.DevStackDir)
+	_, err = os.Stat(constants.OttoStackDir)
 	assert.NoError(t, err)
 }
 
@@ -92,7 +92,7 @@ func TestCreateReadme(t *testing.T) {
 	err = handler.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis})
 	assert.NoError(t, err)
 
-	readmePath := filepath.Join(constants.DevStackDir, constants.ReadmeFileName)
+	readmePath := filepath.Join(constants.OttoStackDir, constants.ReadmeFileName)
 	_, err = os.Stat(readmePath)
 	assert.NoError(t, err)
 }

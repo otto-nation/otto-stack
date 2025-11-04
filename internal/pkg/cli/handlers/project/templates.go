@@ -56,8 +56,8 @@ func (h *InitHandler) generateInitialComposeFiles(services []string, projectName
 	}
 
 	ui.Success("Generated %s and %s",
-		filepath.Join(constants.DevStackDir, constants.DockerComposeFileName),
-		filepath.Join(constants.DevStackDir, constants.EnvGeneratedFileName))
+		filepath.Join(constants.OttoStackDir, constants.DockerComposeFileName),
+		filepath.Join(constants.OttoStackDir, constants.EnvGeneratedFileName))
 
 	return nil
 }
@@ -73,7 +73,7 @@ func (h *InitHandler) generateEnvFile(services []string, config *ProjectConfig) 
 		return fmt.Errorf("failed to generate env content: %w", err)
 	}
 
-	envPath := filepath.Join(constants.DevStackDir, constants.EnvGeneratedFileName)
+	envPath := filepath.Join(constants.OttoStackDir, constants.EnvGeneratedFileName)
 	if err := os.WriteFile(envPath, envContent, 0644); err != nil {
 		return fmt.Errorf("failed to write %s: %w", envPath, err)
 	}
@@ -95,7 +95,7 @@ func (h *InitHandler) generateDockerCompose(services []string, config *ProjectCo
 		return fmt.Errorf("failed to generate docker-compose YAML: %w", err)
 	}
 
-	composePath := filepath.Join(constants.DevStackDir, constants.DockerComposeFileName)
+	composePath := filepath.Join(constants.OttoStackDir, constants.DockerComposeFileName)
 	if err := os.WriteFile(composePath, composeYAML, 0644); err != nil {
 		return fmt.Errorf("failed to write %s: %w", composePath, err)
 	}

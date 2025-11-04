@@ -15,7 +15,7 @@ const (
 
 // Directory names
 const (
-	DevStackDir         = AppName
+	OttoStackDir        = AppName
 	DataDir             = "data"
 	LogsDir             = "logs"
 	TmpDir              = "tmp"
@@ -34,8 +34,11 @@ const (
 var GitignoreEntries = []string{
 	"",
 	"# Otto Stack",
-	DevStackDir + "/" + EnvGeneratedFileName,
-	DevStackDir + "/" + DataDir + "/",
-	DevStackDir + "/" + LogsDir + "/",
-	DevStackDir + "/" + TmpDir + "/",
+	OttoStackDir + "/" + EnvGeneratedFileName,
+	OttoStackDir + "/" + DataDir + "/",
+	OttoStackDir + "/" + LogsDir + "/",
+	OttoStackDir + "/" + TmpDir + "/",
+	"",
+	"# Local config overrides",
+	OttoStackDir + "/" + LocalConfigFileName,
 }

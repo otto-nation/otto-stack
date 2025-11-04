@@ -23,5 +23,5 @@ const (
 
 // Docker file paths
 const (
-	DockerComposeFile = DevStackDir + "/" + DockerComposeFileName
+	DockerComposeFile = OttoStackDir + "/" + DockerComposeFileName
 )

@@ -155,7 +155,7 @@ func (h *UpHandler) getConfigHash(config *ProjectConfig) (string, error) {
 
 // loadState loads previous stack state
 func (h *UpHandler) loadState() (*StackState, error) {
-	statePath := filepath.Join(constants.DevStackDir, constants.StateFileName)
+	statePath := filepath.Join(constants.OttoStackDir, constants.StateFileName)
 	data, err := os.ReadFile(statePath)
 	if err != nil {
 		return nil, err
@@ -170,7 +170,7 @@ func (h *UpHandler) loadState() (*StackState, error) {
 
 // saveState saves current stack state
 func (h *UpHandler) saveState(state *StackState) error {
-	statePath := filepath.Join(constants.DevStackDir, constants.StateFileName)
+	statePath := filepath.Join(constants.OttoStackDir, constants.StateFileName)
 	data, err := json.Marshal(state)
 	if err != nil {
 		return err
