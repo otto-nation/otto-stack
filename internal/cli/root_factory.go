@@ -78,34 +78,17 @@ func configureLogger() {
 }
 
 // GetCommandConfig loads and returns the command configuration
-func GetCommandConfig() (*config.CommandConfig, error) {
-	loader := config.NewLoader("")
-	return loader.Load()
+func GetCommandConfig() (map[string]any, error) {
+	return config.LoadCommandConfig()
 }
 
 // ValidateConfig validates the current configuration
 func ValidateConfig() error {
-	commandConfig, err := GetCommandConfig()
+	_, err := config.LoadConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
-	}
-
-	result := commandConfig.Validate()
-	if !result.Valid {
-		logger.Error("Configuration validation failed", "error_count", len(result.Errors))
-		for _, err := range result.Errors {
-			logger.Error("Validation error", "field", err.Field, "message", err.Message)
-		}
-		return fmt.Errorf("configuration validation failed")
+		return fmt.Errorf("configuration validation failed: %w", err)
 	}
 
 	logger.Info("Configuration is valid")
-	if len(result.Warnings) > 0 {
-		logger.Warn("Configuration warnings", "warning_count", len(result.Warnings))
-		for _, warning := range result.Warnings {
-			logger.Warn("Validation warning", "field", warning.Field, "message", warning.Message)
-		}
-	}
-
 	return nil
 }

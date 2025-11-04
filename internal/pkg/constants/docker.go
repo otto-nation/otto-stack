@@ -28,14 +28,14 @@ const (
 
 // Docker Compose field names
 const (
-	ComposeFieldServices   = "services"
-	ComposeFieldNetworks   = "networks"
-	ComposeFieldVolumes    = "volumes"
-	ComposeFieldImage      = "image"
-	ComposeFieldPorts      = "ports"
+	ComposeFieldServices    = "services"
+	ComposeFieldNetworks    = "networks"
+	ComposeFieldVolumes     = "volumes"
+	ComposeFieldImage       = "image"
+	ComposeFieldPorts       = "ports"
 	ComposeFieldEnvironment = "environment"
-	ComposeFieldRestart    = "restart"
-	ComposeFieldCommand    = "command"
-	ComposeFieldDependsOn  = "depends_on"
-	ComposeFieldName       = "name"
+	ComposeFieldRestart     = "restart"
+	ComposeFieldCommand     = "command"
+	ComposeFieldDependsOn   = "depends_on"
+	ComposeFieldName        = "name"
 )

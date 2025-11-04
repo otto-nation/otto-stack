@@ -6,9 +6,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/otto-nation/otto-stack/internal/config"
 	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -33,13 +31,13 @@ type commandData struct {
 }
 
 func main() {
-	var commandConfig pkgConfig.CommandConfig
-	if err := yaml.Unmarshal(config.EmbeddedCommandsYAML, &commandConfig); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to parse commands.yaml: %v\n", err)
+	commandConfig, err := pkgConfig.LoadCommandConfigStruct()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load commands config: %v\n", err)
 		os.Exit(1)
 	}
 
-	if err := generateCommands(commandConfig); err != nil {
+	if err := generateCommands(*commandConfig); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate commands: %v\n", err)
 		os.Exit(1)
 	}

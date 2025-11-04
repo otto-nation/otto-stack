@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
@@ -42,7 +43,7 @@ func (dr *DependencyResolver) expandComposites(services []string, allServices ma
 			continue
 		}
 
-		if config.Type == "composite" && len(config.Components) > 0 {
+		if config.Type == constants.ServiceTypeComposite && len(config.Components) > 0 {
 			result = append(result, config.Components...)
 		} else {
 			result = append(result, serviceName)
