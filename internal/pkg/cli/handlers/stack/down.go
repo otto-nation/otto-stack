@@ -4,13 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/utils"
+
 	"github.com/spf13/cobra"
 )
 
@@ -44,7 +45,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	// Check if otto-stack is initialized
 	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
-	if !utils.FileExists(configPath) {
+	if !func() bool { _, err := os.Stat(configPath); return err == nil }() {
 		return errors.New(constants.Messages[constants.MsgErrors_not_initialized])
 	}
 
@@ -55,7 +56,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Create Docker client
-	dockerLogger := base.Logger.(loggerAdapter)
+	dockerLogger := base.Logger
 	dockerClient, err := docker.NewClient(dockerLogger.SlogLogger())
 	if err != nil {
 		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_create_docker_client], err)

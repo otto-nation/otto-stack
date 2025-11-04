@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"maps"
-	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
@@ -93,11 +92,11 @@ func (sl *ServiceLoader) loadServicesInCategory(category string) []types.Service
 
 	var services []types.ServiceInfo
 	for _, entry := range entries {
-		if !strings.HasSuffix(entry.Name(), constants.ServiceConfigExtension) {
+		if !constants.IsYAMLFile(entry.Name()) {
 			continue
 		}
 
-		serviceName := strings.TrimSuffix(entry.Name(), constants.ServiceConfigExtension)
+		serviceName := constants.TrimYAMLExt(entry.Name())
 		if info := sl.parseServiceInfo(categoryPath, entry.Name(), serviceName, category); info != nil {
 			services = append(services, *info)
 		}
@@ -130,11 +129,11 @@ func (sl *ServiceLoader) loadAllInCategory(category string) map[string]*types.Se
 
 	result := make(map[string]*types.ServiceConfig)
 	for _, entry := range entries {
-		if !strings.HasSuffix(entry.Name(), constants.ServiceConfigExtension) {
+		if !constants.IsYAMLFile(entry.Name()) {
 			continue
 		}
 
-		serviceName := strings.TrimSuffix(entry.Name(), constants.ServiceConfigExtension)
+		serviceName := constants.TrimYAMLExt(entry.Name())
 		if config := sl.loadServiceFromCategory(category, serviceName); config != nil {
 			result[serviceName] = config
 		}

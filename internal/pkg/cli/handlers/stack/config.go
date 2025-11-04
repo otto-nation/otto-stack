@@ -2,20 +2,13 @@ package stack
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/utils"
+
 	"gopkg.in/yaml.v3"
 )
-
-// loggerAdapter interface for accessing underlying slog.Logger
-type loggerAdapter interface {
-	SlogLogger() *slog.Logger
-}
 
 // ProjectConfig represents the otto-stack project configuration
 type ProjectConfig struct {
@@ -54,19 +47,13 @@ func LoadProjectConfig(configPath string) (*ProjectConfig, error) {
 
 // loadSingleConfig loads a single config file
 func loadSingleConfig(configPath string) (*ProjectConfig, error) {
-	data, err := utils.ReadFileLines(configPath)
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}
 
-	var builder strings.Builder
-	for _, line := range data {
-		builder.WriteString(line + "\n")
-	}
-	content := builder.String()
-
 	var cfg ProjectConfig
-	if err := yaml.Unmarshal([]byte(content), &cfg); err != nil {
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf(constants.Messages[constants.MsgStack_failed_parse_config], err)
 	}
 

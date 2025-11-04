@@ -53,7 +53,7 @@ func addGlobalFlags(cmd *cobra.Command) {
 
 func createServiceManager() (*services.Manager, error) {
 	projectRoot := findProjectRoot(".")
-	log := logger.New(slog.LevelInfo)
+	log := logger.GetLogger()
 	return services.NewManager(log, projectRoot)
 }
 

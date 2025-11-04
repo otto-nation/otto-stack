@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"gopkg.in/yaml.v3"
 )
 
@@ -110,7 +111,7 @@ func (g *Generator) findServiceFile(serviceName string) (string, error) {
 			return err
 		}
 
-		if !strings.HasSuffix(path, ".yaml") {
+		if !constants.IsYAMLFile(path) {
 			return nil
 		}
 

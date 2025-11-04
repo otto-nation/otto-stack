@@ -8,6 +8,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"gopkg.in/yaml.v3"
 )
 
@@ -116,7 +117,7 @@ func extractServiceConstants() (*ServiceConstants, error) {
 	collectors := newCollectors()
 
 	err := filepath.Walk(ServicesDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || !strings.HasSuffix(path, ".yaml") {
+		if err != nil || !constants.IsYAMLFile(path) {
 			return err
 		}
 

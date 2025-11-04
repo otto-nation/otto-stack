@@ -12,66 +12,48 @@ import (
 	"github.com/spf13/viper"
 )
 
-// CreateRootCommand creates the root command using the simplified builder
-func CreateRootCommand() (*cobra.Command, error) {
-	rootCmd, err := cli.BuildRootCommand()
-	if err != nil {
-		return nil, fmt.Errorf("failed to build root command: %w", err)
-	}
-
-	cobra.OnInitialize(initFactoryConfig)
-
-	return rootCmd, nil
-}
-
 // ExecuteFactory executes the root command using the functional builder
 func ExecuteFactory() error {
-	rootCmd, err := CreateRootCommand()
+	rootCmd, err := cli.BuildRootCommand()
 	if err != nil {
-		return fmt.Errorf("failed to create CLI: %w", err)
+		return fmt.Errorf("failed to build root command: %w", err)
 	}
 
+	cobra.OnInitialize(initConfig)
 	return rootCmd.Execute()
 }
 
-// initFactoryConfig reads in config file and ENV variables if set
-func initFactoryConfig() {
-	var cfgFile string
-	if cfgFile != "" {
-		// Use config file from the flag
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Search config only in the Otto Stack directory
-		viper.AddConfigPath(constants.OttoStackDir)
-		viper.SetConfigType("yaml")
-		viper.SetConfigName(constants.ConfigFileName[:len(constants.ConfigFileName)-4]) // Remove .yml extension
-	}
+// CreateRootCommand creates the root command using the simplified builder
+func CreateRootCommand() (*cobra.Command, error) {
+	return cli.BuildRootCommand()
+}
 
-	// read in environment variables that match
+// initConfig reads in config file and ENV variables if set
+func initConfig() {
+	setupViper()
+	configureLogger()
+}
+
+func setupViper() {
+	viper.AddConfigPath(constants.OttoStackDir)
+	viper.SetConfigType("yaml")
+	viper.SetConfigName(constants.ConfigFileName[:len(constants.ConfigFileName)-4]) // Remove .yml extension
 	viper.AutomaticEnv()
 
-	// If a config file is found, read it in
-	if err := viper.ReadInConfig(); err == nil {
-		if viper.GetBool("verbose") {
-			fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-		}
+	if err := viper.ReadInConfig(); err == nil && viper.GetBool("verbose") {
+		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
-
-	// Configure logger based on flags
-	configureLogger()
 }
 
 // configureLogger sets up logger based on command line flags
 func configureLogger() {
 	config := logger.DefaultConfig()
-
 	if viper.GetBool("verbose") {
-		config.Level = logger.LevelInfo
+		config.Level = constants.LogLevelInfo
 	} else {
-		config.Level = logger.LevelWarn
+		config.Level = constants.LogLevelWarn
 	}
 
-	// Reinitialize logger with new config
 	if err := logger.Init(config); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure logger: %v\n", err)
 	}
@@ -84,11 +66,9 @@ func GetCommandConfig() (map[string]any, error) {
 
 // ValidateConfig validates the current configuration
 func ValidateConfig() error {
-	_, err := config.LoadConfig()
-	if err != nil {
+	if _, err := config.LoadConfig(); err != nil {
 		return fmt.Errorf("configuration validation failed: %w", err)
 	}
-
 	logger.Info("Configuration is valid")
 	return nil
 }

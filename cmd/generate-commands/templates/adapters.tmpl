@@ -30,6 +30,10 @@ func (l *loggerAdapter) Debug(msg string, args ...any) {
 	l.logger.Debug(msg, args...)
 }
 
+func (l *loggerAdapter) SlogLogger() *slog.Logger {
+	return l.logger
+}
+
 type outputAdapter struct {
 	output *ui.Output
 }

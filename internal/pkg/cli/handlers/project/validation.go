@@ -25,7 +25,7 @@ func (h *InitHandler) validateInitEnvironment(_ *types.BaseCommand) error {
 	}
 
 	// Check for required tools
-	requiredTools := []string{"docker"}
+	requiredTools := []string{constants.DockerCmd}
 	for _, tool := range requiredTools {
 		if !h.isCommandAvailable(tool) {
 			return fmt.Errorf(constants.Messages[constants.MsgValidation_required_tool_unavailable], tool)

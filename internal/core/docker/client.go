@@ -130,7 +130,7 @@ func (c *Client) GetServiceStatus(ctx context.Context, project string, services 
 }
 
 func (c *Client) RunCommand(ctx context.Context, args ...string) error {
-	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd := exec.CommandContext(ctx, constants.DockerCmd, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		c.logger.Error("Docker command failed", "args", args, "output", string(output), "error", err)

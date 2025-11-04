@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
-	utilsPkg "github.com/otto-nation/otto-stack/internal/pkg/utils"
 )
 
 // CoreSetup contains shared setup data for core commands
@@ -22,7 +22,7 @@ type CoreSetup struct {
 func SetupCoreCommand(ctx context.Context, base *types.BaseCommand) (*CoreSetup, func(), error) {
 	// Check if otto-stack is initialized
 	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
-	if !utilsPkg.FileExists(configPath) {
+	if !func() bool { _, err := os.Stat(configPath); return err == nil }() {
 		return nil, nil, errors.New(constants.Messages[constants.MsgErrors_not_initialized])
 	}
 
@@ -33,7 +33,7 @@ func SetupCoreCommand(ctx context.Context, base *types.BaseCommand) (*CoreSetup,
 	}
 
 	// Create Docker client
-	logger := base.Logger.(loggerAdapter)
+	logger := base.Logger
 	dockerClient, err := docker.NewClient(logger.SlogLogger())
 	if err != nil {
 		return nil, nil, fmt.Errorf(constants.Messages[constants.MsgStack_failed_create_docker_client], err)

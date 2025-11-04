@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
@@ -141,11 +140,11 @@ func (m *Manager) loadCategoryServices(category string) error {
 	}
 
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
+		if entry.IsDir() || !constants.IsYAMLFile(entry.Name()) {
 			continue
 		}
 
-		serviceName := strings.TrimSuffix(entry.Name(), ".yaml")
+		serviceName := constants.TrimYAMLExt(entry.Name())
 		if err := m.loadService(category, serviceName); err != nil {
 			return fmt.Errorf("failed to load service %s: %w", serviceName, err)
 		}
