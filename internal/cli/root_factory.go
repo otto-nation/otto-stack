@@ -63,37 +63,16 @@ func initFactoryConfig(_ *config.CommandConfig) {
 		// Use config file from the flag
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Find home directory
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
-
-		// Search config in multiple locations
-		viper.AddConfigPath(home)
-		viper.AddConfigPath(".")
-		viper.AddConfigPath(".otto-stack")
+		// Search config only in the Otto Stack directory
+		viper.AddConfigPath(constants.OttoStackDir)
 		viper.SetConfigType("yaml")
-
-		// Try to find config file with multiple names
-		configNames := []string{constants.AppName + "-config", "." + constants.AppName}
-		var configFound bool
-		for _, name := range configNames {
-			viper.SetConfigName(name)
-			if err := viper.ReadInConfig(); err == nil {
-				configFound = true
-				break
-			}
-		}
-
-		// If no config found, don't call ReadInConfig again
-		if configFound {
-			return
-		}
+		viper.SetConfigName(constants.ConfigFileName[:len(constants.ConfigFileName)-4]) // Remove .yml extension
 	}
 
 	// read in environment variables that match
 	viper.AutomaticEnv()
 
-	// If a config file is found, read it in (only if not already read above)
+	// If a config file is found, read it in
 	if err := viper.ReadInConfig(); err == nil {
 		if viper.GetBool("verbose") {
 			fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
