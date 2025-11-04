@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 )
 
 // Version drift classification rules
@@ -14,7 +15,7 @@ var driftClassificationRules = []struct {
 }{
 	{func(r, a Version) bool { return a.Major != r.Major }, ChangeTypeMajor, "high"},
 	{func(r, a Version) bool { return a.Minor != r.Minor }, ChangeTypeMinor, "medium"},
-	{func(r, a Version) bool { return a.Patch != r.Patch }, ChangeTypePatch, "low"},
+	{func(r, a Version) bool { return a.Patch != r.Patch }, ChangeTypePatch, constants.SeverityLow},
 }
 
 // Policy enforcement rules
@@ -107,7 +108,7 @@ func (e *VersionEnforcer) CheckCompliance(projectPath string) (*EnforcementResul
 			Compliant: true,
 			Action:    EnforcementActionNone,
 			Message:   "Version compliance satisfied",
-			ExitCode:  constants.ExitSuccess,
+			ExitCode:  0,
 		}, nil
 	}
 
@@ -115,9 +116,9 @@ func (e *VersionEnforcer) CheckCompliance(projectPath string) (*EnforcementResul
 	drift := e.detectDrift(projectPath, projectConfig.Required.Version, activeVersion.Version, projectConfig.LastUsed)
 	action, message := e.determineAction(drift, activeVersion.Version, projectConfig.Required.Version)
 
-	exitCode := constants.ExitSuccess
+	exitCode := 1
 	if action == EnforcementActionSwitch {
-		exitCode = constants.ExitError
+		exitCode = 2
 	}
 
 	return &EnforcementResult{
@@ -154,6 +155,7 @@ func (e *VersionEnforcer) EnforceCompliance(projectPath string) error {
 		}
 		return fmt.Errorf("version enforcement required: %s", result.Message)
 	case EnforcementActionWarn:
+		logger.Warn("Version enforcement warning", "message", result.Message)
 		fmt.Printf("⚠️  Warning: %s\n", result.Message)
 		return nil
 	default:
@@ -200,7 +202,7 @@ func (e *VersionEnforcer) detectDrift(projectPath string, required, active Versi
 // classifyVersionDrift determines the type and severity of version drift
 func (e *VersionEnforcer) classifyVersionDrift(required, active Version) (string, string) {
 	if active.Compare(required) == 0 {
-		return ChangeTypeNone, "low"
+		return ChangeTypeNone, constants.SeverityLow
 	}
 
 	for _, rule := range driftClassificationRules {
@@ -209,7 +211,7 @@ func (e *VersionEnforcer) classifyVersionDrift(required, active Version) (string
 		}
 	}
 
-	return ChangeTypePrerelease, "low"
+	return ChangeTypePrerelease, constants.SeverityLow
 }
 
 func (e *VersionEnforcer) autoSwitchVersion(projectPath string) error {

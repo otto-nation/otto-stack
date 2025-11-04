@@ -3,9 +3,11 @@ package project
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/otto-nation/otto-stack/internal/pkg/version"
 	"github.com/spf13/cobra"
@@ -15,6 +17,7 @@ import (
 type Handler struct {
 	enforcement *EnforcementHandler
 	output      *ui.Output
+	logger      *slog.Logger
 }
 
 // NewVersionHandler creates a new version handler
@@ -22,6 +25,7 @@ func NewVersionHandler() *Handler {
 	return &Handler{
 		enforcement: NewEnforcementHandler(nil), // Can handle nil
 		output:      ui.NewOutput(),
+		logger:      logger.GetLogger(),
 	}
 }
 

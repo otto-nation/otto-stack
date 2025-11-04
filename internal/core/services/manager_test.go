@@ -2,9 +2,9 @@ package services
 
 import (
 	"log/slog"
-	"os"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -20,9 +20,9 @@ func TestNewManager(t *testing.T) {
 		{
 			name: "create manager with valid parameters",
 			setupFunc: func(t *testing.T) (*slog.Logger, string) {
-				logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+				testLogger := logger.GetLogger()
 				projectDir := t.TempDir()
-				return logger, projectDir
+				return testLogger, projectDir
 			},
 			expectError: false,
 		},
@@ -37,7 +37,7 @@ func TestNewManager(t *testing.T) {
 		{
 			name: "create manager with empty project dir",
 			setupFunc: func(t *testing.T) (*slog.Logger, string) {
-				logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+				logger := logger.GetLogger()
 				return logger, ""
 			},
 			expectError: false, // Empty project dir should be allowed
@@ -73,7 +73,7 @@ func TestNewManager(t *testing.T) {
 
 func TestManager_SetConfig(t *testing.T) {
 	// Skip if Docker not available
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := logger.GetLogger()
 	projectDir := t.TempDir()
 
 	manager, err := NewManager(logger, projectDir)
@@ -98,7 +98,6 @@ func TestManager_SetConfig(t *testing.T) {
 					ColorOutput: true,
 				},
 				Projects: make(map[string]types.ProjectConfig),
-				Profiles: make(map[string]types.Profile),
 			},
 		},
 	}
@@ -116,7 +115,7 @@ func TestManager_SetConfig(t *testing.T) {
 }
 
 func TestManager_Close(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := logger.GetLogger()
 	projectDir := t.TempDir()
 
 	manager, err := NewManager(logger, projectDir)
@@ -139,7 +138,7 @@ func TestManager_Close(t *testing.T) {
 }
 
 func TestManager_GetDocker(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := logger.GetLogger()
 	projectDir := t.TempDir()
 
 	manager, err := NewManager(logger, projectDir)
@@ -155,7 +154,7 @@ func TestManager_GetDocker(t *testing.T) {
 }
 
 func TestManager_GetLogger(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := logger.GetLogger()
 	projectDir := t.TempDir()
 
 	manager, err := NewManager(logger, projectDir)
@@ -172,7 +171,7 @@ func TestManager_GetLogger(t *testing.T) {
 }
 
 func TestManager_GetProjectDir(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := logger.GetLogger()
 	projectDir := t.TempDir()
 
 	manager, err := NewManager(logger, projectDir)
@@ -187,7 +186,7 @@ func TestManager_GetProjectDir(t *testing.T) {
 }
 
 func TestManager_SubManagers(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logger := logger.GetLogger()
 	projectDir := t.TempDir()
 
 	manager, err := NewManager(logger, projectDir)

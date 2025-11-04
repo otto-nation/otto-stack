@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types/filters"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
@@ -50,7 +51,7 @@ func (cl *ContainerLifecycle) Start(ctx context.Context, projectName string, ser
 		cl.client.logger.Error("Failed to start services", "error", err, "output", string(output))
 
 		if len(output) > 0 {
-			fmt.Printf("\n🔍 Docker output:\n%s\n", string(output))
+			logger.Info("Docker output", "output", string(output))
 		}
 
 		if saveErr := cl.saveErrorLogs(string(output)); saveErr != nil {
@@ -114,8 +115,8 @@ func (cl *ContainerLifecycle) Stop(ctx context.Context, projectName string, serv
 
 // saveErrorLogs saves error output to a log file
 func (cl *ContainerLifecycle) saveErrorLogs(output string) error {
-	logsDir := fmt.Sprintf("%s/%s", constants.DevStackDir, constants.LogsDir)
-	if err := os.MkdirAll(logsDir, 0755); err != nil {
+	logsDir := fmt.Sprintf("%s/%s", constants.OttoStackDir, constants.LogsDir)
+	if err := os.MkdirAll(logsDir, constants.DirPermReadWriteExec); err != nil {
 		return fmt.Errorf("failed to create logs directory: %w", err)
 	}
 
@@ -124,14 +125,14 @@ func (cl *ContainerLifecycle) saveErrorLogs(output string) error {
 
 	content := fmt.Sprintf("Docker Error Log - %s\n%s\n%s\n\n%s",
 		time.Now().Format(time.RFC3339),
-		strings.Repeat("=", 50),
+		strings.Repeat("=", constants.SeparatorLength),
 		"Docker Compose Output:",
 		output)
 
-	if err := os.WriteFile(logFile, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(logFile, []byte(content), constants.FilePermReadWrite); err != nil {
 		return fmt.Errorf("failed to write error log: %w", err)
 	}
 
-	fmt.Printf("📝 Error details saved to: %s\n", logFile)
+	logger.Info("Error details saved", "file", logFile)
 	return nil
 }

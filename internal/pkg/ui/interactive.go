@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 )
 
 // Confirm prompts the user for yes/no confirmation
@@ -20,6 +22,7 @@ func (o *Output) Confirm(message string, defaultYes bool) bool {
 		prompt += " [y/N]: "
 	}
 
+	logger.Debug("Interactive confirm prompt", "message", message, "default", defaultYes)
 	fmt.Print(prompt)
 
 	reader := bufio.NewReader(os.Stdin)
@@ -34,11 +37,14 @@ func (o *Output) Confirm(message string, defaultYes bool) bool {
 		return defaultYes
 	}
 
-	return response == "y" || response == "yes"
+	result := response == "y" || response == "yes"
+	logger.Debug("Interactive confirm result", "response", response, "result", result)
+	return result
 }
 
 // ConfirmDestructive prompts for confirmation of destructive operations
 func (o *Output) ConfirmDestructive(operation string) bool {
+	logger.Warn("Destructive operation confirmation", "operation", operation)
 	o.Warning("This will %s", operation)
 	return o.Confirm("Are you sure you want to continue?", false)
 }
@@ -49,6 +55,7 @@ func (o *Output) SelectFromList(message string, options []string) (int, error) {
 		return 0, fmt.Errorf("cannot prompt in quiet mode")
 	}
 
+	logger.Debug("Interactive select prompt", "message", message, "options", options)
 	fmt.Println(message)
 	for i, option := range options {
 		fmt.Printf("  %d) %s\n", i+1, option)
@@ -73,5 +80,7 @@ func (o *Output) SelectFromList(message string, options []string) (int, error) {
 		return 0, fmt.Errorf("selection out of range: %d", selection)
 	}
 
-	return selection - 1, nil
+	result := selection - 1
+	logger.Debug("Interactive select result", "selection", selection, "result", result)
+	return result, nil
 }

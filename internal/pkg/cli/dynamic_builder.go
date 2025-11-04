@@ -12,12 +12,13 @@ import (
 	cliTypes "github.com/otto-nation/otto-stack/internal/pkg/cli/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
 // BuildDynamicRootCommand creates commands from YAML configuration
 func BuildDynamicRootCommand(config *config.CommandConfig) (*cobra.Command, error) {
-	log := slog.Default()
+	log := logger.GetLogger()
 
 	rootCmd := &cobra.Command{
 		Use:     constants.AppName,

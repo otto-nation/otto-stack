@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 )
 
 // Output handles all user-facing output with consistent styling
@@ -25,6 +26,7 @@ func (o *Output) Success(msg string, args ...any) {
 		return
 	}
 	formatted := fmt.Sprintf(msg, args...)
+	logger.Info("Success", "message", formatted)
 	if o.NoColor {
 		fmt.Printf("✅ %s\n", formatted)
 	} else {
@@ -35,6 +37,7 @@ func (o *Output) Success(msg string, args ...any) {
 // Error prints an error message
 func (o *Output) Error(msg string, args ...any) {
 	formatted := fmt.Sprintf(msg, args...)
+	logger.Error("UI Error", "message", formatted)
 	if o.NoColor {
 		fmt.Fprintf(os.Stderr, "❌ %s\n", formatted)
 	} else {
@@ -48,6 +51,7 @@ func (o *Output) Warning(msg string, args ...any) {
 		return
 	}
 	formatted := fmt.Sprintf(msg, args...)
+	logger.Warn("UI Warning", "message", formatted)
 	if o.NoColor {
 		fmt.Printf("⚠️  %s\n", formatted)
 	} else {
@@ -61,6 +65,7 @@ func (o *Output) Info(msg string, args ...any) {
 		return
 	}
 	formatted := fmt.Sprintf(msg, args...)
+	logger.Info("UI Info", "message", formatted)
 	if o.NoColor {
 		fmt.Printf("ℹ️  %s\n", formatted)
 	} else {
@@ -74,6 +79,7 @@ func (o *Output) Header(msg string, args ...any) {
 		return
 	}
 	formatted := fmt.Sprintf(msg, args...)
+	logger.Info("UI Header", "message", formatted)
 	if o.NoColor {
 		fmt.Printf("\n=== %s ===\n\n", formatted)
 	} else {
@@ -87,6 +93,7 @@ func (o *Output) SubHeader(msg string, args ...any) {
 		return
 	}
 	formatted := fmt.Sprintf(msg, args...)
+	logger.Info("UI SubHeader", "message", formatted)
 	if o.NoColor {
 		fmt.Printf("\n--- %s ---\n", formatted)
 	} else {
@@ -99,6 +106,7 @@ func (o *Output) List(items []string) {
 	if o.Quiet {
 		return
 	}
+	logger.Info("UI List", "items", items)
 	for _, item := range items {
 		if o.NoColor {
 			fmt.Printf("  • %s\n", item)
@@ -128,6 +136,7 @@ func (o *Output) Muted(msg string, args ...any) {
 		return
 	}
 	formatted := fmt.Sprintf(msg, args...)
+	logger.Debug("UI Muted", "message", formatted)
 	if o.NoColor {
 		fmt.Printf("  %s\n", formatted)
 	} else {
@@ -140,6 +149,7 @@ func (o *Output) Box(title, content string) {
 	if o.Quiet {
 		return
 	}
+	logger.Info("UI Box", "title", title, "content", content)
 	if o.NoColor {
 		fmt.Printf("\n┌─ %s ─\n│ %s\n└─\n", title, content)
 	} else {

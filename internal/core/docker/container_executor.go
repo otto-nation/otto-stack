@@ -130,7 +130,7 @@ func (ce *ContainerExecutor) Logs(ctx context.Context, projectName string, servi
 				}
 			}()
 			if options.Follow {
-				fmt.Printf("==> Following logs for %s <==\n", serviceName)
+				ce.client.logger.Info("Following logs", "service", serviceName)
 			}
 			if _, err := stdcopy.StdCopy(os.Stdout, os.Stderr, logs); err != nil {
 				ce.client.logger.Error("Failed to copy logs", "error", err)

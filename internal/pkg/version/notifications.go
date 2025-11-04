@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 )
 
 // UpdateNotification represents an update notification
@@ -235,6 +237,13 @@ func (n *UpdateNotifier) categorizeUpdate(notification *UpdateNotification) {
 }
 
 func (n *UpdateNotifier) showNotification(notification *UpdateNotification) {
+	logger.Info("Showing update notification",
+		"current", notification.CurrentVersion,
+		"latest", notification.LatestVersion,
+		"type", notification.UpdateType,
+		"severity", notification.Severity,
+		"breaking", notification.BreakingChanges)
+
 	fmt.Printf("\n🔔 Update Available!\n")
 	fmt.Printf("   Current: %s\n", notification.CurrentVersion)
 	fmt.Printf("   Latest:  %s\n", notification.LatestVersion)
@@ -245,8 +254,8 @@ func (n *UpdateNotifier) showNotification(notification *UpdateNotification) {
 	}
 
 	fmt.Printf("\n   %s\n", notification.Message)
-	fmt.Printf("\n   To update: %s version install %s\n", constants.AppName, notification.LatestVersion)
-	fmt.Printf("\n   To suppress: %s version suppress 7d\n\n", constants.AppName)
+	fmt.Printf("\n   To update: %s version install %s\n", "placeholder", notification.LatestVersion)
+	fmt.Printf("\n   To suppress: %s version suppress 7d\n\n", "placeholder")
 }
 
 func (n *UpdateNotifier) updateLastCheck() {
@@ -274,7 +283,7 @@ func (n *UpdateNotifier) saveConfig() error {
 
 	// Ensure directory exists
 	dir := filepath.Dir(n.configPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, constants.DirPermReadWriteExec); err != nil {
 		return fmt.Errorf("failed to create config directory: %w", err)
 	}
 
@@ -283,5 +292,5 @@ func (n *UpdateNotifier) saveConfig() error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	return os.WriteFile(n.configPath, data, 0644)
+	return os.WriteFile(n.configPath, data, constants.FilePermReadWrite)
 }
