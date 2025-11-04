@@ -20,7 +20,7 @@ vars:
   BUILD_ARCH:
     sh: echo "{{ARCH}}"
   LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/pkg/version.AppVersion={{.VERSION}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildDate={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/version.GitCommit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildBy=taskfile"'
-  GOLANGCI_LINT_VERSION: "v2.4.0"
+  GOLANGCI_LINT_VERSION: "v2.6.0"
 
 # ============================================================================
 # TASKS
@@ -65,7 +65,7 @@ tasks:
   # ============================================================================
   build:
     desc: "🔨 Build the Go binary for current platform"
-    deps: [deps, generate]
+    deps: [sync-go-version, deps, generate]
     sources:
       - "**/*.go"
       - "go.mod"
@@ -149,13 +149,13 @@ tasks:
           echo "❌ No staged changes found. Use 'git add' first."
           exit 1
         fi
-        
+
         echo "🤖 Analyzing staged changes with AI..."
-        
+
         DIFF_CONTENT=$(git diff --cached --no-color)
         FILE_LIST=$(echo "$STAGED_FILES" | tr '\n' ', ' | sed 's/,$//')
         COMMITLINT_CONFIG=$(cat .github/.commitlintrc.json)
-        
+
         AI_PROMPT="Generate a conventional commit message following these rules:
         - Header (first line) must be ≤72 characters (no exceptions)
         - Body lines must be ≤100 characters each
@@ -171,14 +171,14 @@ tasks:
         $DIFF_CONTENT
 
         Return only the commit message, nothing else."
-        
+
         source ./scripts/ai-helper.sh
-        
+
         if ! AI_COMMAND=$(check_ai_available 2>&1); then
           echo "$AI_COMMAND"
           exit 1
         fi
-        
+
         echo "🤖 Generating commit message..."
         COMMIT_MSG=$(echo "$AI_PROMPT" | $AI_COMMAND | tr -d '\033' | sed 's/\[[0-9;]*m//g' | sed 's/^[> ]*//g')
         echo "✨ AI Analysis Complete"
@@ -229,12 +229,12 @@ tasks:
 
         # Use AI to generate PR content
         source ./scripts/ai-helper.sh
-        
+
         if ! AI_COMMAND=$(check_ai_available 2>&1); then
           echo "$AI_COMMAND"
           exit 1
         fi
-        
+
         echo "🤖 Generating PR title and description..."
           RAW_RESPONSE=$(echo "$AI_PROMPT" | $AI_COMMAND)
           # Strip all ANSI escape sequences and control characters
@@ -420,6 +420,18 @@ tasks:
     cmds:
       - ./scripts/setup-hooks.sh
 
+  sync-go-version:
+    desc: "🔄 Sync Go version across all configuration files"
+    silent: true
+    cmds:
+      - ./scripts/sync-go-version.sh --fix
+
+  check-go-version:
+    desc: "✅ Check if Go versions are consistent across files"
+    silent: true
+    cmds:
+      - ./scripts/sync-go-version.sh --check
+
   # ============================================================================
   # TESTING
   # ============================================================================
@@ -466,7 +478,7 @@ tasks:
 
   lint:
     desc: "🔍 Run comprehensive linting (vet + fmt + golangci-lint)"
-    deps: [deps]
+    deps: [deps, fmt]
     silent: true
     cmds:
       - echo "🔍 Running go vet..."
@@ -485,9 +497,23 @@ tasks:
           echo "❌ .golangci.yml config file not found!"
           exit 1
         fi
-        if [ ! -f $(go env GOPATH)/bin/golangci-lint ]; then
-          echo "📦 Installing golangci-lint {{.GOLANGCI_LINT_VERSION}}..."
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin {{.GOLANGCI_LINT_VERSION}}
+      - |
+        if [ ! -f .golangci.yml ]; then
+          echo "❌ .golangci.yml config file not found!"
+          exit 1
+        fi
+        GOLANGCI_PATH="$(go env GOPATH)/bin/golangci-lint"
+        EXPECTED_VERSION="{{.GOLANGCI_LINT_VERSION}}"
+
+        if [ ! -f "$GOLANGCI_PATH" ]; then
+          echo "📦 Installing golangci-lint $EXPECTED_VERSION..."
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
+        else
+          CURRENT_VERSION=$($GOLANGCI_PATH version --format short 2>/dev/null | head -1 || echo "unknown")
+          if [ "$CURRENT_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "📦 Updating golangci-lint from $CURRENT_VERSION to $EXPECTED_VERSION..."
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
+          fi
         fi
         $(go env GOPATH)/bin/golangci-lint config verify
       - echo "✅ golangci-lint config is valid"
@@ -642,6 +668,8 @@ tasks:
       - echo ""
       - echo "🛠️ Development:"
       - echo "   setup-hooks    - Install Git hooks"
+      - echo "   sync-go-version - Sync Go version across config files"
+      - echo "   check-go-version - Check Go version consistency"
       - echo "   deps           - Update dependencies"
       - echo ""
       - echo "ℹ️  Info:"
