@@ -22,6 +22,12 @@ type StopOptions struct {
 	RemoveImages  string
 }
 
+// RestartOptions defines options for restarting services
+type RestartOptions struct {
+	Timeout time.Duration
+	Build   bool
+}
+
 // ExecOptions defines options for executing commands in containers
 type ExecOptions struct {
 	User        string

@@ -4,272 +4,151 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
-	"gopkg.in/yaml.v3"
 )
 
-// Manager provides high-level service management operations
+// Manager provides unified service management operations
 type Manager struct {
 	docker     *docker.Client
 	logger     *slog.Logger
 	projectDir string
 	config     *types.Config
-
-	// Sub-managers
-	operations *ServiceOperations
-	cleanup    *CleanupManager
 }
 
-// NewManager creates a new service manager instance
+// NewManager creates a new service manager
 func NewManager(logger *slog.Logger, projectDir string) (*Manager, error) {
 	dockerClient, err := docker.NewClient(logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create Docker client: %w", err)
 	}
 
-	manager := &Manager{
+	return &Manager{
 		docker:     dockerClient,
 		logger:     logger,
 		projectDir: projectDir,
-	}
-
-	// Initialize sub-managers
-	manager.operations = NewServiceOperations(manager)
-	manager.cleanup = NewCleanupManager(manager)
-
-	return manager, nil
+	}, nil
 }
 
-// SetConfig sets the project configuration
 func (m *Manager) SetConfig(config *types.Config) {
 	m.config = config
 }
 
-// Close closes the service manager and its resources
 func (m *Manager) Close() error {
 	return m.docker.Close()
 }
 
-// Core service operations
-
-// StartServices starts the specified services or all services if none specified
-func (m *Manager) StartServices(ctx context.Context, serviceNames []string, options types.StartOptions) error {
-	m.logger.Info("Starting services", "services", serviceNames, "detach", options.Detach)
-
-	projectName := m.getProjectName()
-
-	// Validate services exist
-	if len(serviceNames) > 0 {
-		if err := m.validateServices(serviceNames); err != nil {
-			return err
-		}
-	}
-
-	// Check for port conflicts before starting
-	if err := m.checkPortConflicts(ctx, serviceNames); err != nil {
-		return fmt.Errorf("port conflict detected: %w", err)
-	}
-
-	// Start services using Docker client
-	if err := m.docker.Containers().Start(ctx, projectName, serviceNames, options); err != nil {
-		return fmt.Errorf("failed to start services: %w", err)
-	}
-
-	// Wait for services to be healthy if not detached
-	if !options.Detach {
-		if err := m.waitForHealthy(ctx, projectName, serviceNames, options.Timeout); err != nil {
-			return fmt.Errorf("services failed to become healthy: %w", err)
-		}
-	}
-
-	m.logger.Info("Services started successfully", "services", serviceNames)
-	return nil
+// Core operations using compose directly
+func (m *Manager) StartServices(ctx context.Context, services []string, options types.StartOptions) error {
+	return m.docker.ComposeUp(ctx, m.getProjectName(), services, options)
 }
 
-// StopServices stops the specified services or all services if none specified
-func (m *Manager) StopServices(ctx context.Context, serviceNames []string, options types.StopOptions) error {
-	m.logger.Info("Stopping services", "services", serviceNames, "timeout", options.Timeout)
+func (m *Manager) StopServices(ctx context.Context, services []string, options types.StopOptions) error {
+	return m.docker.ComposeDown(ctx, m.getProjectName(), options)
+}
 
-	projectName := m.getProjectName()
+func (m *Manager) GetServiceStatus(ctx context.Context, services []string) ([]types.ServiceStatus, error) {
+	statuses, err := m.docker.GetServiceStatus(ctx, m.getProjectName(), services)
+	if err != nil {
+		return nil, err
+	}
 
-	if err := m.docker.Containers().Stop(ctx, projectName, serviceNames, options); err != nil {
+	// Add uptime calculation
+	for i := range statuses {
+		if statuses[i].State.IsRunning() && statuses[i].StartedAt != nil {
+			statuses[i].Uptime = time.Since(*statuses[i].StartedAt)
+		}
+	}
+
+	return statuses, nil
+}
+
+func (m *Manager) GetLogs(ctx context.Context, services []string, options types.LogOptions) error {
+	return m.docker.ComposeLogs(ctx, m.getProjectName(), services, options)
+}
+
+func (m *Manager) ExecCommand(ctx context.Context, service string, cmd []string, options types.ExecOptions) error {
+	return m.docker.Containers().Exec(ctx, m.getProjectName(), service, cmd, options)
+}
+
+// Resource cleanup
+func (m *Manager) CleanupResources(ctx context.Context, options types.CleanupOptions) error {
+	project := m.getProjectName()
+
+	// Stop all services first
+	if err := m.docker.ComposeDown(ctx, project, types.StopOptions{
+		Remove:        true,
+		RemoveVolumes: options.RemoveVolumes,
+	}); err != nil {
 		return fmt.Errorf("failed to stop services: %w", err)
 	}
 
-	m.logger.Info("Services stopped successfully", "services", serviceNames)
-	return nil
-}
-
-// GetServiceStatus returns the status of all services or specified services
-func (m *Manager) GetServiceStatus(ctx context.Context, serviceNames []string) ([]types.ServiceStatus, error) {
-	projectName := m.getProjectName()
-
-	services, err := m.docker.Containers().List(ctx, projectName, serviceNames)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get service status: %w", err)
+	// Clean up additional resources if requested
+	if options.RemoveVolumes {
+		if err := m.docker.RemoveResources(ctx, docker.ResourceVolume, project); err != nil {
+			m.logger.Error("Failed to remove volumes", "error", err)
+		}
 	}
-
-	// Calculate uptime for running services
-	for i := range services {
-		if services[i].State == constants.StateRunning && services[i].StartedAt != nil {
-			services[i].Uptime = time.Since(*services[i].StartedAt)
+	if options.RemoveImages {
+		if err := m.docker.RemoveResources(ctx, docker.ResourceImage, project); err != nil {
+			m.logger.Error("Failed to remove images", "error", err)
+		}
+	}
+	if options.RemoveNetworks {
+		if err := m.docker.RemoveResources(ctx, docker.ResourceNetwork, project); err != nil {
+			m.logger.Error("Failed to remove networks", "error", err)
 		}
 	}
 
-	return services, nil
-}
-
-// ExecCommand executes a command in a service container
-func (m *Manager) ExecCommand(ctx context.Context, serviceName string, cmd []string, options types.ExecOptions) error {
-	projectName := m.getProjectName()
-
-	if err := m.docker.Containers().Exec(ctx, projectName, serviceName, cmd, options); err != nil {
-		return fmt.Errorf("failed to execute command in %s: %w", serviceName, err)
-	}
-
 	return nil
 }
 
-// GetLogs retrieves logs from services
-func (m *Manager) GetLogs(ctx context.Context, serviceNames []string, options types.LogOptions) error {
-	projectName := m.getProjectName()
-
-	if err := m.docker.Containers().Logs(ctx, projectName, serviceNames, options); err != nil {
-		return fmt.Errorf("failed to get logs: %w", err)
-	}
-
-	return nil
-}
-
-// Service operations (delegated to operations manager)
-
-// ConnectToService provides convenient connection to services
+// Legacy compatibility methods for existing code
 func (m *Manager) ConnectToService(ctx context.Context, serviceName string, options types.ConnectOptions) error {
-	return m.operations.ConnectToService(ctx, serviceName, options)
+	// Simplified connect - just exec into the service
+	cmd := []string{"sh"}
+	if options.Database != "" {
+		// For databases, try common CLI tools
+		switch serviceName {
+		case "postgres", "postgresql":
+			cmd = []string{"psql", "-U", options.User, "-d", options.Database}
+		case "mysql", "mariadb":
+			cmd = []string{"mysql", "-u", options.User, "-p", options.Database}
+		case "redis":
+			cmd = []string{"redis-cli"}
+		case "mongodb", "mongo":
+			cmd = []string{"mongosh", options.Database}
+		}
+	}
+
+	return m.ExecCommand(ctx, serviceName, cmd, types.ExecOptions{
+		Interactive: true,
+		TTY:         true,
+		User:        options.User,
+	})
 }
 
-// BackupService creates a backup of service data
 func (m *Manager) BackupService(ctx context.Context, serviceName, backupName string, options types.BackupOptions) error {
-	return m.operations.BackupService(ctx, serviceName, backupName, options)
+	return fmt.Errorf("backup functionality moved to separate backup tool")
 }
 
-// RestoreService restores service data from a backup
 func (m *Manager) RestoreService(ctx context.Context, serviceName, backupFile string, options types.RestoreOptions) error {
-	return m.operations.RestoreService(ctx, serviceName, backupFile, options)
+	return fmt.Errorf("restore functionality moved to separate backup tool")
 }
 
-// ScaleService scales a service to the specified number of replicas
 func (m *Manager) ScaleService(ctx context.Context, serviceName string, replicas int, options types.ScaleOptions) error {
-	return m.operations.ScaleService(ctx, serviceName, replicas, options)
+	if replicas == 0 {
+		return m.StopServices(ctx, []string{serviceName}, types.StopOptions{Remove: true})
+	}
+	return m.StartServices(ctx, []string{serviceName}, types.StartOptions{Detach: true})
 }
-
-// Resource management (delegated to cleanup manager)
-
-// CleanupResources removes project resources
-func (m *Manager) CleanupResources(ctx context.Context, options types.CleanupOptions) error {
-	return m.cleanup.CleanupResources(ctx, options)
-}
-
-// Helper methods (package-private for sub-managers)
 
 func (m *Manager) getProjectName() string {
 	if m.config != nil && m.config.Global.DefaultProjectType != "" {
 		return m.config.Global.DefaultProjectType
 	}
 	return filepath.Base(m.projectDir)
-}
-
-func (m *Manager) validateServices(serviceNames []string) error {
-	servicesYAMLPath := filepath.Join(constants.ServicesDir, "services.yaml")
-	data, err := os.ReadFile(servicesYAMLPath)
-	if err != nil {
-		for _, name := range serviceNames {
-			if strings.TrimSpace(name) == "" {
-				return fmt.Errorf("empty service name provided")
-			}
-		}
-		return nil
-	}
-
-	var services map[string]any
-	if err := yaml.Unmarshal(data, &services); err != nil {
-		for _, name := range serviceNames {
-			if strings.TrimSpace(name) == "" {
-				return fmt.Errorf("empty service name provided")
-			}
-		}
-		return nil
-	}
-
-	for _, name := range serviceNames {
-		if strings.TrimSpace(name) == "" {
-			return fmt.Errorf("empty service name provided")
-		}
-		if _, exists := services[name]; !exists {
-			availableServices := make([]string, 0, len(services))
-			for serviceName := range services {
-				availableServices = append(availableServices, serviceName)
-			}
-			return fmt.Errorf("unknown service '%s'. Available services: %v", name, availableServices)
-		}
-	}
-	return nil
-}
-
-func (m *Manager) checkPortConflicts(_ context.Context, serviceNames []string) error {
-	// Load service configurations dynamically to get ports
-	conflicts := []string{}
-	for _, serviceName := range serviceNames {
-		_ = serviceName // TODO: implement dynamic port checking
-	}
-
-	if len(conflicts) > 0 {
-		return fmt.Errorf("port conflicts detected for services: %v", conflicts)
-	}
-	return nil
-}
-
-func (m *Manager) waitForHealthy(ctx context.Context, _ string, serviceNames []string, timeout time.Duration) error {
-	m.logger.Info("Waiting for services to become healthy", "services", serviceNames, "timeout", timeout)
-
-	deadline := time.Now().Add(timeout)
-	ticker := time.NewTicker(constants.HealthCheckIntervalSeconds * time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-ticker.C:
-			if time.Now().After(deadline) {
-				return fmt.Errorf("timeout waiting for services to become healthy")
-			}
-
-			allHealthy := true
-			statuses, err := m.GetServiceStatus(ctx, serviceNames)
-			if err != nil {
-				m.logger.Warn("Failed to get service status during health check", "error", err)
-				continue
-			}
-
-			for _, status := range statuses {
-				if status.State != constants.StateRunning || (status.Health != constants.HealthHealthy && status.Health != "") {
-					allHealthy = false
-					break
-				}
-			}
-
-			if allHealthy {
-				m.logger.Info("All services are healthy")
-				return nil
-			}
-		}
-	}
 }

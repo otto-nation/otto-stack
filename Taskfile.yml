@@ -142,6 +142,10 @@ tasks:
     silent: true
     cmds:
       - |
+        if [ "$NO_VERIFY" ]; then
+            echo 'pre-commit hook skipped' 1>&2
+            exit 0
+        fi
         STAGED_FILES=$(git diff --cached --name-only)
         if [ -z "$STAGED_FILES" ]; then
           echo "❌ No staged changes found. Use 'git add' first."

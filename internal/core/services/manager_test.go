@@ -61,8 +61,8 @@ func TestNewManager(t *testing.T) {
 				}
 				require.NotNil(t, manager)
 				assert.Equal(t, projectDir, manager.projectDir)
-				assert.NotNil(t, manager.operations)
-				assert.NotNil(t, manager.cleanup)
+				assert.NotNil(t, manager.docker)
+				assert.NotNil(t, manager.logger)
 
 				// Clean up
 				_ = manager.Close()
@@ -195,11 +195,11 @@ func TestManager_SubManagers(t *testing.T) {
 	}
 	defer func() { _ = manager.Close() }()
 
-	t.Run("operations sub-manager initialized", func(t *testing.T) {
-		assert.NotNil(t, manager.operations)
+	t.Run("docker client initialized", func(t *testing.T) {
+		assert.NotNil(t, manager.docker)
 	})
 
-	t.Run("cleanup sub-manager initialized", func(t *testing.T) {
-		assert.NotNil(t, manager.cleanup)
+	t.Run("logger initialized", func(t *testing.T) {
+		assert.NotNil(t, manager.logger)
 	})
 }
