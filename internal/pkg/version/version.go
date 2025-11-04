@@ -20,8 +20,8 @@ const (
 
 // Use constants from brand.go
 var (
-	AppNameTemplate   = "placeholder"
-	UserAgentTemplate = "placeholder"
+	AppNameTemplate   = constants.AppName
+	UserAgentTemplate = constants.AppName + "/" + DefaultVersion
 )
 
 // Version-specific templates (not branding)

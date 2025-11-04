@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
@@ -75,27 +76,53 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Perform cleanup operations
-	if err := h.performCleanup(ctx, setup); err != nil {
+	if err := h.performCleanup(ctx, setup, cmd, base); err != nil {
 		utils.HandleError(ciFlags, fmt.Errorf("cleanup failed: %w", err))
 		return nil
 	}
 
-	// TODO: Add cleanup operation when not in quiet mode
+	if !ciFlags.Quiet {
+		base.Output.Success("Cleanup completed successfully")
+	}
 
 	return nil
 }
 
 // performCleanup executes the actual cleanup operations
-func (h *CleanupHandler) performCleanup(ctx context.Context, setup *CoreSetup) error {
-	// Clean up stopped containers
-	// Cleanup operation
+func (h *CleanupHandler) performCleanup(ctx context.Context, setup *CoreSetup, cmd *cobra.Command, base *types.BaseCommand) error {
+	// Parse cleanup flags
+	flags, err := constants.ParseCleanupFlags(cmd)
+	if err != nil {
+		return fmt.Errorf("failed to parse cleanup flags: %w", err)
+	}
+
+	ciFlags := utils.GetCIFlags(cmd)
+
+	if !ciFlags.Quiet {
+		base.Output.Info("Starting cleanup operations...")
+	}
+
+	// Stop and remove containers
 	if err := setup.DockerClient.ComposeDown(ctx, setup.Config.Project.Name, types.StopOptions{
-		Remove: true,
+		Remove:        true,
+		RemoveVolumes: flags.Volumes,
 	}); err != nil {
 		return fmt.Errorf("failed to stop containers: %w", err)
 	}
 
-	// Cleanup operation completed successfully
+	// Clean up additional resources if requested
+	if flags.Images {
+		if err := setup.DockerClient.RemoveResources(ctx, docker.ResourceImage, setup.Config.Project.Name); err != nil && !ciFlags.Quiet {
+			base.Output.Warning("Failed to remove images: %v", err)
+		}
+	}
+
+	if flags.Networks {
+		if err := setup.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, setup.Config.Project.Name); err != nil && !ciFlags.Quiet {
+			base.Output.Warning("Failed to remove networks: %v", err)
+		}
+	}
+
 	return nil
 }
 
