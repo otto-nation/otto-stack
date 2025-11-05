@@ -45,6 +45,11 @@ tasks:
       - "internal/config/services/**/*.yaml"
       - "cmd/generate-*/main.go"
       - "cmd/generate-*/templates/*.tmpl"
+    generates:
+      - "internal/pkg/constants/cli_generated.go"
+      - "internal/pkg/constants/services_generated.go"
+      - "internal/pkg/constants/types_generated.go"
+      - "internal/pkg/cli/commands_generated.go"
     silent: true
     cmds:
       - echo "🔧 Generating code from YAML configs..."
@@ -57,8 +62,6 @@ tasks:
         go run ./cmd/generate-services
         echo "🔧 Running generate-commands..."
         go run ./cmd/generate-commands
-      - echo "🔧 Formatting generated code..."
-      - task: fmt
       - echo "✅ Generated code from YAML configs"
 
   # ============================================================================
@@ -66,7 +69,7 @@ tasks:
   # ============================================================================
   build:
     desc: "🔨 Build the Go binary for current platform"
-    deps: [sync-go-version, deps]
+    deps: [sync-go-version, deps, lint]
     sources:
       - "**/*.go"
       - "go.mod"
@@ -82,7 +85,7 @@ tasks:
 
   build-all:
     desc: "🌍 Build binaries for all supported platforms"
-    deps: [deps]
+    deps: [deps, lint]
     silent: true
     cmds:
       - echo "🌍 Building {{.BINARY_NAME}} for all platforms..."
@@ -130,11 +133,18 @@ tasks:
   deps:
     desc: "📥 Download and tidy Go dependencies"
     deps: [generate]
+    sources:
+      - "go.mod"
+      - "go.sum"
+      - "**/*.go"
+    generates:
+      - ".deps-timestamp"
     silent: true
     cmds:
       - echo "📥 Downloading Go dependencies..."
       - go mod download
       - go mod tidy
+      - touch .deps-timestamp
       - echo "✅ Dependencies updated"
 
   # ============================================================================
@@ -288,6 +298,7 @@ tasks:
       - git diff --name-only > /tmp/git_before_fixes || touch /tmp/git_before_fixes
       - task: generate
       - task: fmt
+      - task: docs-fmt
       - go mod tidy
 
   pre-commit-verify:
@@ -341,9 +352,8 @@ tasks:
     silent: true
     cmds:
       - echo "🚀 Running pre-push checks..."
-      - task: generate
-      - task: test
       - task: build
+      - task: test
       - |
         # Capture git state before docs generation
         git diff --name-only > /tmp/git_before_docs || touch /tmp/git_before_docs
@@ -487,18 +497,26 @@ tasks:
   lint:
     desc: "🔍 Run comprehensive linting (vet + fmt + golangci-lint)"
     deps: [deps, fmt]
+    sources:
+      - "**/*.go"
+      - ".golangci.yml"
+      - "go.mod"
+      - "go.sum"
+    generates:
+      - ".lint-timestamp"
     silent: true
     cmds:
       - echo "🔍 Running go vet..."
       - go vet ./...
-      - echo "🔍 Checking code formatting..."
+      - echo "🔍 Running golangci-lint..."
       - |
-        if [ "$(gofmt -l . | wc -l)" -gt 0 ]; then
-          echo "❌ Code is not formatted. Run 'task fmt' to fix:"
-          gofmt -l .
-          exit 1
+        if [ ! -f $(go env GOPATH)/bin/golangci-lint ]; then
+          echo "📦 Installing golangci-lint..."
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
         fi
-      - echo "✅ Basic linting passed"
+      - $(go env GOPATH)/bin/golangci-lint run ./cmd/otto-stack/... ./internal/...
+      - touch .lint-timestamp
+      - echo "✅ All linting checks passed!"
       - echo "🔍 Running golangci-lint config verify..."
       - |
         if [ ! -f .golangci.yml ]; then
@@ -534,6 +552,12 @@ tasks:
 
   fmt:
     desc: "✨ Format Go code with gofmt and goimports"
+    sources:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+    generates:
+      - ".fmt-timestamp"
     silent: true
     cmds:
       - echo "✨ Formatting Go code..."
@@ -544,9 +568,23 @@ tasks:
         fi
       - go fmt ./...
       - $(go env GOPATH)/bin/goimports -w .
-      - echo "📝 Formatting documentation..."
-      - cd docs-site && npm run format
+      - touch .fmt-timestamp
       - echo "✅ Code formatted"
+
+  docs-fmt:
+    desc: "📝 Format documentation"
+    dir: docs-site
+    sources:
+      - "**/*.md"
+      - "package.json"
+    generates:
+      - "../.docs-fmt-timestamp"
+    silent: true
+    cmds:
+      - echo "📝 Formatting documentation..."
+      - npm run format
+      - touch ../.docs-fmt-timestamp
+      - echo "✅ Documentation formatted"
 
   security:
     desc: "🔒 Run security vulnerability scan"
@@ -580,6 +618,7 @@ tasks:
   # ============================================================================
   docker-build:
     desc: "🐳 Build Docker image"
+    deps: [build]
     silent: true
     cmds:
       - echo "🐳 Building Docker image..."
@@ -604,6 +643,10 @@ tasks:
       - echo "🧹 Cleaning build artifacts..."
       - rm -rf {{.BUILD_DIR}}/
       - rm -f coverage.out *.test *.prof
+      - rm -f .deps-timestamp .lint-timestamp .fmt-timestamp .docs-fmt-timestamp
+      - echo "🧹 Cleaning generated code..."
+      - find internal/ -name '*_generated.go' -type f -delete
+      - echo "🧹 Cleaning Go build cache..."
       - go clean -cache
       - echo "📚 Cleaning documentation..."
       - cd docs-site && npm run docs:clean

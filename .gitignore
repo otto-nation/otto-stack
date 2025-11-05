@@ -1,6 +1,12 @@
 # Generated files
 internal/**/*_generated.go
 
+# Taskfile
+.fmt-timestamp
+.lint-timestamp
+.deps-timestamp
+.docs-fmt-timestamp
+
 # Build artifacts and binaries
 build/
 dist/
