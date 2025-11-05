@@ -1,42 +1,54 @@
 name: localstack-core
 description: LocalStack core AWS service emulator
 hidden: true
-type: container
-runtime:
-    image: localstack/localstack:latest
-    ports:
-        - host: "4566"
-          container: "4566"
-          protocol: tcp
-        - host: "8055"
-          container: "8055"
-          protocol: tcp
-    environment:
-        AWS_ACCESS_KEY_ID: test
-        AWS_DEFAULT_REGION: us-east-1
-        AWS_ENDPOINT_URL: http://${LOCALSTACK_HOST:-localhost}:${LOCALSTACK_PORT:-4566}
-        AWS_SECRET_ACCESS_KEY: test
-        LOCALSTACK_DASHBOARD_PORT: ${LOCALSTACK_DASHBOARD_PORT:-8055}
-        LOCALSTACK_HOST: ${LOCALSTACK_HOST:-localhost}
-        LOCALSTACK_PORT: ${LOCALSTACK_PORT:-4566}
-        LOCALSTACK_URL: http://${LOCALSTACK_HOST:-localhost}:${LOCALSTACK_PORT:-4566}
-    container:
-        restart: unless-stopped
-        networks:
-            - otto-stack
-        memory_limit: 512m
-integration:
-    dependencies:
-        provides:
-            - aws-emulation
-            - cloud-core
+service_type: container
+
+environment:
+  AWS_ACCESS_KEY_ID: test
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_ENDPOINT_URL: http://${LOCALSTACK_HOST:-localhost}:${LOCALSTACK_PORT:-4566}
+  AWS_SECRET_ACCESS_KEY: test
+  LOCALSTACK_DASHBOARD_PORT: ${LOCALSTACK_DASHBOARD_PORT:-8055}
+  LOCALSTACK_HOST: ${LOCALSTACK_HOST:-localhost}
+  LOCALSTACK_PORT: ${LOCALSTACK_PORT:-4566}
+  LOCALSTACK_URL: http://${LOCALSTACK_HOST:-localhost}:${LOCALSTACK_PORT:-4566}
+
+container:
+  image: localstack/localstack:latest
+  ports:
+    - external: "4566"
+      internal: "4566"
+      protocol: tcp
+    - external: "8055"
+      internal: "8055"
+      protocol: tcp
+  restart: unless-stopped
+  networks:
+    - otto-stack
+  memory_limit: 512m
+  health_check:
+    test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+service:
+  dependencies:
+    provides:
+      - aws-emulation
+      - cloud-core
+
 documentation:
-    examples:
-        - aws --endpoint-url=http://localhost:4566 s3 ls
-    usage_notes: Core LocalStack service providing AWS API emulation for local development
-    links:
-        - https://docs.localstack.cloud/
-    use_cases:
-        - AWS service emulation for local development
-        - Cloud service testing without AWS costs
-        - Offline development environment
+  examples:
+    - aws --endpoint-url=http://localhost:4566 s3 ls
+  usage_notes: Core LocalStack service providing AWS API emulation for local development
+  links:
+    - https://docs.localstack.cloud/
+  use_cases:
+    - AWS service emulation for local development
+    - Cloud service testing without AWS costs
+    - Offline development environment
+  web_interfaces:
+    - name: LocalStack Dashboard
+      url: http://localhost:8055
+      description: LocalStack web dashboard for managing services

@@ -1,25 +1,33 @@
 name: zookeeper
 description: Apache Zookeeper coordination service for distributed systems
-type: container
-runtime:
+service_type: container
+
+environment:
+  ZOOKEEPER_HOST: ${ZOOKEEPER_HOST:-localhost}
+  ZOOKEEPER_PORT: ${ZOOKEEPER_PORT:-2181}
+  ZOOKEEPER_URL: ${ZOOKEEPER_HOST:-localhost}:${ZOOKEEPER_PORT:-2181}
+
+container:
   image: confluentinc/cp-zookeeper:latest
   ports:
-    - host: "2181"
-      container: "2181"
+    - external: "2181"
+      internal: "2181"
       protocol: tcp
-  environment:
-    ZOOKEEPER_HOST: ${ZOOKEEPER_HOST:-localhost}
-    ZOOKEEPER_PORT: ${ZOOKEEPER_PORT:-2181}
-    ZOOKEEPER_URL: ${ZOOKEEPER_HOST:-localhost}:${ZOOKEEPER_PORT:-2181}
-  container:
-    restart: unless-stopped
-    networks:
-      - otto-stack
-    memory_limit: 256m
-integration:
+  restart: unless-stopped
+  networks:
+    - otto-stack
+  memory_limit: 256m
+  health_check:
+    test: ["CMD", "sh", "-c", "echo 'ruok' | nc localhost 2181"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+service:
   dependencies:
     provides:
       - coordination
+
 documentation:
   examples:
     - echo 'ruok' | nc localhost 2181

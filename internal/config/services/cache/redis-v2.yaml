@@ -1,50 +1,64 @@
 name: redis
 description: Redis in-memory data store for caching and session storage
-type: container
-runtime:
-    image: redis:7-alpine
-    ports:
-        - host: "6379"
-          container: "6379"
-          protocol: tcp
-    environment:
-        REDIS_HOST: ${REDIS_HOST:-localhost}
-        REDIS_PASSWORD: ${REDIS_PASSWORD:-password}
-        REDIS_PORT: ${REDIS_PORT:-6379}
-        REDIS_URL: redis://:${REDIS_PASSWORD:-password}@${REDIS_HOST:-localhost}:${REDIS_PORT:-6379}
-    container:
-        restart: unless-stopped
-        networks:
-            - otto-stack
-        memory_limit: 256m
-        command:
-            - redis-server
-            - --requirepass
-            - ${REDIS_PASSWORD:-password}
-            - --appendonly
-            - "yes"
-integration:
-    connection:
-        type: cli
-        default_port: 6379
-        client: redis-cli
-        host_flag: -h
-        port_flag: -p
-        database_flag: -n
-    dependencies:
-        provides:
-            - cache
+service_type: container
+
+environment:
+  REDIS_HOST: ${REDIS_HOST:-localhost}
+  REDIS_PASSWORD: ${REDIS_PASSWORD:-password}
+  REDIS_PORT: ${REDIS_PORT:-6379}
+  REDIS_URL: redis://:${REDIS_PASSWORD:-password}@${REDIS_HOST:-localhost}:${REDIS_PORT:-6379}
+
+container:
+  image: redis:7-alpine
+  ports:
+    - external: "6379"
+      internal: "6379"
+      protocol: tcp
+  restart: unless-stopped
+  networks:
+    - otto-stack
+  memory_limit: 256m
+  command:
+    - redis-server
+    - --requirepass
+    - ${REDIS_PASSWORD:-password}
+    - --appendonly
+    - "yes"
+  health_check:
+    test: ["CMD", "redis-cli", "ping"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+service:
+  connection:
+    type: cli
+    default_port: 6379
+    client: redis-cli
+    host_flag: -h
+    port_flag: -p
+    database_flag: -n
+  dependencies:
+    provides:
+      - cache
+  management:
+    connect:
+      type: command
+      command: ["redis-cli"]
+      args:
+        default: ["-h", "localhost", "-p", "6379"]
+
 documentation:
-    examples:
-        - redis-cli -h localhost -p 6379 ping
-        - spring.data.redis.host=localhost
-    usage_notes: Use Redis for caching, session storage, and pub/sub. Set a password for production-like security.
-    links:
-        - https://redis.io/documentation
-        - https://spring.io/projects/spring-data-redis
-    use_cases:
-        - Session storage
-        - Application caching
-        - Rate limiting
-        - Pub/Sub messaging
-        - Temporary data storage
+  examples:
+    - redis-cli -h localhost -p 6379 ping
+    - spring.data.redis.host=localhost
+  usage_notes: Use Redis for caching, session storage, and pub/sub. Set a password for production-like security.
+  links:
+    - https://redis.io/documentation
+    - https://spring.io/projects/spring-data-redis
+  use_cases:
+    - Session storage
+    - Application caching
+    - Rate limiting
+    - Pub/Sub messaging
+    - Temporary data storage

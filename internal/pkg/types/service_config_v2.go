@@ -13,42 +13,40 @@ type ServiceConfigV2 struct {
 	Name        string                `yaml:"name" validate:"required,min=1"`
 	Description string                `yaml:"description" validate:"required,min=1"`
 	Hidden      bool                  `yaml:"hidden,omitempty"`
-	Type        constants.ServiceType `yaml:"type,omitempty"`
+	ServiceType constants.ServiceType `yaml:"service_type,omitempty"`
+
+	// Service-level environment variables (for clients)
+	Environment map[string]string `yaml:"environment,omitempty"`
 
 	// Configuration sections
-	Runtime     RuntimeSpec     `yaml:"runtime" validate:"required"`
-	Integration IntegrationSpec `yaml:"integration,omitempty"`
+	Container ContainerSpec `yaml:"container" validate:"required"`
+	Service   ServiceSpec   `yaml:"service,omitempty"`
 
 	// Documentation and parameters
 	Documentation DocumentationSpec `yaml:"documentation,omitempty"`
 	Parameters    ParametersSpec    `yaml:"parameters,omitempty"`
 }
 
-// RuntimeSpec defines how the service runs
-type RuntimeSpec struct {
+// ContainerSpec defines how the service runs
+type ContainerSpec struct {
 	Image       string            `yaml:"image,omitempty"`
 	Ports       []PortSpec        `yaml:"ports,omitempty"`
 	Environment map[string]string `yaml:"environment,omitempty"`
-	Container   ContainerSpec     `yaml:"container,omitempty"`
 	Volumes     []VolumeSpec      `yaml:"volumes,omitempty"`
+
+	// Container runtime settings (flattened from nested container section)
+	Restart     constants.RestartPolicy `yaml:"restart,omitempty"`
+	Command     []string                `yaml:"command,omitempty"`
+	Networks    []string                `yaml:"networks,omitempty"`
+	MemoryLimit string                  `yaml:"memory_limit,omitempty"`
+	HealthCheck *HealthCheckSpec        `yaml:"health_check,omitempty"`
 }
 
 // PortSpec represents a port mapping
 type PortSpec struct {
-	Host      string `yaml:"host"`
-	Container string `yaml:"container"`
-	Protocol  string `yaml:"protocol,omitempty"` // tcp, udp
-}
-
-// ContainerSpec defines container-specific configuration
-type ContainerSpec struct {
-	Restart     constants.RestartPolicy `yaml:"restart,omitempty"`
-	Networks    []string                `yaml:"networks,omitempty"`
-	MemoryLimit string                  `yaml:"memory_limit,omitempty"`
-	CPULimit    string                  `yaml:"cpu_limit,omitempty"`
-	Command     []string                `yaml:"command,omitempty"`
-	Environment []string                `yaml:"environment,omitempty"`
-	HealthCheck *HealthCheckSpec        `yaml:"health_check,omitempty"`
+	External string `yaml:"external"`
+	Internal string `yaml:"internal"`
+	Protocol string `yaml:"protocol,omitempty"` // tcp, udp
 }
 
 // HealthCheckSpec defines container health check
@@ -68,8 +66,8 @@ type VolumeSpec struct {
 	ReadOnly    bool   `yaml:"read_only,omitempty"`
 }
 
-// IntegrationSpec defines how the service integrates with others
-type IntegrationSpec struct {
+// ServiceSpec defines how the service integrates with others
+type ServiceSpec struct {
 	Connection   *ConnectionSpec  `yaml:"connection,omitempty"`
 	Dependencies DependenciesSpec `yaml:"dependencies,omitempty"`
 	Management   *ManagementSpec  `yaml:"management,omitempty"`
@@ -167,28 +165,28 @@ func (sc *ServiceConfigV2) Validate() error {
 		return fmt.Errorf("service description is required")
 	}
 
-	if err := sc.Type.Validate(); err != nil {
+	if err := sc.ServiceType.Validate(); err != nil {
 		return fmt.Errorf("invalid service type: %w", err)
 	}
 
-	if err := sc.Runtime.Validate(); err != nil {
-		return fmt.Errorf("invalid runtime config: %w", err)
+	if err := sc.Container.Validate(); err != nil {
+		return fmt.Errorf("invalid container config: %w", err)
 	}
 
-	if err := sc.Integration.Validate(); err != nil {
-		return fmt.Errorf("invalid integration config: %w", err)
+	if err := sc.Service.Validate(); err != nil {
+		return fmt.Errorf("invalid service config: %w", err)
 	}
 
 	return nil
 }
 
-// Validate validates the runtime specification
-func (rs *RuntimeSpec) Validate() error {
-	if err := rs.Container.Validate(); err != nil {
-		return fmt.Errorf("invalid container config: %w", err)
+// Validate validates the container specification
+func (cs *ContainerSpec) Validate() error {
+	if err := cs.Restart.Validate(); err != nil {
+		return err
 	}
 
-	for i, volume := range rs.Volumes {
+	for i, volume := range cs.Volumes {
 		if volume.Name == "" {
 			return fmt.Errorf("volume %d: name is required", i)
 		}
@@ -200,15 +198,10 @@ func (rs *RuntimeSpec) Validate() error {
 	return nil
 }
 
-// Validate validates the container specification
-func (cs *ContainerSpec) Validate() error {
-	return cs.Restart.Validate()
-}
-
-// Validate validates the integration specification
-func (is *IntegrationSpec) Validate() error {
-	if is.Connection != nil {
-		if err := is.Connection.Validate(); err != nil {
+// Validate validates the service specification
+func (ss *ServiceSpec) Validate() error {
+	if ss.Connection != nil {
+		if err := ss.Connection.Validate(); err != nil {
 			return fmt.Errorf("invalid connection config: %w", err)
 		}
 	}

@@ -1,26 +1,36 @@
 name: mysql
 description: MySQL relational database for persistent data storage
-type: container
-runtime:
+service_type: container
+
+environment:
+  DATABASE_URL: mysql://${MYSQL_USER:-root}:${MYSQL_PASSWORD:-password}@${MYSQL_HOST:-localhost}:${MYSQL_PORT:-3306}/${MYSQL_DATABASE:-local_dev}
+  MYSQL_DATABASE: ${MYSQL_DATABASE:-local_dev}
+  MYSQL_HOST: ${MYSQL_HOST:-localhost}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
+  MYSQL_PORT: ${MYSQL_PORT:-3306}
+  MYSQL_URL: mysql://${MYSQL_USER:-root}:${MYSQL_PASSWORD:-password}@${MYSQL_HOST:-localhost}:${MYSQL_PORT:-3306}/${MYSQL_DATABASE:-local_dev}
+  MYSQL_USER: ${MYSQL_USER:-root}
+
+container:
   image: mysql:8.0
   ports:
-    - host: "3306"
-      container: "3306"
+    - external: "3306"
+      internal: "3306"
       protocol: tcp
   environment:
-    DATABASE_URL: mysql://${MYSQL_USER:-root}:${MYSQL_PASSWORD:-password}@${MYSQL_HOST:-localhost}:${MYSQL_PORT:-3306}/${MYSQL_DATABASE:-local_dev}
+    MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-password}
     MYSQL_DATABASE: ${MYSQL_DATABASE:-local_dev}
-    MYSQL_HOST: ${MYSQL_HOST:-localhost}
-    MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
-    MYSQL_PORT: ${MYSQL_PORT:-3306}
-    MYSQL_URL: mysql://${MYSQL_USER:-root}:${MYSQL_PASSWORD:-password}@${MYSQL_HOST:-localhost}:${MYSQL_PORT:-3306}/${MYSQL_DATABASE:-local_dev}
-    MYSQL_USER: ${MYSQL_USER:-root}
-  container:
-    restart: unless-stopped
-    networks:
-      - otto-stack
-    memory_limit: 512m
-integration:
+  restart: unless-stopped
+  networks:
+    - otto-stack
+  memory_limit: 512m
+  health_check:
+    test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+service:
   connection:
     type: cli
     default_port: 3306
@@ -35,6 +45,12 @@ integration:
     provides:
       - database
       - sql
+  management:
+    connect:
+      type: command
+      command: ["mysql"]
+      args:
+        default: ["-h", "localhost", "-P", "3306", "-u", "root", "-p"]
 documentation:
   examples:
     - mysql -h localhost -u root -p -e "SELECT version();"

@@ -214,11 +214,11 @@ func isV2Format(data []byte) bool {
 		return false
 	}
 
-	// V2 format has runtime section and structured format
-	_, hasRuntime := config[constants.YAMLKeyRuntime]
-	_, hasIntegration := config[constants.YAMLKeyIntegration]
+	// V2 format has container section and structured format
+	_, hasContainer := config[constants.YAMLKeyContainer]
+	_, hasService := config[constants.YAMLKeyService]
 
-	return hasRuntime || hasIntegration
+	return hasContainer || hasService
 }
 
 // convertV2ToV1 converts V2 format to V1 for backward compatibility
@@ -227,50 +227,92 @@ func convertV2ToV1(v2 types.ServiceConfigV2, category string) Service {
 		Name:        v2.Name,
 		Description: v2.Description,
 		Category:    category,
-		Type:        string(v2.Type),
-		Environment: v2.Runtime.Environment,
+		Type:        string(v2.ServiceType),
+		Environment: v2.Environment, // Use service-level environment
+		Hidden:      v2.Hidden,
 	}
 
 	// Convert Docker config
 	service.Docker = DockerConfig{
-		Image:    v2.Runtime.Image,
-		Restart:  string(v2.Runtime.Container.Restart),
-		Command:  v2.Runtime.Container.Command,
-		Networks: v2.Runtime.Container.Networks,
+		Image:    v2.Container.Image,
+		Restart:  string(v2.Container.Restart),
+		Command:  v2.Container.Command,
+		Networks: v2.Container.Networks,
+	}
+
+	// Convert health check if present
+	if v2.Container.HealthCheck != nil {
+		service.Docker.HealthCheck = &HealthCheckConfig{
+			Test:        v2.Container.HealthCheck.Test,
+			Interval:    v2.Container.HealthCheck.Interval.String(),
+			Timeout:     v2.Container.HealthCheck.Timeout.String(),
+			Retries:     v2.Container.HealthCheck.Retries,
+			StartPeriod: v2.Container.HealthCheck.StartPeriod.String(),
+		}
 	}
 
 	// Convert ports
-	for _, port := range v2.Runtime.Ports {
-		service.Docker.Ports = append(service.Docker.Ports, port.Host+":"+port.Container)
+	for _, port := range v2.Container.Ports {
+		service.Docker.Ports = append(service.Docker.Ports, port.External+":"+port.Internal)
 	}
 
 	// Convert volumes
-	for _, vol := range v2.Runtime.Volumes {
+	for _, vol := range v2.Container.Volumes {
 		service.Docker.Volumes = append(service.Docker.Volumes, vol.Name+":"+vol.Mount)
 	}
 
 	// Convert connection
-	if v2.Integration.Connection != nil {
+	if v2.Service.Connection != nil {
 		service.Connection = ConnectionConfig{
-			Client:      v2.Integration.Connection.Client,
-			DefaultUser: v2.Integration.Connection.DefaultUser,
-			DefaultPort: v2.Integration.Connection.DefaultPort,
-			HostFlag:    v2.Integration.Connection.HostFlag,
-			PortFlag:    v2.Integration.Connection.PortFlag,
-			UserFlag:    v2.Integration.Connection.UserFlag,
-			DBFlag:      v2.Integration.Connection.DBFlag,
+			Client:      v2.Service.Connection.Client,
+			DefaultUser: v2.Service.Connection.DefaultUser,
+			DefaultPort: v2.Service.Connection.DefaultPort,
+			HostFlag:    v2.Service.Connection.HostFlag,
+			PortFlag:    v2.Service.Connection.PortFlag,
+			UserFlag:    v2.Service.Connection.UserFlag,
+			DBFlag:      v2.Service.Connection.DBFlag,
 		}
 	}
 
 	// Convert dependencies - V2 uses different structure than V1
 	service.Dependencies = DependenciesV1{
-		Required:  v2.Integration.Dependencies.Required,
-		Provides:  v2.Integration.Dependencies.Provides,
-		Soft:      v2.Integration.Dependencies.Soft,
-		Conflicts: v2.Integration.Dependencies.Conflicts,
+		Required:  v2.Service.Dependencies.Required,
+		Provides:  v2.Service.Dependencies.Provides,
+		Soft:      v2.Service.Dependencies.Soft,
+		Conflicts: v2.Service.Dependencies.Conflicts,
+	}
+
+	// Convert management operations if present
+	if v2.Service.Management != nil {
+		service.Management = &ManagementV1{
+			Connect: convertOperationV2ToV1(v2.Service.Management.Connect),
+			Backup:  convertOperationV2ToV1(v2.Service.Management.Backup),
+			Restore: convertOperationV2ToV1(v2.Service.Management.Restore),
+			Custom:  make(map[string]*OperationV1),
+		}
+
+		// Convert custom operations
+		for name, op := range v2.Service.Management.Custom {
+			service.Management.Custom[name] = convertOperationV2ToV1(op)
+		}
 	}
 
 	return service
+}
+
+func convertOperationV2ToV1(op *types.OperationSpec) *OperationV1 {
+	if op == nil {
+		return nil
+	}
+
+	return &OperationV1{
+		Type:        op.Type,
+		Command:     op.Command,
+		Args:        op.Args,
+		Defaults:    op.Defaults,
+		PreCommands: op.PreCommands,
+		Extension:   op.Extension,
+	}
 }
 
 // GetConnectionConfig returns connection configuration for a service

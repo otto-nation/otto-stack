@@ -10,10 +10,12 @@ type Service struct {
 	Description  string            `yaml:"description"`
 	Category     string            `yaml:"category"`
 	Type         string            `yaml:"type,omitempty"`
+	Hidden       bool              `yaml:"hidden,omitempty"`
 	Docker       DockerConfig      `yaml:"docker,omitempty"`
 	Connection   ConnectionConfig  `yaml:"connection,omitempty"`
 	Dependencies DependenciesV1    `yaml:"dependencies,omitempty"`
 	Environment  map[string]string `yaml:"environment,omitempty"`
+	Management   *ManagementV1     `yaml:"management,omitempty"`
 }
 
 // DependenciesV1 represents V1 dependencies structure
@@ -26,17 +28,44 @@ type DependenciesV1 struct {
 
 // DockerConfig represents Docker configuration (V1 format)
 type DockerConfig struct {
-	Image         string         `yaml:"image,omitempty"`
-	Ports         []string       `yaml:"ports,omitempty"`
-	Environment   []string       `yaml:"environment,omitempty"`
-	Volumes       []any          `yaml:"volumes,omitempty"` // Can be strings or maps
-	SimpleVolumes []string       `yaml:"simple_volumes,omitempty"`
-	Command       []string       `yaml:"command,omitempty"`
-	Restart       string         `yaml:"restart,omitempty"`
-	DependsOn     []string       `yaml:"depends_on,omitempty"`
-	Networks      []string       `yaml:"networks,omitempty"`
-	MemoryLimit   string         `yaml:"memory_limit,omitempty"`
-	HealthCheck   map[string]any `yaml:"health_check,omitempty"`
+	Image         string             `yaml:"image,omitempty"`
+	Ports         []string           `yaml:"ports,omitempty"`
+	Environment   []string           `yaml:"environment,omitempty"`
+	Volumes       []any              `yaml:"volumes,omitempty"` // Can be strings or maps
+	SimpleVolumes []string           `yaml:"simple_volumes,omitempty"`
+	Command       []string           `yaml:"command,omitempty"`
+	Restart       string             `yaml:"restart,omitempty"`
+	DependsOn     []string           `yaml:"depends_on,omitempty"`
+	Networks      []string           `yaml:"networks,omitempty"`
+	MemoryLimit   string             `yaml:"memory_limit,omitempty"`
+	HealthCheck   *HealthCheckConfig `yaml:"health_check,omitempty"`
+}
+
+// HealthCheckConfig represents health check configuration (V1 format)
+type HealthCheckConfig struct {
+	Test        []string `yaml:"test,omitempty"`
+	Interval    string   `yaml:"interval,omitempty"`
+	Timeout     string   `yaml:"timeout,omitempty"`
+	Retries     int      `yaml:"retries,omitempty"`
+	StartPeriod string   `yaml:"start_period,omitempty"`
+}
+
+// ManagementV1 represents management operations (V1 format)
+type ManagementV1 struct {
+	Connect *OperationV1            `yaml:"connect,omitempty"`
+	Backup  *OperationV1            `yaml:"backup,omitempty"`
+	Restore *OperationV1            `yaml:"restore,omitempty"`
+	Custom  map[string]*OperationV1 `yaml:"custom,omitempty"`
+}
+
+// OperationV1 represents a management operation (V1 format)
+type OperationV1 struct {
+	Type        string              `yaml:"type,omitempty"`
+	Command     []string            `yaml:"command,omitempty"`
+	Args        map[string][]string `yaml:"args,omitempty"`
+	Defaults    map[string]string   `yaml:"defaults,omitempty"`
+	PreCommands map[string][]string `yaml:"pre_commands,omitempty"`
+	Extension   string              `yaml:"extension,omitempty"`
 }
 
 // ConnectionConfig represents connection configuration (V1 format)

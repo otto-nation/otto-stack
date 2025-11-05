@@ -1,24 +1,26 @@
 name: localstack-s3
 description: LocalStack S3 (Simple Storage Service) emulation
-type: container
-runtime:
-    container:
-        restart: unless-stopped
-integration:
-    dependencies:
-        required:
-            - localstack
-        provides:
-            - s3
-            - object-storage
+service_type: container
+
+container:
+  restart: unless-stopped
+
+service:
+  dependencies:
+    required:
+      - localstack
+    provides:
+      - s3
+      - object-storage
+
 documentation:
-    examples:
-        - aws --endpoint-url=http://localhost:4566 s3 ls
-    usage_notes: S3 object storage emulation for local development and testing
-    links:
-        - https://docs.localstack.cloud/user-guide/aws/s3/
-    use_cases:
-        - File storage and retrieval testing
-        - Static asset hosting
-        - Data backup and archival
-        - Content distribution testing
+  examples:
+    - aws --endpoint-url=http://localhost:4566 s3 ls
+  usage_notes: S3 object storage emulation for local development and testing
+  links:
+    - https://docs.localstack.cloud/user-guide/aws/s3/
+  use_cases:
+    - File storage and retrieval testing
+    - Static asset hosting
+    - Data backup and archival
+    - Content distribution testing

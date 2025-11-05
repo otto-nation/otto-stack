@@ -1,34 +1,42 @@
 name: jaeger
 description: Jaeger distributed tracing system for monitoring and troubleshooting microservices
-type: container
-runtime:
+service_type: container
+
+environment:
+  JAEGER_COLLECTOR_PORT: ${JAEGER_COLLECTOR_PORT:-13133}
+  JAEGER_HOST: ${JAEGER_HOST:-localhost}
+  JAEGER_PORT: ${JAEGER_PORT:-16686}
+  JAEGER_URL: http://${JAEGER_HOST:-localhost}:${JAEGER_PORT:-16686}/status
+
+container:
   image: jaegertracing/all-in-one:latest
   ports:
-    - host: "16686"
-      container: "16686"
+    - external: "16686"
+      internal: "16686"
       protocol: tcp
-    - host: "13133"
-      container: "13133"
+    - external: "13133"
+      internal: "13133"
       protocol: tcp
-  environment:
-    JAEGER_COLLECTOR_PORT: ${JAEGER_COLLECTOR_PORT:-13133}
-    JAEGER_HOST: ${JAEGER_HOST:-localhost}
-    JAEGER_PORT: ${JAEGER_PORT:-16686}
-    JAEGER_URL: http://${JAEGER_HOST:-localhost}:${JAEGER_PORT:-16686}/status
-  container:
-    restart: unless-stopped
-    networks:
-      - otto-stack
-    memory_limit: 512m
-integration:
+  restart: unless-stopped
+  networks:
+    - otto-stack
+  memory_limit: 512m
+  health_check:
+    test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:16686/"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+service:
   connection:
-    type: cli
+    type: web
     default_port: 16686
-    client: web
+    url_pattern: "http://localhost:16686"
   dependencies:
     provides:
       - tracing
       - observability
+
 documentation:
   examples:
     - curl -f http://localhost:16686/
@@ -41,3 +49,7 @@ documentation:
     - Performance monitoring
     - Service dependency analysis
     - Request flow visualization
+  web_interfaces:
+    - name: Jaeger UI
+      url: http://localhost:16686
+      description: Jaeger web interface for viewing traces

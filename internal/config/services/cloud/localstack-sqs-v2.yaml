@@ -1,23 +1,25 @@
 name: localstack-sqs
 description: LocalStack SQS (Simple Queue Service) emulation
-type: container
-runtime:
-    container:
-        restart: unless-stopped
-integration:
-    dependencies:
-        required:
-            - localstack
-        provides:
-            - sqs
-            - messaging-queue
+service_type: container
+
+container:
+  restart: unless-stopped
+
+service:
+  dependencies:
+    required:
+      - localstack
+    provides:
+      - sqs
+      - messaging-queue
+
 documentation:
-    examples:
-        - aws --endpoint-url=http://localhost:4566 sqs list-queues
-    usage_notes: SQS message queue emulation for local development
-    links:
-        - https://docs.localstack.cloud/user-guide/aws/sqs/
-    use_cases:
-        - Message queue testing
-        - Asynchronous processing development
-        - Event-driven architecture testing
+  examples:
+    - aws --endpoint-url=http://localhost:4566 sqs list-queues
+  usage_notes: SQS message queue emulation for local development
+  links:
+    - https://docs.localstack.cloud/user-guide/aws/sqs/
+  use_cases:
+    - Message queue testing
+    - Asynchronous processing development
+    - Event-driven architecture testing

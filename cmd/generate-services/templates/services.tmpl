@@ -4,22 +4,21 @@ package constants
 // V2 YAML Structure Constants
 const (
 	// Top-level sections
-	YAMLKeyRuntime     = "runtime"
-	YAMLKeyIntegration = "integration"
+	YAMLKeyContainer = "container"
+	YAMLKeyService   = "service"
 	
-	// Runtime section
+	// Container section
 	YAMLKeyImage       = "image"
 	YAMLKeyEnvironment = "environment"
 	YAMLKeyPorts       = "ports"
 	YAMLKeyVolumes     = "volumes"
-	YAMLKeyContainer   = "container"
+	YAMLKeyRestart     = "restart"
+	YAMLKeyCommand     = "command"
+	YAMLKeyNetworks    = "networks"
+	YAMLKeyMemoryLimit = "memory_limit"
+	YAMLKeyHealthCheck = "health_check"
 	
-	// Container section
-	YAMLKeyRestart  = "restart"
-	YAMLKeyCommand  = "command"
-	YAMLKeyNetworks = "networks"
-	
-	// Integration section
+	// Service section
 	YAMLKeyConnection   = "connection"
 	YAMLKeyDependencies = "dependencies"
 	YAMLKeyManagement   = "management"
@@ -41,10 +40,15 @@ const (
 	YAMLKeyProvides  = "provides"
 	
 	// Port/Volume structure
-	YAMLKeyHost      = "host"
-	YAMLKeyName      = "name"
-	YAMLKeyMount     = "mount"
+	YAMLKeyExternal    = "external"
+	YAMLKeyInternal    = "internal"
+	YAMLKeyName        = "name"
+	YAMLKeyMount       = "mount"
 	YAMLKeyDescription = "description"
+	
+	// Service metadata
+	YAMLKeyServiceType = "service_type"
+	YAMLKeyHidden      = "hidden"
 )
 
 // Service Categories

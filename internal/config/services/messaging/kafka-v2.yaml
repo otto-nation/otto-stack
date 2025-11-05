@@ -1,15 +1,17 @@
 name: kafka
 description: Complete Apache Kafka messaging platform with UI and topic management
-type: container
-runtime:
-  container:
-    restart: unless-stopped
-integration:
+service_type: container
+
+container:
+  restart: unless-stopped
+
+service:
   dependencies:
     provides:
       - messaging
       - streaming
       - event-processing
+
 documentation:
   examples:
     - kafka-console-producer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --topic test-topic

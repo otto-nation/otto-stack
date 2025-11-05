@@ -1,32 +1,40 @@
 name: kafka-ui
 description: Web UI for Kafka cluster management and topic browsing
-type: container
-runtime:
+service_type: container
+
+environment:
+  KAFKA_UI_HOST: ${KAFKA_UI_HOST:-localhost}
+  KAFKA_UI_PORT: ${KAFKA_UI_PORT:-8080}
+  KAFKA_UI_URL: http://${KAFKA_UI_HOST:-localhost}:${KAFKA_UI_PORT:-8080}
+
+container:
   image: provectuslabs/kafka-ui:latest
   ports:
-    - host: "8099"
-      container: "8099"
+    - external: "8099"
+      internal: "8099"
       protocol: tcp
-  environment:
-    KAFKA_UI_HOST: ${KAFKA_UI_HOST:-localhost}
-    KAFKA_UI_PORT: ${KAFKA_UI_PORT:-8080}
-    KAFKA_UI_URL: http://${KAFKA_UI_HOST:-localhost}:${KAFKA_UI_PORT:-8080}
-  container:
-    restart: unless-stopped
-    networks:
-      - otto-stack
-    memory_limit: 256m
-integration:
+  restart: unless-stopped
+  networks:
+    - otto-stack
+  memory_limit: 256m
+  health_check:
+    test: ["CMD", "curl", "-f", "http://localhost:8099/actuator/health"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+service:
   connection:
-    type: cli
+    type: web
     default_port: 8099
-    client: web
+    url_pattern: "http://localhost:8099"
   dependencies:
     required:
       - kafka-broker
     provides:
       - ui
       - management
+
 documentation:
   examples:
     - curl -f http://localhost:8099/actuator/health
@@ -38,3 +46,7 @@ documentation:
     - Message inspection and debugging
     - Cluster monitoring and health checks
     - Consumer group management
+  web_interfaces:
+    - name: Kafka UI
+      url: http://localhost:8099
+      description: Web interface for Kafka cluster management
