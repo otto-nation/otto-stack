@@ -4,6 +4,9 @@ description:
   microservices
 category: observability
 visibility: visible
+ports:
+  - "16686:16686"
+  - "14268:14268"
 dependencies:
   required: []
   soft: []
@@ -11,6 +14,15 @@ dependencies:
   provides:
     - tracing
     - observability
+environment:
+  JAEGER_HOST: ${JAEGER_HOST:-localhost}
+  JAEGER_PORT: ${JAEGER_PORT:-16686}
+  JAEGER_URL: http://${JAEGER_HOST:-localhost}:${JAEGER_PORT:-16686}
+  JAEGER_COLLECTOR_PORT: ${JAEGER_COLLECTOR_PORT:-14268}
+connection:
+  client: web
+  default_port: 16686
+  url_pattern: "http://localhost:{{.Port}}"
 docker:
   restart: unless-stopped
   networks:
@@ -65,13 +77,13 @@ service_configuration:
   - name: ui_port
     type: integer
     description: Port number for Jaeger UI web interface
-    default: "16686"
+    default: "${JAEGER_PORT:-16686}"
     example: "16687"
     required: false
   - name: otlp_http_port
     type: integer
     description: Port number for OpenTelemetry HTTP endpoint
-    default: "4318"
+    default: "${JAEGER_COLLECTOR_PORT:-14268}"
     example: "4319"
     required: false
   - name: otlp_grpc_port

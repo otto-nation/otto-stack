@@ -2,6 +2,8 @@ name: prometheus-service
 description: Prometheus metrics collection and monitoring system
 category: observability
 visibility: visible
+ports:
+  - "9089:9089"
 dependencies:
   required: []
   soft: []
@@ -10,10 +12,15 @@ dependencies:
     - metrics
     - monitoring
 environment:
-  PROMETHEUS_HOST: localhost
+  PROMETHEUS_HOST: ${PROMETHEUS_HOST:-localhost}
   PROMETHEUS_PORT: ${PROMETHEUS_PORT:-9090}
-  PROMETHEUS_URL: http://localhost:${PROMETHEUS_PORT:-9090}
+  PROMETHEUS_URL: http://${PROMETHEUS_HOST:-localhost}:${PROMETHEUS_PORT:-9090}
+connection:
+  client: web
+  default_port: 9090
+  url_pattern: "http://localhost:{{.Port}}"
 docker:
+  image: prom/prometheus:latest
   restart: unless-stopped
   networks:
     - otto-stack
@@ -35,14 +42,14 @@ docker:
       - --no-verbose
       - --tries=1
       - --spider
-      - http://localhost:9090/-/healthy
+      - http://localhost:9089/-/healthy
     interval: 30s
     timeout: 10s
     retries: 3
     start_period: 30s
 documentation:
   examples:
-    - curl http://localhost:9090/metrics
+    - curl http://localhost:9089/metrics
   usage_notes: Metrics collection and monitoring. Scrapes application /metrics endpoints.
   links:
     - https://prometheus.io/docs/
@@ -52,7 +59,7 @@ documentation:
     - Alerting and notifications
   web_interfaces:
     - name: Prometheus UI
-      url: http://localhost:${PROMETHEUS_PORT:-9090}
+      url: http://localhost:${PROMETHEUS_PORT:-9089}
       description: Prometheus metrics and query interface
   docs:
     - name: Prometheus Documentation
@@ -72,7 +79,7 @@ service_configuration:
   - name: port
     type: integer
     description: Port number for Prometheus web interface and API
-    default: "9090"
+    default: "${PROMETHEUS_PORT:-9089}"
     example: "9091"
     required: false
   - name: memory_limit

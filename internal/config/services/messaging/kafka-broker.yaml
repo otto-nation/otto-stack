@@ -2,6 +2,8 @@ name: kafka-broker
 description: Apache Kafka broker for event streaming and messaging
 category: messaging
 visibility: visible
+ports:
+  - "9099:9099"
 dependencies:
   required:
     - zookeeper
@@ -11,6 +13,11 @@ dependencies:
   provides:
     - messaging
     - streaming
+environment:
+  KAFKA_HOST: ${KAFKA_HOST:-localhost}
+  KAFKA_PORT: ${KAFKA_PORT:-9092}
+  KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092}
+  KAFKA_URL: kafka://${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092}
 docker:
   restart: unless-stopped
   networks:
@@ -20,8 +27,8 @@ docker:
     - KAFKA_BROKER_ID=1
     - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
     - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-    - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka-broker:29092,PLAINTEXT_HOST://localhost:${KAFKA_PORT:-9092}
-    - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+    - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka-broker:29092,PLAINTEXT_HOST://${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092}
+    - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:${KAFKA_PORT:-9092}
     - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
     - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
     - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
@@ -40,7 +47,7 @@ docker:
       - CMD
       - kafka-broker-api-versions
       - --bootstrap-server
-      - localhost:9092
+      - localhost:9099
     interval: 30s
     timeout: 10s
     retries: 5
@@ -48,7 +55,7 @@ docker:
   image: confluentinc/cp-kafka:latest
 documentation:
   examples:
-    - kafka-broker-api-versions --bootstrap-server localhost:9092
+    - kafka-broker-api-versions --bootstrap-server localhost:9099
   usage_notes:
     Kafka broker handles message storage and delivery. Requires Zookeeper
     for coordination.
@@ -75,7 +82,7 @@ service_configuration:
   - name: port
     type: integer
     description: Port number for Kafka broker
-    default: "9092"
+    default: "${KAFKA_PORT:-9092}"
     example: "9093"
     required: false
   - name: memory_limit
@@ -112,7 +119,7 @@ management:
         - kafka-topics
         - --list
         - --bootstrap-server
-        - localhost:9092
+        - localhost:9099
       type: cli
     describe_topic:
       command:
@@ -122,6 +129,6 @@ management:
         - kafka-topics
         - --describe
         - --bootstrap-server
-        - localhost:9092
+        - localhost:9099
         - --topic
       type: cli

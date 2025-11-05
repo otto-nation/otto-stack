@@ -2,6 +2,8 @@ name: redis
 description: Redis in-memory data store for caching and session storage
 category: cache
 visibility: visible
+ports:
+  - "6379:6379"
 connection:
   client: redis-cli
   default_port: 6379
@@ -9,10 +11,10 @@ connection:
   port_flag: "-p"
   database_flag: "-n"
 environment:
-  REDIS_HOST: localhost
+  REDIS_HOST: ${REDIS_HOST:-localhost}
   REDIS_PORT: ${REDIS_PORT:-6379}
   REDIS_PASSWORD: ${REDIS_PASSWORD:-password}
-  REDIS_URL: redis://:${REDIS_PASSWORD:-password}@localhost:${REDIS_PORT:-6379}
+  REDIS_URL: redis://:${REDIS_PASSWORD:-password}@${REDIS_HOST:-localhost}:${REDIS_PORT:-6379}
 dependencies:
   required: []
   soft: []
@@ -30,11 +32,6 @@ docker:
   networks:
     - otto-stack
   memory_limit: 256m
-  environment:
-    - REDIS_HOST=localhost
-    - REDIS_PORT=${REDIS_PORT:-6379}
-    - REDIS_PASSWORD=${REDIS_PASSWORD:-password}
-    - REDIS_URL=redis://:${REDIS_PASSWORD:-password}@localhost:${REDIS_PORT:-6379}
   health_check:
     test:
       - CMD
@@ -125,13 +122,13 @@ service_configuration:
   - name: port
     type: integer
     description: Port number for Redis server
-    default: "6379"
+    default: "${REDIS_PORT:-6379}"
     example: "6380"
     required: false
   - name: password
     type: string
     description: Password for Redis authentication
-    default: password
+    default: "${REDIS_PASSWORD:-password}"
     example: mySecurePassword123
     required: false
   - name: memory_limit

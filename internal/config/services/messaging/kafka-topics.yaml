@@ -10,10 +10,15 @@ dependencies:
   conflicts: []
   provides:
     - topic-management
-
+environment:
+  KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092}
+  KAFKA_TOPICS_CONFIG_PATH: /config/otto-stack-config.yml
 docker:
   image: confluentinc/cp-kafka:latest
   restart: "no"
+  networks:
+    - otto-stack
+  memory_limit: 256m
   command:
     - "sh"
     - "-c"
@@ -32,10 +37,13 @@ service_configuration:
 
 documentation:
   examples:
-    - "kafka-topics --bootstrap-server localhost:9092 --list"
+    - "kafka-topics --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --list"
   usage_notes: "Dynamically creates Kafka topics based on otto-stack configuration and service overrides"
   links:
     - "https://kafka.apache.org/documentation/"
+  docs:
+    - name: Apache Kafka Documentation
+      url: https://kafka.apache.org/documentation/
   use_cases:
     - Automatic Kafka topic creation based on configuration
     - Configurable topic names, partitions, and replication

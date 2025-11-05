@@ -2,12 +2,18 @@ name: zookeeper
 description: Apache Zookeeper coordination service for distributed systems
 category: messaging
 visibility: visible
+ports:
+  - "2181:2181"
 dependencies:
   required: []
   soft: []
   conflicts: []
   provides:
     - coordination
+environment:
+  ZOOKEEPER_HOST: ${ZOOKEEPER_HOST:-localhost}
+  ZOOKEEPER_PORT: ${ZOOKEEPER_PORT:-2181}
+  ZOOKEEPER_URL: ${ZOOKEEPER_HOST:-localhost}:${ZOOKEEPER_PORT:-2181}
 docker:
   restart: unless-stopped
   networks:
@@ -54,7 +60,7 @@ service_configuration:
   - name: port
     type: integer
     description: Port number for Zookeeper client connections
-    default: "2181"
+    default: "${ZOOKEEPER_PORT:-2181}"
     example: "2182"
     required: false
   - name: memory_limit

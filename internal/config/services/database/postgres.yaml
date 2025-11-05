@@ -2,6 +2,8 @@ name: postgres
 description: PostgreSQL relational database for persistent data storage
 category: database
 visibility: visible
+ports:
+  - "5432:5432"
 connection:
   client: psql
   default_user: postgres
@@ -19,13 +21,13 @@ dependencies:
     - database
     - sql
 environment:
-  POSTGRES_HOST: localhost
+  POSTGRES_HOST: ${POSTGRES_HOST:-localhost}
   POSTGRES_PORT: ${POSTGRES_PORT:-5432}
   POSTGRES_DB: ${POSTGRES_DB:-local_dev}
   POSTGRES_USER: ${POSTGRES_USER:-postgres}
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-  POSTGRES_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@localhost:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
-  DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@localhost:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
+  POSTGRES_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
 docker:
   restart: unless-stopped
   command:
@@ -156,25 +158,25 @@ service_configuration:
   - name: port
     type: integer
     description: Port number for PostgreSQL server
-    default: "5432"
+    default: "${POSTGRES_PORT:-5432}"
     example: "5433"
     required: false
   - name: database
     type: string
     description: Default database name to create
-    default: local_dev
+    default: "${POSTGRES_DB:-local_dev}"
     example: myapp_dev
     required: false
   - name: username
     type: string
     description: PostgreSQL username
-    default: postgres
+    default: "${POSTGRES_USER:-postgres}"
     example: myuser
     required: false
   - name: password
     type: string
     description: PostgreSQL password
-    default: password
+    default: "${POSTGRES_PASSWORD:-password}"
     example: mySecurePassword123
     required: false
   - name: memory_limit

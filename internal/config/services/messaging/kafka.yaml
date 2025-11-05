@@ -18,8 +18,8 @@ dependencies:
 
 documentation:
   examples:
-    - "kafka-console-producer --bootstrap-server localhost:9092 --topic test-topic"
-    - "kafka-console-consumer --bootstrap-server localhost:9092 --topic test-topic --from-beginning"
+    - "kafka-console-producer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --topic test-topic"
+    - "kafka-console-consumer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --topic test-topic --from-beginning"
   usage_notes: "Complete Kafka setup with Zookeeper coordination, broker, automatic topic creation, and web UI for management"
   links:
     - "https://kafka.apache.org/documentation/"

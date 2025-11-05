@@ -10,10 +10,18 @@ dependencies:
   conflicts: []
   provides:
     - aws-resource-init
-
+environment:
+  AWS_ENDPOINT_URL: http://${LOCALSTACK_HOST:-localhost}:${LOCALSTACK_PORT:-4566}
+  AWS_ACCESS_KEY_ID: test
+  AWS_SECRET_ACCESS_KEY: test
+  AWS_DEFAULT_REGION: us-east-1
+  LOCALSTACK_CONFIG_PATH: /config/otto-stack-config.yml
 docker:
   image: amazon/aws-cli:latest
   restart: "no"
+  networks:
+    - otto-stack
+  memory_limit: 128m
   command:
     - "sh"
     - "-c"
@@ -37,6 +45,9 @@ documentation:
   usage_notes: "Dynamically initializes AWS resources based on otto-stack configuration and service overrides"
   links:
     - "https://docs.localstack.cloud/"
+  docs:
+    - name: LocalStack Documentation
+      url: https://docs.localstack.cloud/
   use_cases:
     - Automatic AWS resource creation based on enabled services
     - Configurable SQS queues, SNS topics, and S3 buckets

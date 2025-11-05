@@ -3,6 +3,9 @@ description: LocalStack core AWS service emulator
 category: cloud
 type: container
 visibility: hidden
+ports:
+  - "4566:4566"
+  - "8055:8055"
 dependencies:
   required: []
   soft: []
@@ -10,12 +13,24 @@ dependencies:
   provides:
     - aws-emulation
     - cloud-core
+environment:
+  LOCALSTACK_HOST: ${LOCALSTACK_HOST:-localhost}
+  LOCALSTACK_PORT: ${LOCALSTACK_PORT:-4566}
+  LOCALSTACK_DASHBOARD_PORT: ${LOCALSTACK_DASHBOARD_PORT:-8055}
+  LOCALSTACK_URL: http://${LOCALSTACK_HOST:-localhost}:${LOCALSTACK_PORT:-4566}
+  AWS_ENDPOINT_URL: http://${LOCALSTACK_HOST:-localhost}:${LOCALSTACK_PORT:-4566}
+  AWS_ACCESS_KEY_ID: test
+  AWS_SECRET_ACCESS_KEY: test
+  AWS_DEFAULT_REGION: us-east-1
 documentation:
   examples:
     - aws --endpoint-url=http://localhost:4566 s3 ls
   usage_notes: Core LocalStack service providing AWS API emulation for local development
   links:
     - https://docs.localstack.cloud/
+  docs:
+    - name: LocalStack Documentation
+      url: https://docs.localstack.cloud/
   web_interfaces:
     - name: LocalStack Dashboard
       url: http://localhost:${LOCALSTACK_DASHBOARD_PORT:-8055}
@@ -31,11 +46,11 @@ docker:
     - otto-stack
   memory_limit: 512m
   environment:
-    - LOCALSTACK_HOST=localhost
+    - LOCALSTACK_HOST=${LOCALSTACK_HOST:-localhost}
     - LOCALSTACK_PORT=${LOCALSTACK_PORT:-4566}
     - LOCALSTACK_DASHBOARD_PORT=${LOCALSTACK_DASHBOARD_PORT:-8055}
-    - LOCALSTACK_URL=http://localhost:${LOCALSTACK_PORT:-4566}
-    - AWS_ENDPOINT_URL=http://localhost:${LOCALSTACK_PORT:-4566}
+    - LOCALSTACK_URL=http://${LOCALSTACK_HOST:-localhost}:${LOCALSTACK_PORT:-4566}
+    - AWS_ENDPOINT_URL=http://${LOCALSTACK_HOST:-localhost}:${LOCALSTACK_PORT:-4566}
     - AWS_ACCESS_KEY_ID=test
     - AWS_SECRET_ACCESS_KEY=test
     - AWS_DEFAULT_REGION=us-east-1
@@ -64,13 +79,13 @@ service_configuration:
   - name: port
     type: integer
     description: Port number for LocalStack API endpoint
-    default: "4566"
+    default: "${LOCALSTACK_PORT:-4566}"
     example: "4567"
     required: false
   - name: dashboard_port
     type: integer
     description: Port number for LocalStack dashboard
-    default: "8055"
+    default: "${LOCALSTACK_DASHBOARD_PORT:-8055}"
     example: "8056"
     required: false
   - name: memory_limit

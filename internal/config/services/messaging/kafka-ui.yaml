@@ -2,6 +2,8 @@ name: kafka-ui
 description: Web UI for Kafka cluster management and topic browsing
 category: messaging
 visibility: visible
+ports:
+  - "8099:8099"
 dependencies:
   required:
     - kafka-broker
@@ -10,6 +12,14 @@ dependencies:
   provides:
     - ui
     - management
+environment:
+  KAFKA_UI_HOST: ${KAFKA_UI_HOST:-localhost}
+  KAFKA_UI_PORT: ${KAFKA_UI_PORT:-8080}
+  KAFKA_UI_URL: http://${KAFKA_UI_HOST:-localhost}:${KAFKA_UI_PORT:-8080}
+connection:
+  client: web
+  default_port: 8099
+  url_pattern: "http://localhost:{{.Port}}"
 docker:
   image: provectuslabs/kafka-ui:latest
   restart: unless-stopped
@@ -26,14 +36,14 @@ docker:
       - CMD
       - curl
       - -f
-      - http://localhost:8080/actuator/health
+      - http://localhost:8099/actuator/health
     interval: 30s
     timeout: 10s
     retries: 3
     start_period: 30s
 documentation:
   examples:
-    - curl -f http://localhost:8080/actuator/health
+    - curl -f http://localhost:8099/actuator/health
   usage_notes:
     Web interface for managing Kafka topics, viewing messages, and monitoring
     cluster health
@@ -46,7 +56,7 @@ documentation:
     - Consumer group management
   web_interfaces:
     - name: Kafka UI
-      url: http://localhost:${KAFKA_UI_PORT:-8080}
+      url: http://localhost:${KAFKA_UI_PORT:-8099}
       description: Kafka cluster management and topic browser
   docs:
     - name: Kafka UI Documentation
@@ -61,7 +71,7 @@ service_configuration:
   - name: port
     type: integer
     description: Port number for Kafka UI web interface
-    default: "8080"
+    default: "${KAFKA_UI_PORT:-8080}"
     example: "8081"
     required: false
   - name: memory_limit

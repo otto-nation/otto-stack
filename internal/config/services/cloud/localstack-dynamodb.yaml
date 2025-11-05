@@ -1,6 +1,8 @@
 name: localstack-dynamodb
 description: LocalStack DynamoDB NoSQL database emulation
 category: cloud
+type: configuration
+target_service: localstack-core
 visibility: visible
 dependencies:
   required:
