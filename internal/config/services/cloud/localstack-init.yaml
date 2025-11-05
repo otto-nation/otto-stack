@@ -5,11 +5,11 @@ visibility: hidden
 
 dependencies:
   required:
-  - localstack-core
+    - localstack-core
   soft: []
   conflicts: []
   provides:
-  - aws-resource-init
+    - aws-resource-init
 
 docker:
   image: amazon/aws-cli:latest

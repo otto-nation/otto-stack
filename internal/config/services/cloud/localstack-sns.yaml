@@ -1,38 +1,40 @@
 name: localstack-sns
 description: LocalStack SNS (Simple Notification Service) emulation
 category: cloud
+visibility: visible
 type: configuration
 target_service: localstack-core
 dependencies:
   required:
-  - localstack
+    - localstack
   soft:
-  - localstack-sqs
+    - localstack-sqs
   conflicts: []
   provides:
-  - sns
-  - notifications
+    - sns
+    - notifications
 environment_additions:
   SERVICES: sns
 documentation:
   examples:
-  - aws --endpoint-url=http://localhost:4566 sns list-topics
-  usage_notes: SNS pub/sub notification service emulation. Can integrate with SQS
+    - aws --endpoint-url=http://localhost:4566 sns list-topics
+  usage_notes:
+    SNS pub/sub notification service emulation. Can integrate with SQS
     for subscriptions.
   links:
-  - https://docs.localstack.cloud/user-guide/aws/sns/
+    - https://docs.localstack.cloud/user-guide/aws/sns/
   use_cases:
-  - Pub/sub messaging patterns
-  - Event notifications
-  - Fan-out message distribution
-  - Integration with SQS subscriptions
+    - Pub/sub messaging patterns
+    - Event notifications
+    - Fan-out message distribution
+    - Integration with SQS subscriptions
   docs:
-  - name: LocalStack SNS Documentation
-    url: https://docs.localstack.cloud/user-guide/aws/sns/
+    - name: LocalStack SNS Documentation
+      url: https://docs.localstack.cloud/user-guide/aws/sns/
 service_configuration:
-- name: topics
-  type: string[]
-  description: List of SNS topic names to create automatically
-  default: '[]'
-  example: '["notifications", "events", "alerts"]'
-  required: false
+  - name: topics
+    type: string[]
+    description: List of SNS topic names to create automatically
+    default: "[]"
+    example: '["notifications", "events", "alerts"]'
+    required: false

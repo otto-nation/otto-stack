@@ -108,14 +108,40 @@ type ServiceInfo struct {
 
 // ServiceConfig represents service configuration
 type ServiceConfig struct {
-	Name        string
-	Description string
-	Image       string
-	Ports       []string
-	Volumes     []string
-	Environment map[string]string
-	Type        string
-	Components  []string
+	Name         string              `yaml:"name"`
+	Description  string              `yaml:"description"`
+	Category     string              `yaml:"category"`
+	Image        string              `yaml:"image,omitempty"`
+	Ports        []string            `yaml:"ports,omitempty"`
+	Volumes      []VolumeConfig      `yaml:"volumes,omitempty"`
+	Environment  map[string]string   `yaml:"environment,omitempty"`
+	Type         string              `yaml:"type,omitempty"`
+	Visibility   string              `yaml:"visibility,omitempty"`
+	Components   []string            `yaml:"components,omitempty"`
+	Dependencies ServiceDependencies `yaml:"dependencies,omitempty"`
+	Docker       map[string]any      `yaml:"docker,omitempty"`
+	Management   map[string]any      `yaml:"management,omitempty"`
+
+	// Flexible fields for documentation and other unknown fields
+	Connection           map[string]any `yaml:"connection,omitempty"`
+	Documentation        map[string]any `yaml:"documentation,omitempty"`
+	ServiceConfiguration []any          `yaml:"service_configuration,omitempty"`
+
+	// Catch-all for any other fields
+	Extra map[string]any `yaml:",inline"`
+}
+
+type VolumeConfig struct {
+	Name        string `yaml:"name"`
+	Mount       string `yaml:"mount"`
+	Description string `yaml:"description,omitempty"`
+}
+
+type ServiceDependencies struct {
+	Required  []string `yaml:"required,omitempty"`
+	Soft      []string `yaml:"soft,omitempty"`
+	Conflicts []string `yaml:"conflicts,omitempty"`
+	Provides  []string `yaml:"provides,omitempty"`
 }
 
 // ServiceStatus represents the runtime status of a service

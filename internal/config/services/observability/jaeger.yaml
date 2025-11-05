@@ -1,30 +1,32 @@
 name: jaeger
-description: Jaeger distributed tracing system for monitoring and troubleshooting
+description:
+  Jaeger distributed tracing system for monitoring and troubleshooting
   microservices
 category: observability
+visibility: visible
 dependencies:
   required: []
   soft: []
   conflicts: []
   provides:
-  - tracing
-  - observability
+    - tracing
+    - observability
 docker:
   restart: unless-stopped
   networks:
-  - otto-stack
+    - otto-stack
   memory_limit: 512m
   environment:
-  - COLLECTOR_OTLP_ENABLED=true
-  - COLLECTOR_ZIPKIN_HOST_PORT=9411
-  - SPAN_STORAGE_TYPE=memory
-  - JAEGER_DISABLED=false
+    - COLLECTOR_OTLP_ENABLED=true
+    - COLLECTOR_ZIPKIN_HOST_PORT=9411
+    - SPAN_STORAGE_TYPE=memory
+    - JAEGER_DISABLED=false
   health_check:
     test:
-    - CMD
-    - curl
-    - -f
-    - http://localhost:16686/
+      - CMD
+      - curl
+      - -f
+      - http://localhost:16686/
     interval: 30s
     timeout: 10s
     retries: 3
@@ -32,54 +34,55 @@ docker:
   image: jaegertracing/all-in-one:latest
 documentation:
   examples:
-  - curl -f http://localhost:16686/
-  usage_notes: Distributed tracing for microservices. Supports OpenTelemetry and Zipkin
+    - curl -f http://localhost:16686/
+  usage_notes:
+    Distributed tracing for microservices. Supports OpenTelemetry and Zipkin
     protocols.
   links:
-  - https://www.jaegertracing.io/docs/
-  - https://opentelemetry.io/docs/
+    - https://www.jaegertracing.io/docs/
+    - https://opentelemetry.io/docs/
   use_cases:
-  - Distributed tracing
-  - Performance monitoring
-  - Service dependency analysis
-  - Request flow visualization
+    - Distributed tracing
+    - Performance monitoring
+    - Service dependency analysis
+    - Request flow visualization
   web_interfaces:
-  - name: Jaeger UI
-    url: http://localhost:${JAEGER_UI_PORT:-16686}
-    description: Distributed tracing UI
+    - name: Jaeger UI
+      url: http://localhost:${JAEGER_UI_PORT:-16686}
+      description: Distributed tracing UI
   docs:
-  - name: Jaeger Documentation
-    url: https://www.jaegertracing.io/docs/
-  - name: OpenTelemetry
-    url: https://opentelemetry.io/docs/
+    - name: Jaeger Documentation
+      url: https://www.jaegertracing.io/docs/
+    - name: OpenTelemetry
+      url: https://opentelemetry.io/docs/
 service_configuration:
-- name: docker_image
-  type: string
-  description: Docker image to use for Jaeger container
-  default: jaegertracing/all-in-one:1.51
-  example: jaegertracing/all-in-one:1.50
-  required: false
-- name: ui_port
-  type: integer
-  description: Port number for Jaeger UI web interface
-  default: '16686'
-  example: '16687'
-  required: false
-- name: otlp_http_port
-  type: integer
-  description: Port number for OpenTelemetry HTTP endpoint
-  default: '4318'
-  example: '4319'
-  required: false
-- name: otlp_grpc_port
-  type: integer
-  description: Port number for OpenTelemetry gRPC endpoint
-  default: '4317'
-  example: '4320'
-  required: false
-- name: memory_limit
-  type: string
-  description: Memory limit for Jaeger container
-  default: 256m
-  example: 512m
-  required: false
+  - name: docker_image
+    type: string
+    description: Docker image to use for Jaeger container
+    default: jaegertracing/all-in-one:1.51
+    example: jaegertracing/all-in-one:1.50
+    required: false
+  - name: ui_port
+    type: integer
+    description: Port number for Jaeger UI web interface
+    default: "16686"
+    example: "16687"
+    required: false
+  - name: otlp_http_port
+    type: integer
+    description: Port number for OpenTelemetry HTTP endpoint
+    default: "4318"
+    example: "4319"
+    required: false
+  - name: otlp_grpc_port
+    type: integer
+    description: Port number for OpenTelemetry gRPC endpoint
+    default: "4317"
+    example: "4320"
+    required: false
+  - name: memory_limit
+    type: string
+    description: Memory limit for Jaeger container
+    default: 256m
+    example: 512m
+    required: false

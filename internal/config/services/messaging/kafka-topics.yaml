@@ -5,11 +5,11 @@ visibility: hidden
 
 dependencies:
   required:
-  - kafka-broker
+    - kafka-broker
   soft: []
   conflicts: []
   provides:
-  - topic-management
+    - topic-management
 
 docker:
   image: confluentinc/cp-kafka:latest

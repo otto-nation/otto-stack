@@ -1,6 +1,7 @@
 name: prometheus-service
 description: Prometheus metrics collection and monitoring system
 category: observability
+visibility: visible
 dependencies:
   required: []
   soft: []
