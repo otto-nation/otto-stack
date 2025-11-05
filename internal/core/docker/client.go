@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"os/exec"
 	"slices"
 
@@ -63,12 +64,20 @@ func (c *Client) ComposeUp(ctx context.Context, project string, services []strin
 }
 
 func (c *Client) ComposeDown(ctx context.Context, project string, options types.StopOptions) error {
-	args := []string{"compose", "-f", constants.DockerComposeFile, "-p", project, "down"}
+	var args []string
 	if options.Remove {
-		args = append(args, "--remove-orphans")
-	}
-	if options.RemoveVolumes {
-		args = append(args, "--volumes")
+		args = []string{"compose", "-f", constants.DockerComposeFile, "-p", project, "down"}
+		if options.RemoveOrphans {
+			args = append(args, "--remove-orphans")
+		}
+		if options.RemoveVolumes {
+			args = append(args, "--volumes")
+		}
+	} else {
+		args = []string{"compose", "-f", constants.DockerComposeFile, "-p", project, "stop"}
+		if options.Timeout > 0 {
+			args = append(args, "--timeout", fmt.Sprintf("%d", options.Timeout))
+		}
 	}
 
 	return c.RunCommand(ctx, args...)
@@ -120,8 +129,9 @@ func (c *Client) GetServiceStatus(ctx context.Context, project string, services 
 		}
 
 		status := types.ServiceStatus{
-			Name:  serviceName,
-			State: types.ServiceState(container.State),
+			Name:   serviceName,
+			State:  types.ServiceState(container.State),
+			Health: c.getContainerHealth(container),
 		}
 		statuses = append(statuses, status)
 	}
@@ -129,14 +139,24 @@ func (c *Client) GetServiceStatus(ctx context.Context, project string, services 
 	return statuses, nil
 }
 
+func (c *Client) getContainerHealth(cont container.Summary) types.HealthStatus {
+	switch cont.State {
+	case constants.StateRunning:
+		return types.HealthStatusHealthy
+	case constants.StateStopped:
+		return types.HealthStatusUnhealthy
+	case constants.StateStarting:
+		return types.HealthStatusStarting
+	default:
+		return types.HealthStatusNone
+	}
+}
+
 func (c *Client) RunCommand(ctx context.Context, args ...string) error {
 	cmd := exec.CommandContext(ctx, constants.DockerCmd, args...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		c.logger.Error("Docker command failed", "args", args, "output", string(output), "error", err)
-		return fmt.Errorf("docker command failed: %w", err)
-	}
-	return nil
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func contains(slice []string, item string) bool {

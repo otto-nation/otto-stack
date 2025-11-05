@@ -82,7 +82,6 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		return nil
 	}
 
-	h.logger.Info("Displaying service status", "service_count", len(statuses))
 	fmt.Printf("%-20s %-12s %s\n", constants.StatusHeaderService, constants.StatusHeaderState, constants.StatusHeaderHealth)
 	fmt.Println(strings.Repeat(constants.StatusSeparator, constants.StatusSeparatorLength))
 	for _, status := range statuses {

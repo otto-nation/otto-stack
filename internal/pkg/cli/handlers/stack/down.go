@@ -70,8 +70,9 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	// Convert CLI options to internal options
 	internalOptions := types.StopOptions{
 		Timeout:       flags.Timeout,
-		Remove:        true,
+		Remove:        flags.Remove,
 		RemoveVolumes: flags.Volumes,
+		RemoveOrphans: flags.RemoveOrphans,
 	}
 
 	// Stop services

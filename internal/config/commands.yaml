@@ -386,6 +386,11 @@ commands:
       - command: "otto-stack down --timeout 5"
         description: "Stop services with custom timeout"
     flags:
+      remove:
+        short: "r"
+        type: "bool"
+        description: "Remove containers (default: false, just stops them)"
+        default: false
       volumes:
         short: "v"
         type: "bool"

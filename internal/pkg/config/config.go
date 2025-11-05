@@ -18,9 +18,18 @@ type CommandConfig struct {
 
 // Command represents a command definition
 type Command struct {
-	Handler         string `yaml:"handler"`
-	Description     string `yaml:"description"`
-	LongDescription string `yaml:"long_description"`
+	Handler         string                `yaml:"handler"`
+	Description     string                `yaml:"description"`
+	LongDescription string                `yaml:"long_description"`
+	Flags           map[string]FlagConfig `yaml:"flags"`
+}
+
+// FlagConfig represents a flag definition
+type FlagConfig struct {
+	Type        string `yaml:"type"`
+	Short       string `yaml:"short"`
+	Description string `yaml:"description"`
+	Default     any    `yaml:"default"`
 }
 
 // LoadConfig loads otto-stack configuration with local overrides
