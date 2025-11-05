@@ -2,7 +2,6 @@ package services
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
@@ -209,11 +208,17 @@ func (m *Manager) loadV1Service(data []byte, serviceName, category string) error
 
 // isV2Format detects if the YAML is in V2 format
 func isV2Format(data []byte) bool {
-	content := string(data)
-	// V2 format has both runtime and integration sections
-	// and typically has structured volumes with name/mount/description
-	return strings.Contains(content, "runtime:") ||
-		(strings.Contains(content, "- name:") && strings.Contains(content, "mount:"))
+	// Parse as generic map to check structure
+	var config map[string]any
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return false
+	}
+
+	// V2 format has runtime section and structured format
+	_, hasRuntime := config[constants.YAMLKeyRuntime]
+	_, hasIntegration := config[constants.YAMLKeyIntegration]
+
+	return hasRuntime || hasIntegration
 }
 
 // convertV2ToV1 converts V2 format to V1 for backward compatibility
@@ -228,14 +233,20 @@ func convertV2ToV1(v2 types.ServiceConfigV2, category string) Service {
 
 	// Convert Docker config
 	service.Docker = DockerConfig{
-		Image:   v2.Runtime.Image,
-		Restart: string(v2.Runtime.Container.Restart),
-		Command: v2.Runtime.Container.Command,
+		Image:    v2.Runtime.Image,
+		Restart:  string(v2.Runtime.Container.Restart),
+		Command:  v2.Runtime.Container.Command,
+		Networks: v2.Runtime.Container.Networks,
 	}
 
 	// Convert ports
 	for _, port := range v2.Runtime.Ports {
 		service.Docker.Ports = append(service.Docker.Ports, port.Host+":"+port.Container)
+	}
+
+	// Convert volumes
+	for _, vol := range v2.Runtime.Volumes {
+		service.Docker.Volumes = append(service.Docker.Volumes, vol.Name+":"+vol.Mount)
 	}
 
 	// Convert connection
@@ -249,6 +260,14 @@ func convertV2ToV1(v2 types.ServiceConfigV2, category string) Service {
 			UserFlag:    v2.Integration.Connection.UserFlag,
 			DBFlag:      v2.Integration.Connection.DBFlag,
 		}
+	}
+
+	// Convert dependencies - V2 uses different structure than V1
+	service.Dependencies = DependenciesV1{
+		Required:  v2.Integration.Dependencies.Required,
+		Provides:  v2.Integration.Dependencies.Provides,
+		Soft:      v2.Integration.Dependencies.Soft,
+		Conflicts: v2.Integration.Dependencies.Conflicts,
 	}
 
 	return service
