@@ -1,0 +1,38 @@
+name: localstack-init
+description: LocalStack AWS resource initialization service
+hidden: true
+type: container
+runtime:
+    image: amazon/aws-cli:latest
+    environment:
+        AWS_ACCESS_KEY_ID: test
+        AWS_DEFAULT_REGION: us-east-1
+        AWS_ENDPOINT_URL: http://${LOCALSTACK_HOST:-localhost}:${LOCALSTACK_PORT:-4566}
+        AWS_SECRET_ACCESS_KEY: test
+        LOCALSTACK_CONFIG_PATH: /config/otto-stack-config.yml
+    container:
+        restart: "no"
+        networks:
+            - otto-stack
+        memory_limit: 128m
+        command:
+            - sh
+            - -c
+            - apk add --no-cache yq curl && chmod +x /scripts/localstack-init.sh && /scripts/localstack-init.sh
+integration:
+    dependencies:
+        required:
+            - localstack-core
+        provides:
+            - aws-resource-init
+documentation:
+    examples:
+        - aws --endpoint-url=http://localhost:4566 sqs list-queues
+        - aws --endpoint-url=http://localhost:4566 sns list-topics
+    usage_notes: Dynamically initializes AWS resources based on otto-stack configuration and service overrides
+    links:
+        - https://docs.localstack.cloud/
+    use_cases:
+        - Automatic AWS resource creation based on enabled services
+        - Configurable SQS queues, SNS topics, and S3 buckets
+        - Project-specific resource naming

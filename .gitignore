@@ -1,9 +1,5 @@
 # Generated files
-internal/pkg/constants/cli_generated.go
-internal/pkg/constants/services_generated.go
-internal/pkg/cli/handlers/*/register_generated.go
-internal/pkg/cli/commands_generated.go
-internal/pkg/constants/services_generated.go
+internal/**/*_generated.go
 
 # Build artifacts and binaries
 build/

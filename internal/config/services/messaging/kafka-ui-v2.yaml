@@ -1,0 +1,40 @@
+name: kafka-ui
+description: Web UI for Kafka cluster management and topic browsing
+type: container
+runtime:
+  image: provectuslabs/kafka-ui:latest
+  ports:
+    - host: "8099"
+      container: "8099"
+      protocol: tcp
+  environment:
+    KAFKA_UI_HOST: ${KAFKA_UI_HOST:-localhost}
+    KAFKA_UI_PORT: ${KAFKA_UI_PORT:-8080}
+    KAFKA_UI_URL: http://${KAFKA_UI_HOST:-localhost}:${KAFKA_UI_PORT:-8080}
+  container:
+    restart: unless-stopped
+    networks:
+      - otto-stack
+    memory_limit: 256m
+integration:
+  connection:
+    type: cli
+    default_port: 8099
+    client: web
+  dependencies:
+    required:
+      - kafka-broker
+    provides:
+      - ui
+      - management
+documentation:
+  examples:
+    - curl -f http://localhost:8099/actuator/health
+  usage_notes: Web interface for managing Kafka topics, viewing messages, and monitoring cluster health
+  links:
+    - https://github.com/provectus/kafka-ui
+  use_cases:
+    - Topic management and browsing
+    - Message inspection and debugging
+    - Cluster monitoring and health checks
+    - Consumer group management

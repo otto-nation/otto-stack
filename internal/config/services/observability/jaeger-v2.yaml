@@ -1,0 +1,43 @@
+name: jaeger
+description: Jaeger distributed tracing system for monitoring and troubleshooting microservices
+type: container
+runtime:
+  image: jaegertracing/all-in-one:latest
+  ports:
+    - host: "16686"
+      container: "16686"
+      protocol: tcp
+    - host: "13133"
+      container: "13133"
+      protocol: tcp
+  environment:
+    JAEGER_COLLECTOR_PORT: ${JAEGER_COLLECTOR_PORT:-13133}
+    JAEGER_HOST: ${JAEGER_HOST:-localhost}
+    JAEGER_PORT: ${JAEGER_PORT:-16686}
+    JAEGER_URL: http://${JAEGER_HOST:-localhost}:${JAEGER_PORT:-16686}/status
+  container:
+    restart: unless-stopped
+    networks:
+      - otto-stack
+    memory_limit: 512m
+integration:
+  connection:
+    type: cli
+    default_port: 16686
+    client: web
+  dependencies:
+    provides:
+      - tracing
+      - observability
+documentation:
+  examples:
+    - curl -f http://localhost:16686/
+  usage_notes: Distributed tracing for microservices. Supports OpenTelemetry and Zipkin protocols.
+  links:
+    - https://www.jaegertracing.io/docs/
+    - https://opentelemetry.io/docs/
+  use_cases:
+    - Distributed tracing
+    - Performance monitoring
+    - Service dependency analysis
+    - Request flow visualization

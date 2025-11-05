@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -12,9 +13,11 @@ import (
 )
 
 const (
-	TemplateFilePath  = "cmd/generate-services/templates/services.tmpl"
-	GeneratedFilePath = "internal/pkg/constants/services_generated.go"
-	ServicesDir       = "internal/config/services"
+	TemplateFilePath       = "cmd/generate-services/templates/services.tmpl"
+	TypesTemplateFilePath  = "cmd/generate-services/templates/types.tmpl"
+	GeneratedFilePath      = "internal/pkg/constants/services_generated.go"
+	TypesGeneratedFilePath = "internal/pkg/constants/types_generated.go"
+	ServicesDir            = "internal/config/services"
 )
 
 type constantData struct {
@@ -22,50 +25,8 @@ type constantData struct {
 	Value string
 }
 
-type ServiceYAML struct {
-	Name         string           `yaml:"name"`
-	Description  string           `yaml:"description"`
-	Category     string           `yaml:"category"`
-	Type         string           `yaml:"type"`
-	Tags         []string         `yaml:"tags"`
-	Environment  map[string]any   `yaml:"environment"`
-	Connection   ConnectionYAML   `yaml:"connection"`
-	Dependencies DependenciesYAML `yaml:"dependencies"`
-	Docker       map[string]any   `yaml:"docker"`
-	HealthCheck  map[string]any   `yaml:"health_check"`
-}
-
-type ConnectionYAML struct {
-	Client       string `yaml:"client"`
-	DefaultUser  string `yaml:"default_user"`
-	DefaultPort  int    `yaml:"default_port"`
-	UserFlag     string `yaml:"user_flag"`
-	HostFlag     string `yaml:"host_flag"`
-	PortFlag     string `yaml:"port_flag"`
-	DatabaseFlag string `yaml:"database_flag"`
-}
-
-type DependenciesYAML struct {
-	Required  []string `yaml:"required"`
-	Soft      []string `yaml:"soft"`
-	Conflicts []string `yaml:"conflicts"`
-	Provides  []string `yaml:"provides"`
-}
-
-type DockerYAML struct {
-	Image   string   `yaml:"image"`
-	Ports   []string `yaml:"ports"`
-	Volumes []string `yaml:"volumes"`
-}
-
-type HealthCheckYAML struct {
-	Endpoint string `yaml:"endpoint"`
-	Enabled  bool   `yaml:"enabled"`
-}
-
 type ServiceConstants struct {
 	Categories      []constantData
-	ServiceTypes    []constantData
 	Clients         []constantData
 	Ports           []constantData
 	Names           []constantData
@@ -75,26 +36,27 @@ type ServiceConstants struct {
 	EnvVars         []constantData
 	HealthEndpoints []constantData
 	Tags            []constantData
-	Dependencies    []constantData
-	Conflicts       []constantData
-	Provides        []constantData
+	Capabilities    []constantData
+	Networks        []constantData
+	MemoryLimits    []constantData
+	Protocols       []constantData
 }
 
 type collectors struct {
-	categories      map[string]bool
-	serviceTypes    map[string]bool
-	clients         map[string]bool
+	categories      map[string]string
+	clients         map[string]string
 	ports           map[string]int
-	names           map[string]bool
+	names           map[string]string
 	images          map[string]string
 	defaultUsers    map[string]string
 	connectionFlags map[string]string
 	envVars         map[string]string
 	healthEndpoints map[string]string
-	tags            map[string]bool
-	dependencies    map[string][]string
-	conflicts       map[string][]string
-	provides        map[string][]string
+	tags            map[string]string
+	capabilities    map[string]string
+	networks        map[string]string
+	memoryLimits    map[string]string
+	protocols       map[string]string
 }
 
 func main() {
@@ -109,234 +71,223 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := generateTypes(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to generate types: %v\n", err)
+		os.Exit(1)
+	}
+
 	printSummary(serviceConstants)
 }
 
 func extractServiceConstants() (*ServiceConstants, error) {
-	collectors := newCollectors()
+	c := newCollectors()
 
 	err := filepath.Walk(ServicesDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || (!strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml")) {
+		if err != nil || !strings.HasSuffix(path, ".yaml") {
 			return err
 		}
-
-		service, err := parseServiceFile(path)
-		if err != nil {
-			return err
-		}
-
-		collectors.collect(service)
-		return nil
+		return c.processFile(path)
 	})
 
-	if err != nil {
-		return nil, err
-	}
-
-	return collectors.toServiceConstants(), nil
-}
-
-func parseServiceFile(path string) (*ServiceYAML, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var service ServiceYAML
-	if err := yaml.Unmarshal(data, &service); err != nil {
-		return nil, err
-	}
-
-	return &service, nil
+	return c.toConstants(), err
 }
 
 func newCollectors() *collectors {
 	return &collectors{
-		categories:      make(map[string]bool),
-		serviceTypes:    make(map[string]bool),
-		clients:         make(map[string]bool),
+		categories:      make(map[string]string),
+		clients:         make(map[string]string),
 		ports:           make(map[string]int),
-		names:           make(map[string]bool),
+		names:           make(map[string]string),
 		images:          make(map[string]string),
 		defaultUsers:    make(map[string]string),
 		connectionFlags: make(map[string]string),
 		envVars:         make(map[string]string),
 		healthEndpoints: make(map[string]string),
-		tags:            make(map[string]bool),
-		dependencies:    make(map[string][]string),
-		conflicts:       make(map[string][]string),
-		provides:        make(map[string][]string),
+		tags:            make(map[string]string),
+		capabilities:    make(map[string]string),
+		networks:        make(map[string]string),
+		memoryLimits:    make(map[string]string),
+		protocols:       make(map[string]string),
 	}
 }
 
-func (c *collectors) collect(service *ServiceYAML) {
-	c.collectBasicInfo(service)
-	c.collectConnectionInfo(service)
-	c.collectDockerInfo(service)
-	c.collectEnvironmentVars(service)
-	c.collectHealthEndpoints(service)
-	c.collectTags(service)
-	c.collectDependencies(service)
+func (c *collectors) processFile(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	var service map[string]any
+	if err := yaml.Unmarshal(data, &service); err != nil {
+		return err
+	}
+
+	serviceName := strings.TrimSuffix(filepath.Base(path), ".yaml")
+
+	c.addBasic(serviceName, path)
+	c.addConnection(service, serviceName)
+	c.addDocker(service, serviceName)
+	c.addPorts(service, serviceName)
+	c.addDependencies(service)
+	c.addEnvironment(service, serviceName)
+	c.addHealth(service, serviceName)
+	c.addTags(service)
+
+	return nil
 }
 
-func (c *collectors) collectBasicInfo(service *ServiceYAML) {
-	if service.Name != "" {
-		c.names[service.Name] = true
-	}
-	if service.Category != "" {
-		c.categories[service.Category] = true
-	}
-	if service.Type != "" {
-		c.serviceTypes[service.Type] = true
+func (c *collectors) addBasic(serviceName, path string) {
+	c.names["Service"+toPascalCase(serviceName)] = serviceName
+
+	parts := strings.Split(path, "/")
+	if len(parts) >= 3 {
+		cat := parts[len(parts)-2]
+		c.categories["Category"+toPascalCase(cat)] = cat
 	}
 }
 
-func (c *collectors) collectConnectionInfo(service *ServiceYAML) {
-	conn := service.Connection
-	serviceName := strings.ToUpper(service.Name)
-
-	if conn.Client != "" {
-		c.clients[conn.Client] = true
-	}
-	if conn.DefaultPort > 0 {
-		c.ports[serviceName+"_PORT"] = conn.DefaultPort
-	}
-	if conn.DefaultUser != "" {
-		c.defaultUsers[serviceName+"_USER"] = conn.DefaultUser
+func (c *collectors) addConnection(service map[string]any, serviceName string) {
+	conn, ok := service["connection"].(map[string]any)
+	if !ok {
+		return
 	}
 
-	flags := map[string]string{
-		"USER_FLAG": conn.UserFlag,
-		"HOST_FLAG": conn.HostFlag,
-		"PORT_FLAG": conn.PortFlag,
-		"DB_FLAG":   conn.DatabaseFlag,
+	if client, ok := conn["client"].(string); ok {
+		c.clients["Client"+toPascalCase(client)] = client
 	}
 
-	for suffix, value := range flags {
-		if value != "" {
-			c.connectionFlags[serviceName+"_"+suffix] = value
+	if user, ok := conn["default_user"].(string); ok {
+		c.defaultUsers["DefaultUser"+toPascalCase(serviceName)] = user
+	}
+
+	flags := []string{"user_flag", "host_flag", "port_flag", "database_flag"}
+	for _, flag := range flags {
+		if val, ok := conn[flag].(string); ok {
+			key := toPascalCase(flag) + toPascalCase(serviceName)
+			c.connectionFlags[key] = val
 		}
 	}
 }
 
-func (c *collectors) collectDockerInfo(service *ServiceYAML) {
-	if image, ok := service.Docker["image"].(string); ok && image != "" {
-		key := strings.ToUpper(service.Name) + "_IMAGE"
-		c.images[key] = image
+func (c *collectors) addDocker(service map[string]any, serviceName string) {
+	docker, ok := service["docker"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	if image, ok := docker["image"].(string); ok {
+		c.images["Image"+toPascalCase(serviceName)] = image
+	}
+
+	if nets, ok := docker["networks"].([]any); ok {
+		for _, net := range nets {
+			if netStr, ok := net.(string); ok {
+				c.networks["Network"+toPascalCase(netStr)] = netStr
+			}
+		}
+	}
+
+	if mem, ok := docker["memory_limit"].(string); ok {
+		c.memoryLimits["MemoryLimit"+toPascalCase(mem)] = mem
 	}
 }
 
-func (c *collectors) collectEnvironmentVars(service *ServiceYAML) {
-	serviceName := strings.ToUpper(service.Name)
-	for key, value := range service.Environment {
+func (c *collectors) addPorts(service map[string]any, serviceName string) {
+	ports, ok := service["ports"].([]any)
+	if !ok {
+		return
+	}
+
+	for _, port := range ports {
+		portStr, ok := port.(string)
+		if !ok {
+			continue
+		}
+
+		parts := strings.Split(portStr, ":")
+		if len(parts) == 2 {
+			if portNum, err := strconv.Atoi(parts[1]); err == nil {
+				c.ports["Port"+toPascalCase(serviceName)] = portNum
+				c.protocols["ProtocolTcp"] = "tcp"
+				return
+			}
+		}
+	}
+}
+
+func (c *collectors) addDependencies(service map[string]any) {
+	deps, ok := service["dependencies"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	provides, ok := deps["provides"].([]any)
+	if !ok {
+		return
+	}
+
+	for _, cap := range provides {
+		if capStr, ok := cap.(string); ok {
+			c.capabilities["Capability"+toPascalCase(capStr)] = capStr
+		}
+	}
+}
+
+func (c *collectors) addEnvironment(service map[string]any, serviceName string) {
+	env, ok := service["environment"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	for key, value := range env {
 		if strValue, ok := value.(string); ok {
-			constKey := serviceName + "_" + strings.ToUpper(key)
-			c.envVars[constKey] = strValue
+			envKey := "Env" + toPascalCase(serviceName) + toPascalCase(key)
+			c.envVars[envKey] = strValue
 		}
 	}
 }
 
-func (c *collectors) collectHealthEndpoints(service *ServiceYAML) {
-	if endpoint, ok := service.HealthCheck["endpoint"].(string); ok && endpoint != "" {
-		key := strings.ToUpper(service.Name) + "_HEALTH_ENDPOINT"
-		c.healthEndpoints[key] = endpoint
+func (c *collectors) addHealth(service map[string]any, serviceName string) {
+	health, ok := service["health_check"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	if endpoint, ok := health["endpoint"].(string); ok {
+		c.healthEndpoints["HealthEndpoint"+toPascalCase(serviceName)] = endpoint
 	}
 }
 
-func (c *collectors) collectTags(service *ServiceYAML) {
-	for _, tag := range service.Tags {
-		c.tags[tag] = true
+func (c *collectors) addTags(service map[string]any) {
+	tags, ok := service["tags"].([]any)
+	if !ok {
+		return
+	}
+
+	for _, tag := range tags {
+		if tagStr, ok := tag.(string); ok {
+			c.tags["Tag"+toPascalCase(tagStr)] = tagStr
+		}
 	}
 }
 
-func (c *collectors) collectDependencies(service *ServiceYAML) {
-	serviceName := strings.ToUpper(service.Name)
-	deps := service.Dependencies
-
-	if len(deps.Required) > 0 {
-		c.dependencies[serviceName+"_DEPENDENCIES"] = deps.Required
-	}
-	if len(deps.Conflicts) > 0 {
-		c.conflicts[serviceName+"_CONFLICTS"] = deps.Conflicts
-	}
-	if len(deps.Provides) > 0 {
-		c.provides[serviceName+"_PROVIDES"] = deps.Provides
-	}
-}
-
-func (c *collectors) toServiceConstants() *ServiceConstants {
+func (c *collectors) toConstants() *ServiceConstants {
 	return &ServiceConstants{
-		Categories:      c.mapToSortedConstants(c.categories, "Category"),
-		ServiceTypes:    c.mapToSortedConstants(c.serviceTypes, "ServiceType"),
-		Clients:         c.mapToSortedConstants(c.clients, "Client"),
-		Names:           c.mapToSortedConstants(c.names, "Service"),
-		Tags:            c.mapToSortedConstants(c.tags, "Tag"),
-		Ports:           c.intMapToConstants(c.ports, "DefaultPort"),
-		Images:          c.stringMapToConstants(c.images, "DefaultImage"),
-		DefaultUsers:    c.stringMapToConstants(c.defaultUsers, "DefaultUser"),
-		ConnectionFlags: c.stringMapToConstants(c.connectionFlags, "Flag"),
-		EnvVars:         c.stringMapToConstants(c.envVars, "Env"),
-		HealthEndpoints: c.stringMapToConstants(c.healthEndpoints, "HealthEndpoint"),
-		Dependencies:    c.arrayMapToConstants(c.dependencies, "Deps"),
-		Conflicts:       c.arrayMapToConstants(c.conflicts, "Conflicts"),
-		Provides:        c.arrayMapToConstants(c.provides, "Provides"),
+		Categories:      stringMapToConstants(c.categories),
+		Clients:         stringMapToConstants(c.clients),
+		Ports:           intMapToConstants(c.ports),
+		Names:           stringMapToConstants(c.names),
+		Images:          stringMapToConstants(c.images),
+		DefaultUsers:    stringMapToConstants(c.defaultUsers),
+		ConnectionFlags: stringMapToConstants(c.connectionFlags),
+		EnvVars:         stringMapToConstants(c.envVars),
+		HealthEndpoints: stringMapToConstants(c.healthEndpoints),
+		Tags:            stringMapToConstants(c.tags),
+		Capabilities:    stringMapToConstants(c.capabilities),
+		Networks:        stringMapToConstants(c.networks),
+		MemoryLimits:    stringMapToConstants(c.memoryLimits),
+		Protocols:       stringMapToConstants(c.protocols),
 	}
-}
-
-func (c *collectors) mapToSortedConstants(m map[string]bool, prefix string) []constantData {
-	var result []constantData
-	for key := range m {
-		result = append(result, constantData{
-			Name:  prefix + toPascalCase(key),
-			Value: key,
-		})
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Name < result[j].Name
-	})
-	return result
-}
-
-func (c *collectors) intMapToConstants(m map[string]int, prefix string) []constantData {
-	var result []constantData
-	for key, value := range m {
-		result = append(result, constantData{
-			Name:  prefix + toPascalCase(key),
-			Value: fmt.Sprintf("%d", value),
-		})
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Name < result[j].Name
-	})
-	return result
-}
-
-func (c *collectors) stringMapToConstants(m map[string]string, prefix string) []constantData {
-	var result []constantData
-	for key, value := range m {
-		result = append(result, constantData{
-			Name:  prefix + toPascalCase(key),
-			Value: value,
-		})
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Name < result[j].Name
-	})
-	return result
-}
-
-func (c *collectors) arrayMapToConstants(m map[string][]string, prefix string) []constantData {
-	var result []constantData
-	for key, value := range m {
-		result = append(result, constantData{
-			Name:  prefix + toPascalCase(key),
-			Value: fmt.Sprintf("[]string{%s}", formatStringArray(value)),
-		})
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].Name < result[j].Name
-	})
-	return result
 }
 
 func generateConstants(serviceConstants *ServiceConstants) error {
@@ -349,53 +300,59 @@ func generateConstants(serviceConstants *ServiceConstants) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer func() { _ = file.Close() }()
+	defer file.Close()
 
 	return tmpl.Execute(file, serviceConstants)
 }
 
-func printSummary(sc *ServiceConstants) {
-	fmt.Printf("Generated comprehensive service constants:\n")
-	fmt.Printf("  Categories: %d, Types: %d, Clients: %d\n",
-		len(sc.Categories), len(sc.ServiceTypes), len(sc.Clients))
-	fmt.Printf("  Ports: %d, Images: %d, Env Vars: %d\n",
-		len(sc.Ports), len(sc.Images), len(sc.EnvVars))
-	fmt.Printf("  Dependencies: %d, Conflicts: %d, Tags: %d\n",
-		len(sc.Dependencies), len(sc.Conflicts), len(sc.Tags))
+func generateTypes() error {
+	tmpl, err := template.ParseFiles(TypesTemplateFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to parse types template: %w", err)
+	}
+
+	file, err := os.Create(TypesGeneratedFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to create types file: %w", err)
+	}
+	defer file.Close()
+
+	return tmpl.Execute(file, nil)
 }
 
-func formatStringArray(arr []string) string {
-	var quoted []string
-	for _, s := range arr {
-		quoted = append(quoted, fmt.Sprintf(`"%s"`, s))
+func printSummary(sc *ServiceConstants) {
+	fmt.Printf("Generated service constants:\n")
+	fmt.Printf("  Categories: %d, Images: %d, Ports: %d\n",
+		len(sc.Categories), len(sc.Images), len(sc.Ports))
+}
+
+func stringMapToConstants(m map[string]string) []constantData {
+	var result []constantData
+	for key, value := range m {
+		result = append(result, constantData{Name: key, Value: value})
 	}
-	return strings.Join(quoted, ", ")
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+	return result
+}
+
+func intMapToConstants(m map[string]int) []constantData {
+	var result []constantData
+	for key, value := range m {
+		result = append(result, constantData{Name: key, Value: fmt.Sprintf("%d", value)})
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+	return result
 }
 
 func toPascalCase(s string) string {
 	parts := strings.Split(s, "-")
 	for i, part := range parts {
 		if len(part) > 0 {
-			switch strings.ToLower(part) {
-			case "json":
-				parts[i] = "JSON"
-			case "yaml":
-				parts[i] = "YAML"
-			case "xml":
-				parts[i] = "XML"
-			case "http":
-				parts[i] = "HTTP"
-			case "https":
-				parts[i] = "HTTPS"
-			case "tty":
-				parts[i] = "TTY"
-			case "url":
-				parts[i] = "URL"
-			case "api":
-				parts[i] = "API"
-			default:
-				parts[i] = strings.ToUpper(part[:1]) + part[1:]
-			}
+			parts[i] = strings.ToUpper(part[:1]) + part[1:]
 		}
 	}
 	return strings.Join(parts, "")

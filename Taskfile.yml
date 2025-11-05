@@ -42,19 +42,21 @@ tasks:
     desc: "🔧 Generate code from YAML configs"
     sources:
       - "internal/config/commands.yaml"
+      - "internal/config/services/**/*.yaml"
       - "cmd/generate-*/main.go"
       - "cmd/generate-*/templates/*.tmpl"
     silent: true
     cmds:
       - echo "🔧 Generating code from YAML configs..."
-      - echo "🔧 Running generate-services..."
-      - go run ./cmd/generate-services
-      - echo "🔧 Running generate-cli..."
-      - go run ./cmd/generate-cli
-      - echo "🔧 Running generate-commands..."
-      - go run ./cmd/generate-commands
-      - echo "🔧 Running generate-registers..."
-      - go run ./cmd/generate-registers
+      - |
+        echo "🔧 Cleaning existing generated files..."
+        find internal/ -name '*_generated.go' -type f -delete
+        echo "🔧 Running generate-cli..."
+        go run ./cmd/generate-cli
+        echo "🔧 Running generate-services..."
+        go run ./cmd/generate-services
+        echo "🔧 Running generate-commands..."
+        go run ./cmd/generate-commands
       - echo "🔧 Formatting generated code..."
       - task: fmt
       - echo "✅ Generated code from YAML configs"
@@ -64,7 +66,7 @@ tasks:
   # ============================================================================
   build:
     desc: "🔨 Build the Go binary for current platform"
-    deps: [sync-go-version, deps, generate]
+    deps: [sync-go-version, deps]
     sources:
       - "**/*.go"
       - "go.mod"
@@ -141,6 +143,7 @@ tasks:
   commit:
     desc: "🤖 Generate AI-powered commit message based on staged changes"
     silent: true
+    deps: [pre-commit]
     cmds:
       - |
         if [ "$NO_VERIFY" ]; then

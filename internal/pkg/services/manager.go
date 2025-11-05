@@ -2,21 +2,25 @@ package services
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"gopkg.in/yaml.v3"
 )
 
 // Manager handles all service operations
 type Manager struct {
-	services map[string]Service
+	services   map[string]Service
+	servicesV2 map[string]types.ServiceConfigV2
 }
 
 // New creates a new service manager
 func New() (*Manager, error) {
 	manager := &Manager{
-		services: make(map[string]Service),
+		services:   make(map[string]Service),
+		servicesV2: make(map[string]types.ServiceConfigV2),
 	}
 
 	if err := manager.loadServices(); err != nil {
@@ -26,7 +30,7 @@ func New() (*Manager, error) {
 	return manager, nil
 }
 
-// GetService returns a service by name
+// GetService returns a service by name (V1 format)
 func (m *Manager) GetService(name string) (Service, error) {
 	service, exists := m.services[name]
 	if !exists {
@@ -67,7 +71,7 @@ func (m *Manager) GetDependencies(serviceName string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return service.Dependencies, nil
+	return service.Dependencies.Required, nil
 }
 
 // BuildConnectCommand builds a connection command for a service
@@ -161,6 +165,29 @@ func (m *Manager) loadService(category, serviceName string) error {
 		return fmt.Errorf("failed to read service file: %w", err)
 	}
 
+	// Detect V2 format by checking for V2-specific fields
+	if isV2Format(data) {
+		return m.loadV2Service(data, serviceName, category)
+	}
+
+	return m.loadV1Service(data, serviceName, category)
+}
+
+func (m *Manager) loadV2Service(data []byte, serviceName, category string) error {
+	var serviceV2 types.ServiceConfigV2
+	if err := yaml.Unmarshal(data, &serviceV2); err != nil {
+		return fmt.Errorf("failed to parse V2 service YAML: %w", err)
+	}
+
+	m.servicesV2[serviceName] = serviceV2
+
+	// Convert V2 to V1 for backward compatibility
+	service := convertV2ToV1(serviceV2, category)
+	m.services[serviceName] = service
+	return nil
+}
+
+func (m *Manager) loadV1Service(data []byte, serviceName, category string) error {
 	var service Service
 	if err := yaml.Unmarshal(data, &service); err != nil {
 		return fmt.Errorf("failed to parse service YAML: %w", err)
@@ -178,6 +205,53 @@ func (m *Manager) loadService(category, serviceName string) error {
 
 	m.services[serviceName] = service
 	return nil
+}
+
+// isV2Format detects if the YAML is in V2 format
+func isV2Format(data []byte) bool {
+	content := string(data)
+	// V2 format has both runtime and integration sections
+	// and typically has structured volumes with name/mount/description
+	return strings.Contains(content, "runtime:") ||
+		(strings.Contains(content, "- name:") && strings.Contains(content, "mount:"))
+}
+
+// convertV2ToV1 converts V2 format to V1 for backward compatibility
+func convertV2ToV1(v2 types.ServiceConfigV2, category string) Service {
+	service := Service{
+		Name:        v2.Name,
+		Description: v2.Description,
+		Category:    category,
+		Type:        string(v2.Type),
+		Environment: v2.Runtime.Environment,
+	}
+
+	// Convert Docker config
+	service.Docker = DockerConfig{
+		Image:   v2.Runtime.Image,
+		Restart: string(v2.Runtime.Container.Restart),
+		Command: v2.Runtime.Container.Command,
+	}
+
+	// Convert ports
+	for _, port := range v2.Runtime.Ports {
+		service.Docker.Ports = append(service.Docker.Ports, port.Host+":"+port.Container)
+	}
+
+	// Convert connection
+	if v2.Integration.Connection != nil {
+		service.Connection = ConnectionConfig{
+			Client:      v2.Integration.Connection.Client,
+			DefaultUser: v2.Integration.Connection.DefaultUser,
+			DefaultPort: v2.Integration.Connection.DefaultPort,
+			HostFlag:    v2.Integration.Connection.HostFlag,
+			PortFlag:    v2.Integration.Connection.PortFlag,
+			UserFlag:    v2.Integration.Connection.UserFlag,
+			DBFlag:      v2.Integration.Connection.DBFlag,
+		}
+	}
+
+	return service
 }
 
 // GetConnectionConfig returns connection configuration for a service

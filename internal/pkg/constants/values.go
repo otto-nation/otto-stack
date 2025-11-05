@@ -351,6 +351,11 @@ var CategoryDisplayInfo = map[string]struct {
 	CategoryCloud:         {"Cloud", "☁️"},
 }
 
+// Legacy port constants for backward compatibility
+const (
+	DefaultPortPOSTGRES_PORT = 5432
+)
+
 // Service display format constants
 const (
 	ServiceCatalogTableFormat = "table"
@@ -364,14 +369,6 @@ const (
 	MsgServiceCatalogHeader = "Available Services by Category"
 	MsgNoServicesInCategory = "No services found in category: %s"
 	MsgServiceCount         = "%s (%d service%s)"
-)
-
-// Service restart policies
-const (
-	RestartPolicyNo        = "no"
-	RestartPolicyAlways    = "always"
-	RestartPolicyOnFailure = "on-failure"
-	RestartPolicyUnless    = "unless-stopped"
 )
 
 // Prompt messages

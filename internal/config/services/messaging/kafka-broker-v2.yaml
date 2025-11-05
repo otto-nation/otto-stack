@@ -1,0 +1,38 @@
+name: kafka-broker
+description: Apache Kafka broker for event streaming and messaging
+type: container
+runtime:
+  image: confluentinc/cp-kafka:latest
+  ports:
+    - host: "9099"
+      container: "9099"
+      protocol: tcp
+  environment:
+    KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092}
+    KAFKA_HOST: ${KAFKA_HOST:-localhost}
+    KAFKA_PORT: ${KAFKA_PORT:-9092}
+    KAFKA_URL: kafka://${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092}
+  container:
+    restart: unless-stopped
+    networks:
+      - otto-stack
+    memory_limit: 1024m
+integration:
+  dependencies:
+    required:
+      - zookeeper
+    provides:
+      - messaging
+      - streaming
+documentation:
+  examples:
+    - kafka-broker-api-versions --bootstrap-server localhost:9099
+  usage_notes: Kafka broker handles message storage and delivery. Requires Zookeeper for coordination.
+  links:
+    - https://kafka.apache.org/documentation/
+    - https://docs.spring.io/spring-kafka/docs/current/reference/html/
+  use_cases:
+    - Event-driven microservices architecture
+    - Real-time data streaming and processing
+    - Message queuing between services
+    - Data pipeline and ETL processes

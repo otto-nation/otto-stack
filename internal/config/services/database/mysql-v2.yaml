@@ -1,0 +1,48 @@
+name: mysql
+description: MySQL relational database for persistent data storage
+type: container
+runtime:
+  image: mysql:8.0
+  ports:
+    - host: "3306"
+      container: "3306"
+      protocol: tcp
+  environment:
+    DATABASE_URL: mysql://${MYSQL_USER:-root}:${MYSQL_PASSWORD:-password}@${MYSQL_HOST:-localhost}:${MYSQL_PORT:-3306}/${MYSQL_DATABASE:-local_dev}
+    MYSQL_DATABASE: ${MYSQL_DATABASE:-local_dev}
+    MYSQL_HOST: ${MYSQL_HOST:-localhost}
+    MYSQL_PASSWORD: ${MYSQL_PASSWORD:-password}
+    MYSQL_PORT: ${MYSQL_PORT:-3306}
+    MYSQL_URL: mysql://${MYSQL_USER:-root}:${MYSQL_PASSWORD:-password}@${MYSQL_HOST:-localhost}:${MYSQL_PORT:-3306}/${MYSQL_DATABASE:-local_dev}
+    MYSQL_USER: ${MYSQL_USER:-root}
+  container:
+    restart: unless-stopped
+    networks:
+      - otto-stack
+    memory_limit: 512m
+integration:
+  connection:
+    type: cli
+    default_port: 3306
+    default_user: root
+    client: mysql
+    host_flag: -h
+    port_flag: -P
+    user_flag: -u
+  dependencies:
+    conflicts:
+      - postgres
+    provides:
+      - database
+      - sql
+documentation:
+  examples:
+    - mysql -h localhost -u root -p -e "SELECT version();"
+    - spring.datasource.url=jdbc:mysql://localhost:3306/my_app_dev
+  usage_notes: MySQL database for relational data storage. Alternative to PostgreSQL.
+  links:
+    - https://dev.mysql.com/doc/
+  use_cases:
+    - Primary application database
+    - Transactional data storage
+    - Relational data modeling

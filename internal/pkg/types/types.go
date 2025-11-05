@@ -144,6 +144,47 @@ type ServiceDependencies struct {
 	Provides  []string `yaml:"provides,omitempty"`
 }
 
+// Helper methods for ServiceConfig backward compatibility
+func (sc *ServiceConfig) GetName() string {
+	return sc.Name
+}
+
+func (sc *ServiceConfig) GetDescription() string {
+	return sc.Description
+}
+
+func (sc *ServiceConfig) GetCategory() string {
+	return sc.Category
+}
+
+func (sc *ServiceConfig) GetVisibility() string {
+	return sc.Visibility
+}
+
+func (sc *ServiceConfig) GetPorts() []string {
+	return sc.Ports
+}
+
+func (sc *ServiceConfig) GetEnvironment() map[string]string {
+	return sc.Environment
+}
+
+func (sc *ServiceConfig) GetDocker() map[string]any {
+	return sc.Docker
+}
+
+func (sc *ServiceConfig) GetConnection() map[string]any {
+	return sc.Connection
+}
+
+func (sc *ServiceConfig) GetDependencies() ServiceDependencies {
+	return sc.Dependencies
+}
+
+func (sc *ServiceConfig) GetManagement() map[string]any {
+	return sc.Management
+}
+
 // ServiceStatus represents the runtime status of a service
 type ServiceStatus struct {
 	Name      string        `json:"name"`
