@@ -7,7 +7,6 @@ import (
 	"text/template"
 
 	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 const (
@@ -317,15 +316,15 @@ func toPascalCase(s string) string {
 
 func goTypeFromYAML(yamlType string) string {
 	switch yamlType {
-	case constants.TypeString:
-		return constants.TypeString
-	case constants.TypeInt:
-		return constants.TypeInt
-	case constants.TypeBool:
-		return constants.TypeBool
-	case constants.TypeStringArray:
-		return constants.TypeStringArray
+	case "string":
+		return "string"
+	case "int":
+		return "int"
+	case "bool":
+		return "bool"
+	case "stringArray":
+		return "stringArray"
 	default:
-		return constants.TypeString
+		return "string"
 	}
 }

@@ -47,13 +47,14 @@ tasks:
     silent: true
     cmds:
       - echo "🔧 Generating code from YAML configs..."
-      - |
-        for generator in cmd/generate-*; do
-          if [ -d "$generator" ] && [ -f "$generator/main.go" ]; then
-            echo "🔧 Running $(basename $generator)..."
-            go run ./$generator
-          fi
-        done
+      - echo "🔧 Running generate-services..."
+      - go run ./cmd/generate-services
+      - echo "🔧 Running generate-cli..."
+      - go run ./cmd/generate-cli
+      - echo "🔧 Running generate-commands..."
+      - go run ./cmd/generate-commands
+      - echo "🔧 Running generate-registers..."
+      - go run ./cmd/generate-registers
       - echo "🔧 Formatting generated code..."
       - task: fmt
       - echo "✅ Generated code from YAML configs"
@@ -282,6 +283,7 @@ tasks:
     cmds:
       - echo "🔧 Auto-fixing formatting and modules..."
       - git diff --name-only > /tmp/git_before_fixes || touch /tmp/git_before_fixes
+      - task: generate
       - task: fmt
       - go mod tidy
 
@@ -336,6 +338,7 @@ tasks:
     silent: true
     cmds:
       - echo "🚀 Running pre-push checks..."
+      - task: generate
       - task: test
       - task: build
       - |
