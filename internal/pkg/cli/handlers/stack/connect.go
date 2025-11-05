@@ -25,18 +25,26 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	ciFlags := utils.GetCIFlags(cmd)
 
 	if len(args) < 1 {
-		utils.HandleError(ciFlags, fmt.Errorf("%s", constants.Messages[constants.MsgErrors_requires_service_name]))
-		return nil
+		return fmt.Errorf("%s", constants.Messages[constants.MsgErrors_requires_service_name])
+	}
+
+	// Check initialization first
+	if err := utils.CheckInitialization(); err != nil {
+		return err
 	}
 
 	if !ciFlags.Quiet {
-		base.Output.Header(constants.Messages[constants.MsgStack_connecting_to], args[0])
+		base.Output.Header(constants.MsgStack_connecting_to, args[0])
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		utils.HandleError(ciFlags, err)
-		return nil
+		return err // Return error directly for clean output
+	}
+	defer cleanup()
+
+	if !ciFlags.Quiet {
+		base.Output.Header(constants.MsgStack_connecting_to, args[0])
 	}
 	defer cleanup()
 

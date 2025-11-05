@@ -17,8 +17,6 @@ func main() {
 	defer logger.Close()
 
 	if err := cli.ExecuteFactory(); err != nil {
-		logger.Error("Application error", "error", err)
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
 }

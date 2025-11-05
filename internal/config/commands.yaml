@@ -26,7 +26,7 @@ messages:
     stopping: "Stopping Otto Stack"
     generating_env: "Generating environment file..."
     generating_compose: "Generating docker-compose.yml..."
-    
+
   success:
     init: "otto stack initialized successfully!"
     start: "otto stack started successfully"
@@ -42,7 +42,7 @@ messages:
     version_compliance_satisfied: "✅ Version compliance satisfied"
     no_version_drift: "✅ No version drift detected"
     generated_files: "Generated %s and %s"
-    
+
   validation:
     failed: "validation failed: %w"
     directory_failed: "directory validation failed: %w"
@@ -58,15 +58,15 @@ messages:
     duplicate_service: "duplicate service '%s' found"
     invalid_service: "invalid service '%s': %w"
     conflicting_file_exists: "conflicting file '%s' already exists. Please remove or rename it before initializing"
-    
+
   conflicts:
     header: "Service Conflicts"
     not_implemented: "Conflict detection not yet implemented"
-    
+
   dependencies:
     header: "Service Dependencies"
     none_found: "No service dependencies found"
-    
+
   version:
     checking_updates: "🔍 Checking for Updates"
     current_info: "Current version: %s"
@@ -81,7 +81,7 @@ messages:
     platform: "Platform: %s/%s"
     update_available: "⚠️  Update available: %s → %s"
     invalid_version: "invalid version format"
-    
+
   doctor:
     some_issues: "Some issues found. Please address them above."
     health_check_failed: "health check failed"
@@ -106,23 +106,11 @@ messages:
     docker_compose_missing: "Docker compose file missing"
     config_incomplete: "Configuration is incomplete"
     config_valid: "Configuration is valid"
-    
-  help:
-    usage: "Usage:"
-    available_commands: "Available Commands:"
-    more_info: "Use 'otto-stack [command] --help' for more information about a command."
-    app_description: "otto-stack - Development stack management tool"
-    usage_example: "  otto-stack [command]"
-    command_up: "  up        Start services"
-    command_down: "  down      Stop services"
-    command_status: "  status    Show service status"
-    command_init: "  init      Initialize project"
-    command_services: "  services  List available services"
-    
+
   services:
     select: "Select %s services:"
     no_description: "No description available"
-    
+
   init:
     summary: "Initialization Summary:"
     project_summary: "  Project: %s"
@@ -135,13 +123,13 @@ messages:
     step_review_config: "1. Review configuration in %s/%s"
     step_start_stack: "2. Start your stack: %s up"
     step_check_status: "3. Check status: %s status"
-    
+
   warnings:
     update_available: "🔔 Update available: %s → %s (%s)"
     not_git_repository: "Not in a git repository. Consider running 'git init' first."
     failed_gitignore: "Failed to update .gitignore: %v"
     failed_readme: "Failed to create README: %v"
-    
+
   notifications:
     config_header: "Notification Configuration:"
     enabled: "  Enabled:         %t"
@@ -151,25 +139,25 @@ messages:
     show_prerelease: "  Show Prerelease: %t"
     last_check: "  Last Check:      %s"
     suppressed_until: "  Suppressed Until: %s"
-    
+
   commands:
     check: "check"
     config: "config"
     suppress: "suppress"
-    
+
   config_keys:
     enabled: "enabled"
     frequency: "frequency"
     min_severity: "min-severity"
     auto_check: "auto-check"
     show_prerelease: "show-prerelease"
-    
+
   duration_units:
     days: "d"
     weeks: "w"
     hours: "h"
     minutes: "m"
-    
+
   stack:
     connecting_to: "Connecting to %s"
     removing_services: "Removing services: %v"
@@ -190,7 +178,7 @@ messages:
     failed_load_local_config: "failed to load local config: %w"
     failed_parse_config: "failed to parse config: %w"
     failed_get_service_status: "failed to get service status: %w"
-    
+
   drift:
     project_path: "📁 %s"
     required_version: "   Required: %s"
@@ -198,24 +186,24 @@ messages:
     drift_type: "   Drift:    %s (%s)"
     duration: "   Duration: %v"
     action: "   Action:   %s"
-    
+
   completion:
     requires_one_arg: "completion requires exactly one argument: %s"
     unsupported_shell: "unsupported shell: %s"
-    
+
   utils:
     service_not_found: "service %s not found"
     circular_dependency: "circular dependency detected: %s"
-    
+
   base:
     handler_not_found: "handler not found for command: %s"
-    
+
   cli:
     failed_read_services: "failed to read services.yaml: %w"
     failed_parse_services: "failed to parse services.yaml: %w"
     unknown_service: "unknown service '%s'. Available services: %v"
     failed_add_global_flags: "failed to add global flags: %w"
-    
+
   errors:
     failed_load_services: "failed to load services: %w"
     version_compliance_failed: "❌ Version compliance failed"
@@ -236,7 +224,7 @@ messages:
     requires_service_name: "service name is required"
     requires_service_and_command: "service name and command are required"
     not_initialized: "otto-stack not initialized. Run 'otto-stack init' first"
-    
+
   files:
     gitignore_exists: ".gitignore already contains otto-stack entries"
 
@@ -890,54 +878,6 @@ commands:
         description: "Show detailed build information"
       - command: "otto-stack version --check-updates"
         description: "Check for available updates"
-
-  help:
-    category: "utility"
-    handler: "project"
-    description: "Show help information"
-    long_description: |
-      Display help information for otto-stack commands and usage.
-    usage: "help [command]"
-    examples:
-      - command: "otto-stack help"
-        description: "Show general help"
-      - command: "otto-stack help up"
-        description: "Show help for up command"
-
-# Workflow definitions for common task sequences
-workflows:
-  quick-start:
-    name: "Quick Start"
-    description: "Get started with a basic development stack"
-    steps:
-      - command: "init"
-        description: "Initialize project"
-      - command: "up postgres redis"
-        description: "Start database services"
-      - command: "status"
-        description: "Check service status"
-
-  full-stack:
-    name: "Full Stack Development"
-    description: "Complete development environment setup"
-    steps:
-      - command: "init web"
-        description: "Initialize web project"
-      - command: "up postgres redis"
-        description: "Start web development services"
-      - command: "status"
-        description: "Check service status"
-
-  cleanup-reset:
-    name: "Clean Reset"
-    description: "Complete cleanup and fresh start"
-    steps:
-      - command: "down --volumes"
-        description: "Stop services and remove data"
-      - command: "cleanup --all"
-        description: "Clean up all resources"
-      - command: "up"
-        description: "Start fresh services"
 
 # Help and documentation sections
 help:

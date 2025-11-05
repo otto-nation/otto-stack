@@ -26,7 +26,7 @@ func LoadProjectConfig(configPath string) (*ProjectConfig, error) {
 	// Load base config
 	baseConfig, err := loadSingleConfig(configPath)
 	if err != nil {
-		return nil, fmt.Errorf(constants.Messages[constants.MsgStack_failed_load_base_config], err)
+		return nil, fmt.Errorf(constants.MsgStack_failed_load_base_config, err)
 	}
 
 	// Try to load local config
@@ -37,7 +37,7 @@ func LoadProjectConfig(configPath string) (*ProjectConfig, error) {
 		if os.IsNotExist(err) {
 			return baseConfig, nil
 		}
-		return nil, fmt.Errorf(constants.Messages[constants.MsgStack_failed_load_local_config], err)
+		return nil, fmt.Errorf(constants.MsgStack_failed_load_local_config, err)
 	}
 
 	// Merge configs (local overrides base)
@@ -54,7 +54,7 @@ func loadSingleConfig(configPath string) (*ProjectConfig, error) {
 
 	var cfg ProjectConfig
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf(constants.Messages[constants.MsgStack_failed_parse_config], err)
+		return nil, fmt.Errorf(constants.MsgStack_failed_parse_config, err)
 	}
 
 	return &cfg, nil

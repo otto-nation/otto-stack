@@ -26,11 +26,11 @@ func (h *EnforcementHandler) HandleCheck(ctx context.Context, cmd *cobra.Command
 
 	err := version.ValidateProjectVersion(projectPath)
 	if err != nil {
-		base.Output.Error(constants.Messages[constants.MsgErrors_version_compliance_failed])
+		base.Output.Error(constants.MsgErrors_version_compliance_failed)
 		return err
 	}
 
-	base.Output.Success(constants.Messages[constants.MsgSuccess_version_compliance_satisfied])
+	base.Output.Success(constants.MsgSuccess_version_compliance_satisfied)
 	return nil
 }
 

@@ -117,8 +117,8 @@ const (
 
 // UI message prefixes
 const (
-	IconSuccess = "✅"
-	IconError   = "❌"
+	IconSuccess = "✅ "
+	IconError   = "❌ "
 	IconWarning = "⚠️ "
 	IconInfo    = "ℹ️ "
 	IconHeader  = "🚀"

@@ -33,7 +33,7 @@ func (h *InitHandler) createConfigFile(projectName string, services []string, ba
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	base.Output.Success(constants.Messages[constants.MsgSuccess_created_file], configPath)
+	base.Output.Success(constants.MsgSuccess_created_file, configPath)
 	return nil
 }
 
@@ -58,7 +58,7 @@ func (h *InitHandler) createGitignoreEntries(base *types.BaseCommand) error {
 	}
 
 	if hasDevStackEntries {
-		base.Output.Info("%s", constants.Messages[constants.MsgFiles_gitignore_exists])
+		base.Output.Info("%s", constants.MsgFiles_gitignore_exists)
 		return nil
 	}
 
@@ -75,7 +75,7 @@ func (h *InitHandler) createGitignoreEntries(base *types.BaseCommand) error {
 		}
 	}
 
-	base.Output.Success("%s", constants.Messages[constants.MsgSuccess_updated_gitignore])
+	base.Output.Success("%s", constants.MsgSuccess_updated_gitignore)
 	return nil
 }
 
@@ -126,7 +126,7 @@ Run `+"`%s --help`"+` for a full list of available commands.
 		return fmt.Errorf("failed to create README: %w", err)
 	}
 
-	base.Output.Success(constants.Messages[constants.MsgSuccess_created_file], readmePath)
+	base.Output.Success(constants.MsgSuccess_created_file, readmePath)
 	return nil
 }
 

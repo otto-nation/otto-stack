@@ -21,7 +21,12 @@ func NewDepsHandler() *DepsHandler {
 
 // Handle executes the deps command
 func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	base.Output.Header("%s", constants.Messages[constants.MsgDependencies_header])
+	// Check initialization first
+	if err := utils.CheckInitialization(); err != nil {
+		return err
+	}
+
+	base.Output.Header("%s", constants.MsgDependencies_header)
 
 	// Get output format
 	format, _ := cmd.Flags().GetString(constants.FlagFormat)
@@ -34,7 +39,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	if len(dependencies) == 0 {
-		base.Output.Info("%s", constants.Messages[constants.MsgDependencies_none_found])
+		base.Output.Info("%s", constants.MsgDependencies_none_found)
 		return nil
 	}
 

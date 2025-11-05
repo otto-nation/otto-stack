@@ -31,7 +31,7 @@ func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	serviceUtils := utils.NewServiceUtils()
 	categorizedServices, err := serviceUtils.GetServicesByCategory()
 	if err != nil {
-		return fmt.Errorf(constants.Messages[constants.MsgErrors_failed_load_services], err)
+		return fmt.Errorf(constants.MsgErrors_failed_load_services, err)
 	}
 
 	// Build service catalog

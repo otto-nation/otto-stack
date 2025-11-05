@@ -28,7 +28,7 @@ func (h *InitHandler) validateInitEnvironment(_ *types.BaseCommand) error {
 	requiredTools := []string{constants.DockerCmd}
 	for _, tool := range requiredTools {
 		if !h.isCommandAvailable(tool) {
-			return fmt.Errorf(constants.Messages[constants.MsgValidation_required_tool_unavailable], tool)
+			return fmt.Errorf(constants.MsgValidation_required_tool_unavailable, tool)
 		}
 	}
 
@@ -38,28 +38,28 @@ func (h *InitHandler) validateInitEnvironment(_ *types.BaseCommand) error {
 // validateProjectName validates the project name
 func (h *InitHandler) validateProjectName(name string) error {
 	if name == "" {
-		return fmt.Errorf("%s", constants.Messages[constants.MsgValidation_project_name_empty])
+		return fmt.Errorf("%s", constants.MsgValidation_project_name_empty)
 	}
 
 	if len(name) < constants.MinProjectNameLength {
-		return fmt.Errorf("%s", constants.Messages[constants.MsgValidation_project_name_too_short])
+		return fmt.Errorf("%s", constants.MsgValidation_project_name_too_short)
 	}
 
 	if len(name) > constants.MaxProjectNameLength {
-		return fmt.Errorf("%s", constants.Messages[constants.MsgValidation_project_name_too_long])
+		return fmt.Errorf("%s", constants.MsgValidation_project_name_too_long)
 	}
 
 	// Check for valid characters (alphanumeric, hyphens, underscores)
 	for _, char := range name {
 		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') &&
 			(char < '0' || char > '9') && char != '-' && char != '_' {
-			return fmt.Errorf("%s", constants.Messages[constants.MsgValidation_project_name_invalid_chars])
+			return fmt.Errorf("%s", constants.MsgValidation_project_name_invalid_chars)
 		}
 	}
 
 	// Cannot start with hyphen or underscore
 	if name[0] == '-' || name[0] == '_' {
-		return fmt.Errorf("%s", constants.Messages[constants.MsgValidation_project_name_invalid_start])
+		return fmt.Errorf("%s", constants.MsgValidation_project_name_invalid_start)
 	}
 
 	return nil
@@ -68,14 +68,14 @@ func (h *InitHandler) validateProjectName(name string) error {
 // validateServices validates the selected services
 func (h *InitHandler) validateServices(services []string) error {
 	if len(services) == 0 {
-		return fmt.Errorf("%s", constants.Messages[constants.MsgValidation_no_services_selected])
+		return fmt.Errorf("%s", constants.MsgValidation_no_services_selected)
 	}
 
 	// Check for duplicates
 	seen := make(map[string]bool)
 	for _, serviceName := range services {
 		if seen[serviceName] {
-			return fmt.Errorf(constants.Messages[constants.MsgValidation_duplicate_service], serviceName)
+			return fmt.Errorf(constants.MsgValidation_duplicate_service, serviceName)
 		}
 		seen[serviceName] = true
 	}
@@ -84,7 +84,7 @@ func (h *InitHandler) validateServices(services []string) error {
 	serviceUtils := utils.NewServiceUtils()
 	for _, serviceName := range services {
 		if _, err := serviceUtils.LoadServiceConfig(serviceName); err != nil {
-			return fmt.Errorf(constants.Messages[constants.MsgValidation_invalid_service], serviceName, err)
+			return fmt.Errorf(constants.MsgValidation_invalid_service, serviceName, err)
 		}
 	}
 
@@ -95,7 +95,7 @@ func (h *InitHandler) validateServices(services []string) error {
 func (h *InitHandler) validateDirectoryStructure(base *types.BaseCommand) error {
 	// Check if we're in a git repository (optional but recommended)
 	if _, err := os.Stat(".git"); os.IsNotExist(err) {
-		base.Output.Warning("%s", constants.Messages[constants.MsgWarnings_not_git_repository])
+		base.Output.Warning("%s", constants.MsgWarnings_not_git_repository)
 	}
 
 	// Check for conflicting files
@@ -106,7 +106,7 @@ func (h *InitHandler) validateDirectoryStructure(base *types.BaseCommand) error 
 
 	for _, file := range conflictingFiles {
 		if _, err := os.Stat(file); err == nil {
-			return fmt.Errorf(constants.Messages[constants.MsgValidation_conflicting_file_exists], file)
+			return fmt.Errorf(constants.MsgValidation_conflicting_file_exists, file)
 		}
 	}
 

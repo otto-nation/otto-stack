@@ -27,6 +27,11 @@ func NewStatusHandler() *StatusHandler {
 
 // Handle executes the status command
 func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+	// Check initialization first
+	if err := utils.CheckInitialization(); err != nil {
+		return err
+	}
+
 	// Get CI-friendly flags
 	ciFlags := utils.GetCIFlags(cmd)
 
@@ -51,14 +56,14 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	serviceUtils := utils.NewServiceUtils()
 	resolvedServices, err := serviceUtils.ResolveServices(serviceNames)
 	if err != nil {
-		utils.HandleError(ciFlags, fmt.Errorf(constants.Messages[constants.MsgStack_failed_resolve_services], err))
+		utils.HandleError(ciFlags, fmt.Errorf(constants.MsgStack_failed_resolve_services, err))
 		return nil
 	}
 
 	// Get service status
 	statuses, err := setup.DockerClient.GetServiceStatus(ctx, setup.Config.Project.Name, resolvedServices)
 	if err != nil {
-		utils.HandleError(ciFlags, fmt.Errorf(constants.Messages[constants.MsgStack_failed_get_service_status], err))
+		utils.HandleError(ciFlags, fmt.Errorf(constants.MsgStack_failed_get_service_status, err))
 		return nil
 	}
 

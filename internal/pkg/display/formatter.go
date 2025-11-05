@@ -97,7 +97,7 @@ func (f *Formatter) FormatHealth(report HealthReport, options Options) error {
 // Table formatting methods
 func (f *Formatter) formatStatusTable(services []ServiceStatus, options Options) error {
 	if len(services) == 0 {
-		f.output.Info(constants.Messages[constants.MsgServices_no_description])
+		f.output.Info(constants.MsgServices_no_description)
 		return nil
 	}
 
@@ -136,7 +136,7 @@ func (f *Formatter) formatStatusTable(services []ServiceStatus, options Options)
 
 func (f *Formatter) formatCatalogTable(catalog ServiceCatalog) error {
 	if catalog.Total == 0 {
-		f.output.Info(constants.Messages[constants.MsgServices_no_description])
+		f.output.Info(constants.MsgServices_no_description)
 		return nil
 	}
 
@@ -154,7 +154,7 @@ func (f *Formatter) formatCatalogTable(catalog ServiceCatalog) error {
 
 func (f *Formatter) formatCatalogGroup(catalog ServiceCatalog) error {
 	if catalog.Total == 0 {
-		f.output.Info(constants.Messages[constants.MsgServices_no_description])
+		f.output.Info(constants.MsgServices_no_description)
 		return nil
 	}
 
@@ -180,7 +180,7 @@ func (f *Formatter) formatCatalogGroup(catalog ServiceCatalog) error {
 		for _, service := range services {
 			description := service.Description
 			if description == "" {
-				description = constants.Messages[constants.MsgServices_no_description]
+				description = constants.MsgServices_no_description
 			}
 			_, _ = fmt.Fprintf(f.writer, "  %-15s %s\n", service.Name, description)
 		}
@@ -191,11 +191,11 @@ func (f *Formatter) formatCatalogGroup(catalog ServiceCatalog) error {
 
 func (f *Formatter) formatValidationTable(result ValidationResult) error {
 	if result.Valid {
-		f.output.Success(constants.Messages[constants.MsgSuccess_config_valid])
+		f.output.Success(constants.MsgSuccess_config_valid)
 		return nil
 	}
 
-	f.output.Error(constants.Messages[constants.MsgValidation_config_failed], len(result.Errors))
+	f.output.Error(constants.MsgValidation_config_failed, len(result.Errors))
 
 	if len(result.Errors) > 0 {
 		_, _ = fmt.Fprintln(f.writer, "Errors:")
@@ -206,7 +206,7 @@ func (f *Formatter) formatValidationTable(result ValidationResult) error {
 	}
 
 	if len(result.Warnings) > 0 {
-		f.output.Warning(constants.Messages[constants.MsgValidation_warnings], len(result.Warnings))
+		f.output.Warning(constants.MsgValidation_warnings, len(result.Warnings))
 		for _, warn := range result.Warnings {
 			_, _ = fmt.Fprintf(f.writer, "  %s: %s\n", warn.Field, warn.Message)
 		}
@@ -221,7 +221,7 @@ func (f *Formatter) formatValidationTable(result ValidationResult) error {
 }
 
 func (f *Formatter) formatVersionTable(info VersionInfo, options Options) error {
-	f.output.Info(constants.Messages[constants.MsgVersion_version_label], info.Version)
+	f.output.Info(constants.MsgVersion_version_label, info.Version)
 
 	if options.Full {
 		_, _ = fmt.Fprintln(f.writer)
@@ -238,9 +238,9 @@ func (f *Formatter) formatVersionTable(info VersionInfo, options Options) error 
 
 func (f *Formatter) formatHealthTable(report HealthReport, options Options) error {
 	if report.Overall.Status == constants.HealthHealthy {
-		f.output.Success(constants.Messages[constants.MsgSuccess_all_checks_passed], "system")
+		f.output.Success(constants.MsgSuccess_all_checks_passed, "system")
 	} else {
-		f.output.Error(constants.Messages[constants.MsgDoctor_some_issues])
+		f.output.Error(constants.MsgDoctor_some_issues)
 	}
 
 	if report.Overall.Message != "" {
@@ -251,7 +251,7 @@ func (f *Formatter) formatHealthTable(report HealthReport, options Options) erro
 		return nil
 	}
 
-	f.output.Header(constants.Messages[constants.MsgDoctor_health_check_header], "System")
+	f.output.Header(constants.MsgDoctor_health_check_header, "System")
 	_, _ = fmt.Fprintf(f.writer, "%-25s %-10s %-15s %-40s\n",
 		"CHECK", "STATUS", "CATEGORY", "MESSAGE")
 	_, _ = fmt.Fprintln(f.writer, strings.Repeat(constants.StatusSeparator, constants.TableWidth90))

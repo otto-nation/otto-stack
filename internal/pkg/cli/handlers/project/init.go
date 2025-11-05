@@ -40,17 +40,17 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	base.Output.Header("%s", constants.Messages[constants.MsgProcess_initializing])
+	base.Output.Header("%s", constants.MsgProcess_initializing)
 	logger.Info(constants.LogMsgProjectAction, constants.LogFieldAction, constants.CommandInit, constants.LogFieldProject, "current_directory")
 
 	// Validate environment
 	if err := h.validateInitEnvironment(base); err != nil && !flags.Force {
-		return fmt.Errorf(constants.Messages[constants.MsgValidation_failed], err)
+		return fmt.Errorf(constants.MsgValidation_failed, err)
 	}
 
 	// Validate directory structure
 	if err := h.validateDirectoryStructure(base); err != nil && !flags.Force {
-		return fmt.Errorf(constants.Messages[constants.MsgValidation_directory_failed], err)
+		return fmt.Errorf(constants.MsgValidation_directory_failed, err)
 	}
 
 	// Prompt for project details
@@ -65,7 +65,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	for {
 		// Prompt for services
-		services, err = h.promptForServices(base)
+		services, err = h.promptForServices()
 		if err != nil {
 			return fmt.Errorf("failed to select services: %w", err)
 		}
@@ -91,10 +91,10 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		case constants.ActionProceed:
 			goto exitLoop
 		case constants.ActionBack:
-			base.Output.Info("%s", constants.Messages[constants.MsgInit_going_back])
+			base.Output.Info("%s", constants.MsgInit_going_back)
 			continue
 		default:
-			base.Output.Info("%s", constants.Messages[constants.MsgInit_cancelled])
+			base.Output.Info("%s", constants.MsgInit_cancelled)
 			return nil
 		}
 	}
@@ -117,19 +117,19 @@ exitLoop:
 
 	// Create .gitignore entries
 	if err := h.createGitignoreEntries(base); err != nil {
-		base.Output.Warning(constants.Messages[constants.MsgWarnings_failed_gitignore], err)
+		base.Output.Warning(constants.MsgWarnings_failed_gitignore, err)
 	}
 
 	// Create README
 	if err := h.createReadme(projectName, services, base); err != nil {
-		base.Output.Warning(constants.Messages[constants.MsgWarnings_failed_readme], err)
+		base.Output.Warning(constants.MsgWarnings_failed_readme, err)
 	}
 
-	base.Output.Success("%s", constants.Messages[constants.MsgSuccess_init])
-	base.Output.Info("%s", constants.Messages[constants.MsgInit_next_steps])
-	base.Output.Info(constants.Messages[constants.MsgInit_step_review_config], constants.OttoStackDir, constants.ConfigFileName)
-	base.Output.Info(constants.Messages[constants.MsgInit_step_start_stack], constants.AppName)
-	base.Output.Info(constants.Messages[constants.MsgInit_step_check_status], constants.AppName)
+	base.Output.Success("%s", constants.MsgSuccess_init)
+	base.Output.Info("%s", constants.MsgInit_next_steps)
+	base.Output.Info(constants.MsgInit_step_review_config, constants.OttoStackDir, constants.ConfigFileName)
+	base.Output.Info(constants.MsgInit_step_start_stack, constants.AppName)
+	base.Output.Info(constants.MsgInit_step_check_status, constants.AppName)
 
 	return nil
 }

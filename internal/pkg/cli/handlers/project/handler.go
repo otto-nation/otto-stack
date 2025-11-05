@@ -58,33 +58,33 @@ func (h *Handler) Handle(ctx context.Context, cmd *cobra.Command, args []string,
 
 // handleCheckUpdates handles the --check-updates flag
 func (h *Handler) handleCheckUpdates(_ context.Context, _ *cobra.Command, _ []string, _ *types.BaseCommand) error {
-	h.output.Header("%s", constants.Messages[constants.MsgVersion_checking_updates])
+	h.output.Header("%s", constants.MsgVersion_checking_updates)
 
 	// Get current version (this should come from build-time ldflags)
 	currentVersion := getCurrentVersion()
-	h.output.Info(constants.Messages[constants.MsgVersion_current_info], currentVersion)
+	h.output.Info(constants.MsgVersion_current_info, currentVersion)
 
 	// Check for updates
 	checker := version.NewUpdateChecker(currentVersion)
 	release, hasUpdate, err := checker.CheckForUpdates()
 	if err != nil {
-		return fmt.Errorf(constants.Messages[constants.MsgErrors_failed_check_updates], err)
+		return fmt.Errorf(constants.MsgErrors_failed_check_updates, err)
 	}
 
 	if !hasUpdate {
-		h.output.Success("%s", constants.Messages[constants.MsgSuccess_latest_version])
+		h.output.Success("%s", constants.MsgSuccess_latest_version)
 		return nil
 	}
 
-	h.output.Warning(constants.Messages[constants.MsgVersion_update_available], currentVersion, release.TagName)
-	h.output.Info(constants.Messages[constants.MsgVersion_release_info], release.Name)
+	h.output.Warning(constants.MsgVersion_update_available, currentVersion, release.TagName)
+	h.output.Info(constants.MsgVersion_release_info, release.Name)
 
 	// Show update instructions
 	h.output.Info("")
-	h.output.Info("%s", constants.Messages[constants.MsgVersion_update_info])
-	h.output.Info(constants.Messages[constants.MsgVersion_install_script],
+	h.output.Info("%s", constants.MsgVersion_update_info)
+	h.output.Info(constants.MsgVersion_install_script,
 		constants.GitHubOrg, constants.GitHubRepo)
-	h.output.Info(constants.Messages[constants.MsgVersion_manual_download],
+	h.output.Info(constants.MsgVersion_manual_download,
 		constants.GitHubOrg, constants.GitHubRepo)
 
 	return nil
@@ -109,7 +109,6 @@ func (h *Handler) handleVersionDisplay(_ context.Context, cmd *cobra.Command, _ 
 
 // displayBasicVersion displays basic version information
 func (h *Handler) displayBasicVersion(version, format string) error {
-	h.logger.Info("Displaying basic version", constants.LogFieldVersion, version, constants.LogFieldFormat, format)
 	switch format {
 	case "json":
 		fmt.Printf(`{"version":"%s","app":"%s"}%s`, version, constants.AppNameTitle, "\n")
@@ -134,11 +133,11 @@ func (h *Handler) displayFullVersion(version, format string) error {
 		fmt.Printf("version: %s\napp: %s\n%s", version, constants.AppNameTitle, buildInfo.YAML())
 	default:
 		h.output.Header("%s Version Information", constants.AppNameTitle)
-		h.output.Info(constants.Messages[constants.MsgVersion_version_label], version)
-		h.output.Info(constants.Messages[constants.MsgVersion_build_date], buildInfo.Date)
-		h.output.Info(constants.Messages[constants.MsgVersion_git_commit], buildInfo.Commit)
-		h.output.Info(constants.Messages[constants.MsgVersion_go_version], buildInfo.GoVersion)
-		h.output.Info(constants.Messages[constants.MsgVersion_platform], buildInfo.OS, buildInfo.Arch)
+		h.output.Info(constants.MsgVersion_version_label, version)
+		h.output.Info(constants.MsgVersion_build_date, buildInfo.Date)
+		h.output.Info(constants.MsgVersion_git_commit, buildInfo.Commit)
+		h.output.Info(constants.MsgVersion_go_version, buildInfo.GoVersion)
+		h.output.Info(constants.MsgVersion_platform, buildInfo.OS, buildInfo.Arch)
 	}
 	return nil
 }

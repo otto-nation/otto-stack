@@ -2,16 +2,14 @@ package stack
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
-
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +23,12 @@ func NewDownHandler() *DownHandler {
 
 // Handle executes the down command
 func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+	// Check initialization first
+	if err := utils.CheckInitialization(); err != nil {
+		return err
+	}
+
+	// Start operation logging only after initialization check passes
 	logger.Info(constants.LogMsgStartingOperation, constants.LogFieldOperation, constants.OperationStackDown, constants.LogFieldServices, args)
 	defer func() {
 		if r := recover(); r != nil {
@@ -43,23 +47,18 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	// Check if otto-stack is initialized
-	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
-	if !func() bool { _, err := os.Stat(configPath); return err == nil }() {
-		return errors.New(constants.Messages[constants.MsgErrors_not_initialized])
-	}
-
 	// Load project configuration
+	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
 	cfg, err := LoadProjectConfig(configPath)
 	if err != nil {
-		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_load_config], err)
+		return fmt.Errorf(constants.MsgStack_failed_load_config, err)
 	}
 
 	// Create Docker client
 	dockerLogger := base.Logger
 	dockerClient, err := docker.NewClient(dockerLogger.SlogLogger())
 	if err != nil {
-		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_create_docker_client], err)
+		return fmt.Errorf(constants.MsgStack_failed_create_docker_client, err)
 	}
 	defer func() {
 		if err := dockerClient.Close(); err != nil {
@@ -78,7 +77,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	// Stop services
 	if err := dockerClient.ComposeDown(ctx, cfg.Project.Name, internalOptions); err != nil {
 		logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationStackDown, constants.LogFieldError, err)
-		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_stop_services], err)
+		return fmt.Errorf(constants.MsgStack_failed_stop_services, err)
 	}
 
 	base.Output.Success(constants.MsgStopSuccess)

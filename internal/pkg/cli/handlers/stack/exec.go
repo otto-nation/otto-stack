@@ -20,18 +20,18 @@ func NewExecHandler() *ExecHandler {
 
 // Handle executes the exec command
 func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	// Get CI-friendly flags
-	ciFlags := utils.GetCIFlags(cmd)
-
 	if len(args) < constants.MinArgumentCount {
-		utils.HandleError(ciFlags, fmt.Errorf("%s", constants.Messages[constants.MsgErrors_requires_service_and_command]))
-		return nil
+		return fmt.Errorf("%s", constants.MsgErrors_requires_service_and_command)
+	}
+
+	// Check initialization first
+	if err := utils.CheckInitialization(); err != nil {
+		return err
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		utils.HandleError(ciFlags, err)
-		return nil
+		return err
 	}
 	defer cleanup()
 
@@ -70,7 +70,7 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 // ValidateArgs validates the command arguments
 func (h *ExecHandler) ValidateArgs(args []string) error {
 	if len(args) < constants.MinArgumentCount {
-		return fmt.Errorf("%s", constants.Messages[constants.MsgErrors_requires_service_and_command])
+		return fmt.Errorf("%s", constants.MsgErrors_requires_service_and_command)
 	}
 	return nil
 }

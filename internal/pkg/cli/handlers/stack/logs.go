@@ -20,6 +20,11 @@ func NewLogsHandler() *LogsHandler {
 
 // Handle executes the logs command
 func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+	// Check initialization first
+	if err := utils.CheckInitialization(); err != nil {
+		return err
+	}
+
 	// Get CI-friendly flags
 	ciFlags := utils.GetCIFlags(cmd)
 
@@ -29,8 +34,7 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		utils.HandleError(ciFlags, err)
-		return nil
+		return err
 	}
 	defer cleanup()
 

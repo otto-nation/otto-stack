@@ -59,7 +59,7 @@ func (h *InitHandler) generateInitialComposeFiles(services []string, projectName
 		return fmt.Errorf("failed to generate docker-compose.yml: %w", err)
 	}
 
-	base.Output.Success(constants.Messages[constants.MsgSuccess_generated_files],
+	base.Output.Success(constants.MsgSuccess_generated_files,
 		filepath.Join(constants.OttoStackDir, constants.DockerComposeFileName),
 		filepath.Join(constants.OttoStackDir, constants.EnvGeneratedFileName))
 
@@ -68,7 +68,7 @@ func (h *InitHandler) generateInitialComposeFiles(services []string, projectName
 
 // generateEnvFile generates .env.generated using programmatic generation
 func (h *InitHandler) generateEnvFile(services []string, config *ProjectConfig, base *types.BaseCommand) error {
-	base.Output.Info("%s", constants.Messages[constants.MsgProcess_generating_env])
+	base.Output.Info("%s", constants.MsgProcess_generating_env)
 
 	generator := env.NewGenerator(config.Project.Name, config.Project.Environment)
 
@@ -87,7 +87,7 @@ func (h *InitHandler) generateEnvFile(services []string, config *ProjectConfig, 
 
 // generateDockerCompose generates docker-compose.yml using programmatic generation
 func (h *InitHandler) generateDockerCompose(services []string, config *ProjectConfig, base *types.BaseCommand) error {
-	base.Output.Info("%s", constants.Messages[constants.MsgProcess_generating_compose])
+	base.Output.Info("%s", constants.MsgProcess_generating_compose)
 
 	generator, err := compose.NewGenerator(config.Project.Name, constants.ServicesDir)
 	if err != nil {

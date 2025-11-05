@@ -21,6 +21,11 @@ func NewCleanupHandler() *CleanupHandler {
 
 // Handle executes the cleanup command
 func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+	// Check initialization first
+	if err := utils.CheckInitialization(); err != nil {
+		return err
+	}
+
 	// Parse all flags with validation - single line!
 	flags, err := constants.ParseCleanupFlags(cmd)
 	if err != nil {

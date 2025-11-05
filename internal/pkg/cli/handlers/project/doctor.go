@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
@@ -33,6 +34,11 @@ func (h *DoctorHandler) GetRequiredFlags() []string {
 }
 
 func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+	// Check initialization first
+	if err := utils.CheckInitialization(); err != nil {
+		return err
+	}
+
 	logger.Info(constants.LogMsgProjectAction, constants.LogFieldAction, constants.CommandDoctor, constants.LogFieldProject, "health_check")
 
 	base.Output.Header("🩺 Otto Stack Health Check")
@@ -56,74 +62,74 @@ func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 }
 
 func (h *DoctorHandler) checkDocker(base *types.BaseCommand) bool {
-	base.Output.Info("%s", constants.Messages[constants.MsgDoctor_checking_docker])
+	base.Output.Info("%s", constants.MsgDoctor_checking_docker)
 
 	if !h.isCommandAvailable(constants.DockerCmd) {
-		base.Output.Error("%s", constants.Messages[constants.MsgDoctor_docker_not_found])
-		base.Output.Muted(constants.Messages[constants.MsgDoctor_docker_install_help], constants.DockerInstallURL)
+		base.Output.Error("%s", constants.MsgDoctor_docker_not_found)
+		base.Output.Muted(constants.MsgDoctor_docker_install_help, constants.DockerInstallURL)
 		return false
 	}
 
 	// Check if Docker daemon is running
 	cmd := exec.Command(constants.DockerCmd, constants.DockerInfoCmd)
 	if err := cmd.Run(); err != nil {
-		base.Output.Error("%s", constants.Messages[constants.MsgDoctor_docker_daemon_not_running])
-		base.Output.Muted("%s", constants.Messages[constants.MsgDoctor_docker_start_help])
+		base.Output.Error("%s", constants.MsgDoctor_docker_daemon_not_running)
+		base.Output.Muted("%s", constants.MsgDoctor_docker_start_help)
 		return false
 	}
 
-	base.Output.Success("%s", constants.Messages[constants.MsgDoctor_docker_available])
+	base.Output.Success("%s", constants.MsgDoctor_docker_available)
 	return true
 }
 
 func (h *DoctorHandler) checkDockerCompose(base *types.BaseCommand) bool {
-	base.Output.Info("%s", constants.Messages[constants.MsgDoctor_checking_docker_compose])
+	base.Output.Info("%s", constants.MsgDoctor_checking_docker_compose)
 
 	if !h.hasDockerComposePlugin() {
-		base.Output.Error("%s", constants.Messages[constants.MsgDoctor_docker_compose_not_found])
-		base.Output.Muted("%s", constants.Messages[constants.MsgDoctor_docker_compose_integrated])
-		base.Output.Muted("%s", constants.Messages[constants.MsgDoctor_docker_compose_update])
+		base.Output.Error("%s", constants.MsgDoctor_docker_compose_not_found)
+		base.Output.Muted("%s", constants.MsgDoctor_docker_compose_integrated)
+		base.Output.Muted("%s", constants.MsgDoctor_docker_compose_update)
 		return false
 	}
 
-	base.Output.Success("%s", constants.Messages[constants.MsgDoctor_docker_compose_available])
+	base.Output.Success("%s", constants.MsgDoctor_docker_compose_available)
 	return true
 }
 
 func (h *DoctorHandler) checkProjectInit(base *types.BaseCommand) bool {
-	base.Output.Info("%s", constants.Messages[constants.MsgDoctor_checking_project_init])
+	base.Output.Info("%s", constants.MsgDoctor_checking_project_init)
 
 	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
 
 	if _, err := os.Stat(configPath); err != nil {
-		base.Output.Error("%s", constants.Messages[constants.MsgDoctor_project_not_initialized])
-		base.Output.Muted(constants.Messages[constants.MsgDoctor_run_init_help], constants.AppName+" init")
+		base.Output.Error("%s", constants.MsgDoctor_project_not_initialized)
+		base.Output.Muted(constants.MsgDoctor_run_init_help, constants.AppName+" init")
 		return false
 	}
 
-	base.Output.Success("%s", constants.Messages[constants.MsgDoctor_project_initialized])
+	base.Output.Success("%s", constants.MsgDoctor_project_initialized)
 	return true
 }
 
 func (h *DoctorHandler) checkConfiguration(base *types.BaseCommand) bool {
-	base.Output.Info("%s", constants.Messages[constants.MsgDoctor_checking_config])
+	base.Output.Info("%s", constants.MsgDoctor_checking_config)
 
 	// Check if otto-stack directory exists
 	if _, err := os.Stat(constants.OttoStackDir); os.IsNotExist(err) {
-		base.Output.Error("%s", constants.Messages[constants.MsgDoctor_config_dir_missing])
-		base.Output.Muted(constants.Messages[constants.MsgDoctor_run_init_help], constants.AppName+" init")
+		base.Output.Error("%s", constants.MsgDoctor_config_dir_missing)
+		base.Output.Muted(constants.MsgDoctor_run_init_help, constants.AppName+" init")
 		return false
 	}
 
 	// Check if docker-compose file exists
 	composePath := filepath.Join(constants.OttoStackDir, constants.DockerComposeFileName)
 	if _, err := os.Stat(composePath); os.IsNotExist(err) {
-		base.Output.Error("%s", constants.Messages[constants.MsgDoctor_docker_compose_missing])
-		base.Output.Muted("%s", constants.Messages[constants.MsgDoctor_config_incomplete])
+		base.Output.Error("%s", constants.MsgDoctor_docker_compose_missing)
+		base.Output.Muted("%s", constants.MsgDoctor_config_incomplete)
 		return false
 	}
 
-	base.Output.Success("%s", constants.Messages[constants.MsgDoctor_config_valid])
+	base.Output.Success("%s", constants.MsgDoctor_config_valid)
 	return true
 }
 

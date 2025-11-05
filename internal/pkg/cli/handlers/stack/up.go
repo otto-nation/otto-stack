@@ -35,7 +35,19 @@ func NewUpHandler() *UpHandler {
 
 // Handle executes the up command
 func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	// Start operation logging
+	// Check initialization first
+	if err := utils.CheckInitialization(); err != nil {
+		return err
+	}
+
+	// Check initialization first, before any output
+	setup, cleanup, err := SetupCoreCommand(ctx, base)
+	if err != nil {
+		return err // Return error directly without logging or headers
+	}
+	defer cleanup()
+
+	// Start operation logging only after initialization check passes
 	logger.Info(constants.LogMsgStartingOperation, constants.LogFieldOperation, constants.OperationStackUp, constants.LogFieldServices, args)
 	defer func() {
 		if r := recover(); r != nil {
@@ -44,22 +56,15 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		}
 	}()
 
-	base.Output.Header("%s", constants.Messages[constants.MsgStarting])
+	base.Output.Header("%s", constants.MsgStarting)
 	logger.Info(constants.LogMsgServiceAction, constants.LogFieldAction, constants.ActionStart, constants.LogFieldService, "stack", constants.LogFieldServices, args)
 
-	// Parse all flags with validation - single line!
+	// Parse all flags with validation
 	flags, err := constants.ParseUpFlags(cmd)
 	if err != nil {
 		logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationStackUp, constants.LogFieldError, err)
 		return err
 	}
-
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
-	if err != nil {
-		logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationStackUp, constants.LogFieldError, err)
-		return err
-	}
-	defer cleanup()
 
 	// Parse timeout from string to duration
 	timeoutSecs := 30 // default
@@ -90,13 +95,13 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	serviceUtils := utils.NewServiceUtils()
 	filteredServices, err := serviceUtils.ResolveServices(serviceNames)
 	if err != nil {
-		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_resolve_services], err)
+		return fmt.Errorf(constants.MsgStack_failed_resolve_services, err)
 	}
 
 	// Check for config changes
 	configHash, err := h.getConfigHash(setup.Config)
 	if err != nil {
-		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_calculate_hash], err)
+		return fmt.Errorf(constants.MsgStack_failed_calculate_hash, err)
 	}
 
 	previousState, err := h.loadState()
@@ -118,33 +123,33 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	// Generate compose file
 	generator, err := compose.NewGenerator(setup.Config.Project.Name, constants.ServicesDir)
 	if err != nil {
-		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_create_generator], err)
+		return fmt.Errorf(constants.MsgStack_failed_create_generator, err)
 	}
 
 	composeFile, err := generator.Generate(serviceNames)
 	if err != nil {
-		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_generate_compose], err)
+		return fmt.Errorf(constants.MsgStack_failed_generate_compose, err)
 	}
 
 	// Ensure otto-stack directory exists
 	if err := os.MkdirAll(constants.OttoStackDir, constants.DirPermReadWriteExec); err != nil {
-		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_create_directory], err)
+		return fmt.Errorf(constants.MsgStack_failed_create_directory, err)
 	}
 
 	// Write compose file
 	composeData, err := yaml.Marshal(composeFile)
 	if err != nil {
-		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_marshal_compose], err)
+		return fmt.Errorf(constants.MsgStack_failed_marshal_compose, err)
 	}
 
 	composePath := constants.DockerComposeFile
 	if err := os.WriteFile(composePath, composeData, constants.FilePermReadWrite); err != nil {
-		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_write_compose], err)
+		return fmt.Errorf(constants.MsgStack_failed_write_compose, err)
 	}
 
 	// Start services
 	if err := setup.DockerClient.ComposeUp(ctx, setup.Config.Project.Name, filteredServices, options); err != nil {
-		return fmt.Errorf(constants.Messages[constants.MsgStack_failed_start_services], err)
+		return fmt.Errorf(constants.MsgStack_failed_start_services, err)
 	}
 
 	// Save new state
@@ -215,7 +220,7 @@ func (h *UpHandler) cleanupRemovedServices(ctx context.Context, setup *CoreSetup
 		return nil
 	}
 
-	base.Output.Info(constants.Messages[constants.MsgStack_removing_services], removedServices)
+	base.Output.Info(constants.MsgStack_removing_services, removedServices)
 	return setup.DockerClient.ComposeDown(ctx, setup.Config.Project.Name, types.StopOptions{
 		Remove:        true,
 		RemoveVolumes: true,

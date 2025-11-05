@@ -12,22 +12,22 @@ func formatColored(text, color string, noColor bool) string {
 
 // formatSuccess formats success messages
 func formatSuccess(text string, noColor bool) string {
-	return formatColored(constants.IconSuccess+" "+text, constants.ColorGreen+constants.ColorBold, noColor)
+	return formatColored(constants.IconSuccess+text, constants.ColorGreen+constants.ColorBold, noColor)
 }
 
 // formatError formats error messages
 func formatError(text string, noColor bool) string {
-	return formatColored(constants.IconError+" "+text, constants.ColorRed+constants.ColorBold, noColor)
+	return formatColored(constants.IconError+text, constants.ColorRed+constants.ColorBold, noColor)
 }
 
 // formatWarning formats warning messages
 func formatWarning(text string, noColor bool) string {
-	return formatColored(constants.IconWarning+" "+text, constants.ColorYellow+constants.ColorBold, noColor)
+	return formatColored(constants.IconWarning+text, constants.ColorYellow+constants.ColorBold, noColor)
 }
 
 // formatInfo formats info messages
 func formatInfo(text string, noColor bool) string {
-	return formatColored(constants.IconInfo+" "+text, constants.ColorBlue, noColor)
+	return formatColored(constants.IconInfo+text, constants.ColorBlue, noColor)
 }
 
 // formatHeader formats header messages

@@ -20,23 +20,23 @@ type CoreSetup struct {
 
 // SetupCoreCommand performs common initialization for core commands
 func SetupCoreCommand(ctx context.Context, base *types.BaseCommand) (*CoreSetup, func(), error) {
-	// Check if otto-stack is initialized
+	// Check if otto-stack is initialized (redundant check for safety)
 	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
-	if !func() bool { _, err := os.Stat(configPath); return err == nil }() {
-		return nil, nil, errors.New(constants.Messages[constants.MsgErrors_not_initialized])
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return nil, nil, errors.New(constants.MsgErrors_not_initialized)
 	}
 
 	// Load project configuration
 	cfg, err := LoadProjectConfig(configPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf(constants.Messages[constants.MsgStack_failed_load_config], err)
+		return nil, nil, fmt.Errorf(constants.MsgStack_failed_load_config, err)
 	}
 
 	// Create Docker client
 	logger := base.Logger
 	dockerClient, err := docker.NewClient(logger.SlogLogger())
 	if err != nil {
-		return nil, nil, fmt.Errorf(constants.Messages[constants.MsgStack_failed_create_docker_client], err)
+		return nil, nil, fmt.Errorf(constants.MsgStack_failed_create_docker_client, err)
 	}
 
 	cleanup := func() {

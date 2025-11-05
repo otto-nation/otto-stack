@@ -20,7 +20,7 @@ func NewConflictsHandler() *ConflictsHandler {
 
 // Handle executes the conflicts command
 func (h *ConflictsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	base.Output.Header("%s", constants.Messages[constants.MsgConflicts_header])
+	base.Output.Header("%s", constants.MsgConflicts_header)
 
 	// Check for common port conflicts
 	conflicts := h.detectPortConflicts()
