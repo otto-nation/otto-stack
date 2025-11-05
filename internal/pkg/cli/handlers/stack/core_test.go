@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 
 	"github.com/spf13/cobra"
@@ -106,7 +107,6 @@ func TestLoadProjectConfig(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
 		configContent := `project:
   name: test-project
-  environment: development
 stack:
   enabled:
     - redis
@@ -120,7 +120,6 @@ stack:
 		assert.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "test-project", cfg.Project.Name)
-		assert.Equal(t, "development", cfg.Project.Environment)
 		assert.Equal(t, []string{"redis", "postgres"}, cfg.Stack.Enabled)
 	})
 
@@ -158,15 +157,13 @@ stack:
 }
 
 func TestProjectConfig_Structure(t *testing.T) {
-	cfg := ProjectConfig{}
+	cfg := config.Config{}
 
 	// Test that struct fields exist and can be set
 	cfg.Project.Name = "test"
-	cfg.Project.Environment = "test"
 	cfg.Stack.Enabled = []string{"service1"}
 
 	assert.Equal(t, "test", cfg.Project.Name)
-	assert.Equal(t, "test", cfg.Project.Environment)
 	assert.Equal(t, []string{"service1"}, cfg.Stack.Enabled)
 }
 

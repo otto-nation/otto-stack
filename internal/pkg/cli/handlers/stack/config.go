@@ -5,24 +5,14 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 
 	"gopkg.in/yaml.v3"
 )
 
-// ProjectConfig represents the otto-stack project configuration
-type ProjectConfig struct {
-	Project struct {
-		Name        string `yaml:"name"`
-		Environment string `yaml:"environment"`
-	} `yaml:"project"`
-	Stack struct {
-		Enabled []string `yaml:"enabled"`
-	} `yaml:"stack"`
-}
-
 // LoadProjectConfig loads the otto-stack project configuration with local overrides
-func LoadProjectConfig(configPath string) (*ProjectConfig, error) {
+func LoadProjectConfig(configPath string) (*config.Config, error) {
 	// Load base config
 	baseConfig, err := loadSingleConfig(configPath)
 	if err != nil {
@@ -46,13 +36,13 @@ func LoadProjectConfig(configPath string) (*ProjectConfig, error) {
 }
 
 // loadSingleConfig loads a single config file
-func loadSingleConfig(configPath string) (*ProjectConfig, error) {
+func loadSingleConfig(configPath string) (*config.Config, error) {
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}
 
-	var cfg ProjectConfig
+	var cfg config.Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return nil, fmt.Errorf(constants.MsgStack_failed_parse_config, err)
 	}
@@ -61,15 +51,12 @@ func loadSingleConfig(configPath string) (*ProjectConfig, error) {
 }
 
 // mergeProjectConfigs merges local config into base config
-func mergeProjectConfigs(base, local *ProjectConfig) *ProjectConfig {
+func mergeProjectConfigs(base, local *config.Config) *config.Config {
 	merged := *base // Copy base
 
 	// Override project settings if specified in local
 	if local.Project.Name != "" {
 		merged.Project.Name = local.Project.Name
-	}
-	if local.Project.Environment != "" {
-		merged.Project.Environment = local.Project.Environment
 	}
 
 	// Override stack settings if specified in local

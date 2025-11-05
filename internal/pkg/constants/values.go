@@ -241,7 +241,6 @@ const (
 
 // Default configuration values
 const (
-	DefaultEnvironment       = "local"
 	DefaultProjectName       = AppName
 	DefaultProjectType       = "docker"
 	DefaultLogLevel          = "info"
@@ -395,15 +394,8 @@ const (
 	HelpAdvancedFeatures  = "Select additional features to enable"
 )
 
-// Default values
-const (
-	DefaultEnvironmentValue = "local"
-)
-
 // Option lists
 var (
-	EnvironmentOptions = []string{DefaultEnvironmentValue}
-
 	ActionOptions = []string{
 		PromptProceedInit,
 		PromptGoBack,

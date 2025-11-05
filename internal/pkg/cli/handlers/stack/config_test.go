@@ -21,7 +21,6 @@ func TestLoadProjectConfigWithLocalOverride(t *testing.T) {
 	baseConfig := `
 project:
   name: "test-project"
-  environment: "development"
 stack:
   enabled:
     - postgres
@@ -35,7 +34,6 @@ stack:
 	cfg, err := LoadProjectConfig(baseConfigPath)
 	require.NoError(t, err)
 	assert.Equal(t, "test-project", cfg.Project.Name)
-	assert.Equal(t, "development", cfg.Project.Environment)
 	assert.Equal(t, []string{"postgres", "redis"}, cfg.Stack.Enabled)
 
 	// Create local override config in otto-stack directory
@@ -46,7 +44,6 @@ stack:
 	localConfig := `
 project:
   name: "local-project"
-  environment: "local"
 stack:
   enabled:
     - postgres
@@ -65,7 +62,6 @@ stack:
 	cfg, err = LoadProjectConfig(baseConfigPath)
 	require.NoError(t, err)
 	assert.Equal(t, "local-project", cfg.Project.Name)
-	assert.Equal(t, "local", cfg.Project.Environment)
 	assert.Equal(t, []string{"postgres", "mongodb"}, cfg.Stack.Enabled)
 }
 
@@ -79,7 +75,6 @@ func TestLoadProjectConfigPartialOverride(t *testing.T) {
 	baseConfig := `
 project:
   name: "test-project"
-  environment: "development"
 stack:
   enabled:
     - postgres
@@ -96,7 +91,6 @@ stack:
 
 	localConfig := `
 project:
-  environment: "local"
 `
 	localConfigPath := filepath.Join(ottoStackDir, constants.LocalConfigFileName)
 	err = os.WriteFile(localConfigPath, []byte(localConfig), constants.FilePermReadWrite)
@@ -111,6 +105,5 @@ project:
 	cfg, err := LoadProjectConfig(baseConfigPath)
 	require.NoError(t, err)
 	assert.Equal(t, "test-project", cfg.Project.Name)                 // unchanged
-	assert.Equal(t, "local", cfg.Project.Environment)                 // overridden
 	assert.Equal(t, []string{"postgres", "redis"}, cfg.Stack.Enabled) // unchanged
 }

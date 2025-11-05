@@ -7,7 +7,6 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"gopkg.in/yaml.v3"
 )
 
@@ -33,7 +32,7 @@ type FlagConfig struct {
 }
 
 // LoadConfig loads otto-stack configuration with local overrides
-func LoadConfig() (*types.OttoStackConfig, error) {
+func LoadConfig() (*Config, error) {
 	// Load base config
 	baseConfig, err := loadBaseConfig()
 	if err != nil {
@@ -71,13 +70,13 @@ func LoadCommandConfigStruct() (*CommandConfig, error) {
 
 // GenerateConfig creates a new otto-stack configuration file
 func GenerateConfig(projectName string, services []string) ([]byte, error) {
-	config := map[string]any{
-		"project": map[string]any{
-			"name":        projectName,
-			"environment": constants.DefaultEnvironment,
+	config := Config{
+		Project: ProjectConfig{
+			Name: projectName,
+			Type: "docker", // default type
 		},
-		"stack": map[string]any{
-			"enabled": services,
+		Stack: StackConfig{
+			Enabled: services,
 		},
 	}
 
@@ -85,7 +84,7 @@ func GenerateConfig(projectName string, services []string) ([]byte, error) {
 }
 
 // loadBaseConfig loads the main configuration file
-func loadBaseConfig() (*types.OttoStackConfig, error) {
+func loadBaseConfig() (*Config, error) {
 	configPath := fmt.Sprintf("%s/%s", constants.OttoStackDir, constants.ConfigFileName)
 
 	data, err := os.ReadFile(configPath)
@@ -93,7 +92,7 @@ func loadBaseConfig() (*types.OttoStackConfig, error) {
 		return nil, fmt.Errorf("config file not found: %s", configPath)
 	}
 
-	var config types.OttoStackConfig
+	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse config: %w", err)
 	}
@@ -102,7 +101,7 @@ func loadBaseConfig() (*types.OttoStackConfig, error) {
 }
 
 // loadLocalConfig loads local configuration overrides
-func loadLocalConfig() (*types.OttoStackConfig, error) {
+func loadLocalConfig() (*Config, error) {
 	configPath := fmt.Sprintf("%s/%s", constants.OttoStackDir, constants.LocalConfigFileName)
 
 	data, err := os.ReadFile(configPath)
@@ -110,7 +109,7 @@ func loadLocalConfig() (*types.OttoStackConfig, error) {
 		return nil, err // File doesn't exist, which is fine
 	}
 
-	var config types.OttoStackConfig
+	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse local config: %w", err)
 	}
@@ -119,15 +118,12 @@ func loadLocalConfig() (*types.OttoStackConfig, error) {
 }
 
 // mergeConfigs merges base config with local overrides
-func mergeConfigs(base, local *types.OttoStackConfig) *types.OttoStackConfig {
+func mergeConfigs(base, local *Config) *Config {
 	merged := *base // Copy base
 
 	// Override project settings
 	if local.Project.Name != "" {
 		merged.Project.Name = local.Project.Name
-	}
-	if local.Project.Environment != "" {
-		merged.Project.Environment = local.Project.Environment
 	}
 
 	// Override stack settings

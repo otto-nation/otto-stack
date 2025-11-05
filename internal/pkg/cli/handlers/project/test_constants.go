@@ -33,10 +33,8 @@ const (
 
 // Use constants from the constants package
 const (
-	// Test environments (use actual constants)
-	TestEnvironmentLocal = constants.DefaultEnvironment
-	TestEnvironmentDev   = "development"
-	TestEnvironmentProd  = "production"
+	// Test project types
+	TestProjectTypeDocker = "docker"
 
 	// Test gitignore entries (use actual constants)
 	TestGitignoreEntry = constants.OttoStackDir + "/" + constants.EnvGeneratedFileName

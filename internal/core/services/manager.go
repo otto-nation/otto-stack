@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
@@ -17,7 +18,7 @@ type Manager struct {
 	docker     *docker.Client
 	logger     *slog.Logger
 	projectDir string
-	config     *types.Config
+	config     *config.Config
 }
 
 // NewManager creates a new service manager
@@ -34,7 +35,7 @@ func NewManager(logger *slog.Logger, projectDir string) (*Manager, error) {
 	}, nil
 }
 
-func (m *Manager) SetConfig(config *types.Config) {
+func (m *Manager) SetConfig(config *config.Config) {
 	m.config = config
 }
 
@@ -119,8 +120,8 @@ func (m *Manager) CleanupResources(ctx context.Context, options types.CleanupOpt
 }
 
 func (m *Manager) getProjectName() string {
-	if m.config != nil && m.config.Global.DefaultProjectType != "" {
-		return m.config.Global.DefaultProjectType
+	if m.config != nil && m.config.Project.Name != "" {
+		return m.config.Project.Name
 	}
 	return filepath.Base(m.projectDir)
 }

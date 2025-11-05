@@ -12,6 +12,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
@@ -179,7 +180,7 @@ func (h *UpHandler) GetRequiredFlags() []string {
 }
 
 // getConfigHash calculates hash of current config
-func (h *UpHandler) getConfigHash(config *ProjectConfig) (string, error) {
+func (h *UpHandler) getConfigHash(config *config.Config) (string, error) {
 	data, err := yaml.Marshal(config)
 	if err != nil {
 		return "", err

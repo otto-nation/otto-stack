@@ -16,22 +16,7 @@ func TestGenerateEnvFile(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	projectConfig := &ProjectConfig{
-		Project: struct {
-			Name        string
-			Environment string
-		}{
-			Name:        TestProjectName,
-			Environment: TestEnvironmentLocal,
-		},
-		Stack: struct {
-			Enabled []string
-		}{
-			Enabled: []string{TestServicePostgres},
-		},
-	}
-
-	err = handler.generateEnvFile([]string{TestServicePostgres}, projectConfig, &types.BaseCommand{Output: ui.NewOutput()})
+	err = handler.generateEnvFile([]string{TestServicePostgres}, TestProjectName, &types.BaseCommand{Output: ui.NewOutput()})
 	if err != nil {
 		t.Logf("Expected error in test environment: %v", err)
 	}
@@ -45,22 +30,7 @@ func TestGenerateDockerCompose(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	projectConfig := &ProjectConfig{
-		Project: struct {
-			Name        string
-			Environment string
-		}{
-			Name:        TestProjectName,
-			Environment: TestEnvironmentLocal,
-		},
-		Stack: struct {
-			Enabled []string
-		}{
-			Enabled: []string{TestServicePostgres},
-		},
-	}
-
-	err = handler.generateDockerCompose([]string{TestServicePostgres}, projectConfig, &types.BaseCommand{Output: ui.NewOutput()})
+	err = handler.generateDockerCompose([]string{TestServicePostgres}, TestProjectName, &types.BaseCommand{Output: ui.NewOutput()})
 	if err != nil {
 		t.Logf("Expected error in test environment: %v", err)
 	}

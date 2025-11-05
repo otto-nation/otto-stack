@@ -4,8 +4,8 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -87,7 +87,7 @@ func TestManager_SetConfig(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		config *types.Config
+		config *config.Config
 	}{
 		{
 			name:   "set nil config",
@@ -95,12 +95,14 @@ func TestManager_SetConfig(t *testing.T) {
 		},
 		{
 			name: "set valid config",
-			config: &types.Config{
-				Global: types.GlobalConfig{
-					LogLevel:    "info",
-					ColorOutput: true,
+			config: &config.Config{
+				Project: config.ProjectConfig{
+					Name: "test-project",
+					Type: "docker",
 				},
-				Projects: make(map[string]types.ProjectConfig),
+				Stack: config.StackConfig{
+					Enabled: []string{"postgres", "redis"},
+				},
 			},
 		},
 	}

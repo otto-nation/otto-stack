@@ -12,17 +12,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
-// ProjectConfig represents the project configuration structure
-type ProjectConfig struct {
-	Project struct {
-		Name        string
-		Environment string
-	}
-	Stack struct {
-		Enabled []string
-	}
-}
-
 // generateConfig generates config using simplified approach
 func (h *InitHandler) generateConfig(name string, services []string) string {
 	configData, err := pkgConfig.GenerateConfig(name, services)
@@ -34,28 +23,13 @@ func (h *InitHandler) generateConfig(name string, services []string) string {
 
 // generateInitialComposeFiles generates initial compose files during init
 func (h *InitHandler) generateInitialComposeFiles(services []string, projectName string, _, _ map[string]bool, base *types.BaseCommand) error {
-	projectConfig := &ProjectConfig{
-		Project: struct {
-			Name        string
-			Environment string
-		}{
-			Name:        projectName,
-			Environment: constants.DefaultEnvironment,
-		},
-		Stack: struct {
-			Enabled []string
-		}{
-			Enabled: services,
-		},
-	}
-
 	// Generate .env.generated
-	if err := h.generateEnvFile(services, projectConfig, base); err != nil {
+	if err := h.generateEnvFile(services, projectName, base); err != nil {
 		return fmt.Errorf("failed to generate .env file: %w", err)
 	}
 
 	// Generate docker-compose.yml
-	if err := h.generateDockerCompose(services, projectConfig, base); err != nil {
+	if err := h.generateDockerCompose(services, projectName, base); err != nil {
 		return fmt.Errorf("failed to generate docker-compose.yml: %w", err)
 	}
 
@@ -67,12 +41,10 @@ func (h *InitHandler) generateInitialComposeFiles(services []string, projectName
 }
 
 // generateEnvFile generates .env.generated using programmatic generation
-func (h *InitHandler) generateEnvFile(services []string, config *ProjectConfig, base *types.BaseCommand) error {
+func (h *InitHandler) generateEnvFile(services []string, projectName string, base *types.BaseCommand) error {
 	base.Output.Info("%s", constants.MsgProcess_generating_env)
 
-	generator := env.NewGenerator(config.Project.Name, config.Project.Environment)
-
-	envContent, err := generator.Generate(services)
+	envContent, err := env.Generate(projectName, services)
 	if err != nil {
 		return fmt.Errorf("failed to generate env content: %w", err)
 	}
@@ -86,10 +58,10 @@ func (h *InitHandler) generateEnvFile(services []string, config *ProjectConfig, 
 }
 
 // generateDockerCompose generates docker-compose.yml using programmatic generation
-func (h *InitHandler) generateDockerCompose(services []string, config *ProjectConfig, base *types.BaseCommand) error {
+func (h *InitHandler) generateDockerCompose(services []string, projectName string, base *types.BaseCommand) error {
 	base.Output.Info("%s", constants.MsgProcess_generating_compose)
 
-	generator, err := compose.NewGenerator(config.Project.Name, constants.ServicesDir)
+	generator, err := compose.NewGenerator(projectName, constants.ServicesDir)
 	if err != nil {
 		return fmt.Errorf("failed to create compose generator: %w", err)
 	}

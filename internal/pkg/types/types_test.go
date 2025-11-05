@@ -74,24 +74,6 @@ func TestShellType(t *testing.T) {
 	}
 }
 
-func TestProject(t *testing.T) {
-	project := Project{
-		Name:        "test-project",
-		Type:        constants.ProjectTypeDocker,
-		Environment: constants.DefaultEnvironment,
-		Services:    []string{"postgres", "redis"},
-		CreatedAt:   time.Now(),
-		UpdatedAt:   time.Now(),
-	}
-
-	assert.Equal(t, "test-project", project.Name)
-	assert.Equal(t, constants.ProjectTypeDocker, project.Type)
-	assert.Equal(t, constants.DefaultEnvironment, project.Environment)
-	assert.Len(t, project.Services, 2)
-	assert.Contains(t, project.Services, "postgres")
-	assert.Contains(t, project.Services, "redis")
-}
-
 func TestService(t *testing.T) {
 	service := Service{
 		Name:  "postgres",

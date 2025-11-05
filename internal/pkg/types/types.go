@@ -9,16 +9,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Project represents a development stack project
-type Project struct {
-	Name        string    `yaml:"name" json:"name"`
-	Type        string    `yaml:"type" json:"type"`
-	Environment string    `yaml:"environment" json:"environment"`
-	Services    []string  `yaml:"services" json:"services"`
-	CreatedAt   time.Time `yaml:"created_at" json:"created_at"`
-	UpdatedAt   time.Time `yaml:"updated_at" json:"updated_at"`
-}
-
 // Service represents a service within a development stack
 type Service struct {
 	Name        string            `yaml:"name" json:"name"`
@@ -52,46 +42,6 @@ type HealthCheck struct {
 	Timeout     time.Duration `yaml:"timeout,omitempty" json:"timeout,omitempty"`
 	Retries     int           `yaml:"retries,omitempty" json:"retries,omitempty"`
 	StartPeriod time.Duration `yaml:"start_period,omitempty" json:"start_period,omitempty"`
-}
-
-// Config represents the main application configuration
-type Config struct {
-	Project              ProjectInfo              `yaml:"project" json:"project"`
-	Stack                StackConfig              `yaml:"stack" json:"stack"`
-	ServiceConfiguration map[string]any           `yaml:"service_configuration,omitempty" json:"service_configuration,omitempty"`
-	Global               GlobalConfig             `yaml:"global" json:"global"`
-	Projects             map[string]ProjectConfig `yaml:"projects,omitempty" json:"projects,omitempty"`
-}
-
-// GlobalConfig represents global application settings
-type GlobalConfig struct {
-	DefaultProjectType string `yaml:"default_project_type" json:"default_project_type"`
-	LogLevel           string `yaml:"log_level" json:"log_level"`
-	ColorOutput        bool   `yaml:"color_output" json:"color_output"`
-	CheckUpdates       bool   `yaml:"check_updates" json:"check_updates"`
-}
-
-// OttoStackConfig represents the main otto-stack-config.yml structure
-type OttoStackConfig struct {
-	Project              ProjectInfo    `yaml:"project" json:"project"`
-	Stack                StackConfig    `yaml:"stack" json:"stack"`
-	ServiceConfiguration map[string]any `yaml:"service_configuration,omitempty" json:"service_configuration,omitempty"`
-}
-
-// ProjectInfo represents project information
-type ProjectInfo struct {
-	Name        string `yaml:"name" json:"name"`
-	Environment string `yaml:"environment" json:"environment"`
-}
-
-// StackConfig represents stack configuration
-type StackConfig struct {
-	Enabled []string `yaml:"enabled" json:"enabled"`
-}
-
-// ProjectConfig represents project-level configuration
-type ProjectConfig struct {
-	Version string `yaml:"version" json:"version"`
 }
 
 // ServiceInfo represents service information

@@ -8,13 +8,14 @@ import (
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // CoreSetup contains shared setup data for core commands
 type CoreSetup struct {
-	Config       *ProjectConfig
+	Config       *config.Config
 	DockerClient *docker.Client
 }
 
