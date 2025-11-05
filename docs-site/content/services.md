@@ -3,7 +3,7 @@ title: "Services"
 description: "Available services and configuration options"
 lead: "Explore all the services you can use with otto-stack"
 date: "2025-10-01"
-lastmod: "2025-11-04"
+lastmod: "2025-11-05"
 draft: false
 weight: 30
 toc: true

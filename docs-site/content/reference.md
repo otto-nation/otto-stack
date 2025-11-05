@@ -3,7 +3,7 @@ title: "CLI Reference"
 description: "Complete command reference for otto-stack CLI"
 lead: "Comprehensive reference for all otto-stack CLI commands and their usage"
 date: "2025-10-01"
-lastmod: "2025-11-04"
+lastmod: "2025-11-05"
 draft: false
 weight: 50
 toc: true

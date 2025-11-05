@@ -159,7 +159,7 @@ tasks:
         COMMITLINT_CONFIG=$(cat .github/.commitlintrc.json)
 
         AI_PROMPT="Generate a conventional commit message following these rules:
-        - Header (first line) must be ≤72 characters (no exceptions)
+        - Header (first line) must be ≤72 characters (no exceptions). Use ';' to separate multiple changes.
         - Body lines must be ≤100 characters each
         - Use conventional commit format: type(scope): description
         - Separate header and body with blank line

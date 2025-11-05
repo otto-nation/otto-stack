@@ -28,7 +28,7 @@ func BuildRootCommand() (*cobra.Command, error) {
 
 	rootCmd := &cobra.Command{
 		Use:     constants.AppName,
-		Short:   constants.Messages[constants.MsgHelp_app_description],
+		Short:   constants.Messages["MsgHelp_app_description"],
 		Version: version.GetAppVersion(),
 	}
 
