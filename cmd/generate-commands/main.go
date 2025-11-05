@@ -28,6 +28,15 @@ type commandData struct {
 	Handler         string
 	Description     string
 	LongDescription string
+	Flags           []flagData
+}
+
+type flagData struct {
+	Name        string
+	Type        string
+	Short       string
+	Description string
+	Default     string
 }
 
 func main() {
@@ -73,6 +82,7 @@ func generateCommands(commandConfig pkgConfig.CommandConfig) error {
 			Handler:         cmd.Handler,
 			Description:     escape(cmd.Description),
 			LongDescription: escape(cmd.LongDescription),
+			Flags:           extractFlags(cmd.Flags),
 		})
 	}
 
@@ -99,6 +109,20 @@ func toPascalCase(s string) string {
 		}
 	}
 	return strings.Join(parts, "")
+}
+
+func extractFlags(flags map[string]pkgConfig.FlagConfig) []flagData {
+	var result []flagData
+	for name, flag := range flags {
+		result = append(result, flagData{
+			Name:        name,
+			Type:        flag.Type,
+			Short:       flag.Short,
+			Description: escape(flag.Description),
+			Default:     fmt.Sprintf("%v", flag.Default),
+		})
+	}
+	return result
 }
 
 func escape(s string) string {

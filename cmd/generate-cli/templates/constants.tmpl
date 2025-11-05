@@ -20,12 +20,12 @@ import (
 
 // Command constants
 const (
-{{range .Commands}}	{{.Name}} = "{{.Value}}"
+{{range .Commands}}	{{.Name}} = {{.Value}}
 {{end}})
 
 // Flag constants
 const (
-{{range .Flags}}	{{.Name}} = "{{.Value}}"
+{{range .Flags}}	{{.Name}} = {{.Value}}
 {{end}})
 
 // File extension constants
@@ -70,22 +70,22 @@ const (
 
 // Message constants
 const (
-{{range .Messages}}	{{.Name}} = "{{.Value}}"
-{{end}})
-
-// Icon constants
-const (
-{{range .Icons}}	{{.Name}} = "{{.Value}}"
+{{range .Messages}}	{{.Name}} = {{.Value}}
 {{end}})
 
 // Messages contains all messages from commands.yaml
 var Messages = map[string]string{
-{{range .Messages}}	"{{.Name}}": "{{.Value}}",
+{{range .Messages}}	"{{.Name}}": {{.Value}},
 {{end}}}
+
+// Icon constants
+const (
+{{range .Icons}}	{{.Name}} = {{.Value}}
+{{end}})
 
 // Icons contains all icons from commands.yaml
 var Icons = map[string]string{
-{{range .Icons}}	"{{.Name}}": "{{.Value}}",
+{{range .Icons}}	"{{.Key}}": {{.Value}},
 {{end}}}
 
 {{range .CommandsData}}

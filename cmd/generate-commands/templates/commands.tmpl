@@ -89,7 +89,7 @@ func New{{.FuncName}}Command(serviceManager *services.Manager, logger *slog.Logg
 {{if eq .Handler "stack"}}	handler := stack.New{{.HandlerName}}Handler()
 {{else if eq .Handler "project"}}	handler := project.New{{.HandlerName}}Handler()
 {{else}}	handler := project.NewVersionHandler()
-{{end}}	return &cobra.Command{
+{{end}}	cmd := &cobra.Command{
 		Use:   constants.Command{{.ConstantName}},
 		Short: "{{.Description}}",{{if .LongDescription}}
 		Long:  "{{.LongDescription}}",{{end}}
@@ -102,6 +102,11 @@ func New{{.FuncName}}Command(serviceManager *services.Manager, logger *slog.Logg
 			})
 		},
 	}
+
+{{range .Flags}}	{{if eq .Type "bool"}}cmd.Flags().Bool("{{.Name}}", {{if eq .Default "true"}}true{{else}}false{{end}}, "{{.Description}}"){{end}}{{if eq .Type "string"}}cmd.Flags().String("{{.Name}}", "{{.Default}}", "{{.Description}}"){{end}}{{if eq .Type "int"}}cmd.Flags().Int("{{.Name}}", {{.Default}}, "{{.Description}}"){{end}}{{if .Short}}
+	cmd.Flags().Lookup("{{.Name}}").Shorthand = "{{.Short}}"{{end}}
+{{end}}
+	return cmd
 }
 
 {{end}}

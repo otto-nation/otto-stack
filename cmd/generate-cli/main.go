@@ -3,13 +3,15 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"text/template"
 
-	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
+	"gopkg.in/yaml.v3"
 )
 
 const (
+	CommandsYAMLPath  = "internal/config/commands.yaml"
 	TemplateFilePath  = "cmd/generate-cli/templates/constants.tmpl"
 	GeneratedFilePath = "internal/pkg/constants/cli_generated.go"
 )
@@ -24,6 +26,7 @@ type commandData struct {
 type constantData struct {
 	Name  string
 	Value string
+	Key   string
 }
 
 type flagField struct {
@@ -34,7 +37,7 @@ type flagField struct {
 }
 
 func main() {
-	rawConfig, err := pkgConfig.LoadCommandConfig()
+	rawConfig, err := loadCommandConfig()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load config: %v\n", err)
 		os.Exit(1)
@@ -49,8 +52,19 @@ func main() {
 		countFlags(rawConfig), countCommands(rawConfig))
 }
 
+func loadCommandConfig() (map[string]any, error) {
+	data, err := os.ReadFile(CommandsYAMLPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var config map[string]any
+	err = yaml.Unmarshal(data, &config)
+	return config, err
+}
+
 func generateConstants() error {
-	rawConfig, err := pkgConfig.LoadCommandConfig()
+	rawConfig, err := loadCommandConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load raw config: %w", err)
 	}
@@ -101,7 +115,7 @@ func collectCommandConstants(rawConfig map[string]any) []constantData {
 	for cmdName := range commands {
 		constants = append(constants, constantData{
 			Name:  "Command" + toPascalCase(cmdName),
-			Value: cmdName,
+			Value: strconv.Quote(cmdName),
 		})
 	}
 	return constants
@@ -117,7 +131,7 @@ func collectFlagsData(rawConfig map[string]any) []constantData {
 	for flagName := range flagNames {
 		flags = append(flags, constantData{
 			Name:  "Flag" + toPascalCase(flagName),
-			Value: flagName,
+			Value: strconv.Quote(flagName),
 		})
 	}
 	return flags
@@ -127,76 +141,123 @@ func collectMessagesData(rawConfig map[string]any) []constantData {
 	var messages []constantData
 	msgs := getMessages(rawConfig)
 	for category, categoryData := range msgs {
-		categoryMap := getCategoryMap(categoryData)
-		for key, value := range categoryMap {
-			valueStr := getStringValue(value)
-			if valueStr != "" {
-				constName := "Msg" + toPascalCase(category) + "_" + strings.ReplaceAll(key, "-", "_")
-				messages = append(messages, constantData{
-					Name:  constName,
-					Value: valueStr,
-				})
-			}
+		messages = append(messages, processMessageCategory(category, categoryData)...)
+	}
+	return messages
+}
+
+func processMessageCategory(category string, categoryData any) []constantData {
+	var messages []constantData
+	categoryMap := getCategoryMap(categoryData)
+	for key, value := range categoryMap {
+		if msg := createMessageConstant(category, key, value); msg.Name != "" {
+			messages = append(messages, msg)
 		}
 	}
 	return messages
+}
+
+func createMessageConstant(category, key string, value any) constantData {
+	valueStr := getStringValue(value)
+	if valueStr == "" {
+		return constantData{}
+	}
+
+	constName := "Msg" + toPascalCase(category) + "_" + strings.ReplaceAll(key, "-", "_")
+	return constantData{
+		Name:  constName,
+		Value: strconv.Quote(valueStr),
+	}
 }
 
 func collectIconsData(rawConfig map[string]any) []constantData {
 	var icons []constantData
 	icns := getIcons(rawConfig)
 	for category, categoryData := range icns {
-		categoryMap := getCategoryMap(categoryData)
-		for key, value := range categoryMap {
-			valueStr := getStringValue(value)
-			if valueStr != "" {
-				constName := "Icon" + toPascalCase(strings.ReplaceAll(category+"."+key, ".", "_"))
-				icons = append(icons, constantData{
-					Name:  constName,
-					Value: valueStr,
-				})
-			}
+		icons = append(icons, processIconCategory(category, categoryData)...)
+	}
+	return icons
+}
+
+func processIconCategory(category string, categoryData any) []constantData {
+	var icons []constantData
+	categoryMap := getCategoryMap(categoryData)
+	for key, value := range categoryMap {
+		if icon := createIconConstant(category, key, value); icon.Name != "" {
+			icons = append(icons, icon)
 		}
 	}
 	return icons
+}
+
+func createIconConstant(category, key string, value any) constantData {
+	valueStr := getStringValue(value)
+	if valueStr == "" {
+		return constantData{}
+	}
+
+	// Generate snake_case names to match existing code expectations
+	constName := "Icon" + toPascalCase(category) + "_" + strings.ToLower(strings.ReplaceAll(key, "-", "_"))
+	return constantData{
+		Name:  constName,
+		Value: strconv.Quote(valueStr),
+		Key:   category + "_" + key,
+	}
 }
 
 func collectCommandsData(rawConfig map[string]any) []commandData {
 	var commands []commandData
 	cmds := getCommands(rawConfig)
 	for cmdName, cmdData := range cmds {
-		cmd := getCommandMap(cmdData)
-		if cmd != nil {
-			commands = append(commands, commandData{
-				CommandName: cmdName,
-				StructName:  toPascalCase(cmdName) + "Flags",
-				FuncName:    "Parse" + toPascalCase(cmdName) + "Flags",
-				Fields:      extractCommandFlags(cmd),
-			})
+		if cmd := createCommandData(cmdName, cmdData); cmd.CommandName != "" {
+			commands = append(commands, cmd)
 		}
 	}
 	return commands
+}
+
+func createCommandData(cmdName string, cmdData any) commandData {
+	cmd := getCommandMap(cmdData)
+	if cmd == nil {
+		return commandData{}
+	}
+
+	return commandData{
+		CommandName: cmdName,
+		StructName:  toPascalCase(cmdName) + "Flags",
+		FuncName:    "Parse" + toPascalCase(cmdName) + "Flags",
+		Fields:      extractCommandFlags(cmd),
+	}
 }
 
 func extractCommandFlags(cmd map[string]any) []flagField {
 	var fields []flagField
 	flags := getFlags(cmd)
 	for flagName, flagData := range flags {
-		flag := getFlagMap(flagData)
-		if flag != nil {
-			flagType := getStringValue(flag["type"])
-			if flagType == "" {
-				flagType = "string"
-			}
-			fields = append(fields, flagField{
-				Name:     toPascalCase(flagName),
-				Type:     goTypeFromYAML(flagType),
-				FlagName: flagName,
-				YAMLType: flagType,
-			})
+		if field := createFlagField(flagName, flagData); field.Name != "" {
+			fields = append(fields, field)
 		}
 	}
 	return fields
+}
+
+func createFlagField(flagName string, flagData any) flagField {
+	flag := getFlagMap(flagData)
+	if flag == nil {
+		return flagField{}
+	}
+
+	flagType := getStringValue(flag["type"])
+	if flagType == "" {
+		flagType = "string"
+	}
+
+	return flagField{
+		Name:     toPascalCase(flagName),
+		Type:     goTypeFromYAML(flagType),
+		FlagName: flagName,
+		YAMLType: flagType,
+	}
 }
 
 // Helper functions to reduce nesting
@@ -270,6 +331,7 @@ func addCommandFlags(rawConfig map[string]any, flagNames map[string]bool) {
 		if cmd == nil {
 			continue
 		}
+
 		cmdFlags := getFlags(cmd)
 		for flagName := range cmdFlags {
 			flagNames[flagName] = true
