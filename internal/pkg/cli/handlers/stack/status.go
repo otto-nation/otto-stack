@@ -8,8 +8,8 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
-	"github.com/otto-nation/otto-stack/internal/pkg/output"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 	"github.com/spf13/cobra"
@@ -35,7 +35,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	}
 
 	// Get CI-friendly flags
-	ciFlags := output.GetCIFlags(cmd)
+	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
 		base.Output.Header(core.MsgStatus)
@@ -43,7 +43,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		output.HandleError(ciFlags, err)
+		ci.HandleError(ciFlags, err)
 		return nil
 	}
 	defer cleanup()
@@ -57,13 +57,13 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	// Apply same service resolution as up command
 	manager, err := services.New()
 	if err != nil {
-		output.HandleError(ciFlags, fmt.Errorf("failed to create service manager: %w", err))
+		ci.HandleError(ciFlags, fmt.Errorf("failed to create service manager: %w", err))
 		return nil
 	}
 
 	// Validate services exist
 	if err := manager.ValidateServices(serviceNames); err != nil {
-		output.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
+		ci.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
 		return nil
 	}
 
@@ -72,13 +72,13 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	// Get service status
 	statuses, err := setup.DockerClient.GetDockerServiceStatus(ctx, setup.Config.Project.Name, resolvedServices)
 	if err != nil {
-		output.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_get_service_status, err))
+		ci.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_get_service_status, err))
 		return nil
 	}
 
 	// Handle CI-friendly output
 	if ciFlags.JSON {
-		output.OutputResult(ciFlags, map[string]any{
+		ci.OutputResult(ciFlags, map[string]any{
 			"services": statuses,
 			"count":    len(statuses),
 		}, core.ExitSuccess)

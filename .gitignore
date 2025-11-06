@@ -1,5 +1,6 @@
 # Generated files
 internal/**/*_generated.go
+internal/pkg/ci/generated.go
 
 # Taskfile
 .fmt-timestamp

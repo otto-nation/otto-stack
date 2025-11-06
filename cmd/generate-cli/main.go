@@ -11,9 +11,11 @@ import (
 )
 
 const (
-	CommandsYAMLPath  = "internal/config/commands.yaml"
-	TemplateFilePath  = "cmd/generate-cli/templates/core.tmpl"
-	GeneratedFilePath = "internal/core/cli_generated.go"
+	CommandsYAMLPath     = "internal/config/commands.yaml"
+	CoreTemplateFilePath = "cmd/generate-cli/templates/core.tmpl"
+	CLITemplateFilePath  = "cmd/generate-cli/templates/ci.tmpl"
+	CoreGeneratedPath    = "internal/core/cli_generated.go"
+	CIGeneratedPath      = "internal/pkg/ci/generated.go"
 )
 
 type commandData struct {
@@ -43,8 +45,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := generateConstants(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to generate constants: %v\n", err)
+	if err := generateCoreConstants(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to generate core constants: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := generateCIUtilities(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to generate CI utilities: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -63,18 +70,18 @@ func loadCommandConfig() (map[string]any, error) {
 	return config, err
 }
 
-func generateConstants() error {
+func generateCoreConstants() error {
 	rawConfig, err := loadCommandConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load raw config: %w", err)
 	}
 
-	tmpl, err := template.ParseFiles(TemplateFilePath)
+	tmpl, err := template.ParseFiles(CoreTemplateFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to parse constants template: %w", err)
 	}
 
-	file, err := os.Create(GeneratedFilePath)
+	file, err := os.Create(CoreGeneratedPath)
 	if err != nil {
 		return fmt.Errorf("failed to create constants file: %w", err)
 	}
@@ -95,6 +102,22 @@ func generateConstants() error {
 	}
 
 	return tmpl.Execute(file, data)
+}
+
+func generateCIUtilities() error {
+	tmpl, err := template.ParseFiles(CLITemplateFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to parse CI template: %w", err)
+	}
+
+	file, err := os.Create(CIGeneratedPath)
+	if err != nil {
+		return fmt.Errorf("failed to create CI file: %w", err)
+	}
+	defer func() { _ = file.Close() }()
+
+	// CI utilities don't need data from YAML, they're static
+	return tmpl.Execute(file, nil)
 }
 
 func countFlags(rawConfig map[string]any) int {

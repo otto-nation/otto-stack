@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
-	"github.com/otto-nation/otto-stack/internal/pkg/output"
 	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 	"github.com/spf13/cobra"
 )
@@ -26,12 +26,12 @@ func (h *ValidateHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 		return err
 	}
 
-	flags := output.GetCIFlags(cmd)
+	flags := ci.GetFlags(cmd)
 
 	// Load configuration
 	_, err := config.LoadConfig()
 	if err != nil {
-		output.HandleError(flags, fmt.Errorf("failed to load configuration: %w", err))
+		ci.HandleError(flags, fmt.Errorf("failed to load configuration: %w", err))
 		return nil
 	}
 

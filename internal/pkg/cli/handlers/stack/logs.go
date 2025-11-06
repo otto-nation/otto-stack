@@ -7,7 +7,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/output"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 	"github.com/spf13/cobra"
@@ -29,7 +29,7 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Get CI-friendly flags
-	ciFlags := output.GetCIFlags(cmd)
+	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
 		base.Output.Header(core.MsgLogs)
@@ -57,7 +57,7 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	serviceUtils := services.NewServiceUtils()
 	resolvedServices, err := serviceUtils.ResolveServices(serviceNames)
 	if err != nil {
-		output.HandleError(ciFlags, fmt.Errorf("failed to resolve services: %w", err))
+		ci.HandleError(ciFlags, fmt.Errorf("failed to resolve services: %w", err))
 		return nil
 	}
 
