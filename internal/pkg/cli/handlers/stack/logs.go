@@ -7,8 +7,9 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
+	"github.com/otto-nation/otto-stack/internal/pkg/output"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -23,12 +24,12 @@ func NewLogsHandler() *LogsHandler {
 // Handle executes the logs command
 func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Check initialization first
-	if err := utils.CheckInitialization(); err != nil {
+	if err := validation.CheckInitialization(); err != nil {
 		return err
 	}
 
 	// Get CI-friendly flags
-	ciFlags := utils.GetCIFlags(cmd)
+	ciFlags := output.GetCIFlags(cmd)
 
 	if !ciFlags.Quiet {
 		base.Output.Header(core.MsgLogs)
@@ -56,7 +57,7 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	serviceUtils := services.NewServiceUtils()
 	resolvedServices, err := serviceUtils.ResolveServices(serviceNames)
 	if err != nil {
-		utils.HandleError(ciFlags, fmt.Errorf("failed to resolve services: %w", err))
+		output.HandleError(ciFlags, fmt.Errorf("failed to resolve services: %w", err))
 		return nil
 	}
 

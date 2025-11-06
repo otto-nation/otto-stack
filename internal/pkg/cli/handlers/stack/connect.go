@@ -7,8 +7,9 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
+	"github.com/otto-nation/otto-stack/internal/pkg/output"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -23,14 +24,14 @@ func NewConnectHandler() *ConnectHandler {
 // Handle executes the connect command
 func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Get CI-friendly flags
-	ciFlags := utils.GetCIFlags(cmd)
+	ciFlags := output.GetCIFlags(cmd)
 
 	if len(args) < 1 {
 		return fmt.Errorf("%s", core.Messages[core.MsgErrors_requires_service_name])
 	}
 
 	// Check initialization first
-	if err := utils.CheckInitialization(); err != nil {
+	if err := validation.CheckInitialization(); err != nil {
 		return err
 	}
 
@@ -60,7 +61,7 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	// Create connection command based on service type
 	command, err := h.getConnectionCommand(serviceName, flags.Database, flags.User, flags.Host, flags.Port, flags.ReadOnly)
 	if err != nil {
-		utils.HandleError(ciFlags, err)
+		output.HandleError(ciFlags, err)
 		return nil
 	}
 
