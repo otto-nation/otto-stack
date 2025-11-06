@@ -2,8 +2,6 @@ package docker
 
 import (
 	"time"
-
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 // StartOptions defines options for starting services
@@ -71,9 +69,9 @@ type DockerServiceStatus struct {
 type DockerServiceState string
 
 const (
-	DockerServiceStateRunning DockerServiceState = constants.StateRunning
-	DockerServiceStateStopped DockerServiceState = constants.StateStopped
-	DockerServiceStateCreated DockerServiceState = constants.StateCreated
+	DockerServiceStateRunning DockerServiceState = StateRunning
+	DockerServiceStateStopped DockerServiceState = StateStopped
+	DockerServiceStateCreated DockerServiceState = StateCreated
 )
 
 // IsRunning returns true if the service is running
@@ -85,8 +83,8 @@ func (s DockerServiceState) IsRunning() bool {
 type DockerHealthStatus string
 
 const (
-	DockerHealthStatusHealthy   DockerHealthStatus = constants.HealthHealthy
-	DockerHealthStatusUnhealthy DockerHealthStatus = constants.HealthUnhealthy
-	DockerHealthStatusStarting  DockerHealthStatus = constants.HealthStarting
-	DockerHealthStatusNone      DockerHealthStatus = constants.HealthNone
+	DockerHealthStatusHealthy   DockerHealthStatus = HealthHealthy
+	DockerHealthStatusUnhealthy DockerHealthStatus = HealthUnhealthy
+	DockerHealthStatusStarting  DockerHealthStatus = HealthStarting
+	DockerHealthStatusNone      DockerHealthStatus = HealthNone
 )

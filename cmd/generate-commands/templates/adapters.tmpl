@@ -1,16 +1,16 @@
 type serviceManagerAdapter struct {
-	manager *services.Manager
+	manager *services.Orchestrator
 }
 
-func (s *serviceManagerAdapter) StartServices(ctx context.Context, serviceNames []string, options types.StartOptions) error {
+func (s *serviceManagerAdapter) StartServices(ctx context.Context, serviceNames []string, options docker.StartOptions) error {
 	return s.manager.StartServices(ctx, serviceNames, options)
 }
 
-func (s *serviceManagerAdapter) StopServices(ctx context.Context, serviceNames []string, options types.StopOptions) error {
+func (s *serviceManagerAdapter) StopServices(ctx context.Context, serviceNames []string, options docker.StopOptions) error {
 	return s.manager.StopServices(ctx, serviceNames, options)
 }
 
-func (s *serviceManagerAdapter) GetServiceStatus(ctx context.Context, serviceNames []string) ([]types.ServiceStatus, error) {
+func (s *serviceManagerAdapter) GetServiceStatus(ctx context.Context, serviceNames []string) ([]docker.DockerServiceStatus, error) {
 	return s.manager.GetServiceStatus(ctx, serviceNames)
 }
 

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"gopkg.in/yaml.v3"
 )
@@ -29,7 +28,7 @@ func Generate(projectName string, services []string) ([]byte, error) {
 }
 
 func addServiceEnv(content *strings.Builder, serviceName string) {
-	yamlPath := filepath.Join(constants.ServicesDir, "**", serviceName+".yaml")
+	yamlPath := filepath.Join(services.ServicesDir, "**", serviceName+".yaml")
 	matches, _ := filepath.Glob(yamlPath)
 	if len(matches) == 0 {
 		return

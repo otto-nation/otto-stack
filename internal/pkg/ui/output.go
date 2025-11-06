@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/briandowns/spinner"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 )
 
@@ -54,7 +53,7 @@ func (o *Output) SubHeader(msg string, args ...any) {
 	if o.NoColor {
 		o.print("\n--- "+formatted+" ---\n", "SubHeader")
 	} else {
-		o.print(formatColored("\n"+constants.IconBox+" "+formatted+"\n", constants.ColorGreen+constants.ColorBold, o.NoColor), "SubHeader")
+		o.print(formatColored("\n"+IconBox+" "+formatted+"\n", ColorGreen+ColorBold, o.NoColor), "SubHeader")
 	}
 }
 
@@ -75,7 +74,7 @@ func (o *Output) Progress(msg string, fn func() error) error {
 		return fn()
 	}
 
-	s := spinner.New(spinner.CharSets[14], constants.SpinnerIntervalMilliseconds*time.Millisecond)
+	s := spinner.New(spinner.CharSets[14], SpinnerIntervalMilliseconds*time.Millisecond)
 	s.Suffix = " " + msg
 	s.Start()
 	defer s.Stop()
@@ -97,7 +96,7 @@ func (o *Output) Box(title, content string) {
 	if o.NoColor {
 		fmt.Printf("\n┌─ %s ─\n│ %s\n└─\n", title, content)
 	} else {
-		fmt.Printf("\n%s\n\n%s\n", formatColored(title, constants.ColorGreen+constants.ColorBold, false), content)
+		fmt.Printf("\n%s\n\n%s\n", formatColored(title, ColorGreen+ColorBold, false), content)
 	}
 }
 

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 )
 
 func TestCreateRootCommand(t *testing.T) {
@@ -48,11 +48,11 @@ commands:
 help: {}
 `
 				configDir := "internal/config"
-				err := os.MkdirAll(configDir, constants.DirPermReadWriteExec)
+				err := os.MkdirAll(configDir, core.DirPermReadWriteExec)
 				require.NoError(t, err)
 
 				configFile := filepath.Join(configDir, "commands.yaml")
-				err = os.WriteFile(configFile, []byte(configContent), constants.FilePermReadWrite)
+				err = os.WriteFile(configFile, []byte(configContent), core.FilePermReadWrite)
 				require.NoError(t, err)
 
 				t.Cleanup(func() {
@@ -76,7 +76,7 @@ help: {}
 			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, rootCmd)
-				assert.Equal(t, constants.AppName, rootCmd.Use)
+				assert.Equal(t, core.AppName, rootCmd.Use)
 				assert.NotEmpty(t, rootCmd.Short)
 			}
 		})
@@ -93,7 +93,7 @@ func TestExecuteFactory(t *testing.T) {
 			name: "execute with help flag",
 			setupFunc: func(t *testing.T) {
 				// Set args to show help (which should not error)
-				os.Args = []string{constants.AppName, "--help"}
+				os.Args = []string{core.AppName, "--help"}
 			},
 			expectError: false,
 		},
@@ -101,7 +101,7 @@ func TestExecuteFactory(t *testing.T) {
 			name: "execute with version flag",
 			setupFunc: func(t *testing.T) {
 				// Set args to show version
-				os.Args = []string{constants.AppName, "--version"}
+				os.Args = []string{core.AppName, "--version"}
 			},
 			expectError: false,
 		},
@@ -125,7 +125,7 @@ func TestExecuteFactory(t *testing.T) {
 			require.NotNil(t, rootCmd)
 
 			// Test that the command has the expected structure
-			assert.Equal(t, constants.AppName, rootCmd.Use)
+			assert.Equal(t, core.AppName, rootCmd.Use)
 			assert.NotEmpty(t, rootCmd.Short)
 			assert.True(t, rootCmd.HasSubCommands())
 		})
@@ -152,11 +152,11 @@ commands:
 help: {}
 `
 		configDir := "internal/config"
-		err := os.MkdirAll(configDir, constants.DirPermReadWriteExec)
+		err := os.MkdirAll(configDir, core.DirPermReadWriteExec)
 		require.NoError(t, err)
 
 		configFile := filepath.Join(configDir, "commands.yaml")
-		err = os.WriteFile(configFile, []byte(configContent), constants.FilePermReadWrite)
+		err = os.WriteFile(configFile, []byte(configContent), core.FilePermReadWrite)
 		require.NoError(t, err)
 
 		t.Cleanup(func() {

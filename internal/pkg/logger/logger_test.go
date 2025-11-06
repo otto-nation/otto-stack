@@ -4,13 +4,12 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDefaultConfig(t *testing.T) {
 	config := DefaultConfig()
-	assert.Equal(t, constants.LogLevelInfo, config.Level)
+	assert.Equal(t, LogLevelInfo, config.Level)
 }
 
 func TestParseLogLevel(t *testing.T) {
@@ -19,11 +18,11 @@ func TestParseLogLevel(t *testing.T) {
 		input    string
 		expected slog.Level
 	}{
-		{"debug", constants.LogLevelDebug, slog.LevelDebug},
-		{"info", constants.LogLevelInfo, slog.LevelInfo},
-		{"warn", constants.LogLevelWarn, slog.LevelWarn},
+		{"debug", LogLevelDebug, slog.LevelDebug},
+		{"info", LogLevelInfo, slog.LevelInfo},
+		{"warn", LogLevelWarn, slog.LevelWarn},
 		{"warning", "warning", slog.LevelWarn},
-		{"error", constants.LogLevelError, slog.LevelError},
+		{"error", LogLevelError, slog.LevelError},
 		{"invalid", "invalid", slog.LevelInfo},
 		{"uppercase", "DEBUG", slog.LevelDebug},
 	}
@@ -42,8 +41,8 @@ func TestInit(t *testing.T) {
 		config Config
 	}{
 		{"default config", DefaultConfig()},
-		{"debug level", Config{Level: constants.LogLevelDebug}},
-		{"error level", Config{Level: constants.LogLevelError}},
+		{"debug level", Config{Level: LogLevelDebug}},
+		{"error level", Config{Level: LogLevelError}},
 	}
 
 	for _, tt := range tests {
@@ -68,7 +67,7 @@ func TestGetLogger(t *testing.T) {
 }
 
 func TestLoggingFunctions(t *testing.T) {
-	err := Init(Config{Level: constants.LogLevelDebug})
+	err := Init(Config{Level: LogLevelDebug})
 	assert.NoError(t, err)
 
 	// Test that functions don't panic
@@ -107,10 +106,10 @@ func TestClose(t *testing.T) {
 }
 
 func TestMultipleInit(t *testing.T) {
-	err1 := Init(Config{Level: constants.LogLevelDebug})
+	err1 := Init(Config{Level: LogLevelDebug})
 	assert.NoError(t, err1)
 
-	err2 := Init(Config{Level: constants.LogLevelError})
+	err2 := Init(Config{Level: LogLevelError})
 	assert.NoError(t, err2)
 
 	// Should not panic

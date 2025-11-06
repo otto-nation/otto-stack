@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/otto-nation/otto-stack/internal/config"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 	"gopkg.in/yaml.v3"
 )
 
@@ -109,7 +109,7 @@ func (m *Manager) buildV2ConnectCommand(v2 *ServiceConfigV2, options map[string]
 
 // loadServices loads all services from embedded filesystem
 func (m *Manager) loadServices() error {
-	entries, err := config.EmbeddedServicesFS.ReadDir(constants.EmbeddedServicesDir)
+	entries, err := config.EmbeddedServicesFS.ReadDir(EmbeddedServicesDir)
 	if err != nil {
 		return fmt.Errorf("failed to read services directory: %w", err)
 	}
@@ -130,19 +130,19 @@ func (m *Manager) loadServices() error {
 
 // loadCategoryServices loads services from a specific category directory
 func (m *Manager) loadCategoryServices(category string) error {
-	categoryPath := fmt.Sprintf("%s/%s", constants.EmbeddedServicesDir, category)
+	categoryPath := fmt.Sprintf("%s/%s", EmbeddedServicesDir, category)
 	entries, err := config.EmbeddedServicesFS.ReadDir(categoryPath)
 	if err != nil {
 		return fmt.Errorf("failed to read category directory %s: %w", category, err)
 	}
 
 	for _, entry := range entries {
-		if entry.IsDir() || !constants.IsYAMLFile(entry.Name()) {
+		if entry.IsDir() || !core.IsYAMLFile(entry.Name()) {
 			continue
 		}
 
 		fileName := entry.Name()
-		serviceName := constants.TrimYAMLExt(fileName)
+		serviceName := core.TrimYAMLExt(fileName)
 
 		if err := m.loadService(category, serviceName); err != nil {
 			return fmt.Errorf("failed to load service %s: %w", serviceName, err)
@@ -155,13 +155,13 @@ func (m *Manager) loadCategoryServices(category string) error {
 // loadService loads a single service from YAML (V2 only)
 func (m *Manager) loadService(category, serviceName string) error {
 	// Try V2 format
-	v2Path := fmt.Sprintf("%s/%s/%s-v2.yaml", constants.EmbeddedServicesDir, category, serviceName)
+	v2Path := fmt.Sprintf("%s/%s/%s-v2.yaml", EmbeddedServicesDir, category, serviceName)
 	if data, err := config.EmbeddedServicesFS.ReadFile(v2Path); err == nil {
 		return m.loadV2Service(data, serviceName, category)
 	}
 
 	// Try exact filename (for services like redis-v2)
-	exactPath := fmt.Sprintf("%s/%s/%s.yaml", constants.EmbeddedServicesDir, category, serviceName)
+	exactPath := fmt.Sprintf("%s/%s/%s.yaml", EmbeddedServicesDir, category, serviceName)
 	if data, err := config.EmbeddedServicesFS.ReadFile(exactPath); err == nil {
 		return m.loadV2Service(data, serviceName, category)
 	}

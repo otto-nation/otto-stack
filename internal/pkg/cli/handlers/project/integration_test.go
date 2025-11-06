@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -63,7 +63,7 @@ func TestCreateDirectoryStructure(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	_, err = os.Stat(constants.OttoStackDir)
+	_, err = os.Stat(core.OttoStackDir)
 	assert.NoError(t, err)
 }
 
@@ -91,7 +91,7 @@ func TestCreateGitignoreEntries(t *testing.T) {
 	err := handler.createGitignoreEntries(&base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
-	_, err = os.Stat(constants.GitignoreFileName)
+	_, err = os.Stat(core.GitIgnoreFileName)
 	assert.NoError(t, err)
 }
 
@@ -106,7 +106,7 @@ func TestCreateReadme(t *testing.T) {
 	err = handler.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis}, &base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
-	readmePath := filepath.Join(constants.OttoStackDir, constants.ReadmeFileName)
+	readmePath := filepath.Join(core.OttoStackDir, core.ReadmeFileName)
 	_, err = os.Stat(readmePath)
 	assert.NoError(t, err)
 }

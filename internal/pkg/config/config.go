@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/otto-nation/otto-stack/internal/config"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 	"gopkg.in/yaml.v3"
 )
 
@@ -91,7 +91,7 @@ func GenerateConfig(projectName string, services []string) ([]byte, error) {
 
 // loadBaseConfig loads the main configuration file
 func loadBaseConfig() (*Config, error) {
-	configPath := fmt.Sprintf("%s/%s", constants.OttoStackDir, constants.ConfigFileName)
+	configPath := fmt.Sprintf("%s/%s", core.OttoStackDir, core.ConfigFileName)
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -108,7 +108,7 @@ func loadBaseConfig() (*Config, error) {
 
 // loadLocalConfig loads local configuration overrides
 func loadLocalConfig() (*Config, error) {
-	configPath := fmt.Sprintf("%s/%s", constants.OttoStackDir, constants.LocalConfigFileName)
+	configPath := fmt.Sprintf("%s/%s", core.OttoStackDir, core.LocalConfigFileName)
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {

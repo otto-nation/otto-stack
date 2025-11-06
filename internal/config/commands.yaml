@@ -275,6 +275,10 @@ global:
       type: "bool"
       description: "Run in non-interactive mode (CI-friendly)"
       default: false
+    dry-run:
+      type: "bool"
+      description: "Show what would be done without executing"
+      default: false
 
 categories:
   lifecycle:
@@ -465,7 +469,6 @@ commands:
         description: "Show only running services"
     flags:
       format:
-        short: "f"
         type: "string"
         description: "Output format (table|json|yaml)"
         default: "table"
@@ -514,7 +517,6 @@ commands:
         description: "Show last 100 lines from the past hour"
     flags:
       follow:
-        short: "f"
         type: "bool"
         description: "Follow log output in real-time"
         default: false
@@ -572,7 +574,6 @@ commands:
         description: "Show detailed diagnostic information"
         default: false
       format:
-        short: "f"
         type: "string"
         description: "Output format (table|json)"
         default: "table"
@@ -776,13 +777,11 @@ commands:
         description: "List services in table format"
     flags:
       category:
-        short: "c"
         type: "string"
         description: "Show services in specific category"
         default: ""
         options: ["database", "cache", "messaging", "observability", "cloud"]
       format:
-        short: "f"
         type: "string"
         description: "Output format (group|table|json|yaml)"
         default: "group"
@@ -844,7 +843,6 @@ commands:
         description: "Use strict validation rules"
         default: false
       format:
-        short: "f"
         type: "string"
         description: "Output format (table|json)"
         default: "table"

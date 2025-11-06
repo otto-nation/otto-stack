@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/otto-nation/otto-stack/internal/pkg/version"
@@ -43,7 +43,7 @@ func (h *Handler) GetRequiredFlags() []string {
 // Handle handles the version command with update checking
 func (h *Handler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Parse all flags with validation - single line!
-	flags, err := constants.ParseVersionFlags(cmd)
+	flags, err := core.ParseVersionFlags(cmd)
 	if err != nil {
 		return err
 	}
@@ -58,34 +58,34 @@ func (h *Handler) Handle(ctx context.Context, cmd *cobra.Command, args []string,
 
 // handleCheckUpdates handles the --check-updates flag
 func (h *Handler) handleCheckUpdates(_ context.Context, _ *cobra.Command, _ []string, _ *base.BaseCommand) error {
-	h.output.Header("%s", constants.MsgVersion_checking_updates)
+	h.output.Header("%s", core.MsgVersion_checking_updates)
 
 	// Get current version (this should come from build-time ldflags)
 	currentVersion := getCurrentVersion()
-	h.output.Info(constants.MsgVersion_current_info, currentVersion)
+	h.output.Info(core.MsgVersion_current_info, currentVersion)
 
 	// Check for updates
 	checker := version.NewUpdateChecker(currentVersion)
 	release, hasUpdate, err := checker.CheckForUpdates()
 	if err != nil {
-		return fmt.Errorf(constants.MsgErrors_failed_check_updates, err)
+		return fmt.Errorf(core.MsgErrors_failed_check_updates, err)
 	}
 
 	if !hasUpdate {
-		h.output.Success("%s", constants.MsgSuccess_latest_version)
+		h.output.Success("%s", core.MsgSuccess_latest_version)
 		return nil
 	}
 
-	h.output.Warning(constants.MsgVersion_update_available, currentVersion, release.TagName)
-	h.output.Info(constants.MsgVersion_release_info, release.Name)
+	h.output.Warning(core.MsgVersion_update_available, currentVersion, release.TagName)
+	h.output.Info(core.MsgVersion_release_info, release.Name)
 
 	// Show update instructions
 	h.output.Info("")
-	h.output.Info("%s", constants.MsgVersion_update_info)
-	h.output.Info(constants.MsgVersion_install_script,
-		constants.GitHubOrg, constants.GitHubRepo)
-	h.output.Info(constants.MsgVersion_manual_download,
-		constants.GitHubOrg, constants.GitHubRepo)
+	h.output.Info("%s", core.MsgVersion_update_info)
+	h.output.Info(core.MsgVersion_install_script,
+		core.GitHubOrg, core.GitHubRepo)
+	h.output.Info(core.MsgVersion_manual_download,
+		core.GitHubOrg, core.GitHubRepo)
 
 	return nil
 }
@@ -93,7 +93,7 @@ func (h *Handler) handleCheckUpdates(_ context.Context, _ *cobra.Command, _ []st
 // handleVersionDisplay handles the default version display
 func (h *Handler) handleVersionDisplay(_ context.Context, cmd *cobra.Command, _ []string, _ *base.BaseCommand) error {
 	// Parse all flags with validation - single line!
-	flags, err := constants.ParseVersionFlags(cmd)
+	flags, err := core.ParseVersionFlags(cmd)
 	if err != nil {
 		return err
 	}
@@ -111,11 +111,11 @@ func (h *Handler) handleVersionDisplay(_ context.Context, cmd *cobra.Command, _ 
 func (h *Handler) displayBasicVersion(version, format string) error {
 	switch format {
 	case "json":
-		fmt.Printf(`{"version":"%s","app":"%s"}%s`, version, constants.AppNameTitle, "\n")
+		fmt.Printf(`{"version":"%s","app":"%s"}%s`, version, core.AppNameTitle, "\n")
 	case "yaml":
-		fmt.Printf("version: %s\napp: %s\n", version, constants.AppNameTitle)
+		fmt.Printf("version: %s\napp: %s\n", version, core.AppNameTitle)
 	default:
-		fmt.Printf("%s version %s\n", constants.AppNameTitle, version)
+		fmt.Printf("%s version %s\n", core.AppNameTitle, version)
 	}
 	return nil
 }
@@ -123,21 +123,21 @@ func (h *Handler) displayBasicVersion(version, format string) error {
 // displayFullVersion displays detailed version information
 func (h *Handler) displayFullVersion(version, format string) error {
 	buildInfo := getBuildInfo()
-	h.logger.Info("Displaying full version", constants.LogFieldVersion, version, constants.LogFieldFormat, format, constants.LogFieldBuildInfo, buildInfo)
+	h.logger.Info("Displaying full version", logger.LogFieldVersion, version, logger.LogFieldFormat, format, logger.LogFieldBuildInfo, buildInfo)
 
 	switch format {
 	case "json":
 		fmt.Printf(`{"version":"%s","app":"%s","build":%s}%s`,
-			version, constants.AppNameTitle, buildInfo.JSON(), "\n")
+			version, core.AppNameTitle, buildInfo.JSON(), "\n")
 	case "yaml":
-		fmt.Printf("version: %s\napp: %s\n%s", version, constants.AppNameTitle, buildInfo.YAML())
+		fmt.Printf("version: %s\napp: %s\n%s", version, core.AppNameTitle, buildInfo.YAML())
 	default:
-		h.output.Header("%s Version Information", constants.AppNameTitle)
-		h.output.Info(constants.MsgVersion_version_label, version)
-		h.output.Info(constants.MsgVersion_build_date, buildInfo.Date)
-		h.output.Info(constants.MsgVersion_git_commit, buildInfo.Commit)
-		h.output.Info(constants.MsgVersion_go_version, buildInfo.GoVersion)
-		h.output.Info(constants.MsgVersion_platform, buildInfo.OS, buildInfo.Arch)
+		h.output.Header("%s Version Information", core.AppNameTitle)
+		h.output.Info(core.MsgVersion_version_label, version)
+		h.output.Info(core.MsgVersion_build_date, buildInfo.Date)
+		h.output.Info(core.MsgVersion_git_commit, buildInfo.Commit)
+		h.output.Info(core.MsgVersion_go_version, buildInfo.GoVersion)
+		h.output.Info(core.MsgVersion_platform, buildInfo.OS, buildInfo.Arch)
 	}
 	return nil
 }

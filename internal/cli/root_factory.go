@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -35,9 +35,9 @@ func initConfig() {
 }
 
 func setupViper() {
-	viper.AddConfigPath(constants.OttoStackDir)
+	viper.AddConfigPath(core.OttoStackDir)
 	viper.SetConfigType("yaml")
-	viper.SetConfigName(constants.ConfigFileName[:len(constants.ConfigFileName)-4]) // Remove .yml extension
+	viper.SetConfigName(core.ConfigFileName[:len(core.ConfigFileName)-4]) // Remove .yml extension
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil && viper.GetBool("verbose") {
@@ -49,9 +49,9 @@ func setupViper() {
 func configureLogger() {
 	config := logger.DefaultConfig()
 	if viper.GetBool("verbose") {
-		config.Level = constants.LogLevelInfo
+		config.Level = logger.LogLevelInfo
 	} else {
-		config.Level = constants.LogLevelWarn
+		config.Level = logger.LogLevelWarn
 	}
 
 	if err := logger.Init(config); err != nil {

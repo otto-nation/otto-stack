@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/stretchr/testify/assert"
 )
@@ -93,12 +93,12 @@ func TestValidateDirectoryStructure(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Test with conflicting file
-	createTestFile(t, constants.DockerComposeFileName, "version: '3'")
+	createTestFile(t, core.DockerComposeFileName, "version: '3'")
 	err = handler.validateDirectoryStructure(&base.BaseCommand{Output: ui.NewOutput()})
 	assert.Error(t, err)
 	assert.True(t,
 		strings.Contains(err.Error(), "conflicting file") ||
-			strings.Contains(err.Error(), constants.DockerComposeFileName),
+			strings.Contains(err.Error(), core.DockerComposeFileName),
 		"Expected conflicting file error, got: %s", err.Error())
 }
 

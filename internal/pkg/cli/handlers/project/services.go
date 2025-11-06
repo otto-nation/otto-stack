@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
@@ -22,7 +22,7 @@ func NewServicesHandler() *ServicesHandler {
 // Handle executes the services command
 func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Parse all flags with validation - single line!
-	flags, err := constants.ParseServicesFlags(cmd)
+	flags, err := core.ParseServicesFlags(cmd)
 	if err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	serviceUtils := services.NewServiceUtils()
 	categorizedServices, err := serviceUtils.GetServicesByCategory()
 	if err != nil {
-		return fmt.Errorf(constants.MsgErrors_failed_load_services, err)
+		return fmt.Errorf(core.MsgErrors_failed_load_services, err)
 	}
 
 	// Build service catalog

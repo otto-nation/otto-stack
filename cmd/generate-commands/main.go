@@ -17,7 +17,8 @@ const (
 )
 
 type templateData struct {
-	Commands []commandData
+	Commands    []commandData
+	GlobalFlags []flagData
 }
 
 type commandData struct {
@@ -86,7 +87,10 @@ func generateCommands(commandConfig pkgConfig.CommandConfig) error {
 		})
 	}
 
-	data := templateData{Commands: commands}
+	data := templateData{
+		Commands:    commands,
+		GlobalFlags: extractFlags(commandConfig.Global.Flags),
+	}
 
 	// Execute main template
 	if err := tmpl.ExecuteTemplate(file, CommandsTemplateFile, data); err != nil {

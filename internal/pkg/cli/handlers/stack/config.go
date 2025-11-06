@@ -5,8 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 
 	"gopkg.in/yaml.v3"
 )
@@ -16,18 +16,18 @@ func LoadProjectConfig(configPath string) (*config.Config, error) {
 	// Load base config
 	baseConfig, err := loadSingleConfig(configPath)
 	if err != nil {
-		return nil, fmt.Errorf(constants.MsgStack_failed_load_base_config, err)
+		return nil, fmt.Errorf(core.MsgStack_failed_load_base_config, err)
 	}
 
 	// Try to load local config
-	localPath := filepath.Join(constants.OttoStackDir, constants.LocalConfigFileName)
+	localPath := filepath.Join(core.OttoStackDir, core.LocalConfigFileName)
 	localConfig, err := loadSingleConfig(localPath)
 	if err != nil {
 		// Local config is optional, return base config if not found
 		if os.IsNotExist(err) {
 			return baseConfig, nil
 		}
-		return nil, fmt.Errorf(constants.MsgStack_failed_load_local_config, err)
+		return nil, fmt.Errorf(core.MsgStack_failed_load_local_config, err)
 	}
 
 	// Merge configs (local overrides base)
@@ -44,7 +44,7 @@ func loadSingleConfig(configPath string) (*config.Config, error) {
 
 	var cfg config.Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf(constants.MsgStack_failed_parse_config, err)
+		return nil, fmt.Errorf(core.MsgStack_failed_parse_config, err)
 	}
 
 	return &cfg, nil

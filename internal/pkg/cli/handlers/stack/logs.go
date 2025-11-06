@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
@@ -31,7 +31,7 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	ciFlags := utils.GetCIFlags(cmd)
 
 	if !ciFlags.Quiet {
-		base.Output.Header(constants.MsgLogs)
+		base.Output.Header(core.MsgLogs)
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
@@ -41,7 +41,7 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	defer cleanup()
 
 	// Parse all flags with validation - single line!
-	flags, err := constants.ParseLogsFlags(cmd)
+	flags, err := core.ParseLogsFlags(cmd)
 	if err != nil {
 		return err
 	}

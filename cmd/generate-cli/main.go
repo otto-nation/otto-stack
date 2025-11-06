@@ -12,8 +12,8 @@ import (
 
 const (
 	CommandsYAMLPath  = "internal/config/commands.yaml"
-	TemplateFilePath  = "cmd/generate-cli/templates/constants.tmpl"
-	GeneratedFilePath = "internal/pkg/constants/cli_generated.go"
+	TemplateFilePath  = "cmd/generate-cli/templates/core.tmpl"
+	GeneratedFilePath = "internal/core/cli_generated.go"
 )
 
 type commandData struct {
@@ -241,6 +241,10 @@ func extractCommandFlags(cmd map[string]any) []flagField {
 	return fields
 }
 
+const (
+	defaultFlagType = "string"
+)
+
 func createFlagField(flagName string, flagData any) flagField {
 	flag := getFlagMap(flagData)
 	if flag == nil {
@@ -249,7 +253,7 @@ func createFlagField(flagName string, flagData any) flagField {
 
 	flagType := getStringValue(flag["type"])
 	if flagType == "" {
-		flagType = "string"
+		flagType = defaultFlagType
 	}
 
 	return flagField{
@@ -378,8 +382,8 @@ func toPascalCase(s string) string {
 
 func goTypeFromYAML(yamlType string) string {
 	switch yamlType {
-	case "string":
-		return "string"
+	case defaultFlagType:
+		return defaultFlagType
 	case "int":
 		return "int"
 	case "bool":
@@ -387,6 +391,6 @@ func goTypeFromYAML(yamlType string) string {
 	case "stringArray":
 		return "stringArray"
 	default:
-		return "string"
+		return defaultFlagType
 	}
 }

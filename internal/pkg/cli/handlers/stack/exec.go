@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/spf13/cobra"
 )
 
@@ -21,8 +21,8 @@ func NewExecHandler() *ExecHandler {
 
 // Handle executes the exec command
 func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	if len(args) < constants.MinArgumentCount {
-		return fmt.Errorf("%s", constants.MsgErrors_requires_service_and_command)
+	if len(args) < core.MinArgumentCount {
+		return fmt.Errorf("%s", core.MsgErrors_requires_service_and_command)
 	}
 
 	// Check initialization first
@@ -40,7 +40,7 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	command := args[1:]
 
 	// Parse all flags with validation - single line!
-	flags, err := constants.ParseExecFlags(cmd)
+	flags, err := core.ParseExecFlags(cmd)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	// Execute command using Docker client
 	// Execute command in service container
-	dockerArgs := []string{"compose", "-f", constants.DockerComposeFile, "-p", setup.Config.Project.Name, "exec"}
+	dockerArgs := []string{"compose", "-f", docker.DockerComposeFile, "-p", setup.Config.Project.Name, "exec"}
 	if options.User != "" {
 		dockerArgs = append(dockerArgs, "--user", options.User)
 	}
@@ -70,8 +70,8 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 // ValidateArgs validates the command arguments
 func (h *ExecHandler) ValidateArgs(args []string) error {
-	if len(args) < constants.MinArgumentCount {
-		return fmt.Errorf("%s", constants.MsgErrors_requires_service_and_command)
+	if len(args) < core.MinArgumentCount {
+		return fmt.Errorf("%s", core.MsgErrors_requires_service_and_command)
 	}
 	return nil
 }

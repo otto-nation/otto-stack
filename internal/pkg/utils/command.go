@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	dockerConstants "github.com/otto-nation/otto-stack/internal/core/docker"
 )
 
 // RunCommand executes a command and returns its output
@@ -45,13 +45,13 @@ func GetProcessPID(name string) (int, error) {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
-	case constants.OSLinux, constants.OSDarwin:
-		cmd = exec.Command(constants.CmdPgrep, "-f", name)
-	case constants.OSWindows:
+	case dockerConstants.OSLinux, dockerConstants.OSDarwin:
+		cmd = exec.Command(dockerConstants.CmdPgrep, "-f", name)
+	case dockerConstants.OSWindows:
 		args := []string{"/FI", fmt.Sprintf("IMAGENAME eq %s.exe", name), "/FO", "CSV", "/NH"}
-		cmd = exec.Command(constants.CmdTasklist, args...)
+		cmd = exec.Command(dockerConstants.CmdTasklist, args...)
 	default:
-		return 0, fmt.Errorf(constants.ErrUnsupportedOS, runtime.GOOS)
+		return 0, fmt.Errorf(dockerConstants.ErrUnsupportedOS, runtime.GOOS)
 	}
 
 	output, err := cmd.Output()
@@ -61,14 +61,14 @@ func GetProcessPID(name string) (int, error) {
 
 	outputStr := strings.TrimSpace(string(output))
 	if outputStr == "" {
-		return 0, fmt.Errorf(constants.ErrProcessNotFound, name)
+		return 0, fmt.Errorf(dockerConstants.ErrProcessNotFound, name)
 	}
 
-	if runtime.GOOS == constants.OSWindows {
+	if runtime.GOOS == dockerConstants.OSWindows {
 		lines := strings.Split(outputStr, "\n")
 		if len(lines) > 0 {
 			fields := strings.Split(lines[0], ",")
-			if len(fields) >= constants.MinFieldCount {
+			if len(fields) >= dockerConstants.MinFieldCount {
 				pidStr := strings.Trim(fields[1], "\"")
 				return strconv.Atoi(pidStr)
 			}
@@ -82,9 +82,9 @@ func GetProcessPID(name string) (int, error) {
 
 // KillProcess kills a process by PID
 func KillProcess(pid int) error {
-	if runtime.GOOS == constants.OSWindows {
+	if runtime.GOOS == dockerConstants.OSWindows {
 		args := []string{"/F", "/PID", strconv.Itoa(pid)}
-		cmd := exec.Command(constants.CmdTaskkill, args...)
+		cmd := exec.Command(dockerConstants.CmdTaskkill, args...)
 		return cmd.Run()
 	}
 
@@ -106,7 +106,7 @@ func Retry(attempts int, delay time.Duration, fn func() error) error {
 			time.Sleep(delay)
 		}
 	}
-	return fmt.Errorf(constants.ErrFailedAfterRetry, attempts, err)
+	return fmt.Errorf(dockerConstants.ErrFailedAfterRetry, attempts, err)
 }
 
 // Timeout executes a function with timeout
@@ -120,6 +120,6 @@ func Timeout(timeout time.Duration, fn func() error) error {
 	case err := <-done:
 		return err
 	case <-time.After(timeout):
-		return fmt.Errorf(constants.ErrOperationTimeout, timeout)
+		return fmt.Errorf(dockerConstants.ErrOperationTimeout, timeout)
 	}
 }

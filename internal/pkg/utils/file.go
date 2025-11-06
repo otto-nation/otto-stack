@@ -6,13 +6,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 )
 
 // EnsureDir creates a directory if it doesn't exist
 func EnsureDir(dirname string) error {
 	if _, err := os.Stat(dirname); os.IsNotExist(err) {
-		return os.MkdirAll(dirname, constants.DirPermReadWriteExec)
+		return os.MkdirAll(dirname, core.DirPermReadWriteExec)
 	}
 	return nil
 }

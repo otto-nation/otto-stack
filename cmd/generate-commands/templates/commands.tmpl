@@ -7,12 +7,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/otto-nation/otto-stack/internal/core/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/stack"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/otto-nation/otto-stack/internal/pkg/version"
 	"github.com/spf13/cobra"
@@ -27,8 +28,8 @@ func BuildRootCommand() (*cobra.Command, error) {
 	}
 
 	rootCmd := &cobra.Command{
-		Use:     constants.AppName,
-		Short:   constants.Messages["MsgHelp_app_description"],
+		Use:     core.AppName,
+		Short:   core.Messages["MsgHelp_app_description"],
 		Version: version.GetAppVersion(),
 	}
 
@@ -44,17 +45,13 @@ func BuildRootCommand() (*cobra.Command, error) {
 }
 
 func addGlobalFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().Bool(constants.FlagQuiet, false, "Suppress output")
-	cmd.PersistentFlags().Bool(constants.FlagJSON, false, "Output in JSON format")
-	cmd.PersistentFlags().Bool(constants.FlagNoColor, false, "Disable colored output")
-	cmd.PersistentFlags().Bool(constants.FlagNonInteractive, false, "Run in non-interactive mode")
-	cmd.PersistentFlags().Bool(constants.FlagStrict, false, "Enable strict validation")
-}
+{{range .GlobalFlags}}	{{if eq .Type "bool"}}{{if .Short}}cmd.PersistentFlags().BoolP("{{.Name}}", "{{.Short}}", {{if eq .Default "true"}}true{{else}}false{{end}}, "{{.Description}}"){{else}}cmd.PersistentFlags().Bool("{{.Name}}", {{if eq .Default "true"}}true{{else}}false{{end}}, "{{.Description}}"){{end}}{{end}}{{if eq .Type "string"}}{{if .Short}}cmd.PersistentFlags().StringP("{{.Name}}", "{{.Short}}", "{{.Default}}", "{{.Description}}"){{else}}cmd.PersistentFlags().String("{{.Name}}", "{{.Default}}", "{{.Description}}"){{end}}{{end}}{{if eq .Type "int"}}{{if .Short}}cmd.PersistentFlags().IntP("{{.Name}}", "{{.Short}}", {{.Default}}, "{{.Description}}"){{else}}cmd.PersistentFlags().Int("{{.Name}}", {{.Default}}, "{{.Description}}"){{end}}{{end}}
+{{end}}}
 
-func createServiceManager() (*services.Manager, error) {
+func createServiceManager() (*services.Orchestrator, error) {
 	projectRoot := findProjectRoot(".")
 	log := logger.GetLogger()
-	return services.NewManager(log, projectRoot)
+	return services.NewOrchestrator(log, projectRoot)
 }
 
 func findProjectRoot(startDir string) string {
@@ -65,7 +62,7 @@ func findProjectRoot(startDir string) string {
 			break
 		}
 
-		configPath := filepath.Join(absDir, constants.ConfigFileName)
+		configPath := filepath.Join(absDir, core.ConfigFileName)
 		if _, err := os.Stat(configPath); err == nil {
 			return absDir
 		}
@@ -85,17 +82,17 @@ func findProjectRoot(startDir string) string {
 }
 
 {{range .Commands}}
-func New{{.FuncName}}Command(serviceManager *services.Manager, logger *slog.Logger) *cobra.Command {
+func New{{.FuncName}}Command(serviceManager *services.Orchestrator, logger *slog.Logger) *cobra.Command {
 {{if eq .Handler "stack"}}	handler := stack.New{{.HandlerName}}Handler()
 {{else if eq .Handler "project"}}	handler := project.New{{.HandlerName}}Handler()
 {{else}}	handler := project.NewVersionHandler()
 {{end}}	cmd := &cobra.Command{
-		Use:   constants.Command{{.ConstantName}},
+		Use:   core.Command{{.ConstantName}},
 		Short: "{{.Description}}",{{if .LongDescription}}
 		Long:  "{{.LongDescription}}",{{end}}
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			return handler.Handle(ctx, cmd, args, &types.BaseCommand{
+			return handler.Handle(ctx, cmd, args, &base.BaseCommand{
 				Manager: &serviceManagerAdapter{serviceManager},
 				Logger:  &loggerAdapter{logger},
 				Output:  &outputAdapter{ui.NewOutput()},
@@ -103,8 +100,7 @@ func New{{.FuncName}}Command(serviceManager *services.Manager, logger *slog.Logg
 		},
 	}
 
-{{range .Flags}}	{{if eq .Type "bool"}}cmd.Flags().Bool("{{.Name}}", {{if eq .Default "true"}}true{{else}}false{{end}}, "{{.Description}}"){{end}}{{if eq .Type "string"}}cmd.Flags().String("{{.Name}}", "{{.Default}}", "{{.Description}}"){{end}}{{if eq .Type "int"}}cmd.Flags().Int("{{.Name}}", {{.Default}}, "{{.Description}}"){{end}}{{if .Short}}
-	cmd.Flags().Lookup("{{.Name}}").Shorthand = "{{.Short}}"{{end}}
+{{range .Flags}}	{{if eq .Type "bool"}}{{if .Short}}cmd.Flags().BoolP("{{.Name}}", "{{.Short}}", {{if eq .Default "true"}}true{{else}}false{{end}}, "{{.Description}}"){{else}}cmd.Flags().Bool("{{.Name}}", {{if eq .Default "true"}}true{{else}}false{{end}}, "{{.Description}}"){{end}}{{end}}{{if eq .Type "string"}}{{if .Short}}cmd.Flags().StringP("{{.Name}}", "{{.Short}}", "{{.Default}}", "{{.Description}}"){{else}}cmd.Flags().String("{{.Name}}", "{{.Default}}", "{{.Description}}"){{end}}{{end}}{{if eq .Type "int"}}{{if .Short}}cmd.Flags().IntP("{{.Name}}", "{{.Short}}", {{.Default}}, "{{.Description}}"){{else}}cmd.Flags().Int("{{.Name}}", {{.Default}}, "{{.Description}}"){{end}}{{end}}
 {{end}}
 	return cmd
 }

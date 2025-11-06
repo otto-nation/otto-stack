@@ -7,9 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	pkgServices "github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"gopkg.in/yaml.v3"
 )
 
@@ -30,12 +32,12 @@ func New(writer io.Writer, output base.Output) *Formatter {
 // FormatStatus formats service status information
 func (f *Formatter) FormatStatus(services []ServiceStatus, options Options) error {
 	switch options.Format {
-	case constants.ServiceCatalogJSONFormat:
+	case pkgServices.ServiceCatalogJSONFormat:
 		return f.writeJSON(map[string]any{
 			"services": services,
 			"summary":  f.createSummary(services),
 		})
-	case constants.ServiceCatalogYAMLFormat:
+	case pkgServices.ServiceCatalogYAMLFormat:
 		return f.writeYAML(map[string]any{
 			"services": services,
 			"summary":  f.createSummary(services),
@@ -48,11 +50,11 @@ func (f *Formatter) FormatStatus(services []ServiceStatus, options Options) erro
 // FormatServiceCatalog formats service catalog information
 func (f *Formatter) FormatServiceCatalog(catalog ServiceCatalog, options Options) error {
 	switch options.Format {
-	case constants.ServiceCatalogJSONFormat:
+	case pkgServices.ServiceCatalogJSONFormat:
 		return f.writeJSON(catalog)
-	case constants.ServiceCatalogYAMLFormat:
+	case pkgServices.ServiceCatalogYAMLFormat:
 		return f.writeYAML(catalog)
-	case constants.ServiceCatalogTableFormat:
+	case pkgServices.ServiceCatalogTableFormat:
 		return f.formatCatalogTable(catalog)
 	default:
 		return f.formatCatalogGroup(catalog)
@@ -62,9 +64,9 @@ func (f *Formatter) FormatServiceCatalog(catalog ServiceCatalog, options Options
 // FormatValidation formats validation results
 func (f *Formatter) FormatValidation(result ValidationResult, options Options) error {
 	switch options.Format {
-	case constants.ServiceCatalogJSONFormat:
+	case pkgServices.ServiceCatalogJSONFormat:
 		return f.writeJSON(result)
-	case constants.ServiceCatalogYAMLFormat:
+	case pkgServices.ServiceCatalogYAMLFormat:
 		return f.writeYAML(result)
 	default:
 		return f.formatValidationTable(result)
@@ -74,9 +76,9 @@ func (f *Formatter) FormatValidation(result ValidationResult, options Options) e
 // FormatVersion formats version information
 func (f *Formatter) FormatVersion(info VersionInfo, options Options) error {
 	switch options.Format {
-	case constants.ServiceCatalogJSONFormat:
+	case pkgServices.ServiceCatalogJSONFormat:
 		return f.writeJSON(info)
-	case constants.ServiceCatalogYAMLFormat:
+	case pkgServices.ServiceCatalogYAMLFormat:
 		return f.writeYAML(info)
 	default:
 		return f.formatVersionTable(info, options)
@@ -86,9 +88,9 @@ func (f *Formatter) FormatVersion(info VersionInfo, options Options) error {
 // FormatHealth formats health check results
 func (f *Formatter) FormatHealth(report HealthReport, options Options) error {
 	switch options.Format {
-	case constants.ServiceCatalogJSONFormat:
+	case pkgServices.ServiceCatalogJSONFormat:
 		return f.writeJSON(report)
-	case constants.ServiceCatalogYAMLFormat:
+	case pkgServices.ServiceCatalogYAMLFormat:
 		return f.writeYAML(report)
 	default:
 		return f.formatHealthTable(report, options)
@@ -98,14 +100,14 @@ func (f *Formatter) FormatHealth(report HealthReport, options Options) error {
 // Table formatting methods
 func (f *Formatter) formatStatusTable(services []ServiceStatus, options Options) error {
 	if len(services) == 0 {
-		f.output.Info(constants.MsgServices_no_description)
+		f.output.Info(core.MsgServices_no_description)
 		return nil
 	}
 
 	if options.Compact {
 		_, _ = fmt.Fprintf(f.writer, "%-20s %-10s %-12s\n",
-			constants.StatusHeaderService, constants.StatusHeaderState, constants.StatusHeaderHealth)
-		_, _ = fmt.Fprintln(f.writer, strings.Repeat(constants.StatusSeparator, constants.TableWidth42))
+			ui.StatusHeaderService, ui.StatusHeaderState, ui.StatusHeaderHealth)
+		_, _ = fmt.Fprintln(f.writer, strings.Repeat(ui.StatusSeparator, ui.TableWidth42))
 		for _, service := range services {
 			_, _ = fmt.Fprintf(f.writer, "%-20s %-10s %-12s\n",
 				service.Name, f.getStateIcon(service.State)+" "+service.State,
@@ -115,9 +117,9 @@ func (f *Formatter) formatStatusTable(services []ServiceStatus, options Options)
 	}
 
 	_, _ = fmt.Fprintf(f.writer, "%-15s %-10s %-10s %-8s %-12s %-10s\n",
-		constants.StatusHeaderService, constants.StatusHeaderState, constants.StatusHeaderHealth,
+		ui.StatusHeaderService, ui.StatusHeaderState, ui.StatusHeaderHealth,
 		"UPTIME", "PORTS", "UPDATED")
-	_, _ = fmt.Fprintln(f.writer, strings.Repeat(constants.StatusSeparator, constants.TableWidth75))
+	_, _ = fmt.Fprintln(f.writer, strings.Repeat(ui.StatusSeparator, ui.TableWidth75))
 
 	for _, service := range services {
 		_, _ = fmt.Fprintf(f.writer, "%-15s %-10s %-10s %-8s %-12s %-10s\n",
@@ -137,12 +139,12 @@ func (f *Formatter) formatStatusTable(services []ServiceStatus, options Options)
 
 func (f *Formatter) formatCatalogTable(catalog ServiceCatalog) error {
 	if catalog.Total == 0 {
-		f.output.Info(constants.MsgServices_no_description)
+		f.output.Info(core.MsgServices_no_description)
 		return nil
 	}
 
-	_, _ = fmt.Fprintf(f.writer, "%-15s %-20s %s\n", "CATEGORY", constants.StatusHeaderService, "DESCRIPTION")
-	_, _ = fmt.Fprintln(f.writer, strings.Repeat(constants.StatusSeparator, constants.TableWidth80))
+	_, _ = fmt.Fprintf(f.writer, "%-15s %-20s %s\n", "CATEGORY", ui.StatusHeaderService, "DESCRIPTION")
+	_, _ = fmt.Fprintln(f.writer, strings.Repeat(ui.StatusSeparator, ui.TableWidth80))
 
 	for categoryName, services := range catalog.Categories {
 		for _, service := range services {
@@ -155,11 +157,11 @@ func (f *Formatter) formatCatalogTable(catalog ServiceCatalog) error {
 
 func (f *Formatter) formatCatalogGroup(catalog ServiceCatalog) error {
 	if catalog.Total == 0 {
-		f.output.Info(constants.MsgServices_no_description)
+		f.output.Info(core.MsgServices_no_description)
 		return nil
 	}
 
-	f.output.Header(constants.MsgServiceCatalogHeader)
+	f.output.Header(pkgServices.MsgServiceCatalogHeader)
 
 	for categoryName, serviceList := range catalog.Categories {
 		if len(serviceList) == 0 {
@@ -167,7 +169,7 @@ func (f *Formatter) formatCatalogGroup(catalog ServiceCatalog) error {
 		}
 
 		icon := "📦"
-		if displayInfo, exists := services.CategoryDisplayInfo[categoryName]; exists {
+		if displayInfo, exists := pkgServices.CategoryDisplayInfo[categoryName]; exists {
 			icon = displayInfo.Icon
 		}
 
@@ -176,12 +178,12 @@ func (f *Formatter) formatCatalogGroup(catalog ServiceCatalog) error {
 			plural = "s"
 		}
 		_, _ = fmt.Fprintf(f.writer, "%s %s\n", icon,
-			fmt.Sprintf(constants.MsgServiceCount, categoryName, len(serviceList), plural))
+			fmt.Sprintf(pkgServices.MsgCategoryServiceCount, categoryName, len(serviceList), plural))
 
 		for _, service := range serviceList {
 			description := service.Description
 			if description == "" {
-				description = constants.MsgServices_no_description
+				description = core.MsgServices_no_description
 			}
 			_, _ = fmt.Fprintf(f.writer, "  %-15s %s\n", service.Name, description)
 		}
@@ -192,11 +194,11 @@ func (f *Formatter) formatCatalogGroup(catalog ServiceCatalog) error {
 
 func (f *Formatter) formatValidationTable(result ValidationResult) error {
 	if result.Valid {
-		f.output.Success(constants.MsgSuccess_config_valid)
+		f.output.Success(core.MsgSuccess_config_valid)
 		return nil
 	}
 
-	f.output.Error(constants.MsgValidation_config_failed, len(result.Errors))
+	f.output.Error(core.MsgValidation_config_failed, len(result.Errors))
 
 	if len(result.Errors) > 0 {
 		_, _ = fmt.Fprintln(f.writer, "Errors:")
@@ -207,7 +209,7 @@ func (f *Formatter) formatValidationTable(result ValidationResult) error {
 	}
 
 	if len(result.Warnings) > 0 {
-		f.output.Warning(constants.MsgValidation_warnings, len(result.Warnings))
+		f.output.Warning(core.MsgValidation_warnings, len(result.Warnings))
 		for _, warn := range result.Warnings {
 			_, _ = fmt.Fprintf(f.writer, "  %s: %s\n", warn.Field, warn.Message)
 		}
@@ -222,7 +224,7 @@ func (f *Formatter) formatValidationTable(result ValidationResult) error {
 }
 
 func (f *Formatter) formatVersionTable(info VersionInfo, options Options) error {
-	f.output.Info(constants.MsgVersion_version_label, info.Version)
+	f.output.Info(core.MsgVersion_version_label, info.Version)
 
 	if options.Full {
 		_, _ = fmt.Fprintln(f.writer)
@@ -238,10 +240,10 @@ func (f *Formatter) formatVersionTable(info VersionInfo, options Options) error 
 }
 
 func (f *Formatter) formatHealthTable(report HealthReport, options Options) error {
-	if report.Overall.Status == constants.HealthHealthy {
-		f.output.Success(constants.MsgSuccess_all_checks_passed, "system")
+	if report.Overall.Status == docker.HealthHealthy {
+		f.output.Success(core.MsgSuccess_all_checks_passed, "system")
 	} else {
-		f.output.Error(constants.MsgDoctor_some_issues)
+		f.output.Error(core.MsgDoctor_some_issues)
 	}
 
 	if report.Overall.Message != "" {
@@ -252,10 +254,10 @@ func (f *Formatter) formatHealthTable(report HealthReport, options Options) erro
 		return nil
 	}
 
-	f.output.Header(constants.MsgDoctor_health_check_header, "System")
+	f.output.Header(core.MsgDoctor_health_check_header, "System")
 	_, _ = fmt.Fprintf(f.writer, "%-25s %-10s %-15s %-40s\n",
 		"CHECK", "STATUS", "CATEGORY", "MESSAGE")
-	_, _ = fmt.Fprintln(f.writer, strings.Repeat(constants.StatusSeparator, constants.TableWidth90))
+	_, _ = fmt.Fprintln(f.writer, strings.Repeat(ui.StatusSeparator, ui.TableWidth90))
 
 	for _, check := range report.Checks {
 		icon := f.getHealthIcon(check.Status)
@@ -283,13 +285,13 @@ func (f *Formatter) writeYAML(data any) error {
 }
 
 func (f *Formatter) createSummary(services []ServiceStatus) map[string]int {
-	summary := map[string]int{constants.SummaryTotal: len(services)}
+	summary := map[string]int{pkgServices.SummaryTotal: len(services)}
 	for _, service := range services {
-		if service.State == constants.StateRunning {
-			summary[constants.SummaryRunning]++
+		if service.State == docker.StateRunning {
+			summary[pkgServices.SummaryRunning]++
 		}
-		if service.Health == constants.HealthHealthy {
-			summary[constants.SummaryHealthy]++
+		if service.Health == docker.HealthHealthy {
+			summary[pkgServices.SummaryHealthy]++
 		}
 	}
 	return summary
@@ -302,16 +304,16 @@ func (f *Formatter) formatDuration(d time.Duration) string {
 	if d < time.Hour {
 		return fmt.Sprintf("%dm", int(d.Minutes()))
 	}
-	if d < constants.HoursPerDay*time.Hour {
+	if d < core.HoursPerDay*time.Hour {
 		return fmt.Sprintf("%dh", int(d.Hours()))
 	}
-	return fmt.Sprintf("%dd", int(d.Hours()/constants.HoursPerDay))
+	return fmt.Sprintf("%dd", int(d.Hours()/core.HoursPerDay))
 }
 
 func (f *Formatter) formatPorts(ports []string) string {
 	joined := strings.Join(ports, ",")
-	if len(joined) > constants.MaxCategoryCommands {
-		return joined[:constants.MaxCategoryCommands] + "..."
+	if len(joined) > core.MaxCategoryCommands {
+		return joined[:core.MaxCategoryCommands] + "..."
 	}
 	return joined
 }
@@ -320,40 +322,40 @@ func (f *Formatter) formatResourceSummary(services []ServiceStatus) {
 	summary := f.createSummary(services)
 	_, _ = fmt.Fprintln(f.writer)
 	_, _ = fmt.Fprintln(f.writer, "Resource Summary:")
-	_, _ = fmt.Fprintf(f.writer, "  Total Services: %d\n", summary[constants.SummaryTotal])
-	_, _ = fmt.Fprintf(f.writer, "  Running: %d\n", summary[constants.SummaryRunning])
-	_, _ = fmt.Fprintf(f.writer, "  Healthy: %d\n", summary[constants.SummaryHealthy])
+	_, _ = fmt.Fprintf(f.writer, "  Total Services: %d\n", summary[pkgServices.SummaryTotal])
+	_, _ = fmt.Fprintf(f.writer, "  Running: %d\n", summary[pkgServices.SummaryRunning])
+	_, _ = fmt.Fprintf(f.writer, "  Healthy: %d\n", summary[pkgServices.SummaryHealthy])
 }
 
 func (f *Formatter) getStateIcon(state string) string {
 	switch state {
-	case constants.StateRunning:
-		return constants.Icons[constants.IconState_running]
-	case constants.StateStopped:
-		return constants.Icons[constants.IconState_stopped]
-	case constants.StateCreated:
-		return constants.Icons[constants.IconState_created]
-	case constants.StateStarting:
-		return constants.Icons[constants.IconState_starting]
-	case constants.StatePaused:
-		return constants.Icons[constants.IconState_paused]
+	case docker.StateRunning:
+		return core.Icons[core.IconState_running]
+	case docker.StateStopped:
+		return core.Icons[core.IconState_stopped]
+	case docker.StateCreated:
+		return core.Icons[core.IconState_created]
+	case docker.StateStarting:
+		return core.Icons[core.IconState_starting]
+	case docker.StatePaused:
+		return core.Icons[core.IconState_paused]
 	default:
-		return constants.Icons[constants.IconState_default]
+		return core.Icons[core.IconState_default]
 	}
 }
 
 func (f *Formatter) getHealthIcon(health string) string {
 	switch health {
-	case constants.HealthHealthy:
-		return constants.Icons[constants.IconHealth_healthy]
-	case constants.HealthUnhealthy:
-		return constants.Icons[constants.IconHealth_unhealthy]
-	case constants.HealthStarting:
-		return constants.Icons[constants.IconHealth_starting]
-	case constants.HealthNone:
-		return constants.Icons[constants.IconHealth_none]
+	case docker.HealthHealthy:
+		return core.Icons[core.IconHealth_healthy]
+	case docker.HealthUnhealthy:
+		return core.Icons[core.IconHealth_unhealthy]
+	case docker.HealthStarting:
+		return core.Icons[core.IconHealth_starting]
+	case docker.HealthNone:
+		return core.Icons[core.IconHealth_none]
 	default:
-		return constants.Icons[constants.IconHealth_default]
+		return core.Icons[core.IconHealth_default]
 	}
 }
 

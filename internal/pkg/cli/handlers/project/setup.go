@@ -5,18 +5,18 @@ import (
 	"os"
 	"strings"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 // createDirectoryStructure creates the necessary directory structure
 func (h *InitHandler) createDirectoryStructure() error {
 	directories := []string{
-		constants.OttoStackDir,
+		core.OttoStackDir,
 	}
 
 	for _, dir := range directories {
-		if err := os.MkdirAll(dir, constants.DirPermReadWriteExec); err != nil {
+		if err := os.MkdirAll(dir, core.DirPermReadWriteExec); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
@@ -28,18 +28,18 @@ func (h *InitHandler) createDirectoryStructure() error {
 func (h *InitHandler) createConfigFile(projectName string, services []string, base *base.BaseCommand) error {
 	configContent := h.generateConfig(projectName, services)
 
-	configPath := constants.OttoStackDir + "/" + constants.ConfigFileName
-	if err := os.WriteFile(configPath, []byte(configContent), constants.FilePermReadWrite); err != nil {
+	configPath := core.OttoStackDir + "/" + core.ConfigFileName
+	if err := os.WriteFile(configPath, []byte(configContent), core.FilePermReadWrite); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	base.Output.Success(constants.MsgSuccess_created_file, configPath)
+	base.Output.Success(core.MsgSuccess_created_file, configPath)
 	return nil
 }
 
 // createGitignoreEntries adds entries to .gitignore
 func (h *InitHandler) createGitignoreEntries(base *base.BaseCommand) error {
-	gitignorePath := constants.GitignoreFileName
+	gitignorePath := core.GitIgnoreFileName
 
 	// Check if .gitignore exists
 	var existingContent []byte
@@ -50,7 +50,7 @@ func (h *InitHandler) createGitignoreEntries(base *base.BaseCommand) error {
 	// Check if entries already exist
 	existingStr := string(existingContent)
 	hasDevStackEntries := false
-	for _, entry := range constants.GitignoreEntries {
+	for _, entry := range core.GitignoreEntries {
 		if entry != "" && contains(existingStr, entry) {
 			hasDevStackEntries = true
 			break
@@ -58,24 +58,24 @@ func (h *InitHandler) createGitignoreEntries(base *base.BaseCommand) error {
 	}
 
 	if hasDevStackEntries {
-		base.Output.Info("%s", constants.MsgFiles_gitignore_exists)
+		base.Output.Info("%s", core.MsgFiles_gitignore_exists)
 		return nil
 	}
 
 	// Append entries
-	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, constants.FilePermReadWrite)
+	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, core.FilePermReadWrite)
 	if err != nil {
 		return fmt.Errorf("failed to open .gitignore: %w", err)
 	}
 	defer func() { _ = file.Close() }()
 
-	for _, entry := range constants.GitignoreEntries {
+	for _, entry := range core.GitignoreEntries {
 		if _, err := file.WriteString(entry + "\n"); err != nil {
 			return fmt.Errorf("failed to write to .gitignore: %w", err)
 		}
 	}
 
-	base.Output.Success("%s", constants.MsgSuccess_updated_gitignore)
+	base.Output.Success("%s", core.MsgSuccess_updated_gitignore)
 	return nil
 }
 
@@ -118,15 +118,15 @@ The following services are configured:
 
 Run `+"`%s --help`"+` for a full list of available commands.
 `, projectName, projectName, formatServicesList(services),
-		constants.AppName, constants.AppName, constants.AppName,
-		constants.ConfigFileName, constants.DockerComposeFileName, constants.AppName)
+		core.AppName, core.AppName, core.AppName,
+		core.ConfigFileName, core.DockerComposeFileName, core.AppName)
 
-	readmePath := constants.OttoStackDir + "/" + constants.ReadmeFileName
-	if err := os.WriteFile(readmePath, []byte(readmeContent), constants.FilePermReadWrite); err != nil {
+	readmePath := core.OttoStackDir + "/" + core.ReadmeFileName
+	if err := os.WriteFile(readmePath, []byte(readmeContent), core.FilePermReadWrite); err != nil {
 		return fmt.Errorf("failed to create README: %w", err)
 	}
 
-	base.Output.Success(constants.MsgSuccess_created_file, readmePath)
+	base.Output.Success(core.MsgSuccess_created_file, readmePath)
 	return nil
 }
 

@@ -5,8 +5,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 var semverRegex = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z\-\.]+))?(?:\+([0-9A-Za-z\-\.]+))?$`)
@@ -40,40 +38,40 @@ func (v Version) String() string {
 func (v Version) Compare(other Version) int {
 	if v.Major != other.Major {
 		if v.Major < other.Major {
-			return constants.VersionOlder
+			return VersionOlder
 		}
-		return constants.VersionNewer
+		return VersionNewer
 	}
 
 	if v.Minor != other.Minor {
 		if v.Minor < other.Minor {
-			return constants.VersionOlder
+			return VersionOlder
 		}
-		return constants.VersionNewer
+		return VersionNewer
 	}
 
 	if v.Patch != other.Patch {
 		if v.Patch < other.Patch {
-			return constants.VersionOlder
+			return VersionOlder
 		}
-		return constants.VersionNewer
+		return VersionNewer
 	}
 
 	// Handle pre-release versions
 	if v.PreRelease == "" && other.PreRelease != "" {
-		return constants.VersionNewer // release > pre-release
+		return VersionNewer // release > pre-release
 	}
 	if v.PreRelease != "" && other.PreRelease == "" {
-		return constants.VersionOlder // pre-release < release
+		return VersionOlder // pre-release < release
 	}
 	if v.PreRelease != other.PreRelease {
 		if v.PreRelease < other.PreRelease {
-			return constants.VersionOlder
+			return VersionOlder
 		}
-		return constants.VersionNewer
+		return VersionNewer
 	}
 
-	return constants.VersionEqual
+	return VersionEqual
 }
 
 // ParseVersion parses a version string into a Version struct
@@ -87,9 +85,9 @@ func ParseVersion(versionStr string) (*Version, error) {
 	// Handle special cases
 	if versionStr == "latest" || versionStr == "*" {
 		return &Version{
-			Major:    constants.MaxVersionNumber,
-			Minor:    constants.MaxVersionNumber,
-			Patch:    constants.MaxVersionNumber,
+			Major:    MaxVersionNumber,
+			Minor:    MaxVersionNumber,
+			Patch:    MaxVersionNumber,
 			Original: versionStr,
 		}, nil
 	}
@@ -137,17 +135,17 @@ func (c VersionConstraint) Satisfies(version Version) bool {
 
 	switch c.Operator {
 	case "=", "==", "":
-		return cmp == constants.VersionEqual
+		return cmp == VersionEqual
 	case "!=":
-		return cmp != constants.VersionEqual
+		return cmp != VersionEqual
 	case ">":
-		return cmp == constants.VersionNewer
+		return cmp == VersionNewer
 	case ">=":
-		return cmp == constants.VersionNewer || cmp == constants.VersionEqual
+		return cmp == VersionNewer || cmp == VersionEqual
 	case "<":
-		return cmp == constants.VersionOlder
+		return cmp == VersionOlder
 	case "<=":
-		return cmp == constants.VersionOlder || cmp == constants.VersionEqual
+		return cmp == VersionOlder || cmp == VersionEqual
 	case "*":
 		return true
 	default:

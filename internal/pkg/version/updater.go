@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 )
 
 // GitHubRelease represents a GitHub release
@@ -31,7 +31,7 @@ func NewUpdateChecker(currentVersion string) *UpdateChecker {
 	return &UpdateChecker{
 		currentVersion: currentVersion,
 		client: &http.Client{
-			Timeout: constants.DefaultStartTimeoutSeconds * time.Second,
+			Timeout: core.DefaultStartTimeoutSeconds * time.Second,
 		},
 	}
 }
@@ -39,7 +39,7 @@ func NewUpdateChecker(currentVersion string) *UpdateChecker {
 // CheckForUpdates checks GitHub for newer releases
 func (u *UpdateChecker) CheckForUpdates() (*GitHubRelease, bool, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest",
-		constants.GitHubOrg, constants.GitHubRepo)
+		core.GitHubOrg, core.GitHubRepo)
 
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -93,7 +93,7 @@ func (u *UpdateChecker) isNewer(releaseVersion string) (bool, error) {
 		return false, err
 	}
 
-	return release.Compare(*current) == constants.VersionNewer, nil
+	return release.Compare(*current) == VersionNewer, nil
 }
 
 // DetectProjectVersion detects required version from project config

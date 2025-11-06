@@ -10,8 +10,6 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 type ResourceType string
@@ -50,7 +48,7 @@ func (c *Client) Close() error {
 
 // Compose operations using docker compose CLI
 func (c *Client) ComposeUp(ctx context.Context, project string, services []string, options StartOptions) error {
-	args := []string{"compose", "-f", constants.DockerComposeFile, "-p", project, "up", "-d"}
+	args := []string{"compose", "-f", DockerComposeFile, "-p", project, "up", "-d"}
 	if options.Build {
 		args = append(args, "--build")
 	}
@@ -65,7 +63,7 @@ func (c *Client) ComposeUp(ctx context.Context, project string, services []strin
 func (c *Client) ComposeDown(ctx context.Context, project string, options StopOptions) error {
 	var args []string
 	if options.Remove {
-		args = []string{"compose", "-f", constants.DockerComposeFile, "-p", project, "down"}
+		args = []string{"compose", "-f", DockerComposeFile, "-p", project, "down"}
 		if options.RemoveOrphans {
 			args = append(args, "--remove-orphans")
 		}
@@ -73,7 +71,7 @@ func (c *Client) ComposeDown(ctx context.Context, project string, options StopOp
 			args = append(args, "--volumes")
 		}
 	} else {
-		args = []string{"compose", "-f", constants.DockerComposeFile, "-p", project, "stop"}
+		args = []string{"compose", "-f", DockerComposeFile, "-p", project, "stop"}
 		if options.Timeout > 0 {
 			args = append(args, "--timeout", fmt.Sprintf("%d", options.Timeout))
 		}
@@ -83,7 +81,7 @@ func (c *Client) ComposeDown(ctx context.Context, project string, options StopOp
 }
 
 func (c *Client) ComposeLogs(ctx context.Context, project string, services []string, options LogOptions) error {
-	args := []string{"compose", "-f", constants.DockerComposeFile, "-p", project, "logs"}
+	args := []string{"compose", "-f", DockerComposeFile, "-p", project, "logs"}
 	if options.Follow {
 		args = append(args, "--follow")
 	}
@@ -122,7 +120,7 @@ func (c *Client) GetDockerServiceStatus(ctx context.Context, project string, ser
 
 	var statuses []DockerServiceStatus
 	for _, container := range containers {
-		serviceName := container.Labels[constants.ComposeServiceLabel]
+		serviceName := container.Labels[ComposeServiceLabel]
 		if len(services) > 0 && !contains(services, serviceName) {
 			continue
 		}
@@ -140,11 +138,11 @@ func (c *Client) GetDockerServiceStatus(ctx context.Context, project string, ser
 
 func (c *Client) getContainerHealth(cont container.Summary) DockerHealthStatus {
 	switch cont.State {
-	case constants.StateRunning:
+	case StateRunning:
 		return DockerHealthStatusHealthy
-	case constants.StateStopped:
+	case StateStopped:
 		return DockerHealthStatusUnhealthy
-	case constants.StateStarting:
+	case StateStarting:
 		return DockerHealthStatusStarting
 	default:
 		return DockerHealthStatusNone
@@ -152,7 +150,7 @@ func (c *Client) getContainerHealth(cont container.Summary) DockerHealthStatus {
 }
 
 func (c *Client) RunCommand(ctx context.Context, args ...string) error {
-	cmd := exec.CommandContext(ctx, constants.DockerCmd, args...)
+	cmd := exec.CommandContext(ctx, DockerCmd, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()

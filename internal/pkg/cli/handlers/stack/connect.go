@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
@@ -26,7 +26,7 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	ciFlags := utils.GetCIFlags(cmd)
 
 	if len(args) < 1 {
-		return fmt.Errorf("%s", constants.Messages[constants.MsgErrors_requires_service_name])
+		return fmt.Errorf("%s", core.Messages[core.MsgErrors_requires_service_name])
 	}
 
 	// Check initialization first
@@ -35,7 +35,7 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	if !ciFlags.Quiet {
-		base.Output.Header(constants.MsgStack_connecting_to, args[0])
+		base.Output.Header(core.MsgStack_connecting_to, args[0])
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
@@ -45,14 +45,14 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	defer cleanup()
 
 	if !ciFlags.Quiet {
-		base.Output.Header(constants.MsgStack_connecting_to, args[0])
+		base.Output.Header(core.MsgStack_connecting_to, args[0])
 	}
 	defer cleanup()
 
 	serviceName := args[0]
 
 	// Parse all flags with validation - single line!
-	flags, err := constants.ParseConnectFlags(cmd)
+	flags, err := core.ParseConnectFlags(cmd)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		TTY:         true,
 	}
 
-	dockerArgs := []string{"compose", "-f", constants.DockerComposeFile, "-p", setup.Config.Project.Name, "exec"}
+	dockerArgs := []string{"compose", "-f", docker.DockerComposeFile, "-p", setup.Config.Project.Name, "exec"}
 	if options.User != "" {
 		dockerArgs = append(dockerArgs, "--user", options.User)
 	}
@@ -118,7 +118,7 @@ func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host 
 	}
 
 	// Add host flag if specified and not localhost
-	if config.HostFlag != "" && host != "" && host != constants.ServiceLocalhost {
+	if config.HostFlag != "" && host != "" && host != services.ServiceLocalhost {
 		cmd = append(cmd, config.HostFlag, host)
 	}
 
@@ -136,7 +136,7 @@ func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host 
 // ValidateArgs validates the command arguments
 func (h *ConnectHandler) ValidateArgs(args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("%s", constants.Messages[constants.MsgErrors_requires_service_name])
+		return fmt.Errorf("%s", core.Messages[core.MsgErrors_requires_service_name])
 	}
 	return nil
 }

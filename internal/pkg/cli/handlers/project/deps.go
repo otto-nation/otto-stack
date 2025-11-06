@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
@@ -27,10 +27,10 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	base.Output.Header("%s", constants.MsgDependencies_header)
+	base.Output.Header("%s", core.MsgDependencies_header)
 
 	// Get output format
-	format, _ := cmd.Flags().GetString(constants.FlagFormat)
+	format, _ := cmd.Flags().GetString(core.FlagFormat)
 
 	// Load service dependencies
 	serviceUtils := services.NewServiceUtils()
@@ -40,7 +40,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	if len(dependencies) == 0 {
-		base.Output.Info("%s", constants.MsgDependencies_none_found)
+		base.Output.Info("%s", core.MsgDependencies_none_found)
 		return nil
 	}
 

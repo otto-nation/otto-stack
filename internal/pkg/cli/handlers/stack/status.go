@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
@@ -37,7 +37,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	ciFlags := utils.GetCIFlags(cmd)
 
 	if !ciFlags.Quiet {
-		base.Output.Header(constants.MsgStatus)
+		base.Output.Header(core.MsgStatus)
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
@@ -62,7 +62,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 
 	// Validate services exist
 	if err := manager.ValidateServices(serviceNames); err != nil {
-		utils.HandleError(ciFlags, fmt.Errorf(constants.MsgStack_failed_resolve_services, err))
+		utils.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
 		return nil
 	}
 
@@ -71,7 +71,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	// Get service status
 	statuses, err := setup.DockerClient.GetDockerServiceStatus(ctx, setup.Config.Project.Name, resolvedServices)
 	if err != nil {
-		utils.HandleError(ciFlags, fmt.Errorf(constants.MsgStack_failed_get_service_status, err))
+		utils.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_get_service_status, err))
 		return nil
 	}
 
@@ -80,7 +80,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		utils.OutputResult(ciFlags, map[string]any{
 			"services": statuses,
 			"count":    len(statuses),
-		}, constants.ExitSuccess)
+		}, core.ExitSuccess)
 		return nil
 	}
 
@@ -90,8 +90,8 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		return nil
 	}
 
-	fmt.Printf("%-20s %-12s %s\n", constants.StatusHeaderService, constants.StatusHeaderState, constants.StatusHeaderHealth)
-	fmt.Println(strings.Repeat(constants.StatusSeparator, constants.StatusSeparatorLength))
+	fmt.Printf("%-20s %-12s %s\n", core.StatusHeaderService, core.StatusHeaderState, core.StatusHeaderHealth)
+	fmt.Println(strings.Repeat(core.StatusSeparator, core.StatusSeparatorLength))
 	for _, status := range statuses {
 		fmt.Printf("%-20s %-12s %s\n", status.Name, status.State, status.Health)
 	}

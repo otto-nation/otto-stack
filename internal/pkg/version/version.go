@@ -6,15 +6,15 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 )
 
 // Build variables set by ldflags
 var (
-	AppVersion = constants.DefaultVersion
-	GitCommit  = constants.DefaultCommit
-	BuildDate  = constants.DefaultBuildDate
-	BuildBy    = constants.DefaultBuildBy
+	AppVersion = DefaultVersion
+	GitCommit  = DefaultCommit
+	BuildDate  = DefaultBuildDate
+	BuildBy    = DefaultBuildBy
 )
 
 // BuildInfo contains comprehensive build information
@@ -50,7 +50,7 @@ func GetBuildInfo() *BuildInfo {
 
 // GetAppVersion returns the application version string
 func GetAppVersion() string {
-	if AppVersion == constants.DefaultVersion {
+	if AppVersion == DefaultVersion {
 		if buildInfo, ok := debug.ReadBuildInfo(); ok {
 			return buildInfo.Main.Version
 		}
@@ -61,8 +61,8 @@ func GetAppVersion() string {
 // GetShortVersion returns a short version string
 func GetShortVersion() string {
 	version := GetAppVersion()
-	if version == constants.DevelVersion || version == constants.DefaultVersion {
-		return constants.DefaultVersion
+	if version == DevelVersion || version == DefaultVersion {
+		return DefaultVersion
 	}
 	return version
 }
@@ -71,14 +71,14 @@ func GetShortVersion() string {
 func GetFullVersion() string {
 	info := GetBuildInfo()
 	version := info.Version
-	if version == constants.DefaultVersion || version == constants.DevelVersion {
-		version = constants.DefaultVersion
+	if version == DefaultVersion || version == DevelVersion {
+		version = DefaultVersion
 	}
 
-	result := fmt.Sprintf("%s %s", constants.AppName, version)
-	if info.GitCommit != constants.DefaultCommit && info.GitCommit != "" {
-		if len(info.GitCommit) > constants.GitCommitHashLength {
-			result += fmt.Sprintf(" (%s)", info.GitCommit[:constants.GitCommitHashLength])
+	result := fmt.Sprintf("%s %s", core.AppName, version)
+	if info.GitCommit != DefaultCommit && info.GitCommit != "" {
+		if len(info.GitCommit) > GitCommitHashLength {
+			result += fmt.Sprintf(" (%s)", info.GitCommit[:GitCommitHashLength])
 		} else {
 			result += fmt.Sprintf(" (%s)", info.GitCommit)
 		}
@@ -101,10 +101,10 @@ Platform:   %s/%s`,
 
 // IsDevBuild returns true if this is a development build
 func IsDevBuild() bool {
-	return AppVersion == constants.DefaultVersion || AppVersion == constants.DevelVersion
+	return AppVersion == DefaultVersion || AppVersion == DevelVersion
 }
 
 // GetUserAgent returns a user agent string for HTTP requests
 func GetUserAgent() string {
-	return fmt.Sprintf("%s/%s (%s; %s)", constants.AppName, GetShortVersion(), runtime.GOOS, runtime.GOARCH)
+	return fmt.Sprintf("%s/%s (%s; %s)", core.AppName, GetShortVersion(), runtime.GOOS, runtime.GOARCH)
 }

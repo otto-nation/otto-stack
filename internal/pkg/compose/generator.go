@@ -5,7 +5,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	dockerConstants "github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
@@ -32,10 +32,10 @@ func NewGenerator(projectName string, servicesPath string) (*Generator, error) {
 func (g *Generator) GenerateYAML(serviceNames []string) ([]byte, error) {
 	// Build compose structure with project-specific default network
 	compose := map[string]any{
-		constants.ComposeFieldServices: g.buildServices(serviceNames),
-		constants.ComposeFieldNetworks: map[string]any{
+		dockerConstants.ComposeFieldServices: g.buildServices(serviceNames),
+		dockerConstants.ComposeFieldNetworks: map[string]any{
 			"default": map[string]any{
-				constants.ComposeFieldName: fmt.Sprintf("%s-network", g.projectName),
+				dockerConstants.ComposeFieldName: fmt.Sprintf("%s-network", g.projectName),
 			},
 		},
 	}
@@ -66,7 +66,7 @@ func (g *Generator) buildServices(serviceNames []string) map[string]any {
 
 func (g *Generator) buildServiceFromV2(v2 *services.ServiceConfigV2) map[string]any {
 	service := map[string]any{
-		constants.ComposeFieldImage: v2.Container.Image,
+		dockerConstants.ComposeFieldImage: v2.Container.Image,
 	}
 
 	// Convert V2 ports to compose format
@@ -79,11 +79,11 @@ func (g *Generator) buildServiceFromV2(v2 *services.ServiceConfigV2) map[string]
 			}
 			ports = append(ports, portStr)
 		}
-		service[constants.ComposeFieldPorts] = ports
+		service[dockerConstants.ComposeFieldPorts] = ports
 	}
 
 	if len(v2.Container.Environment) > 0 {
-		service[constants.ComposeFieldEnvironment] = v2.Container.Environment
+		service[dockerConstants.ComposeFieldEnvironment] = v2.Container.Environment
 	}
 
 	if len(v2.Container.Volumes) > 0 {
@@ -95,15 +95,15 @@ func (g *Generator) buildServiceFromV2(v2 *services.ServiceConfigV2) map[string]
 			}
 			volumes = append(volumes, volStr)
 		}
-		service[constants.ComposeFieldVolumes] = volumes
+		service[dockerConstants.ComposeFieldVolumes] = volumes
 	}
 
 	if v2.Container.Restart != "" {
-		service[constants.ComposeFieldRestart] = string(v2.Container.Restart)
+		service[dockerConstants.ComposeFieldRestart] = string(v2.Container.Restart)
 	}
 
 	if len(v2.Container.Command) > 0 {
-		service[constants.ComposeFieldCommand] = v2.Container.Command
+		service[dockerConstants.ComposeFieldCommand] = v2.Container.Command
 	}
 
 	if v2.Container.MemoryLimit != "" {
@@ -137,10 +137,10 @@ func (g *Generator) buildServiceFromV2(v2 *services.ServiceConfigV2) map[string]
 func (g *Generator) Generate(serviceNames []string) (map[string]any, error) {
 	// Build compose structure
 	return map[string]any{
-		constants.ComposeFieldServices: g.buildServices(serviceNames),
-		constants.ComposeFieldNetworks: map[string]any{
+		dockerConstants.ComposeFieldServices: g.buildServices(serviceNames),
+		dockerConstants.ComposeFieldNetworks: map[string]any{
 			"default": map[string]any{
-				constants.ComposeFieldName: fmt.Sprintf("%s-network", g.projectName),
+				dockerConstants.ComposeFieldName: fmt.Sprintf("%s-network", g.projectName),
 			},
 		},
 	}, nil

@@ -1,7 +1,7 @@
 package services
 
 import (
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 )
 
 // ServiceUtils provides service operations
@@ -49,10 +49,10 @@ func (u *ServiceUtils) LoadAllServiceDependencies() (map[string][]string, error)
 
 // IsYAMLFile checks if filename is a YAML file (alias to constants function)
 func IsYAMLFile(filename string) bool {
-	return constants.IsYAMLFile(filename)
+	return core.IsYAMLFile(filename)
 }
 
 // TrimYAMLExt removes YAML extension from filename (alias to constants function)
 func TrimYAMLExt(filename string) string {
-	return constants.TrimYAMLExt(filename)
+	return core.TrimYAMLExt(filename)
 }

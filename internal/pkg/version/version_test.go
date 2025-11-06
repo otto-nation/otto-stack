@@ -3,7 +3,7 @@ package version
 import (
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,7 +29,7 @@ func TestGetShortVersion(t *testing.T) {
 func TestGetFullVersion(t *testing.T) {
 	version := GetFullVersion()
 	assert.NotEmpty(t, version)
-	assert.Contains(t, version, constants.AppName)
+	assert.Contains(t, version, core.AppName)
 }
 
 func TestGetFormattedBuildInfo(t *testing.T) {
@@ -49,7 +49,7 @@ func TestIsDevBuild(t *testing.T) {
 func TestGetUserAgent(t *testing.T) {
 	ua := GetUserAgent()
 	assert.NotEmpty(t, ua)
-	assert.Contains(t, ua, constants.AppName)
+	assert.Contains(t, ua, core.AppName)
 }
 
 func TestParseVersion(t *testing.T) {
@@ -62,7 +62,7 @@ func TestParseVersion(t *testing.T) {
 		{"v1.2.3", Version{Major: 1, Minor: 2, Patch: 3, Original: "v1.2.3"}, false},
 		{"1.2.3-alpha.1", Version{Major: 1, Minor: 2, Patch: 3, PreRelease: "alpha.1", Original: "1.2.3-alpha.1"}, false},
 		{"1.2.3+build.123", Version{Major: 1, Minor: 2, Patch: 3, Build: "build.123", Original: "1.2.3+build.123"}, false},
-		{"latest", Version{Major: constants.MaxVersionNumber, Minor: constants.MaxVersionNumber, Patch: constants.MaxVersionNumber, Original: "latest"}, false},
+		{"latest", Version{Major: MaxVersionNumber, Minor: MaxVersionNumber, Patch: MaxVersionNumber, Original: "latest"}, false},
 		{"", Version{}, true},
 		{"invalid", Version{}, true},
 	}
@@ -91,15 +91,15 @@ func TestVersionCompare(t *testing.T) {
 		v2       string
 		expected int
 	}{
-		{"1.2.3", "1.2.3", constants.VersionEqual},
-		{"1.2.4", "1.2.3", constants.VersionNewer},
-		{"1.2.2", "1.2.3", constants.VersionOlder},
-		{"1.3.0", "1.2.3", constants.VersionNewer},
-		{"1.1.0", "1.2.3", constants.VersionOlder},
-		{"2.0.0", "1.2.3", constants.VersionNewer},
-		{"0.9.0", "1.2.3", constants.VersionOlder},
-		{"1.2.3", "1.2.3-alpha", constants.VersionNewer},
-		{"1.2.3-alpha", "1.2.3", constants.VersionOlder},
+		{"1.2.3", "1.2.3", VersionEqual},
+		{"1.2.4", "1.2.3", VersionNewer},
+		{"1.2.2", "1.2.3", VersionOlder},
+		{"1.3.0", "1.2.3", VersionNewer},
+		{"1.1.0", "1.2.3", VersionOlder},
+		{"2.0.0", "1.2.3", VersionNewer},
+		{"0.9.0", "1.2.3", VersionOlder},
+		{"1.2.3", "1.2.3-alpha", VersionNewer},
+		{"1.2.3-alpha", "1.2.3", VersionOlder},
 	}
 
 	for _, tt := range tests {

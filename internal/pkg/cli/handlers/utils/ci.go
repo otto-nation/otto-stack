@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/spf13/cobra"
 )
@@ -21,11 +21,11 @@ type CIFlags struct {
 
 // GetCIFlags extracts CI-friendly flags from command
 func GetCIFlags(cmd *cobra.Command) CIFlags {
-	quiet, _ := cmd.Flags().GetBool(constants.FlagQuiet)
-	jsonOutput, _ := cmd.Flags().GetBool(constants.FlagJSON)
-	noColor, _ := cmd.Flags().GetBool(constants.FlagNoColor)
-	nonInteractive, _ := cmd.Flags().GetBool(constants.FlagNonInteractive)
-	strict, _ := cmd.Flags().GetBool(constants.FlagStrict)
+	quiet, _ := cmd.Flags().GetBool(core.FlagQuiet)
+	jsonOutput, _ := cmd.Flags().GetBool(core.FlagJSON)
+	noColor, _ := cmd.Flags().GetBool(core.FlagNoColor)
+	nonInteractive, _ := cmd.Flags().GetBool(core.FlagNonInteractive)
+	strict, _ := cmd.Flags().GetBool(core.FlagStrict)
 
 	return CIFlags{
 		Quiet:          quiet,
@@ -47,7 +47,7 @@ func OutputResult(flags CIFlags, result any, exitCode int) {
 		outputTable(result)
 	}
 
-	if exitCode != constants.ExitSuccess {
+	if exitCode != core.ExitSuccess {
 		os.Exit(exitCode)
 	}
 }
@@ -57,14 +57,14 @@ func HandleError(flags CIFlags, err error) {
 	if flags.JSON {
 		errorResult := map[string]any{
 			"error":     err.Error(),
-			"exit_code": constants.ExitError,
+			"exit_code": core.ExitError,
 		}
 		_ = json.NewEncoder(os.Stdout).Encode(errorResult)
 	} else if !flags.Quiet {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
 
-	os.Exit(constants.ExitError)
+	os.Exit(core.ExitError)
 }
 
 func outputJSON(result any, exitCode int) {
@@ -75,12 +75,12 @@ func outputJSON(result any, exitCode int) {
 
 	_ = json.NewEncoder(os.Stdout).Encode(output)
 
-	if exitCode != constants.ExitSuccess {
+	if exitCode != core.ExitSuccess {
 		os.Exit(exitCode)
 	}
 }
 
 func outputTable(result any) {
-	logger.Debug("Outputting table result", constants.LogFieldResult, result)
+	logger.Debug("Outputting table result", logger.LogFieldResult, result)
 	fmt.Printf("%+v\n", result)
 }

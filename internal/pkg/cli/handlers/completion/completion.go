@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/spf13/cobra"
 )
 
@@ -19,13 +19,13 @@ func NewCompletionHandler() *CompletionHandler {
 
 func (h *CompletionHandler) ValidateArgs(args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf(constants.MsgCompletion_requires_one_arg,
+		return fmt.Errorf(core.MsgCompletion_requires_one_arg,
 			fmt.Sprintf("%v", cli.AllShellTypeStrings()))
 	}
 
 	shell := cli.ShellType(args[0])
 	if !shell.IsValid() {
-		return fmt.Errorf(constants.MsgCompletion_unsupported_shell,
+		return fmt.Errorf(core.MsgCompletion_unsupported_shell,
 			args[0])
 	}
 
@@ -52,6 +52,6 @@ func (h *CompletionHandler) Handle(ctx context.Context, cmd *cobra.Command, args
 	case cli.ShellTypePowerShell:
 		return rootCmd.GenPowerShellCompletion(os.Stdout)
 	default:
-		return fmt.Errorf(constants.MsgCompletion_unsupported_shell, shell)
+		return fmt.Errorf(core.MsgCompletion_unsupported_shell, shell)
 	}
 }

@@ -10,12 +10,12 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
@@ -51,21 +51,21 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	defer cleanup()
 
 	// Start operation logging only after initialization check passes
-	logger.Info(constants.LogMsgStartingOperation, constants.LogFieldOperation, constants.OperationStackUp, constants.LogFieldServices, args)
+	logger.Info(logger.LogMsgStartingOperation, logger.LogFieldOperation, logger.OperationStackUp, logger.LogFieldServices, args)
 	defer func() {
 		if r := recover(); r != nil {
-			logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationStackUp, constants.LogFieldError, fmt.Errorf("panic: %v", r))
+			logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationStackUp, logger.LogFieldError, fmt.Errorf("panic: %v", r))
 			panic(r)
 		}
 	}()
 
-	base.Output.Header("%s", constants.MsgStarting)
-	logger.Info(constants.LogMsgServiceAction, constants.LogFieldAction, constants.ActionStart, constants.LogFieldService, "stack", constants.LogFieldServices, args)
+	base.Output.Header("%s", core.MsgStarting)
+	logger.Info(logger.LogMsgServiceAction, logger.LogFieldAction, logger.ActionStart, logger.LogFieldService, "stack", logger.LogFieldServices, args)
 
 	// Parse all flags with validation
-	flags, err := constants.ParseUpFlags(cmd)
+	flags, err := core.ParseUpFlags(cmd)
 	if err != nil {
-		logger.Error(constants.LogMsgOperationFailed, constants.LogFieldOperation, constants.OperationStackUp, constants.LogFieldError, err)
+		logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationStackUp, logger.LogFieldError, err)
 		return err
 	}
 
@@ -98,13 +98,13 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	serviceUtils := services.NewServiceUtils()
 	filteredServices, err := serviceUtils.ResolveServices(serviceNames)
 	if err != nil {
-		return fmt.Errorf(constants.MsgStack_failed_resolve_services, err)
+		return fmt.Errorf(core.MsgStack_failed_resolve_services, err)
 	}
 
 	// Check for config changes
 	configHash, err := h.getConfigHash(setup.Config)
 	if err != nil {
-		return fmt.Errorf(constants.MsgStack_failed_calculate_hash, err)
+		return fmt.Errorf(core.MsgStack_failed_calculate_hash, err)
 	}
 
 	previousState, err := h.loadState()
@@ -124,35 +124,35 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	}
 
 	// Generate compose file
-	generator, err := compose.NewGenerator(setup.Config.Project.Name, constants.ServicesDir)
+	generator, err := compose.NewGenerator(setup.Config.Project.Name, services.ServicesDir)
 	if err != nil {
-		return fmt.Errorf(constants.MsgStack_failed_create_generator, err)
+		return fmt.Errorf(core.MsgStack_failed_create_generator, err)
 	}
 
 	composeFile, err := generator.Generate(serviceNames)
 	if err != nil {
-		return fmt.Errorf(constants.MsgStack_failed_generate_compose, err)
+		return fmt.Errorf(core.MsgStack_failed_generate_compose, err)
 	}
 
 	// Ensure otto-stack directory exists
-	if err := os.MkdirAll(constants.OttoStackDir, constants.DirPermReadWriteExec); err != nil {
-		return fmt.Errorf(constants.MsgStack_failed_create_directory, err)
+	if err := os.MkdirAll(core.OttoStackDir, core.DirPermReadWriteExec); err != nil {
+		return fmt.Errorf(core.MsgStack_failed_create_directory, err)
 	}
 
 	// Write compose file
 	composeData, err := yaml.Marshal(composeFile)
 	if err != nil {
-		return fmt.Errorf(constants.MsgStack_failed_marshal_compose, err)
+		return fmt.Errorf(core.MsgStack_failed_marshal_compose, err)
 	}
 
-	composePath := constants.DockerComposeFile
-	if err := os.WriteFile(composePath, composeData, constants.FilePermReadWrite); err != nil {
-		return fmt.Errorf(constants.MsgStack_failed_write_compose, err)
+	composePath := docker.DockerComposeFile
+	if err := os.WriteFile(composePath, composeData, core.FilePermReadWrite); err != nil {
+		return fmt.Errorf(core.MsgStack_failed_write_compose, err)
 	}
 
 	// Start services
 	if err := setup.DockerClient.ComposeUp(ctx, setup.Config.Project.Name, filteredServices, options); err != nil {
-		return fmt.Errorf(constants.MsgStack_failed_start_services, err)
+		return fmt.Errorf(core.MsgStack_failed_start_services, err)
 	}
 
 	// Save new state
@@ -164,8 +164,8 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		base.Output.Warning("Failed to save state: %v", err)
 	}
 
-	base.Output.Success(constants.MsgStartSuccess)
-	logger.Info(constants.LogMsgOperationCompleted, constants.LogFieldOperation, constants.OperationStackUp)
+	base.Output.Success(core.MsgStartSuccess)
+	logger.Info(logger.LogMsgOperationCompleted, logger.LogFieldOperation, logger.OperationStackUp)
 	return nil
 }
 
@@ -193,7 +193,7 @@ func (h *UpHandler) getConfigHash(config *config.Config) (string, error) {
 
 // loadState loads previous stack state
 func (h *UpHandler) loadState() (*StackState, error) {
-	statePath := filepath.Join(constants.OttoStackDir, constants.StateFileName)
+	statePath := filepath.Join(core.OttoStackDir, core.StateFileName)
 	data, err := os.ReadFile(statePath)
 	if err != nil {
 		return nil, err
@@ -208,12 +208,12 @@ func (h *UpHandler) loadState() (*StackState, error) {
 
 // saveState saves current stack state
 func (h *UpHandler) saveState(state *StackState) error {
-	statePath := filepath.Join(constants.OttoStackDir, constants.StateFileName)
+	statePath := filepath.Join(core.OttoStackDir, core.StateFileName)
 	data, err := json.Marshal(state)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(statePath, data, constants.FilePermReadWrite)
+	return os.WriteFile(statePath, data, core.FilePermReadWrite)
 }
 
 // cleanupRemovedServices removes services no longer in config
@@ -223,7 +223,7 @@ func (h *UpHandler) cleanupRemovedServices(ctx context.Context, setup *CoreSetup
 		return nil
 	}
 
-	base.Output.Info(constants.MsgStack_removing_services, removedServices)
+	base.Output.Info(core.MsgStack_removing_services, removedServices)
 	return setup.DockerClient.ComposeDown(ctx, setup.Config.Project.Name, docker.StopOptions{
 		Remove:        true,
 		RemoveVolumes: true,

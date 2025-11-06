@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 )
 
 // IsPortInUse checks if a port is in use
@@ -14,11 +14,11 @@ func IsPortInUse(port int) bool {
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {
-	case constants.OSLinux, constants.OSDarwin:
+	case docker.OSLinux, docker.OSDarwin:
 		args := []string{"-i", fmt.Sprintf(":%d", port)}
-		cmd = exec.Command(constants.CmdLsof, args...)
-	case constants.OSWindows:
-		cmd = exec.Command(constants.CmdNetstat, "-an")
+		cmd = exec.Command(docker.CmdLsof, args...)
+	case docker.OSWindows:
+		cmd = exec.Command(docker.CmdNetstat, "-an")
 	default:
 		return false
 	}
@@ -28,7 +28,7 @@ func IsPortInUse(port int) bool {
 		return false
 	}
 
-	if runtime.GOOS == constants.OSWindows {
+	if runtime.GOOS == docker.OSWindows {
 		return strings.Contains(string(output), fmt.Sprintf(":%d", port))
 	}
 
@@ -37,10 +37,10 @@ func IsPortInUse(port int) bool {
 
 // GetFreePort finds an available port starting from the given port
 func GetFreePort(startPort int) (int, error) {
-	for port := startPort; port < startPort+constants.PortSearchRange; port++ {
+	for port := startPort; port < startPort+docker.PortSearchRange; port++ {
 		if !IsPortInUse(port) {
 			return port, nil
 		}
 	}
-	return 0, fmt.Errorf(constants.ErrNoFreePort, startPort, startPort+constants.PortSearchRange)
+	return 0, fmt.Errorf(docker.ErrNoFreePort, startPort, startPort+docker.PortSearchRange)
 }

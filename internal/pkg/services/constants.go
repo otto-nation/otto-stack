@@ -1,0 +1,40 @@
+package services
+
+// Service constants
+const (
+	ServiceLocalhost = "localhost"
+)
+
+// Service catalog formats
+const (
+	ServiceCatalogJSONFormat  = "json"
+	ServiceCatalogYAMLFormat  = "yaml"
+	ServiceCatalogTableFormat = "table"
+)
+
+// Service catalog messages
+const (
+	MsgServiceCatalogHeader = "Available Services"
+	MsgServiceCount         = "Total services: %d"
+	MsgCategoryServiceCount = "%s: %d service%s"
+	SummaryTotal            = "Total"
+	SummaryRunning          = "Running"
+	SummaryHealthy          = "Healthy"
+)
+
+// File extensions
+const (
+	ServiceConfigExtension = ".yaml"
+	ServiceConfigExtAlt    = ".yml"
+)
+
+// Directory names
+const (
+	ServicesDir         = "internal/config/services"
+	EmbeddedServicesDir = "services"
+)
+
+// Format constants
+const (
+	FormatJSON = "json"
+)

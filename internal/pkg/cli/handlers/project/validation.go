@@ -6,29 +6,30 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 // validateInitEnvironment validates the environment before initialization
 func (h *InitHandler) validateInitEnvironment(_ *base.BaseCommand) error {
 	// Check if already initialized
-	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
+	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
 	if _, err := os.Stat(configPath); err == nil {
-		return fmt.Errorf("%s is already initialized in this directory", constants.AppNameLower)
+		return fmt.Errorf("%s is already initialized in this directory", core.AppNameLower)
 	}
 	// Also check for .yaml extension
-	yamlConfigPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
+	yamlConfigPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
 	if _, err := os.Stat(yamlConfigPath); err == nil {
-		return fmt.Errorf("%s is already initialized in this directory", constants.AppNameLower)
+		return fmt.Errorf("%s is already initialized in this directory", core.AppNameLower)
 	}
 
 	// Check for required tools
-	requiredTools := []string{constants.DockerCmd}
+	requiredTools := []string{docker.DockerCmd}
 	for _, tool := range requiredTools {
 		if !h.isCommandAvailable(tool) {
-			return fmt.Errorf(constants.MsgValidation_required_tool_unavailable, tool)
+			return fmt.Errorf(core.MsgValidation_required_tool_unavailable, tool)
 		}
 	}
 
@@ -38,28 +39,28 @@ func (h *InitHandler) validateInitEnvironment(_ *base.BaseCommand) error {
 // validateProjectName validates the project name
 func (h *InitHandler) validateProjectName(name string) error {
 	if name == "" {
-		return fmt.Errorf("%s", constants.MsgValidation_project_name_empty)
+		return fmt.Errorf("%s", core.MsgValidation_project_name_empty)
 	}
 
-	if len(name) < constants.MinProjectNameLength {
-		return fmt.Errorf("%s", constants.MsgValidation_project_name_too_short)
+	if len(name) < core.MinProjectNameLength {
+		return fmt.Errorf("%s", core.MsgValidation_project_name_too_short)
 	}
 
-	if len(name) > constants.MaxProjectNameLength {
-		return fmt.Errorf("%s", constants.MsgValidation_project_name_too_long)
+	if len(name) > core.MaxProjectNameLength {
+		return fmt.Errorf("%s", core.MsgValidation_project_name_too_long)
 	}
 
 	// Check for valid characters (alphanumeric, hyphens, underscores)
 	for _, char := range name {
 		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') &&
 			(char < '0' || char > '9') && char != '-' && char != '_' {
-			return fmt.Errorf("%s", constants.MsgValidation_project_name_invalid_chars)
+			return fmt.Errorf("%s", core.MsgValidation_project_name_invalid_chars)
 		}
 	}
 
 	// Cannot start with hyphen or underscore
 	if name[0] == '-' || name[0] == '_' {
-		return fmt.Errorf("%s", constants.MsgValidation_project_name_invalid_start)
+		return fmt.Errorf("%s", core.MsgValidation_project_name_invalid_start)
 	}
 
 	return nil
@@ -68,14 +69,14 @@ func (h *InitHandler) validateProjectName(name string) error {
 // validateServices validates the selected services
 func (h *InitHandler) validateServices(serviceNames []string) error {
 	if len(serviceNames) == 0 {
-		return fmt.Errorf("%s", constants.MsgValidation_no_services_selected)
+		return fmt.Errorf("%s", core.MsgValidation_no_services_selected)
 	}
 
 	// Check for duplicates
 	seen := make(map[string]bool)
 	for _, serviceName := range serviceNames {
 		if seen[serviceName] {
-			return fmt.Errorf(constants.MsgValidation_duplicate_service, serviceName)
+			return fmt.Errorf(core.MsgValidation_duplicate_service, serviceName)
 		}
 		seen[serviceName] = true
 	}
@@ -84,7 +85,7 @@ func (h *InitHandler) validateServices(serviceNames []string) error {
 	serviceUtils := services.NewServiceUtils()
 	for _, serviceName := range serviceNames {
 		if _, err := serviceUtils.LoadServiceConfig(serviceName); err != nil {
-			return fmt.Errorf(constants.MsgValidation_invalid_service, serviceName, err)
+			return fmt.Errorf(core.MsgValidation_invalid_service, serviceName, err)
 		}
 	}
 
@@ -95,7 +96,7 @@ func (h *InitHandler) validateServices(serviceNames []string) error {
 func (h *InitHandler) validateDirectoryStructure(base *base.BaseCommand) error {
 	// Check if we're in a git repository (optional but recommended)
 	if _, err := os.Stat(".git"); os.IsNotExist(err) {
-		base.Output.Warning("%s", constants.MsgWarnings_not_git_repository)
+		base.Output.Warning("%s", core.MsgWarnings_not_git_repository)
 	}
 
 	// Check for conflicting files
@@ -106,7 +107,7 @@ func (h *InitHandler) validateDirectoryStructure(base *base.BaseCommand) error {
 
 	for _, file := range conflictingFiles {
 		if _, err := os.Stat(file); err == nil {
-			return fmt.Errorf(constants.MsgValidation_conflicting_file_exists, file)
+			return fmt.Errorf(core.MsgValidation_conflicting_file_exists, file)
 		}
 	}
 

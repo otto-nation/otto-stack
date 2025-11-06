@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
@@ -35,7 +35,7 @@ func TestHandle_DirectoryValidation(t *testing.T) {
 	defer cleanup()
 
 	// Create conflicting docker-compose.yml file
-	createTestFile(t, constants.DockerComposeFileName, "version: '3'")
+	createTestFile(t, core.DockerComposeFileName, "version: '3'")
 
 	handler := NewInitHandler()
 	cmd := &cobra.Command{}

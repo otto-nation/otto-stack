@@ -4,8 +4,6 @@ import (
 	"log/slog"
 	"os"
 	"strings"
-
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 )
 
 var defaultLogger *slog.Logger
@@ -18,7 +16,7 @@ type Config struct {
 // DefaultConfig returns default logger configuration
 func DefaultConfig() Config {
 	return Config{
-		Level: constants.LogLevelInfo,
+		Level: LogLevelInfo,
 	}
 }
 
@@ -41,13 +39,13 @@ func Close() {
 // parseLogLevel converts string to slog.Level
 func parseLogLevel(level string) slog.Level {
 	switch strings.ToLower(level) {
-	case constants.LogLevelDebug:
+	case LogLevelDebug:
 		return slog.LevelDebug
-	case constants.LogLevelInfo:
+	case LogLevelInfo:
 		return slog.LevelInfo
-	case constants.LogLevelWarn, "warning":
+	case LogLevelWarn, "warning":
 		return slog.LevelWarn
-	case constants.LogLevelError:
+	case LogLevelError:
 		return slog.LevelError
 	default:
 		return slog.LevelInfo

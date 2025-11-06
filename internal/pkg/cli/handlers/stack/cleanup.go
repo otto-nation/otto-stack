@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +27,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Parse all flags with validation - single line!
-	flags, err := constants.ParseCleanupFlags(cmd)
+	flags, err := core.ParseCleanupFlags(cmd)
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	ciFlags := utils.GetCIFlags(cmd)
 
 	if !ciFlags.Quiet {
-		base.Output.Header(constants.MsgCleaning)
+		base.Output.Header(core.MsgCleaning)
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
@@ -96,7 +96,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 // performCleanup executes the actual cleanup operations
 func (h *CleanupHandler) performCleanup(ctx context.Context, setup *CoreSetup, cmd *cobra.Command, base *base.BaseCommand) error {
 	// Parse cleanup flags
-	flags, err := constants.ParseCleanupFlags(cmd)
+	flags, err := core.ParseCleanupFlags(cmd)
 	if err != nil {
 		return fmt.Errorf("failed to parse cleanup flags: %w", err)
 	}

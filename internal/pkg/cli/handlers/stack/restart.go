@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/spf13/cobra"
 )
 
@@ -29,31 +29,31 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return err
 	}
 
-	base.Output.Header(constants.MsgRestarting)
+	base.Output.Header(core.MsgRestarting)
 
 	// Check if otto-stack is initialized
-	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
+	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
 	if !func() bool { _, err := os.Stat(configPath); return err == nil }() {
-		return errors.New(constants.MsgErrors_not_initialized)
+		return errors.New(core.MsgErrors_not_initialized)
 	}
 
 	// Load project configuration
 	cfg, err := LoadProjectConfig(configPath)
 	if err != nil {
-		return fmt.Errorf(constants.MsgStack_failed_load_config, err)
+		return fmt.Errorf(core.MsgStack_failed_load_config, err)
 	}
 
 	// Create Docker client
 	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
-		return fmt.Errorf(constants.MsgStack_failed_create_docker_client, err)
+		return fmt.Errorf(core.MsgStack_failed_create_docker_client, err)
 	}
 	defer func() {
 		_ = dockerClient.Close()
 	}()
 
 	// Parse all flags with validation - single line!
-	flags, err := constants.ParseRestartFlags(cmd)
+	flags, err := core.ParseRestartFlags(cmd)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		Timeout: flags.Timeout,
 	}
 	if err := dockerClient.ComposeDown(ctx, cfg.Project.Name, stopOptions); err != nil {
-		return fmt.Errorf(constants.MsgStack_failed_stop_services, err)
+		return fmt.Errorf(core.MsgStack_failed_stop_services, err)
 	}
 
 	// Start services
@@ -79,10 +79,10 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		Detach: true,
 	}
 	if err := dockerClient.ComposeUp(ctx, cfg.Project.Name, serviceNames, startOptions); err != nil {
-		return fmt.Errorf(constants.MsgStack_failed_start_services, err)
+		return fmt.Errorf(core.MsgStack_failed_start_services, err)
 	}
 
-	base.Output.Success(constants.MsgRestartSuccess)
+	base.Output.Success(core.MsgRestartSuccess)
 	// Restart operation
 	return nil
 }

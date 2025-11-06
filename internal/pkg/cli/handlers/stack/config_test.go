@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,7 +27,7 @@ stack:
     - redis
 `
 	baseConfigPath := filepath.Join(tmpDir, "otto-stack-config.yaml")
-	err = os.WriteFile(baseConfigPath, []byte(baseConfig), constants.FilePermReadWrite)
+	err = os.WriteFile(baseConfigPath, []byte(baseConfig), core.FilePermReadWrite)
 	require.NoError(t, err)
 
 	// Test loading base config only
@@ -37,8 +37,8 @@ stack:
 	assert.Equal(t, []string{"postgres", "redis"}, cfg.Stack.Enabled)
 
 	// Create local override config in otto-stack directory
-	ottoStackDir := filepath.Join(tmpDir, constants.OttoStackDir)
-	err = os.MkdirAll(ottoStackDir, constants.DirPermReadWriteExec)
+	ottoStackDir := filepath.Join(tmpDir, core.OttoStackDir)
+	err = os.MkdirAll(ottoStackDir, core.DirPermReadWriteExec)
 	require.NoError(t, err)
 
 	localConfig := `
@@ -49,8 +49,8 @@ stack:
     - postgres
     - mongodb
 `
-	localConfigPath := filepath.Join(ottoStackDir, constants.LocalConfigFileName)
-	err = os.WriteFile(localConfigPath, []byte(localConfig), constants.FilePermReadWrite)
+	localConfigPath := filepath.Join(ottoStackDir, core.LocalConfigFileName)
+	err = os.WriteFile(localConfigPath, []byte(localConfig), core.FilePermReadWrite)
 	require.NoError(t, err)
 
 	// Change to temp directory so LoadProjectConfig can find the local config
@@ -81,19 +81,19 @@ stack:
     - redis
 `
 	baseConfigPath := filepath.Join(tmpDir, "otto-stack-config.yaml")
-	err = os.WriteFile(baseConfigPath, []byte(baseConfig), constants.FilePermReadWrite)
+	err = os.WriteFile(baseConfigPath, []byte(baseConfig), core.FilePermReadWrite)
 	require.NoError(t, err)
 
 	// Create partial local override (only environment) in otto-stack directory
-	ottoStackDir := filepath.Join(tmpDir, constants.OttoStackDir)
-	err = os.MkdirAll(ottoStackDir, constants.DirPermReadWriteExec)
+	ottoStackDir := filepath.Join(tmpDir, core.OttoStackDir)
+	err = os.MkdirAll(ottoStackDir, core.DirPermReadWriteExec)
 	require.NoError(t, err)
 
 	localConfig := `
 project:
 `
-	localConfigPath := filepath.Join(ottoStackDir, constants.LocalConfigFileName)
-	err = os.WriteFile(localConfigPath, []byte(localConfig), constants.FilePermReadWrite)
+	localConfigPath := filepath.Join(ottoStackDir, core.LocalConfigFileName)
+	err = os.WriteFile(localConfigPath, []byte(localConfig), core.FilePermReadWrite)
 	require.NoError(t, err)
 
 	// Change to temp directory so LoadProjectConfig can find the local config
