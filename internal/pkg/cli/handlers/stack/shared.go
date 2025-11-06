@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // CoreSetup contains shared setup data for core commands
@@ -20,7 +20,7 @@ type CoreSetup struct {
 }
 
 // SetupCoreCommand performs common initialization for core commands
-func SetupCoreCommand(ctx context.Context, base *types.BaseCommand) (*CoreSetup, func(), error) {
+func SetupCoreCommand(ctx context.Context, base *base.BaseCommand) (*CoreSetup, func(), error) {
 	// Check if otto-stack is initialized (redundant check for safety)
 	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {

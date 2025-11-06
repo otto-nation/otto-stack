@@ -3,8 +3,8 @@ package project
 import (
 	"context"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/version"
 	"github.com/spf13/cobra"
 )
@@ -18,7 +18,7 @@ func NewEnforcementHandler(_ any) *EnforcementHandler {
 }
 
 // HandleCheck handles basic version validation
-func (h *EnforcementHandler) HandleCheck(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *EnforcementHandler) HandleCheck(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	projectPath := "."
 	if len(args) > 0 {
 		projectPath = args[0]
@@ -35,6 +35,6 @@ func (h *EnforcementHandler) HandleCheck(ctx context.Context, cmd *cobra.Command
 }
 
 // HandleEnforce handles version enforcement (simplified to just validation)
-func (h *EnforcementHandler) HandleEnforce(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *EnforcementHandler) HandleEnforce(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	return h.HandleCheck(ctx, cmd, args, base)
 }

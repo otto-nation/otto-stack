@@ -13,6 +13,12 @@ import (
 // CommandConfig represents command configuration (minimal for generators)
 type CommandConfig struct {
 	Commands map[string]Command `yaml:"commands"`
+	Global   GlobalConfig       `yaml:"global"`
+}
+
+// GlobalConfig represents global configuration
+type GlobalConfig struct {
+	Flags map[string]FlagConfig `yaml:"flags"`
 }
 
 // Command represents a command definition

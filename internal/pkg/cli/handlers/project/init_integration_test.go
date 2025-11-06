@@ -7,8 +7,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +32,7 @@ func TestInitHandler_Handle_FullFlow(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("force", true, "force initialization")
 
-	base := &types.BaseCommand{}
+	base := &base.BaseCommand{}
 	ctx := context.Background()
 
 	// This would require mocking user input for full integration test

@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // createDirectoryStructure creates the necessary directory structure
@@ -25,7 +25,7 @@ func (h *InitHandler) createDirectoryStructure() error {
 }
 
 // createConfigFile creates the main configuration file
-func (h *InitHandler) createConfigFile(projectName string, services []string, base *types.BaseCommand) error {
+func (h *InitHandler) createConfigFile(projectName string, services []string, base *base.BaseCommand) error {
 	configContent := h.generateConfig(projectName, services)
 
 	configPath := constants.OttoStackDir + "/" + constants.ConfigFileName
@@ -38,7 +38,7 @@ func (h *InitHandler) createConfigFile(projectName string, services []string, ba
 }
 
 // createGitignoreEntries adds entries to .gitignore
-func (h *InitHandler) createGitignoreEntries(base *types.BaseCommand) error {
+func (h *InitHandler) createGitignoreEntries(base *base.BaseCommand) error {
 	gitignorePath := constants.GitignoreFileName
 
 	// Check if .gitignore exists
@@ -80,7 +80,7 @@ func (h *InitHandler) createGitignoreEntries(base *types.BaseCommand) error {
 }
 
 // createReadme creates a README file for the project
-func (h *InitHandler) createReadme(projectName string, services []string, base *types.BaseCommand) error {
+func (h *InitHandler) createReadme(projectName string, services []string, base *base.BaseCommand) error {
 	readmeContent := fmt.Sprintf(`# %s Otto Stack
 
 This directory contains the development stack configuration for %s.

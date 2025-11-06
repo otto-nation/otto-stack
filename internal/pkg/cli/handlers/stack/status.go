@@ -6,11 +6,11 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +27,7 @@ func NewStatusHandler() *StatusHandler {
 }
 
 // Handle executes the status command
-func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Check initialization first
 	if err := utils.CheckInitialization(); err != nil {
 		return err
@@ -69,7 +69,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	resolvedServices := serviceNames
 
 	// Get service status
-	statuses, err := setup.DockerClient.GetServiceStatus(ctx, setup.Config.Project.Name, resolvedServices)
+	statuses, err := setup.DockerClient.GetDockerServiceStatus(ctx, setup.Config.Project.Name, resolvedServices)
 	if err != nil {
 		utils.HandleError(ciFlags, fmt.Errorf(constants.MsgStack_failed_get_service_status, err))
 		return nil

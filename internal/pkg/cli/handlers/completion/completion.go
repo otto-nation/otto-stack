@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -19,10 +20,10 @@ func NewCompletionHandler() *CompletionHandler {
 func (h *CompletionHandler) ValidateArgs(args []string) error {
 	if len(args) != 1 {
 		return fmt.Errorf(constants.MsgCompletion_requires_one_arg,
-			fmt.Sprintf("%v", types.AllShellTypeStrings()))
+			fmt.Sprintf("%v", cli.AllShellTypeStrings()))
 	}
 
-	shell := types.ShellType(args[0])
+	shell := cli.ShellType(args[0])
 	if !shell.IsValid() {
 		return fmt.Errorf(constants.MsgCompletion_unsupported_shell,
 			args[0])
@@ -35,20 +36,20 @@ func (h *CompletionHandler) GetRequiredFlags() []string {
 	return []string{}
 }
 
-func (h *CompletionHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	shell := types.ShellType(args[0])
+func (h *CompletionHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	shell := cli.ShellType(args[0])
 
 	// Get the root command to generate completion for
 	rootCmd := cmd.Root()
 
 	switch shell {
-	case types.ShellTypeBash:
+	case cli.ShellTypeBash:
 		return rootCmd.GenBashCompletion(os.Stdout)
-	case types.ShellTypeZsh:
+	case cli.ShellTypeZsh:
 		return rootCmd.GenZshCompletion(os.Stdout)
-	case types.ShellTypeFish:
+	case cli.ShellTypeFish:
 		return rootCmd.GenFishCompletion(os.Stdout, true)
-	case types.ShellTypePowerShell:
+	case cli.ShellTypePowerShell:
 		return rootCmd.GenPowerShellCompletion(os.Stdout)
 	default:
 		return fmt.Errorf(constants.MsgCompletion_unsupported_shell, shell)

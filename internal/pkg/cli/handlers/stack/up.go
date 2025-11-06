@@ -10,13 +10,14 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -36,7 +37,7 @@ func NewUpHandler() *UpHandler {
 }
 
 // Handle executes the up command
-func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Check initialization first
 	if err := utils.CheckInitialization(); err != nil {
 		return err
@@ -77,7 +78,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	}
 
 	// Clean usage with no repetitive error handling
-	options := types.StartOptions{
+	options := docker.StartOptions{
 		Build:          flags.Build,
 		ForceRecreate:  flags.ForceRecreate,
 		Detach:         flags.Detach,
@@ -216,14 +217,14 @@ func (h *UpHandler) saveState(state *StackState) error {
 }
 
 // cleanupRemovedServices removes services no longer in config
-func (h *UpHandler) cleanupRemovedServices(ctx context.Context, setup *CoreSetup, oldServices, newServices []string, base *types.BaseCommand) error {
+func (h *UpHandler) cleanupRemovedServices(ctx context.Context, setup *CoreSetup, oldServices, newServices []string, base *base.BaseCommand) error {
 	removedServices := h.findRemovedServices(oldServices, newServices)
 	if len(removedServices) == 0 {
 		return nil
 	}
 
 	base.Output.Info(constants.MsgStack_removing_services, removedServices)
-	return setup.DockerClient.ComposeDown(ctx, setup.Config.Project.Name, types.StopOptions{
+	return setup.DockerClient.ComposeDown(ctx, setup.Config.Project.Name, docker.StopOptions{
 		Remove:        true,
 		RemoveVolumes: true,
 	})

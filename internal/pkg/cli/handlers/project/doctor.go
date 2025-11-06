@@ -7,10 +7,10 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -33,7 +33,7 @@ func (h *DoctorHandler) GetRequiredFlags() []string {
 	return []string{}
 }
 
-func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Check initialization first
 	if err := utils.CheckInitialization(); err != nil {
 		return err
@@ -61,7 +61,7 @@ func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	}
 }
 
-func (h *DoctorHandler) checkDocker(base *types.BaseCommand) bool {
+func (h *DoctorHandler) checkDocker(base *base.BaseCommand) bool {
 	base.Output.Info("%s", constants.MsgDoctor_checking_docker)
 
 	if !h.isCommandAvailable(constants.DockerCmd) {
@@ -82,7 +82,7 @@ func (h *DoctorHandler) checkDocker(base *types.BaseCommand) bool {
 	return true
 }
 
-func (h *DoctorHandler) checkDockerCompose(base *types.BaseCommand) bool {
+func (h *DoctorHandler) checkDockerCompose(base *base.BaseCommand) bool {
 	base.Output.Info("%s", constants.MsgDoctor_checking_docker_compose)
 
 	if !h.hasDockerComposePlugin() {
@@ -96,7 +96,7 @@ func (h *DoctorHandler) checkDockerCompose(base *types.BaseCommand) bool {
 	return true
 }
 
-func (h *DoctorHandler) checkProjectInit(base *types.BaseCommand) bool {
+func (h *DoctorHandler) checkProjectInit(base *base.BaseCommand) bool {
 	base.Output.Info("%s", constants.MsgDoctor_checking_project_init)
 
 	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
@@ -111,7 +111,7 @@ func (h *DoctorHandler) checkProjectInit(base *types.BaseCommand) bool {
 	return true
 }
 
-func (h *DoctorHandler) checkConfiguration(base *types.BaseCommand) bool {
+func (h *DoctorHandler) checkConfiguration(base *base.BaseCommand) bool {
 	base.Output.Info("%s", constants.MsgDoctor_checking_config)
 
 	// Check if otto-stack directory exists

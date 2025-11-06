@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
@@ -41,7 +41,7 @@ func TestHandle_DirectoryValidation(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("force", false, "force initialization")
 
-	base := &types.BaseCommand{
+	base := &base.BaseCommand{
 		Logger: &MockLogger{},
 		Output: &MockOutput{},
 	}
@@ -67,7 +67,7 @@ func TestHandle_AlreadyInitialized(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("force", false, "force initialization")
 
-	base := &types.BaseCommand{
+	base := &base.BaseCommand{
 		Logger: &MockLogger{},
 		Output: &MockOutput{},
 	}

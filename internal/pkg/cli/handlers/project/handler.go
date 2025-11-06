@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/otto-nation/otto-stack/internal/pkg/version"
 	"github.com/spf13/cobra"
@@ -41,7 +41,7 @@ func (h *Handler) GetRequiredFlags() []string {
 }
 
 // Handle handles the version command with update checking
-func (h *Handler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *Handler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Parse all flags with validation - single line!
 	flags, err := constants.ParseVersionFlags(cmd)
 	if err != nil {
@@ -57,7 +57,7 @@ func (h *Handler) Handle(ctx context.Context, cmd *cobra.Command, args []string,
 }
 
 // handleCheckUpdates handles the --check-updates flag
-func (h *Handler) handleCheckUpdates(_ context.Context, _ *cobra.Command, _ []string, _ *types.BaseCommand) error {
+func (h *Handler) handleCheckUpdates(_ context.Context, _ *cobra.Command, _ []string, _ *base.BaseCommand) error {
 	h.output.Header("%s", constants.MsgVersion_checking_updates)
 
 	// Get current version (this should come from build-time ldflags)
@@ -91,7 +91,7 @@ func (h *Handler) handleCheckUpdates(_ context.Context, _ *cobra.Command, _ []st
 }
 
 // handleVersionDisplay handles the default version display
-func (h *Handler) handleVersionDisplay(_ context.Context, cmd *cobra.Command, _ []string, _ *types.BaseCommand) error {
+func (h *Handler) handleVersionDisplay(_ context.Context, cmd *cobra.Command, _ []string, _ *base.BaseCommand) error {
 	// Parse all flags with validation - single line!
 	flags, err := constants.ParseVersionFlags(cmd)
 	if err != nil {

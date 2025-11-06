@@ -4,10 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -20,7 +21,7 @@ func NewConnectHandler() *ConnectHandler {
 }
 
 // Handle executes the connect command
-func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Get CI-friendly flags
 	ciFlags := utils.GetCIFlags(cmd)
 
@@ -64,7 +65,7 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Execute connection command
-	options := types.ExecOptions{
+	options := docker.ExecOptions{
 		Interactive: true,
 		TTY:         true,
 	}

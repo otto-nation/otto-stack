@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/stretchr/testify/assert"
 )
@@ -50,7 +50,7 @@ func TestCreateGitignoreEntries_ExistingContent(t *testing.T) {
 	// Create .gitignore with existing content
 	createTestFile(t, constants.GitignoreFileName, TestGitignoreContent)
 
-	err := handler.createGitignoreEntries(&types.BaseCommand{Output: ui.NewOutput()})
+	err := handler.createGitignoreEntries(&base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	content, err := os.ReadFile(constants.GitignoreFileName)
@@ -66,7 +66,7 @@ func TestCreateReadme_WithServices(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis}, &types.BaseCommand{Output: ui.NewOutput()})
+	err = handler.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis}, &base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	readmePath := filepath.Join(constants.OttoStackDir, constants.ReadmeFileName)

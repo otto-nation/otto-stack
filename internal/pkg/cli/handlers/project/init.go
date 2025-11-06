@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +24,7 @@ func NewInitHandler() *InitHandler {
 }
 
 // Handle executes the init command
-func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	logger.Info(constants.LogMsgStartingOperation, constants.LogFieldOperation, constants.OperationInit)
 	defer func() {
 		if r := recover(); r != nil {

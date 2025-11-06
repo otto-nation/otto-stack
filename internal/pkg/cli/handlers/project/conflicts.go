@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +19,7 @@ func NewConflictsHandler() *ConflictsHandler {
 }
 
 // Handle executes the conflicts command
-func (h *ConflictsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *ConflictsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	base.Output.Header("%s", constants.MsgConflicts_header)
 
 	// Check for common port conflicts

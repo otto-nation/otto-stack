@@ -6,13 +6,13 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // validateInitEnvironment validates the environment before initialization
-func (h *InitHandler) validateInitEnvironment(_ *types.BaseCommand) error {
+func (h *InitHandler) validateInitEnvironment(_ *base.BaseCommand) error {
 	// Check if already initialized
 	configPath := filepath.Join(constants.OttoStackDir, constants.ConfigFileName)
 	if _, err := os.Stat(configPath); err == nil {
@@ -92,7 +92,7 @@ func (h *InitHandler) validateServices(serviceNames []string) error {
 }
 
 // validateDirectoryStructure ensures the directory structure is valid for initialization
-func (h *InitHandler) validateDirectoryStructure(base *types.BaseCommand) error {
+func (h *InitHandler) validateDirectoryStructure(base *base.BaseCommand) error {
 	// Check if we're in a git repository (optional but recommended)
 	if _, err := os.Stat(".git"); os.IsNotExist(err) {
 		base.Output.Warning("%s", constants.MsgWarnings_not_git_repository)

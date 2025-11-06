@@ -8,14 +8,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // MockLogger implements the Logger interface for testing
@@ -84,7 +82,7 @@ func TestUpHandler_Handle_ConfigNotFound(t *testing.T) {
 	cmd.Flags().Bool("build", false, "")
 	cmd.Flags().Bool("force-recreate", false, "")
 
-	base := &types.BaseCommand{
+	base := &base.BaseCommand{
 		Logger: mockLogger,
 		Output: mockOutput,
 	}

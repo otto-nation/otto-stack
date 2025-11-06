@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -24,7 +24,7 @@ func TestHandle_ValidationFailure(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("force", false, "force initialization")
 
-	base := &types.BaseCommand{
+	base := &base.BaseCommand{
 		Logger: &MockLogger{},
 		Output: &MockOutput{},
 	}
@@ -45,7 +45,7 @@ func TestHandle_WithForceFlag(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("force", true, "force initialization")
 
-	base := &types.BaseCommand{
+	base := &base.BaseCommand{
 		Logger: &MockLogger{},
 		Output: &MockOutput{},
 	}
@@ -76,7 +76,7 @@ func TestCreateConfigFile(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = handler.createConfigFile(TestProjectName, []string{TestServicePostgres},
-		&types.BaseCommand{Output: ui.NewOutput()})
+		&base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	_, err = os.Stat(TestConfigFilePath)
@@ -88,7 +88,7 @@ func TestCreateGitignoreEntries(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.createGitignoreEntries(&types.BaseCommand{Output: ui.NewOutput()})
+	err := handler.createGitignoreEntries(&base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	_, err = os.Stat(constants.GitignoreFileName)
@@ -103,7 +103,7 @@ func TestCreateReadme(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis}, &types.BaseCommand{Output: ui.NewOutput()})
+	err = handler.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis}, &base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	readmePath := filepath.Join(constants.OttoStackDir, constants.ReadmeFileName)

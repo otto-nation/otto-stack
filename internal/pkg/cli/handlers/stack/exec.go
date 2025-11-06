@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -19,7 +20,7 @@ func NewExecHandler() *ExecHandler {
 }
 
 // Handle executes the exec command
-func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	if len(args) < constants.MinArgumentCount {
 		return fmt.Errorf("%s", constants.MsgErrors_requires_service_and_command)
 	}
@@ -45,7 +46,7 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Create exec options - clean usage with no repetitive error handling
-	options := types.ExecOptions{
+	options := docker.ExecOptions{
 		Interactive: flags.Interactive,
 		TTY:         flags.TTY,
 		User:        flags.User,

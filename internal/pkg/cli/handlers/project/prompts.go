@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // ErrGoBack is returned when user wants to go back
@@ -201,7 +201,7 @@ func (h *InitHandler) promptForAdvancedOptions() (map[string]bool, map[string]bo
 }
 
 // confirmInitializationWithBack shows a summary and asks for confirmation with back option
-func (h *InitHandler) confirmInitializationWithBack(projectName string, services []string, validation, advanced map[string]bool, base *types.BaseCommand) (string, error) {
+func (h *InitHandler) confirmInitializationWithBack(projectName string, services []string, validation, advanced map[string]bool, base *base.BaseCommand) (string, error) {
 	base.Output.Info("%s", constants.MsgInit_summary)
 	base.Output.Info(constants.MsgInit_project_summary, projectName)
 	base.Output.Info(constants.MsgInit_services_summary, strings.Join(services, ", "))

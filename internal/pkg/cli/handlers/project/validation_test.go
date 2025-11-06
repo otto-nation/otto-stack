@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/stretchr/testify/assert"
 )
@@ -71,14 +71,14 @@ func TestValidateInitEnvironment(t *testing.T) {
 	defer cleanup()
 
 	// Test clean directory
-	err := handler.validateInitEnvironment(&types.BaseCommand{Output: ui.NewOutput()})
+	err := handler.validateInitEnvironment(&base.BaseCommand{Output: ui.NewOutput()})
 	if err != nil && !strings.Contains(err.Error(), MsgRequiredTool) {
 		t.Errorf("Unexpected error: %v", err)
 	}
 
 	// Test with existing config
 	createTestConfig(t)
-	err = handler.validateInitEnvironment(&types.BaseCommand{Output: ui.NewOutput()})
+	err = handler.validateInitEnvironment(&base.BaseCommand{Output: ui.NewOutput()})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), MsgAlreadyInitialized)
 }
@@ -89,12 +89,12 @@ func TestValidateDirectoryStructure(t *testing.T) {
 	defer cleanup()
 
 	// Test clean directory
-	err := handler.validateDirectoryStructure(&types.BaseCommand{Output: ui.NewOutput()})
+	err := handler.validateDirectoryStructure(&base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	// Test with conflicting file
 	createTestFile(t, constants.DockerComposeFileName, "version: '3'")
-	err = handler.validateDirectoryStructure(&types.BaseCommand{Output: ui.NewOutput()})
+	err = handler.validateDirectoryStructure(&base.BaseCommand{Output: ui.NewOutput()})
 	assert.Error(t, err)
 	assert.True(t,
 		strings.Contains(err.Error(), "conflicting file") ||

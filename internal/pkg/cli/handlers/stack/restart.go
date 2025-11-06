@@ -8,9 +8,9 @@ import (
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +23,7 @@ func NewRestartHandler() *RestartHandler {
 }
 
 // Handle executes the restart command
-func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Check initialization first
 	if err := utils.CheckInitialization(); err != nil {
 		return err
@@ -67,7 +67,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	// Stop services first
 	// Restart operation
 	// Stop services
-	stopOptions := types.StopOptions{
+	stopOptions := docker.StopOptions{
 		Timeout: flags.Timeout,
 	}
 	if err := dockerClient.ComposeDown(ctx, cfg.Project.Name, stopOptions); err != nil {
@@ -75,7 +75,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Start services
-	startOptions := types.StartOptions{
+	startOptions := docker.StartOptions{
 		Detach: true,
 	}
 	if err := dockerClient.ComposeUp(ctx, cfg.Project.Name, serviceNames, startOptions); err != nil {

@@ -7,20 +7,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"gopkg.in/yaml.v3"
 )
 
 // Formatter handles all output formatting
 type Formatter struct {
 	writer io.Writer
-	output types.Output
+	output base.Output
 }
 
 // New creates a new formatter
-func New(writer io.Writer, output types.Output) *Formatter {
+func New(writer io.Writer, output base.Output) *Formatter {
 	return &Formatter{
 		writer: writer,
 		output: output,

@@ -12,7 +12,6 @@ import (
 	"github.com/docker/docker/client"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 type ResourceType string
@@ -50,7 +49,7 @@ func (c *Client) Close() error {
 }
 
 // Compose operations using docker compose CLI
-func (c *Client) ComposeUp(ctx context.Context, project string, services []string, options types.StartOptions) error {
+func (c *Client) ComposeUp(ctx context.Context, project string, services []string, options StartOptions) error {
 	args := []string{"compose", "-f", constants.DockerComposeFile, "-p", project, "up", "-d"}
 	if options.Build {
 		args = append(args, "--build")
@@ -63,7 +62,7 @@ func (c *Client) ComposeUp(ctx context.Context, project string, services []strin
 	return c.RunCommand(ctx, args...)
 }
 
-func (c *Client) ComposeDown(ctx context.Context, project string, options types.StopOptions) error {
+func (c *Client) ComposeDown(ctx context.Context, project string, options StopOptions) error {
 	var args []string
 	if options.Remove {
 		args = []string{"compose", "-f", constants.DockerComposeFile, "-p", project, "down"}
@@ -83,7 +82,7 @@ func (c *Client) ComposeDown(ctx context.Context, project string, options types.
 	return c.RunCommand(ctx, args...)
 }
 
-func (c *Client) ComposeLogs(ctx context.Context, project string, services []string, options types.LogOptions) error {
+func (c *Client) ComposeLogs(ctx context.Context, project string, services []string, options LogOptions) error {
 	args := []string{"compose", "-f", constants.DockerComposeFile, "-p", project, "logs"}
 	if options.Follow {
 		args = append(args, "--follow")
@@ -114,23 +113,23 @@ func (c *Client) RemoveResources(ctx context.Context, resourceType ResourceType,
 }
 
 // Container status
-func (c *Client) GetServiceStatus(ctx context.Context, project string, services []string) ([]types.ServiceStatus, error) {
+func (c *Client) GetDockerServiceStatus(ctx context.Context, project string, services []string) ([]DockerServiceStatus, error) {
 	filter := NewProjectFilter(project)
 	containers, err := c.cli.ContainerList(ctx, container.ListOptions{All: true, Filters: filter})
 	if err != nil {
 		return nil, err
 	}
 
-	var statuses []types.ServiceStatus
+	var statuses []DockerServiceStatus
 	for _, container := range containers {
 		serviceName := container.Labels[constants.ComposeServiceLabel]
 		if len(services) > 0 && !contains(services, serviceName) {
 			continue
 		}
 
-		status := types.ServiceStatus{
+		status := DockerServiceStatus{
 			Name:   serviceName,
-			State:  types.ServiceState(container.State),
+			State:  DockerServiceState(container.State),
 			Health: c.getContainerHealth(container),
 		}
 		statuses = append(statuses, status)
@@ -139,16 +138,16 @@ func (c *Client) GetServiceStatus(ctx context.Context, project string, services 
 	return statuses, nil
 }
 
-func (c *Client) getContainerHealth(cont container.Summary) types.HealthStatus {
+func (c *Client) getContainerHealth(cont container.Summary) DockerHealthStatus {
 	switch cont.State {
 	case constants.StateRunning:
-		return types.HealthStatusHealthy
+		return DockerHealthStatusHealthy
 	case constants.StateStopped:
-		return types.HealthStatusUnhealthy
+		return DockerHealthStatusUnhealthy
 	case constants.StateStarting:
-		return types.HealthStatusStarting
+		return DockerHealthStatusStarting
 	default:
-		return types.HealthStatusNone
+		return DockerHealthStatusNone
 	}
 }
 

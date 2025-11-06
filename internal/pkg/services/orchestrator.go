@@ -10,7 +10,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // Orchestrator provides unified service management operations
@@ -44,16 +43,16 @@ func (o *Orchestrator) Close() error {
 }
 
 // Core operations using compose directly
-func (o *Orchestrator) StartServices(ctx context.Context, services []string, options types.StartOptions) error {
+func (o *Orchestrator) StartServices(ctx context.Context, services []string, options docker.StartOptions) error {
 	return o.docker.ComposeUp(ctx, o.getProjectName(), services, options)
 }
 
-func (o *Orchestrator) StopServices(ctx context.Context, services []string, options types.StopOptions) error {
+func (o *Orchestrator) StopServices(ctx context.Context, services []string, options docker.StopOptions) error {
 	return o.docker.ComposeDown(ctx, o.getProjectName(), options)
 }
 
-func (o *Orchestrator) GetServiceStatus(ctx context.Context, services []string) ([]types.ServiceStatus, error) {
-	statuses, err := o.docker.GetServiceStatus(ctx, o.getProjectName(), services)
+func (o *Orchestrator) GetServiceStatus(ctx context.Context, services []string) ([]docker.DockerServiceStatus, error) {
+	statuses, err := o.docker.GetDockerServiceStatus(ctx, o.getProjectName(), services)
 	if err != nil {
 		return nil, err
 	}
@@ -68,11 +67,11 @@ func (o *Orchestrator) GetServiceStatus(ctx context.Context, services []string) 
 	return statuses, nil
 }
 
-func (o *Orchestrator) GetLogs(ctx context.Context, services []string, options types.LogOptions) error {
+func (o *Orchestrator) GetLogs(ctx context.Context, services []string, options docker.LogOptions) error {
 	return o.docker.ComposeLogs(ctx, o.getProjectName(), services, options)
 }
 
-func (o *Orchestrator) ExecCommand(ctx context.Context, service string, cmd []string, options types.ExecOptions) error {
+func (o *Orchestrator) ExecCommand(ctx context.Context, service string, cmd []string, options docker.ExecOptions) error {
 	// Use docker compose exec for better integration
 	args := []string{"compose", "-f", constants.DockerComposeFile, "-p", o.getProjectName(), "exec"}
 	if options.User != "" {
@@ -88,11 +87,11 @@ func (o *Orchestrator) ExecCommand(ctx context.Context, service string, cmd []st
 }
 
 // Resource cleanup
-func (o *Orchestrator) CleanupResources(ctx context.Context, options types.CleanupOptions) error {
+func (o *Orchestrator) CleanupResources(ctx context.Context, options docker.CleanupOptions) error {
 	project := o.getProjectName()
 
 	// Stop all services first
-	if err := o.docker.ComposeDown(ctx, project, types.StopOptions{
+	if err := o.docker.ComposeDown(ctx, project, docker.StopOptions{
 		Remove:        true,
 		RemoveVolumes: options.RemoveVolumes,
 	}); err != nil {

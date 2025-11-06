@@ -5,11 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/env"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // generateConfig generates config using simplified approach
@@ -22,7 +22,7 @@ func (h *InitHandler) generateConfig(name string, services []string) string {
 }
 
 // generateInitialComposeFiles generates initial compose files during init
-func (h *InitHandler) generateInitialComposeFiles(services []string, projectName string, _, _ map[string]bool, base *types.BaseCommand) error {
+func (h *InitHandler) generateInitialComposeFiles(services []string, projectName string, _, _ map[string]bool, base *base.BaseCommand) error {
 	// Generate .env.generated
 	if err := h.generateEnvFile(services, projectName, base); err != nil {
 		return fmt.Errorf("failed to generate .env file: %w", err)
@@ -41,7 +41,7 @@ func (h *InitHandler) generateInitialComposeFiles(services []string, projectName
 }
 
 // generateEnvFile generates .env.generated using programmatic generation
-func (h *InitHandler) generateEnvFile(services []string, projectName string, base *types.BaseCommand) error {
+func (h *InitHandler) generateEnvFile(services []string, projectName string, base *base.BaseCommand) error {
 	base.Output.Info("%s", constants.MsgProcess_generating_env)
 
 	envContent, err := env.Generate(projectName, services)
@@ -58,7 +58,7 @@ func (h *InitHandler) generateEnvFile(services []string, projectName string, bas
 }
 
 // generateDockerCompose generates docker-compose.yml using programmatic generation
-func (h *InitHandler) generateDockerCompose(services []string, projectName string, base *types.BaseCommand) error {
+func (h *InitHandler) generateDockerCompose(services []string, projectName string, base *base.BaseCommand) error {
 	base.Output.Info("%s", constants.MsgProcess_generating_compose)
 
 	generator, err := compose.NewGenerator(projectName, constants.ServicesDir)
