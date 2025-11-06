@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"gopkg.in/yaml.v3"
 )
 
@@ -40,7 +40,7 @@ func addServiceEnv(content *strings.Builder, serviceName string) {
 		return
 	}
 
-	var service types.ServiceConfigV2
+	var service services.ServiceConfigV2
 	if err := yaml.Unmarshal(data, &service); err != nil {
 		return
 	}

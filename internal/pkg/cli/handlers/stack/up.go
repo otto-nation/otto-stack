@@ -15,6 +15,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
@@ -93,7 +94,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	}
 
 	// Filter services to only include container services
-	serviceUtils := utils.NewServiceUtils()
+	serviceUtils := services.NewServiceUtils()
 	filteredServices, err := serviceUtils.ResolveServices(serviceNames)
 	if err != nil {
 		return fmt.Errorf(constants.MsgStack_failed_resolve_services, err)

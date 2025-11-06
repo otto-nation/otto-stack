@@ -1,4 +1,4 @@
-name: localstack-sqs
+name: localstack-sqs-v2
 description: LocalStack SQS (Simple Queue Service) emulation
 service_type: container
 

@@ -1,4 +1,4 @@
-name: kafka
+name: kafka-v2
 description: Complete Apache Kafka messaging platform with UI and topic management
 service_type: container
 

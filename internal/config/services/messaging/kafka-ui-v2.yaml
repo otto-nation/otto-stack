@@ -1,4 +1,4 @@
-name: kafka-ui
+name: kafka-ui-v2
 description: Web UI for Kafka cluster management and topic browsing
 service_type: container
 

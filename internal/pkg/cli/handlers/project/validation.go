@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
@@ -66,14 +66,14 @@ func (h *InitHandler) validateProjectName(name string) error {
 }
 
 // validateServices validates the selected services
-func (h *InitHandler) validateServices(services []string) error {
-	if len(services) == 0 {
+func (h *InitHandler) validateServices(serviceNames []string) error {
+	if len(serviceNames) == 0 {
 		return fmt.Errorf("%s", constants.MsgValidation_no_services_selected)
 	}
 
 	// Check for duplicates
 	seen := make(map[string]bool)
-	for _, serviceName := range services {
+	for _, serviceName := range serviceNames {
 		if seen[serviceName] {
 			return fmt.Errorf(constants.MsgValidation_duplicate_service, serviceName)
 		}
@@ -81,8 +81,8 @@ func (h *InitHandler) validateServices(services []string) error {
 	}
 
 	// Validate each service exists
-	serviceUtils := utils.NewServiceUtils()
-	for _, serviceName := range services {
+	serviceUtils := services.NewServiceUtils()
+	for _, serviceName := range serviceNames {
 		if _, err := serviceUtils.LoadServiceConfig(serviceName); err != nil {
 			return fmt.Errorf(constants.MsgValidation_invalid_service, serviceName, err)
 		}

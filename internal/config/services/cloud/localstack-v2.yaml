@@ -1,4 +1,4 @@
-name: localstack
+name: localstack-v2
 description: Complete LocalStack AWS emulation environment
 service_type: container
 

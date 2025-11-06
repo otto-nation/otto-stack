@@ -13,11 +13,13 @@ import (
 )
 
 const (
-	TemplateFilePath       = "cmd/generate-services/templates/services.tmpl"
-	TypesTemplateFilePath  = "cmd/generate-services/templates/types.tmpl"
-	GeneratedFilePath      = "internal/pkg/constants/services_generated.go"
-	TypesGeneratedFilePath = "internal/pkg/constants/types_generated.go"
-	ServicesDir            = "internal/config/services"
+	TemplateFilePath        = "cmd/generate-services/templates/services.tmpl"
+	TypesTemplateFilePath   = "cmd/generate-services/templates/types.tmpl"
+	SchemaTemplateFilePath  = "cmd/generate-services/templates/schema.tmpl"
+	GeneratedFilePath       = "internal/pkg/services/services_generated.go"
+	TypesGeneratedFilePath  = "internal/pkg/services/types_generated.go"
+	SchemaGeneratedFilePath = "internal/pkg/services/schema_generated.go"
+	ServicesDir             = "internal/config/services"
 )
 
 type constantData struct {
@@ -73,6 +75,11 @@ func main() {
 
 	if err := generateTypes(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate types: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := generateSchema(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to generate schema: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -136,12 +143,17 @@ func (c *collectors) processFile(path string) error {
 	return nil
 }
 
+const (
+	minPathParts = 3
+	pathParts    = 2
+)
+
 func (c *collectors) addBasic(serviceName, path string) {
 	c.names["Service"+toPascalCase(serviceName)] = serviceName
 
 	parts := strings.Split(path, "/")
-	if len(parts) >= 3 {
-		cat := parts[len(parts)-2]
+	if len(parts) >= minPathParts {
+		cat := parts[len(parts)-pathParts]
 		c.categories["Category"+toPascalCase(cat)] = cat
 	}
 }
@@ -205,7 +217,7 @@ func (c *collectors) addPorts(service map[string]any, serviceName string) {
 		}
 
 		parts := strings.Split(portStr, ":")
-		if len(parts) == 2 {
+		if len(parts) == pathParts {
 			if portNum, err := strconv.Atoi(parts[1]); err == nil {
 				c.ports["Port"+toPascalCase(serviceName)] = portNum
 				c.protocols["ProtocolTcp"] = "tcp"
@@ -300,7 +312,7 @@ func generateConstants(serviceConstants *ServiceConstants) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	return tmpl.Execute(file, serviceConstants)
 }
@@ -315,7 +327,22 @@ func generateTypes() error {
 	if err != nil {
 		return fmt.Errorf("failed to create types file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
+
+	return tmpl.Execute(file, nil)
+}
+
+func generateSchema() error {
+	tmpl, err := template.ParseFiles(SchemaTemplateFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to parse schema template: %w", err)
+	}
+
+	file, err := os.Create(SchemaGeneratedFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to create schema file: %w", err)
+	}
+	defer func() { _ = file.Close() }()
 
 	return tmpl.Execute(file, nil)
 }

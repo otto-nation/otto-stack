@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"gopkg.in/yaml.v3"
 )
@@ -160,24 +161,24 @@ func (f *Formatter) formatCatalogGroup(catalog ServiceCatalog) error {
 
 	f.output.Header(constants.MsgServiceCatalogHeader)
 
-	for categoryName, services := range catalog.Categories {
-		if len(services) == 0 {
+	for categoryName, serviceList := range catalog.Categories {
+		if len(serviceList) == 0 {
 			continue
 		}
 
 		icon := "📦"
-		if displayInfo, exists := constants.CategoryDisplayInfo[categoryName]; exists {
+		if displayInfo, exists := services.CategoryDisplayInfo[categoryName]; exists {
 			icon = displayInfo.Icon
 		}
 
 		plural := ""
-		if len(services) != 1 {
+		if len(serviceList) != 1 {
 			plural = "s"
 		}
 		_, _ = fmt.Fprintf(f.writer, "%s %s\n", icon,
-			fmt.Sprintf(constants.MsgServiceCount, categoryName, len(services), plural))
+			fmt.Sprintf(constants.MsgServiceCount, categoryName, len(serviceList), plural))
 
-		for _, service := range services {
+		for _, service := range serviceList {
 			description := service.Description
 			if description == "" {
 				description = constants.MsgServices_no_description

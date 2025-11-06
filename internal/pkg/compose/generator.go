@@ -5,7 +5,6 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
@@ -31,16 +30,9 @@ func NewGenerator(projectName string, servicesPath string) (*Generator, error) {
 
 // GenerateYAML creates a docker-compose YAML for the specified services
 func (g *Generator) GenerateYAML(serviceNames []string) ([]byte, error) {
-	// Use utils for service resolution (no duplication)
-	serviceUtils := utils.NewServiceUtils()
-	resolvedServices, err := serviceUtils.ResolveServices(serviceNames)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve services: %w", err)
-	}
-
-	// Build compose structure
+	// Build compose structure with project-specific default network
 	compose := map[string]any{
-		constants.ComposeFieldServices: g.buildServices(resolvedServices),
+		constants.ComposeFieldServices: g.buildServices(serviceNames),
 		constants.ComposeFieldNetworks: map[string]any{
 			"default": map[string]any{
 				constants.ComposeFieldName: fmt.Sprintf("%s-network", g.projectName),
@@ -53,53 +45,89 @@ func (g *Generator) GenerateYAML(serviceNames []string) ([]byte, error) {
 
 // buildServices creates the services section
 func (g *Generator) buildServices(serviceNames []string) map[string]any {
-	services := make(map[string]any)
+	serviceList := make(map[string]any)
 
 	for _, serviceName := range serviceNames {
-		serviceDef, err := g.manager.GetService(serviceName)
+		serviceDef, err := g.manager.GetServiceV2(serviceName)
 		if err != nil {
 			continue
 		}
 
 		// Skip configuration services (they merge into container services)
-		if serviceDef.Type == constants.ServiceTypeConfiguration {
+		if serviceDef.ServiceType == services.ServiceTypeConfiguration {
 			continue
 		}
 
-		services[serviceName] = g.buildService(serviceDef)
+		serviceList[serviceName] = g.buildServiceFromV2(serviceDef)
 	}
 
-	return services
+	return serviceList
 }
 
-// buildService creates a single service definition
-func (g *Generator) buildService(def services.Service) map[string]any {
+func (g *Generator) buildServiceFromV2(v2 *services.ServiceConfigV2) map[string]any {
 	service := map[string]any{
-		constants.ComposeFieldImage: def.Docker.Image,
+		constants.ComposeFieldImage: v2.Container.Image,
 	}
 
-	if len(def.Docker.Ports) > 0 {
-		service[constants.ComposeFieldPorts] = def.Docker.Ports
+	// Convert V2 ports to compose format
+	if len(v2.Container.Ports) > 0 {
+		var ports []string
+		for _, port := range v2.Container.Ports {
+			portStr := fmt.Sprintf("%s:%s", port.External, port.Internal)
+			if port.Protocol != "" && port.Protocol != "tcp" {
+				portStr += "/" + port.Protocol
+			}
+			ports = append(ports, portStr)
+		}
+		service[constants.ComposeFieldPorts] = ports
 	}
 
-	if len(def.Docker.Environment) > 0 {
-		service[constants.ComposeFieldEnvironment] = def.Docker.Environment
+	if len(v2.Container.Environment) > 0 {
+		service[constants.ComposeFieldEnvironment] = v2.Container.Environment
 	}
 
-	if len(def.Docker.SimpleVolumes) > 0 {
-		service[constants.ComposeFieldVolumes] = def.Docker.SimpleVolumes
+	if len(v2.Container.Volumes) > 0 {
+		var volumes []string
+		for _, vol := range v2.Container.Volumes {
+			volStr := fmt.Sprintf("%s:%s", vol.Name, vol.Mount)
+			if vol.ReadOnly {
+				volStr += ":ro"
+			}
+			volumes = append(volumes, volStr)
+		}
+		service[constants.ComposeFieldVolumes] = volumes
 	}
 
-	if def.Docker.Restart != "" {
-		service[constants.ComposeFieldRestart] = def.Docker.Restart
+	if v2.Container.Restart != "" {
+		service[constants.ComposeFieldRestart] = string(v2.Container.Restart)
 	}
 
-	if len(def.Docker.Command) > 0 {
-		service[constants.ComposeFieldCommand] = def.Docker.Command
+	if len(v2.Container.Command) > 0 {
+		service[constants.ComposeFieldCommand] = v2.Container.Command
 	}
 
-	if len(def.Docker.DependsOn) > 0 {
-		service[constants.ComposeFieldDependsOn] = def.Docker.DependsOn
+	if v2.Container.MemoryLimit != "" {
+		service["mem_limit"] = v2.Container.MemoryLimit
+	}
+
+	// Add health check if present
+	if v2.Container.HealthCheck != nil {
+		healthCheck := map[string]any{
+			"test": v2.Container.HealthCheck.Test,
+		}
+		if v2.Container.HealthCheck.Interval > 0 {
+			healthCheck["interval"] = v2.Container.HealthCheck.Interval.String()
+		}
+		if v2.Container.HealthCheck.Timeout > 0 {
+			healthCheck["timeout"] = v2.Container.HealthCheck.Timeout.String()
+		}
+		if v2.Container.HealthCheck.Retries > 0 {
+			healthCheck["retries"] = v2.Container.HealthCheck.Retries
+		}
+		if v2.Container.HealthCheck.StartPeriod > 0 {
+			healthCheck["start_period"] = v2.Container.HealthCheck.StartPeriod.String()
+		}
+		service["healthcheck"] = healthCheck
 	}
 
 	return service
@@ -107,16 +135,9 @@ func (g *Generator) buildService(def services.Service) map[string]any {
 
 // Generate creates a compose structure (for backward compatibility)
 func (g *Generator) Generate(serviceNames []string) (map[string]any, error) {
-	// Use utils for service resolution
-	serviceUtils := utils.NewServiceUtils()
-	resolvedServices, err := serviceUtils.ResolveServices(serviceNames)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve services: %w", err)
-	}
-
 	// Build compose structure
 	return map[string]any{
-		constants.ComposeFieldServices: g.buildServices(resolvedServices),
+		constants.ComposeFieldServices: g.buildServices(serviceNames),
 		constants.ComposeFieldNetworks: map[string]any{
 			"default": map[string]any{
 				constants.ComposeFieldName: fmt.Sprintf("%s-network", g.projectName),

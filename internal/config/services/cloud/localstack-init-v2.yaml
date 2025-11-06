@@ -1,4 +1,4 @@
-name: localstack-init
+name: localstack-init-v2
 description: LocalStack AWS resource initialization service
 hidden: true
 service_type: container

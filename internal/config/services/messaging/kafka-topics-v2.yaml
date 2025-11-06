@@ -1,4 +1,4 @@
-name: kafka-topics
+name: kafka-topics-v2
 description: Kafka topic initialization and management service
 hidden: true
 service_type: container

@@ -9,6 +9,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -53,12 +54,19 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	}
 
 	// Apply same service resolution as up command
-	serviceUtils := utils.NewServiceUtils()
-	resolvedServices, err := serviceUtils.ResolveServices(serviceNames)
+	manager, err := services.New()
 	if err != nil {
+		utils.HandleError(ciFlags, fmt.Errorf("failed to create service manager: %w", err))
+		return nil
+	}
+
+	// Validate services exist
+	if err := manager.ValidateServices(serviceNames); err != nil {
 		utils.HandleError(ciFlags, fmt.Errorf(constants.MsgStack_failed_resolve_services, err))
 		return nil
 	}
+
+	resolvedServices := serviceNames
 
 	// Get service status
 	statuses, err := setup.DockerClient.GetServiceStatus(ctx, setup.Config.Project.Name, resolvedServices)

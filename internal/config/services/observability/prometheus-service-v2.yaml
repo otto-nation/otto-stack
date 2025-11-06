@@ -1,4 +1,4 @@
-name: prometheus-service
+name: prometheus-service-v2
 description: Prometheus metrics collection and monitoring system
 service_type: container
 

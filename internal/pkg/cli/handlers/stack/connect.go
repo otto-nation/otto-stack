@@ -84,10 +84,21 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 
 // getConnectionCommand returns the appropriate connection command for the service
 func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host string, port int, _ bool) ([]string, error) {
-	config, err := services.GetConnectionConfig(serviceName)
+	manager, err := services.New()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create service manager: %w", err)
+	}
+
+	service, err := manager.GetServiceV2(serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("unsupported service type: %s", serviceName)
 	}
+
+	if service.Service.Connection == nil {
+		return nil, fmt.Errorf("service %s does not support connections", serviceName)
+	}
+
+	config := service.Service.Connection
 
 	cmd := []string{config.Client}
 

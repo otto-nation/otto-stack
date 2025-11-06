@@ -1,4 +1,4 @@
-name: zookeeper
+name: zookeeper-v2
 description: Apache Zookeeper coordination service for distributed systems
 service_type: container
 

@@ -5,21 +5,18 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"gopkg.in/yaml.v3"
 )
 
 // Manager handles all service operations
 type Manager struct {
-	services   map[string]Service
-	servicesV2 map[string]types.ServiceConfigV2
+	servicesV2 map[string]ServiceConfigV2
 }
 
 // New creates a new service manager
 func New() (*Manager, error) {
 	manager := &Manager{
-		services:   make(map[string]Service),
-		servicesV2: make(map[string]types.ServiceConfigV2),
+		servicesV2: make(map[string]ServiceConfigV2),
 	}
 
 	if err := manager.loadServices(); err != nil {
@@ -29,35 +26,24 @@ func New() (*Manager, error) {
 	return manager, nil
 }
 
-// GetService returns a service by name (V1 format)
-func (m *Manager) GetService(name string) (Service, error) {
-	service, exists := m.services[name]
+// GetService returns a service by name (V2 format only)
+func (m *Manager) GetService(name string) (ServiceConfigV2, error) {
+	service, exists := m.servicesV2[name]
 	if !exists {
-		return Service{}, fmt.Errorf("service not found: %s", name)
+		return ServiceConfigV2{}, fmt.Errorf("service not found: %s", name)
 	}
 	return service, nil
 }
 
-// GetServicesByCategory returns services grouped by category
-func (m *Manager) GetServicesByCategory() map[string][]Service {
-	categories := make(map[string][]Service)
-
-	for _, service := range m.services {
-		categories[service.Category] = append(categories[service.Category], service)
-	}
-
-	return categories
-}
-
 // GetAllServices returns all services
-func (m *Manager) GetAllServices() map[string]Service {
-	return m.services
+func (m *Manager) GetAllServices() map[string]ServiceConfigV2 {
+	return m.servicesV2
 }
 
 // ValidateServices validates a list of service names
 func (m *Manager) ValidateServices(serviceNames []string) error {
 	for _, name := range serviceNames {
-		if _, exists := m.services[name]; !exists {
+		if _, exists := m.servicesV2[name]; !exists {
 			return fmt.Errorf("unknown service: %s", name)
 		}
 	}
@@ -70,45 +56,53 @@ func (m *Manager) GetDependencies(serviceName string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return service.Dependencies.Required, nil
+	return service.Service.Dependencies.Required, nil
+}
+
+// GetServiceV2 returns a service by name in V2 format
+func (m *Manager) GetServiceV2(name string) (*ServiceConfigV2, error) {
+	if service, exists := m.servicesV2[name]; exists {
+		return &service, nil
+	}
+	return nil, fmt.Errorf("service not found: %s", name)
 }
 
 // BuildConnectCommand builds a connection command for a service
 func (m *Manager) BuildConnectCommand(serviceName string, options map[string]string) ([]string, error) {
-	service, err := m.GetService(serviceName)
+	v2Service, err := m.GetServiceV2(serviceName)
 	if err != nil {
 		return nil, err
 	}
 
-	if service.Connection.Client == "" {
-		return nil, fmt.Errorf("no connection client configured for service: %s", serviceName)
+	return m.buildV2ConnectCommand(v2Service, options)
+}
+
+// buildV2ConnectCommand builds connection command from V2 management spec
+func (m *Manager) buildV2ConnectCommand(v2 *ServiceConfigV2, options map[string]string) ([]string, error) {
+	if v2.Service.Management == nil || v2.Service.Management.Connect == nil {
+		return nil, fmt.Errorf("no connect operation configured for service: %s", v2.Name)
 	}
 
-	cmd := []string{service.Connection.Client}
-
-	// Add connection parameters
-	if host, ok := options["host"]; ok && service.Connection.HostFlag != "" {
-		cmd = append(cmd, service.Connection.HostFlag, host)
+	connect := v2.Service.Management.Connect
+	if len(connect.Command) == 0 {
+		return nil, fmt.Errorf("no connect command configured for service: %s", v2.Name)
 	}
 
-	if port, ok := options["port"]; ok && service.Connection.PortFlag != "" {
-		cmd = append(cmd, service.Connection.PortFlag, port)
-	} else if service.Connection.DefaultPort > 0 && service.Connection.PortFlag != "" {
-		cmd = append(cmd, service.Connection.PortFlag, fmt.Sprintf("%d", service.Connection.DefaultPort))
+	cmd := make([]string, len(connect.Command))
+	copy(cmd, connect.Command)
+
+	// Use default args if no specific args provided
+	if args, exists := connect.Args["default"]; exists {
+		cmd = append(cmd, args...)
 	}
 
-	if user, ok := options["user"]; ok && service.Connection.UserFlag != "" {
-		cmd = append(cmd, service.Connection.UserFlag, user)
-	} else if service.Connection.DefaultUser != "" && service.Connection.UserFlag != "" {
-		cmd = append(cmd, service.Connection.UserFlag, service.Connection.DefaultUser)
+	// Apply any provided options/overrides
+	for key, value := range options {
+		if key == "database" && v2.Service.Connection != nil && v2.Service.Connection.DBFlag != "" {
+			cmd = append(cmd, v2.Service.Connection.DBFlag, value)
+		}
+		// Add more option handling as needed
 	}
-
-	if database, ok := options["database"]; ok && service.Connection.DBFlag != "" {
-		cmd = append(cmd, service.Connection.DBFlag, database)
-	}
-
-	// Add extra flags
-	cmd = append(cmd, service.Connection.ExtraFlags...)
 
 	return cmd, nil
 }
@@ -147,7 +141,9 @@ func (m *Manager) loadCategoryServices(category string) error {
 			continue
 		}
 
-		serviceName := constants.TrimYAMLExt(entry.Name())
+		fileName := entry.Name()
+		serviceName := constants.TrimYAMLExt(fileName)
+
 		if err := m.loadService(category, serviceName); err != nil {
 			return fmt.Errorf("failed to load service %s: %w", serviceName, err)
 		}
@@ -156,180 +152,74 @@ func (m *Manager) loadCategoryServices(category string) error {
 	return nil
 }
 
-// loadService loads a single service from YAML
+// loadService loads a single service from YAML (V2 only)
 func (m *Manager) loadService(category, serviceName string) error {
-	servicePath := fmt.Sprintf("%s/%s/%s.yaml", constants.EmbeddedServicesDir, category, serviceName)
-	data, err := config.EmbeddedServicesFS.ReadFile(servicePath)
-	if err != nil {
-		return fmt.Errorf("failed to read service file: %w", err)
-	}
-
-	// Detect V2 format by checking for V2-specific fields
-	if isV2Format(data) {
+	// Try V2 format
+	v2Path := fmt.Sprintf("%s/%s/%s-v2.yaml", constants.EmbeddedServicesDir, category, serviceName)
+	if data, err := config.EmbeddedServicesFS.ReadFile(v2Path); err == nil {
 		return m.loadV2Service(data, serviceName, category)
 	}
 
-	return m.loadV1Service(data, serviceName, category)
+	// Try exact filename (for services like redis-v2)
+	exactPath := fmt.Sprintf("%s/%s/%s.yaml", constants.EmbeddedServicesDir, category, serviceName)
+	if data, err := config.EmbeddedServicesFS.ReadFile(exactPath); err == nil {
+		return m.loadV2Service(data, serviceName, category)
+	}
+
+	return fmt.Errorf("service file not found: %s", serviceName)
 }
 
 func (m *Manager) loadV2Service(data []byte, serviceName, category string) error {
-	var serviceV2 types.ServiceConfigV2
+	var serviceV2 ServiceConfigV2
 	if err := yaml.Unmarshal(data, &serviceV2); err != nil {
 		return fmt.Errorf("failed to parse V2 service YAML: %w", err)
 	}
 
-	m.servicesV2[serviceName] = serviceV2
-
-	// Convert V2 to V1 for backward compatibility
-	service := convertV2ToV1(serviceV2, category)
-	m.services[serviceName] = service
-	return nil
-}
-
-func (m *Manager) loadV1Service(data []byte, serviceName, category string) error {
-	var service Service
-	if err := yaml.Unmarshal(data, &service); err != nil {
-		return fmt.Errorf("failed to parse service YAML: %w", err)
-	}
-
 	// Set category if not specified in YAML
-	if service.Category == "" {
-		service.Category = category
+	if serviceV2.Category == "" {
+		serviceV2.Category = category
 	}
 
-	// Set name if not specified in YAML
-	if service.Name == "" {
-		service.Name = serviceName
+	// Use the name from the YAML file, not the filename
+	actualServiceName := serviceV2.Name
+	if actualServiceName == "" {
+		actualServiceName = serviceName
 	}
 
-	m.services[serviceName] = service
+	m.servicesV2[actualServiceName] = serviceV2
 	return nil
 }
 
 // isV2Format detects if the YAML is in V2 format
-func isV2Format(data []byte) bool {
-	// Parse as generic map to check structure
-	var config map[string]any
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return false
-	}
 
-	// V2 format has container section and structured format
-	_, hasContainer := config[constants.YAMLKeyContainer]
-	_, hasService := config[constants.YAMLKeyService]
-
-	return hasContainer || hasService
-}
-
-// convertV2ToV1 converts V2 format to V1 for backward compatibility
-func convertV2ToV1(v2 types.ServiceConfigV2, category string) Service {
-	service := Service{
-		Name:        v2.Name,
-		Description: v2.Description,
-		Category:    category,
-		Type:        string(v2.ServiceType),
-		Environment: v2.Environment, // Use service-level environment
-		Hidden:      v2.Hidden,
-	}
-
-	// Convert Docker config
-	service.Docker = DockerConfig{
-		Image:    v2.Container.Image,
-		Restart:  string(v2.Container.Restart),
-		Command:  v2.Container.Command,
-		Networks: v2.Container.Networks,
-	}
-
-	// Convert health check if present
-	if v2.Container.HealthCheck != nil {
-		service.Docker.HealthCheck = &HealthCheckConfig{
-			Test:        v2.Container.HealthCheck.Test,
-			Interval:    v2.Container.HealthCheck.Interval.String(),
-			Timeout:     v2.Container.HealthCheck.Timeout.String(),
-			Retries:     v2.Container.HealthCheck.Retries,
-			StartPeriod: v2.Container.HealthCheck.StartPeriod.String(),
-		}
-	}
-
-	// Convert ports
-	for _, port := range v2.Container.Ports {
-		service.Docker.Ports = append(service.Docker.Ports, port.External+":"+port.Internal)
-	}
-
-	// Convert volumes
-	for _, vol := range v2.Container.Volumes {
-		service.Docker.Volumes = append(service.Docker.Volumes, vol.Name+":"+vol.Mount)
-	}
-
-	// Convert connection
-	if v2.Service.Connection != nil {
-		service.Connection = ConnectionConfig{
-			Client:      v2.Service.Connection.Client,
-			DefaultUser: v2.Service.Connection.DefaultUser,
-			DefaultPort: v2.Service.Connection.DefaultPort,
-			HostFlag:    v2.Service.Connection.HostFlag,
-			PortFlag:    v2.Service.Connection.PortFlag,
-			UserFlag:    v2.Service.Connection.UserFlag,
-			DBFlag:      v2.Service.Connection.DBFlag,
-		}
-	}
-
-	// Convert dependencies - V2 uses different structure than V1
-	service.Dependencies = DependenciesV1{
-		Required:  v2.Service.Dependencies.Required,
-		Provides:  v2.Service.Dependencies.Provides,
-		Soft:      v2.Service.Dependencies.Soft,
-		Conflicts: v2.Service.Dependencies.Conflicts,
-	}
-
-	// Convert management operations if present
-	if v2.Service.Management != nil {
-		service.Management = &ManagementV1{
-			Connect: convertOperationV2ToV1(v2.Service.Management.Connect),
-			Backup:  convertOperationV2ToV1(v2.Service.Management.Backup),
-			Restore: convertOperationV2ToV1(v2.Service.Management.Restore),
-			Custom:  make(map[string]*OperationV1),
-		}
-
-		// Convert custom operations
-		for name, op := range v2.Service.Management.Custom {
-			service.Management.Custom[name] = convertOperationV2ToV1(op)
-		}
-	}
-
-	return service
-}
-
-func convertOperationV2ToV1(op *types.OperationSpec) *OperationV1 {
-	if op == nil {
-		return nil
-	}
-
-	return &OperationV1{
-		Type:        op.Type,
-		Command:     op.Command,
-		Args:        op.Args,
-		Defaults:    op.Defaults,
-		PreCommands: op.PreCommands,
-		Extension:   op.Extension,
-	}
-}
-
-// GetConnectionConfig returns connection configuration for a service
-func GetConnectionConfig(serviceName string) (*ConnectionConfig, error) {
-	manager, err := New()
+// ExecuteCustomOperation executes V2 custom management operations
+func (m *Manager) ExecuteCustomOperation(serviceName, operationName string) ([]string, error) {
+	service, err := m.GetServiceV2(serviceName)
 	if err != nil {
 		return nil, err
 	}
 
-	service, err := manager.GetService(serviceName)
-	if err != nil {
-		return nil, err
+	if service.Service.Management == nil || service.Service.Management.Custom == nil {
+		return nil, fmt.Errorf("no custom operations for service: %s", serviceName)
 	}
 
-	if service.Connection.Client == "" {
-		return nil, fmt.Errorf("no connection client configured for service: %s", serviceName)
+	operation, exists := service.Service.Management.Custom[operationName]
+	if !exists {
+		return nil, fmt.Errorf("operation %s not found", operationName)
 	}
 
-	return &service.Connection, nil
+	cmd := make([]string, len(operation.Command))
+	copy(cmd, operation.Command)
+
+	if args, exists := operation.Args["default"]; exists {
+		cmd = append(cmd, args...)
+	}
+
+	return cmd, nil
+}
+
+// ResolveServices applies composite expansion and dependency resolution
+func (m *Manager) ResolveServices(serviceNames []string) ([]string, error) {
+	// Simple pass-through for now - no expansion needed
+	return serviceNames, nil
 }

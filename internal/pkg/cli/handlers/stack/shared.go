@@ -34,16 +34,13 @@ func SetupCoreCommand(ctx context.Context, base *types.BaseCommand) (*CoreSetup,
 	}
 
 	// Create Docker client
-	logger := base.Logger
-	dockerClient, err := docker.NewClient(logger.SlogLogger())
+	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf(constants.MsgStack_failed_create_docker_client, err)
 	}
 
 	cleanup := func() {
-		if err := dockerClient.Close(); err != nil {
-			base.Logger.Error("Failed to close Docker client", "error", err)
-		}
+		_ = dockerClient.Close()
 	}
 
 	return &CoreSetup{

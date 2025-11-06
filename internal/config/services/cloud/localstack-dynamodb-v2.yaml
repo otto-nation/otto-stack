@@ -1,4 +1,4 @@
-name: localstack-dynamodb
+name: localstack-dynamodb-v2
 description: LocalStack DynamoDB NoSQL database emulation
 service_type: container
 

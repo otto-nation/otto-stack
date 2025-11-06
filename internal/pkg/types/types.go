@@ -9,32 +9,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Service represents a service within a development stack
-type Service struct {
-	Name        string            `yaml:"name" json:"name"`
-	Type        string            `yaml:"type" json:"type"`
-	Image       string            `yaml:"image,omitempty" json:"image,omitempty"`
-	Ports       []PortMapping     `yaml:"ports,omitempty" json:"ports,omitempty"`
-	Environment map[string]string `yaml:"environment,omitempty" json:"environment,omitempty"`
-	Volumes     []VolumeMapping   `yaml:"volumes,omitempty" json:"volumes,omitempty"`
-	DependsOn   []string          `yaml:"depends_on,omitempty" json:"depends_on,omitempty"`
-	HealthCheck *HealthCheck      `yaml:"health_check,omitempty" json:"health_check,omitempty"`
-}
-
-// PortMapping represents a port mapping between host and container
-type PortMapping struct {
-	Host      string `yaml:"host" json:"host"`
-	Container string `yaml:"container" json:"container"`
-	Protocol  string `yaml:"protocol,omitempty" json:"protocol,omitempty"`
-}
-
-// VolumeMapping represents a volume mapping between host and container
-type VolumeMapping struct {
-	Host      string `yaml:"host" json:"host"`
-	Container string `yaml:"container" json:"container"`
-	Mode      string `yaml:"mode,omitempty" json:"mode,omitempty"`
-}
-
 // HealthCheck represents health check configuration
 type HealthCheck struct {
 	Test        []string      `yaml:"test" json:"test"`
@@ -44,97 +18,6 @@ type HealthCheck struct {
 	StartPeriod time.Duration `yaml:"start_period,omitempty" json:"start_period,omitempty"`
 }
 
-// ServiceInfo represents service information
-type ServiceInfo struct {
-	Name         string
-	Description  string
-	Category     string
-	Status       string
-	Type         string
-	Visibility   string
-	Components   []string
-	Dependencies []string
-}
-
-// ServiceConfig represents service configuration
-type ServiceConfig struct {
-	Name         string              `yaml:"name"`
-	Description  string              `yaml:"description"`
-	Category     string              `yaml:"category"`
-	Image        string              `yaml:"image,omitempty"`
-	Ports        []string            `yaml:"ports,omitempty"`
-	Volumes      []VolumeConfig      `yaml:"volumes,omitempty"`
-	Environment  map[string]string   `yaml:"environment,omitempty"`
-	Type         string              `yaml:"type,omitempty"`
-	Visibility   string              `yaml:"visibility,omitempty"`
-	Components   []string            `yaml:"components,omitempty"`
-	Dependencies ServiceDependencies `yaml:"dependencies,omitempty"`
-	Docker       map[string]any      `yaml:"docker,omitempty"`
-	Management   map[string]any      `yaml:"management,omitempty"`
-
-	// Flexible fields for documentation and other unknown fields
-	Connection           map[string]any `yaml:"connection,omitempty"`
-	Documentation        map[string]any `yaml:"documentation,omitempty"`
-	ServiceConfiguration []any          `yaml:"service_configuration,omitempty"`
-
-	// Catch-all for any other fields
-	Extra map[string]any `yaml:",inline"`
-}
-
-type VolumeConfig struct {
-	Name        string `yaml:"name"`
-	Mount       string `yaml:"mount"`
-	Description string `yaml:"description,omitempty"`
-}
-
-type ServiceDependencies struct {
-	Required  []string `yaml:"required,omitempty"`
-	Soft      []string `yaml:"soft,omitempty"`
-	Conflicts []string `yaml:"conflicts,omitempty"`
-	Provides  []string `yaml:"provides,omitempty"`
-}
-
-// Helper methods for ServiceConfig backward compatibility
-func (sc *ServiceConfig) GetName() string {
-	return sc.Name
-}
-
-func (sc *ServiceConfig) GetDescription() string {
-	return sc.Description
-}
-
-func (sc *ServiceConfig) GetCategory() string {
-	return sc.Category
-}
-
-func (sc *ServiceConfig) GetVisibility() string {
-	return sc.Visibility
-}
-
-func (sc *ServiceConfig) GetPorts() []string {
-	return sc.Ports
-}
-
-func (sc *ServiceConfig) GetEnvironment() map[string]string {
-	return sc.Environment
-}
-
-func (sc *ServiceConfig) GetDocker() map[string]any {
-	return sc.Docker
-}
-
-func (sc *ServiceConfig) GetConnection() map[string]any {
-	return sc.Connection
-}
-
-func (sc *ServiceConfig) GetDependencies() ServiceDependencies {
-	return sc.Dependencies
-}
-
-func (sc *ServiceConfig) GetManagement() map[string]any {
-	return sc.Management
-}
-
 // ServiceStatus represents the runtime status of a service
 type ServiceStatus struct {
 	Name      string        `json:"name"`
@@ -142,16 +25,11 @@ type ServiceStatus struct {
 	Health    HealthStatus  `json:"health"`
 	Uptime    time.Duration `json:"uptime"`
 	CPUUsage  float64       `json:"cpu_usage"`
-	Memory    MemoryUsage   `json:"memory"`
-	Ports     []PortMapping `json:"ports"`
-	CreatedAt time.Time     `json:"created_at"`
+	Memory    uint64        `json:"memory"`
 	StartedAt *time.Time    `json:"started_at,omitempty"`
-}
-
-// MemoryUsage represents memory usage statistics
-type MemoryUsage struct {
-	Used  uint64 `json:"used"`
-	Limit uint64 `json:"limit"`
+	Ports     []string      `json:"ports,omitempty"`
+	Image     string        `json:"image,omitempty"`
+	ID        string        `json:"id,omitempty"`
 }
 
 // StackStatus represents the overall status of a development stack
@@ -221,16 +99,11 @@ func (h HealthStatus) IsStarting() bool {
 type ShellType string
 
 const (
-	ShellTypeBash       ShellType = constants.ShellBash
-	ShellTypeZsh        ShellType = constants.ShellZsh
-	ShellTypeFish       ShellType = constants.ShellFish
-	ShellTypePowerShell ShellType = constants.ShellPowerShell
+	ShellTypeBash       ShellType = "bash"
+	ShellTypeZsh        ShellType = "zsh"
+	ShellTypeFish       ShellType = "fish"
+	ShellTypePowerShell ShellType = "powershell"
 )
-
-// String returns the string representation of the shell type
-func (s ShellType) String() string {
-	return string(s)
-}
 
 // IsValid returns true if the shell type is supported
 func (s ShellType) IsValid() bool {
@@ -252,7 +125,7 @@ func AllShellTypeStrings() []string {
 	}
 }
 
-// Output interface for UI output (compatibility)
+// Output interface for command output
 type Output interface {
 	Success(msg string, args ...any)
 	Error(msg string, args ...any)

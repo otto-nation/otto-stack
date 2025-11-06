@@ -338,18 +338,6 @@ const (
 	StatusSeparator     = "-"
 )
 
-// Service category display names and icons
-var CategoryDisplayInfo = map[string]struct {
-	Name string
-	Icon string
-}{
-	CategoryDatabase:      {"Database", "📊"},
-	CategoryCache:         {"Cache", "💾"},
-	CategoryMessaging:     {"Messaging", "📨"},
-	CategoryObservability: {"Observability", "🔍"},
-	CategoryCloud:         {"Cloud", "☁️"},
-}
-
 // Legacy port constants for backward compatibility
 const (
 	DefaultPortPOSTGRES_PORT = 5432

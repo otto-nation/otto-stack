@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -28,7 +28,7 @@ func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	}
 
 	// Load services by category
-	serviceUtils := utils.NewServiceUtils()
+	serviceUtils := services.NewServiceUtils()
 	categorizedServices, err := serviceUtils.GetServicesByCategory()
 	if err != nil {
 		return fmt.Errorf(constants.MsgErrors_failed_load_services, err)
@@ -52,7 +52,7 @@ func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 }
 
 // buildServiceCatalog converts service data to catalog format
-func (h *ServicesHandler) buildServiceCatalog(categorizedServices map[string][]types.ServiceInfo) display.ServiceCatalog {
+func (h *ServicesHandler) buildServiceCatalog(categorizedServices map[string][]services.ServiceConfigV2) display.ServiceCatalog {
 	catalog := display.ServiceCatalog{
 		Categories: make(map[string][]display.ServiceInfo),
 		Total:      0,

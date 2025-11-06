@@ -1,4 +1,4 @@
-name: localstack-s3
+name: localstack-s3-v2
 description: LocalStack S3 (Simple Storage Service) emulation
 service_type: container
 

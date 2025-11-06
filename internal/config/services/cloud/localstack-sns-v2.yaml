@@ -1,4 +1,4 @@
-name: localstack-sns
+name: localstack-sns-v2
 description: LocalStack SNS (Simple Notification Service) emulation
 service_type: container
 

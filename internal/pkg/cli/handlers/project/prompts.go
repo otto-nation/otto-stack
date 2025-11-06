@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
@@ -44,7 +44,7 @@ func (h *InitHandler) promptForProjectDetails() (string, error) {
 
 // promptForServices prompts user to select services with category navigation
 func (h *InitHandler) promptForServices() ([]string, error) {
-	serviceUtils := utils.NewServiceUtils()
+	serviceUtils := services.NewServiceUtils()
 
 	// Get available services by category
 	categories, err := serviceUtils.GetServicesByCategory()
@@ -58,7 +58,7 @@ func (h *InitHandler) promptForServices() ([]string, error) {
 
 	// Convert map to ordered slice for navigation
 	var categoryNames []string
-	var categoryServicesList [][]types.ServiceInfo
+	var categoryServicesList [][]services.ServiceConfigV2
 	for categoryName, services := range categories {
 		if len(services) > 0 {
 			categoryNames = append(categoryNames, categoryName)

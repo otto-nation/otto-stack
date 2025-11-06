@@ -1,4 +1,4 @@
-name: kafka-broker
+name: kafka-broker-v2
 description: Apache Kafka broker for event streaming and messaging
 service_type: container
 

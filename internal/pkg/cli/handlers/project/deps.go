@@ -7,6 +7,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -32,7 +33,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	format, _ := cmd.Flags().GetString(constants.FlagFormat)
 
 	// Load service dependencies
-	serviceUtils := utils.NewServiceUtils()
+	serviceUtils := services.NewServiceUtils()
 	dependencies, err := serviceUtils.LoadAllServiceDependencies()
 	if err != nil {
 		return fmt.Errorf("failed to load dependencies: %w", err)

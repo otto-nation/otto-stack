@@ -44,15 +44,12 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Create Docker client
-	logger := base.Logger
-	dockerClient, err := docker.NewClient(logger.SlogLogger())
+	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
 		return fmt.Errorf(constants.MsgStack_failed_create_docker_client, err)
 	}
 	defer func() {
-		if err := dockerClient.Close(); err != nil {
-			base.Logger.Error("Failed to close Docker client", "error", err)
-		}
+		_ = dockerClient.Close()
 	}()
 
 	// Parse all flags with validation - single line!

@@ -4,22 +4,22 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
 	"github.com/otto-nation/otto-stack/internal/pkg/constants"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
 // InitHandler handles the init command
 type InitHandler struct {
-	serviceUtils *utils.ServiceUtils
+	serviceUtils *services.ServiceUtils
 }
 
 // NewInitHandler creates a new InitHandler
 func NewInitHandler() *InitHandler {
 	return &InitHandler{
-		serviceUtils: utils.NewServiceUtils(),
+		serviceUtils: services.NewServiceUtils(),
 	}
 }
 

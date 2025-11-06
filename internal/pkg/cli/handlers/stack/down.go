@@ -55,15 +55,12 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Create Docker client
-	dockerLogger := base.Logger
-	dockerClient, err := docker.NewClient(dockerLogger.SlogLogger())
+	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
 		return fmt.Errorf(constants.MsgStack_failed_create_docker_client, err)
 	}
 	defer func() {
-		if err := dockerClient.Close(); err != nil {
-			base.Logger.Error("Failed to close Docker client", "error", err)
-		}
+		_ = dockerClient.Close()
 	}()
 
 	// Determine services to stop

@@ -1,4 +1,4 @@
-name: postgres
+name: postgres-v2
 description: PostgreSQL relational database for persistent data storage
 service_type: container
 

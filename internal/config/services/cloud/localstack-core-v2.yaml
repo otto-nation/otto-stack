@@ -1,4 +1,4 @@
-name: localstack-core
+name: localstack-core-v2
 description: LocalStack core AWS service emulator
 hidden: true
 service_type: container

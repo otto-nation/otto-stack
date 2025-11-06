@@ -1,4 +1,4 @@
-name: redis
+name: redis-v2
 description: Redis in-memory data store for caching and session storage
 service_type: container
 
@@ -15,8 +15,6 @@ container:
       internal: "6379"
       protocol: tcp
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 256m
   command:
     - redis-server
