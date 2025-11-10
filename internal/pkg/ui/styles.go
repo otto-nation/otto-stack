@@ -10,22 +10,22 @@ func formatColored(text, color string, noColor bool) string {
 
 // formatSuccess formats success messages
 func formatSuccess(text string, noColor bool) string {
-	return formatColored(IconSuccess+text, ColorGreen+ColorBold, noColor)
+	return formatColored(IconSuccess+" "+text, ColorGreen+ColorBold, noColor)
 }
 
 // formatError formats error messages
 func formatError(text string, noColor bool) string {
-	return formatColored(IconError+text, ColorRed+ColorBold, noColor)
+	return formatColored(IconError+" "+text, ColorRed+ColorBold, noColor)
 }
 
 // formatWarning formats warning messages
 func formatWarning(text string, noColor bool) string {
-	return formatColored(IconWarning+text, ColorYellow+ColorBold, noColor)
+	return formatColored(IconWarning+"  "+text, ColorYellow+ColorBold, noColor)
 }
 
 // formatInfo formats info messages
 func formatInfo(text string, noColor bool) string {
-	return formatColored(IconInfo+text, ColorBlue, noColor)
+	return formatColored(IconInfo+"  "+text, ColorBlue, noColor)
 }
 
 // formatHeader formats header messages

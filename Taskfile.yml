@@ -335,7 +335,7 @@ tasks:
           echo "❌ Pre-commit failed: Files were modified during formatting"
           echo ""
           echo "📋 Modified files:"
-          git diff --name-only
+          git diff --name-only | sed 's/^/  - /'
           echo ""
           echo "🔧 Please add these changes and commit again:"
           echo "   git add ."
@@ -376,19 +376,14 @@ tasks:
 
   pre-push:
     desc: "🚀 Run all pre-push checks"
+    deps: [build, test]
     silent: true
     cmds:
       - echo "🚀 Running pre-push checks..."
-      - task: build
-      - task: test
-      - |
-        # Capture git state before docs generation
-        git diff --name-only > /tmp/git_before_docs || touch /tmp/git_before_docs
       - task: docs
       - |
-        # Check if docs generation made changes
-        git diff --name-only > /tmp/git_after_docs
-        if ! cmp -s /tmp/git_before_docs /tmp/git_after_docs; then
+        # Check if docs generation made any changes
+        if ! git diff --quiet; then
           echo ""
           echo "❌ Pre-push failed: Documentation was out of sync"
           echo ""
@@ -399,10 +394,8 @@ tasks:
           echo "   git add ."
           echo "   git commit"
           echo ""
-          rm -f /tmp/git_before_docs /tmp/git_after_docs
           exit 1
         fi
-        rm -f /tmp/git_before_docs /tmp/git_after_docs
       - task: docs-lastmod-update
       - echo "✅ Pre-push checks passed"
 

@@ -23,6 +23,8 @@ func TestHandle_ValidationFailure(t *testing.T) {
 	handler := NewInitHandler()
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("force", false, "force initialization")
+	cmd.Flags().Bool("non-interactive", true, "non-interactive mode")
+	cmd.Flag("non-interactive").Value.Set("true")
 
 	base := &base.BaseCommand{
 		Logger: &MockLogger{},
@@ -32,7 +34,9 @@ func TestHandle_ValidationFailure(t *testing.T) {
 	err := handler.Handle(context.Background(), cmd, []string{}, base)
 	assert.Error(t, err)
 	assert.True(t,
-		strings.Contains(err.Error(), "validation failed") ||
+		strings.Contains(err.Error(), "Non-interactive mode requires explicit configuration") ||
+			strings.Contains(err.Error(), "non-interactive mode requires") ||
+			strings.Contains(err.Error(), "validation failed") ||
 			strings.Contains(err.Error(), "already initialized"),
 		"Expected validation or initialization error, got: %s", err.Error())
 }

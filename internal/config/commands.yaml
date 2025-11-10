@@ -72,6 +72,9 @@ validation:
 
 # Centralized messages for consistency and i18n
 messages:
+  help:
+    app_description: "A powerful development stack management tool for streamlined local development automation"
+
   process:
     initializing: "Initializing Otto Stack"
     starting: "Starting Otto Stack"

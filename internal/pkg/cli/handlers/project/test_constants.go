@@ -20,7 +20,7 @@ const (
 	// Test file content
 	TestConfigContent    = "test: config"
 	TestReadmeContent    = "# Test Project"
-	TestGitignoreContent = "*.log\n*.tmp"
+	TestGitignoreContent = "*.bak\n*.tmp"
 	TestExistingContent  = "# Existing content"
 
 	// Test validation messages
