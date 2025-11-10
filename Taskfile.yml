@@ -668,11 +668,39 @@ tasks:
     cmds:
       - echo "🔒 Running security scan..."
       - |
+        # Install security tools if needed
         if ! command -v govulncheck >/dev/null 2>&1; then
           echo "📦 Installing govulncheck..."
           go install golang.org/x/vuln/cmd/govulncheck@latest
         fi
+        if ! command -v gosec >/dev/null 2>&1; then
+          echo "📦 Installing gosec..."
+          go install github.com/securego/gosec/v2/cmd/gosec@latest
+        fi
+      - echo "🔍 Running Gosec security scan..."
+      - |
+        GOSEC_CONFIG=".gosec.conf"
+        if [ -f "$GOSEC_CONFIG" ]; then
+          gosec -conf "$GOSEC_CONFIG" -fmt text ./...
+        else
+          gosec -fmt text ./...
+        fi
+      - echo "🔍 Running vulnerability scan..."
       - govulncheck ./...
+      - echo "🔍 Running basic security checks..."
+      - |
+        # Check for hardcoded secrets patterns (excluding test files)
+        if grep -r -E "(password|pwd|secret|key|token)\s*[:=]\s*['\"][^'\"]{8,}" --include="*.go" --exclude="*_test.go" . ; then
+          echo "⚠️ Potential hardcoded secrets found"
+          exit 1
+        fi
+        
+        # Check for unsafe functions (excluding test files)
+        if grep -r "unsafe\." --include="*.go" --exclude="*_test.go" . ; then
+          echo "⚠️ Unsafe package usage found - review carefully"
+        fi
+        
+        echo "✅ Basic security checks passed"
       - echo "✅ Security scan complete"
 
   # ============================================================================

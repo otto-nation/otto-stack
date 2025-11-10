@@ -90,6 +90,16 @@ jobs:
           path: coverage.html
           retention-days: 30
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Install documentation dependencies
+        run: cd docs-site && npm ci
+
       - name: Build binary
         run: task build
 
