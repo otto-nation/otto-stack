@@ -3,7 +3,8 @@ module.exports = {
     { name: 'cli-reference', enabled: true, output: 'cli-reference.md' },
     { name: 'services-guide', enabled: true, output: 'services.md' },
     { name: 'configuration-guide', enabled: true, output: 'configuration.md' },
-    { name: 'homepage', enabled: true, output: '_index.md' }
+    { name: 'homepage', enabled: true, output: '_index.md' },
+    { name: 'contributing-guide', enabled: true, output: 'contributing.md' }
   ],
 
   validation: {

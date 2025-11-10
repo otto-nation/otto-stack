@@ -101,7 +101,7 @@ otto-stack up
 - **[Usage Guide](usage.md)**
 - **[Services Guide](services.md)**
 - **[Configuration](configuration.md)**
-- **[CLI Reference](reference.md)**
+- **[CLI Reference](cli-reference.md)**
 - **[Scripts Reference](scripts.md)**
 - **[Contributing](contributing.md)**
 

@@ -652,6 +652,14 @@ tasks:
       - cd docs-site && npm run docs:generate
       - echo "✅ Documentation generated"
 
+  docs-serve:
+    desc: "🌐 Serve documentation locally"
+    deps: [build]
+    silent: true
+    cmds:
+      - echo "🌐 Starting documentation server..."
+      - cd docs-site && npm run docs:serve
+
   # ============================================================================
   # DOCKER
   # ============================================================================
@@ -747,6 +755,7 @@ tasks:
       - echo ""
       - echo "📚 Documentation:"
       - echo "   docs           - Generate documentation"
+      - echo "   docs-serve     - Serve documentation locally"
       - echo ""
       - echo "🐳 Docker:"
       - echo "   docker-build   - Build Docker image"

@@ -12,6 +12,7 @@ const ServicesGuideGenerator = require("../generators/services-guide");
 const CLIReferenceGenerator = require("../generators/cli-reference");
 const HomepageGenerator = require("../generators/homepage");
 const ConfigurationGuideGenerator = require("../generators/configuration-guide");
+const ContributingGuideGenerator = require("../generators/contributing-guide");
 
 // Load utilities
 const ServiceAnalyzer = require("../utils/service-analyzer");
@@ -22,6 +23,7 @@ const generators = {
   "cli-reference": CLIReferenceGenerator,
   homepage: HomepageGenerator,
   "configuration-guide": ConfigurationGuideGenerator,
+  "contributing-guide": ContributingGuideGenerator,
 };
 
 async function validateServices() {
