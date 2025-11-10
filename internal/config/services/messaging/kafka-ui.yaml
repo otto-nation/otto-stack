@@ -1,70 +1,50 @@
 name: kafka-ui
 description: Web UI for Kafka cluster management and topic browsing
-category: messaging
-dependencies:
-  required:
-  - kafka-broker
-  soft: []
-  conflicts: []
-  provides:
-  - ui
-  - management
-docker:
+service_type: container
+
+environment:
+  KAFKA_UI_HOST: ${KAFKA_UI_HOST:-localhost}
+  KAFKA_UI_PORT: ${KAFKA_UI_PORT:-8080}
+  KAFKA_UI_URL: http://${KAFKA_UI_HOST:-localhost}:${KAFKA_UI_PORT:-8080}
+
+container:
   image: provectuslabs/kafka-ui:latest
+  ports:
+    - external: "8099"
+      internal: "8099"
+      protocol: tcp
   restart: unless-stopped
-  networks:
-  - otto-stack
   memory_limit: 256m
-  environment:
-  - KAFKA_CLUSTERS_0_NAME=otto-stack
-  - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka-broker:29092
-  - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
-  - DYNAMIC_CONFIG_ENABLED=true
   health_check:
-    test:
-    - CMD
-    - curl
-    - -f
-    - http://localhost:8080/actuator/health
+    test: ["CMD", "curl", "-f", "http://localhost:8099/actuator/health"]
     interval: 30s
     timeout: 10s
     retries: 3
-    start_period: 30s
+
+service:
+  connection:
+    type: web
+    default_port: 8099
+    url_pattern: "http://localhost:8099"
+  dependencies:
+    required:
+      - kafka-broker
+    provides:
+      - ui
+      - management
+
 documentation:
   examples:
-  - curl -f http://localhost:8080/actuator/health
-  usage_notes: Web interface for managing Kafka topics, viewing messages, and monitoring
-    cluster health
+    - curl -f http://localhost:8099/actuator/health
+  usage_notes: Web interface for managing Kafka topics, viewing messages, and monitoring cluster health
   links:
-  - https://github.com/provectus/kafka-ui
+    - https://github.com/provectus/kafka-ui
   use_cases:
-  - Topic management and browsing
-  - Message inspection and debugging
-  - Cluster monitoring and health checks
-  - Consumer group management
+    - Topic management and browsing
+    - Message inspection and debugging
+    - Cluster monitoring and health checks
+    - Consumer group management
   web_interfaces:
-  - name: Kafka UI
-    url: http://localhost:${KAFKA_UI_PORT:-8080}
-    description: Kafka cluster management and topic browser
-  docs:
-  - name: Kafka UI Documentation
-    url: https://github.com/provectus/kafka-ui
-service_configuration:
-- name: docker_image
-  type: string
-  description: Docker image to use for Kafka UI container
-  default: provectuslabs/kafka-ui:latest
-  example: provectuslabs/kafka-ui:v0.7.1
-  required: false
-- name: port
-  type: integer
-  description: Port number for Kafka UI web interface
-  default: '8080'
-  example: '8081'
-  required: false
-- name: memory_limit
-  type: string
-  description: Memory limit for Kafka UI container
-  default: 256m
-  example: 512m
-  required: false
+    - name: Kafka UI
+      url: http://localhost:8099
+      description: Web interface for Kafka cluster management

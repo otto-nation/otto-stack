@@ -20,7 +20,7 @@ vars:
   BUILD_ARCH:
     sh: echo "{{ARCH}}"
   LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/pkg/version.AppVersion={{.VERSION}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildDate={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/version.GitCommit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildBy=taskfile"'
-  GOLANGCI_LINT_VERSION: "v2.4.0"
+  GOLANGCI_LINT_VERSION: "v2.6.0"
 
 # ============================================================================
 # TASKS
@@ -40,27 +40,58 @@ tasks:
   # ============================================================================
   generate:
     desc: "🔧 Generate code from YAML configs"
-    sources:
-      - "internal/config/commands.yaml"
-      - "cmd/generate-flags/main.go"
-      - "cmd/generate-registers/main.go"
-    generates:
-      - "internal/pkg/constants/flags_generated.go"
-      - "internal/pkg/cli/handlers/*/register_generated.go"
+    deps: [generate:cli, generate:services, generate:commands]
     silent: true
     cmds:
-      - echo "🔧 Generating flag constants from commands.yaml..."
-      - go run cmd/generate-flags/main.go
-      - echo "🔧 Generating register files from commands.yaml..."
-      - go run cmd/generate-registers/main.go
       - echo "✅ Generated code from YAML configs"
+
+  generate:cli:
+    desc: "🔧 Generate CLI code"
+    sources:
+      - "internal/config/commands.yaml"
+      - "cmd/generate-cli/main.go"
+      - "cmd/generate-cli/templates/*.tmpl"
+    generates:
+      - "internal/pkg/cli/commands_generated.go"
+    silent: true
+    cmds:
+      - echo "🔧 Running generate-cli..."
+      - go run ./cmd/generate-cli
+
+  generate:services:
+    desc: "🔧 Generate service code"
+    sources:
+      - "internal/config/services/**/*.yaml"
+      - "cmd/generate-services/main.go"
+      - "cmd/generate-services/templates/*.tmpl"
+    generates:
+      - "internal/pkg/services/services_generated.go"
+      - "internal/pkg/services/types_generated.go"
+      - "internal/pkg/services/schema_generated.go"
+    silent: true
+    cmds:
+      - echo "🔧 Running generate-services..."
+      - go run ./cmd/generate-services
+
+  generate:commands:
+    desc: "🔧 Generate command code"
+    sources:
+      - "internal/config/commands.yaml"
+      - "cmd/generate-commands/main.go"
+      - "cmd/generate-commands/templates/*.tmpl"
+    generates:
+      - "internal/core/constants_generated.go"
+    silent: true
+    cmds:
+      - echo "🔧 Running generate-commands..."
+      - go run ./cmd/generate-commands
 
   # ============================================================================
   # BUILD
   # ============================================================================
   build:
     desc: "🔨 Build the Go binary for current platform"
-    deps: [deps, generate]
+    deps: [sync-go-version, deps, lint:go]
     sources:
       - "**/*.go"
       - "go.mod"
@@ -76,7 +107,7 @@ tasks:
 
   build-all:
     desc: "🌍 Build binaries for all supported platforms"
-    deps: [deps]
+    deps: [deps, lint]
     silent: true
     cmds:
       - echo "🌍 Building {{.BINARY_NAME}} for all platforms..."
@@ -124,11 +155,19 @@ tasks:
   deps:
     desc: "📥 Download and tidy Go dependencies"
     deps: [generate]
+    sources:
+      - "go.mod"
+      - "go.sum"
+      - "**/*.go"
+    generates:
+      - ".task/deps-timestamp"
     silent: true
     cmds:
+      - mkdir -p .task
       - echo "📥 Downloading Go dependencies..."
       - go mod download
       - go mod tidy
+      - touch .task/deps-timestamp
       - echo "✅ Dependencies updated"
 
   # ============================================================================
@@ -137,22 +176,27 @@ tasks:
   commit:
     desc: "🤖 Generate AI-powered commit message based on staged changes"
     silent: true
+    deps: [pre-commit]
     cmds:
       - |
+        if [ "$NO_VERIFY" ]; then
+            echo 'pre-commit hook skipped' 1>&2
+            exit 0
+        fi
         STAGED_FILES=$(git diff --cached --name-only)
         if [ -z "$STAGED_FILES" ]; then
           echo "❌ No staged changes found. Use 'git add' first."
           exit 1
         fi
-        
+
         echo "🤖 Analyzing staged changes with AI..."
-        
+
         DIFF_CONTENT=$(git diff --cached --no-color)
         FILE_LIST=$(echo "$STAGED_FILES" | tr '\n' ', ' | sed 's/,$//')
         COMMITLINT_CONFIG=$(cat .github/.commitlintrc.json)
-        
+
         AI_PROMPT="Generate a conventional commit message following these rules:
-        - Header (first line) must be ≤72 characters (no exceptions)
+        - Header (first line) must be ≤72 characters (no exceptions). Use ';' to separate multiple changes.
         - Body lines must be ≤100 characters each
         - Use conventional commit format: type(scope): description
         - Separate header and body with blank line
@@ -166,14 +210,14 @@ tasks:
         $DIFF_CONTENT
 
         Return only the commit message, nothing else."
-        
+
         source ./scripts/ai-helper.sh
-        
+
         if ! AI_COMMAND=$(check_ai_available 2>&1); then
           echo "$AI_COMMAND"
           exit 1
         fi
-        
+
         echo "🤖 Generating commit message..."
         COMMIT_MSG=$(echo "$AI_PROMPT" | $AI_COMMAND | tr -d '\033' | sed 's/\[[0-9;]*m//g' | sed 's/^[> ]*//g')
         echo "✨ AI Analysis Complete"
@@ -224,12 +268,12 @@ tasks:
 
         # Use AI to generate PR content
         source ./scripts/ai-helper.sh
-        
+
         if ! AI_COMMAND=$(check_ai_available 2>&1); then
           echo "$AI_COMMAND"
           exit 1
         fi
-        
+
         echo "🤖 Generating PR title and description..."
           RAW_RESPONSE=$(echo "$AI_PROMPT" | $AI_COMMAND)
           # Strip all ANSI escape sequences and control characters
@@ -274,8 +318,9 @@ tasks:
     silent: true
     cmds:
       - echo "🔧 Auto-fixing formatting and modules..."
-      - git diff --name-only > /tmp/git_before_fixes || touch /tmp/git_before_fixes
+      - task: generate
       - task: fmt
+      - task: docs-fmt
       - go mod tidy
 
   pre-commit-verify:
@@ -284,24 +329,19 @@ tasks:
     cmds:
       - |
         echo "✅ Verifying fixes..."
-        # Check if pre-commit-fix made changes by comparing before/after states
-        if [ -f /tmp/git_before_fixes ]; then
-          git diff --name-only > /tmp/git_after_fixes
-          if ! cmp -s /tmp/git_before_fixes /tmp/git_after_fixes; then
-            echo ""
-            echo "❌ Pre-commit failed: Files were modified during formatting"
-            echo ""
-            echo "📋 Modified files:"
-            git diff --name-only
-            echo ""
-            echo "🔧 Please add these changes and commit again:"
-            echo "   git add ."
-            echo "   git commit"
-            echo ""
-            rm -f /tmp/git_before_fixes /tmp/git_after_fixes
-            exit 1
-          fi
-          rm -f /tmp/git_before_fixes /tmp/git_after_fixes
+        # Check if there are any unstaged changes after formatting
+        if ! git diff --quiet; then
+          echo ""
+          echo "❌ Pre-commit failed: Files were modified during formatting"
+          echo ""
+          echo "📋 Modified files:"
+          git diff --name-only | sed 's/^/  - /'
+          echo ""
+          echo "🔧 Please add these changes and commit again:"
+          echo "   git add ."
+          echo "   git commit"
+          echo ""
+          exit 1
         fi
       - task: lint
       - task: validate-homebrew-formula
@@ -309,36 +349,41 @@ tasks:
 
   validate-homebrew-formula:
     desc: "🍺 Validate Homebrew formula syntax and style"
+    sources:
+      - "Formula/otto-stack.rb"
+    generates:
+      - ".task/homebrew-validation-timestamp"
     silent: true
     cmds:
+      - mkdir -p .task
       - |
-        echo "🍺 Validating Homebrew formula..."
-        if [ -f "Formula/otto-stack.rb" ]; then
-          if command -v brew >/dev/null 2>&1; then
-            brew style Formula/otto-stack.rb
-            echo "✅ Homebrew formula validation passed"
-          else
-            echo "⚠️  Homebrew not installed, skipping formula validation"
-          fi
-        else
+        if [ ! -f "Formula/otto-stack.rb" ]; then
           echo "ℹ️  No Homebrew formula found, skipping validation"
+          touch .task/homebrew-validation-timestamp
+          exit 0
         fi
+        
+        echo "🍺 Validating Homebrew formula..."
+        if ! command -v brew >/dev/null 2>&1; then
+          echo "⚠️  Homebrew not installed, skipping formula validation"
+          touch .task/homebrew-validation-timestamp
+          exit 0
+        fi
+        
+        brew style Formula/otto-stack.rb
+        touch .task/homebrew-validation-timestamp
+        echo "✅ Homebrew formula validation passed"
 
   pre-push:
     desc: "🚀 Run all pre-push checks"
+    deps: [build, test]
     silent: true
     cmds:
       - echo "🚀 Running pre-push checks..."
-      - task: test
-      - task: build
-      - |
-        # Capture git state before docs generation
-        git diff --name-only > /tmp/git_before_docs || touch /tmp/git_before_docs
       - task: docs
       - |
-        # Check if docs generation made changes
-        git diff --name-only > /tmp/git_after_docs
-        if ! cmp -s /tmp/git_before_docs /tmp/git_after_docs; then
+        # Check if docs generation made any changes
+        if ! git diff --quiet; then
           echo ""
           echo "❌ Pre-push failed: Documentation was out of sync"
           echo ""
@@ -349,10 +394,8 @@ tasks:
           echo "   git add ."
           echo "   git commit"
           echo ""
-          rm -f /tmp/git_before_docs /tmp/git_after_docs
           exit 1
         fi
-        rm -f /tmp/git_before_docs /tmp/git_after_docs
       - task: docs-lastmod-update
       - echo "✅ Pre-push checks passed"
 
@@ -415,6 +458,18 @@ tasks:
     cmds:
       - ./scripts/setup-hooks.sh
 
+  sync-go-version:
+    desc: "🔄 Sync Go version across all configuration files"
+    silent: true
+    cmds:
+      - ./scripts/sync-go-version.sh --fix
+
+  check-go-version:
+    desc: "✅ Check if Go versions are consistent across files"
+    silent: true
+    cmds:
+      - ./scripts/sync-go-version.sh --check
+
   # ============================================================================
   # TESTING
   # ============================================================================
@@ -461,53 +516,150 @@ tasks:
 
   lint:
     desc: "🔍 Run comprehensive linting (vet + fmt + golangci-lint)"
-    deps: [deps]
+    deps: [deps, fmt]
+    sources:
+      - "**/*.go"
+      - ".golangci.yml"
+      - "go.mod"
+      - "go.sum"
+    generates:
+      - ".task/lint-timestamp"
     silent: true
     cmds:
+      - mkdir -p .task
       - echo "🔍 Running go vet..."
       - go vet ./...
-      - echo "🔍 Checking code formatting..."
-      - |
-        if [ "$(gofmt -l . | wc -l)" -gt 0 ]; then
-          echo "❌ Code is not formatted. Run 'task fmt' to fix:"
-          gofmt -l .
-          exit 1
-        fi
-      - echo "✅ Basic linting passed"
-      - echo "🔍 Running golangci-lint config verify..."
-      - |
-        if [ ! -f .golangci.yml ]; then
-          echo "❌ .golangci.yml config file not found!"
-          exit 1
-        fi
-        if [ ! -f $(go env GOPATH)/bin/golangci-lint ]; then
-          echo "📦 Installing golangci-lint {{.GOLANGCI_LINT_VERSION}}..."
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin {{.GOLANGCI_LINT_VERSION}}
-        fi
-        $(go env GOPATH)/bin/golangci-lint config verify
-      - echo "✅ golangci-lint config is valid"
       - echo "🔍 Running golangci-lint..."
-      - $(go env GOPATH)/bin/golangci-lint run ./...
-      - echo "📝 Linting documentation..."
-      - cd docs-site && npm run lint:md
-      - cd docs-site && npm run lint:links
+      - |
+        GOLANGCI_PATH="$(go env GOPATH)/bin/golangci-lint"
+        EXPECTED_VERSION="{{.GOLANGCI_LINT_VERSION}}"
+
+        if [ ! -f "$GOLANGCI_PATH" ]; then
+          echo "📦 Installing golangci-lint $EXPECTED_VERSION..."
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
+        else
+          CURRENT_VERSION="v$($GOLANGCI_PATH version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 || echo "unknown")"
+          if [ "$CURRENT_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "📦 Updating golangci-lint from $CURRENT_VERSION to $EXPECTED_VERSION..."
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
+          fi
+        fi
+        
+        $GOLANGCI_PATH config verify
+        $GOLANGCI_PATH run ./cmd/otto-stack/... ./internal/...
+      - task: lint:docs
+      - touch .task/lint-timestamp
       - echo "✅ All linting checks passed!"
+
+  lint:go:
+    desc: "🔍 Run Go-only linting (vet + golangci-lint) - for CI"
+    deps: [deps, fmt]
+    sources:
+      - "**/*.go"
+      - ".golangci.yml"
+      - "go.mod"
+      - "go.sum"
+    generates:
+      - ".task/go-lint-timestamp"
+    silent: true
+    cmds:
+      - mkdir -p .task
+      - echo "🔍 Running go vet..."
+      - go vet ./...
+      - echo "🔍 Running golangci-lint..."
+      - |
+        GOLANGCI_PATH="$(go env GOPATH)/bin/golangci-lint"
+        EXPECTED_VERSION="{{.GOLANGCI_LINT_VERSION}}"
+
+        if [ ! -f "$GOLANGCI_PATH" ]; then
+          echo "📦 Installing golangci-lint $EXPECTED_VERSION..."
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
+        else
+          CURRENT_VERSION="v$($GOLANGCI_PATH version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 || echo "unknown")"
+          if [ "$CURRENT_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "📦 Updating golangci-lint from $CURRENT_VERSION to $EXPECTED_VERSION..."
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
+          fi
+        fi
+        
+        $GOLANGCI_PATH config verify
+        $GOLANGCI_PATH run ./cmd/otto-stack/... ./internal/...
+      - touch .task/go-lint-timestamp
+      - echo "✅ Go linting checks passed!"
+
+  lint:docs:
+    desc: "📝 Lint documentation files"
+    sources:
+      - "docs-site/content/**/*.md"
+      - "docs-site/README.md"
+      - "docs-site/.markdownlint.jsonc"
+      - "docs-site/.mlc_config.json"
+    generates:
+      - ".task/docs-lint-timestamp"
+    silent: true
+    cmds:
+      - mkdir -p .task
+      - echo "📝 Linting documentation..."
+      - |
+        cd docs-site
+        # Run markdown lint and link check in parallel
+        npm run lint:md &
+        LINT_PID=$!
+        npm run lint:links &
+        LINKS_PID=$!
+        
+        # Wait for both to complete
+        wait $LINT_PID
+        LINT_EXIT=$?
+        wait $LINKS_PID
+        LINKS_EXIT=$?
+        
+        # Check if either failed
+        if [ $LINT_EXIT -ne 0 ] || [ $LINKS_EXIT -ne 0 ]; then
+          echo "❌ Documentation linting failed"
+          exit 1
+        fi
+        
+        cd ..
+        touch .task/docs-lint-timestamp
 
   fmt:
     desc: "✨ Format Go code with gofmt and goimports"
+    sources:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+    generates:
+      - ".task/fmt-timestamp"
     silent: true
     cmds:
+      - mkdir -p .task
       - echo "✨ Formatting Go code..."
       - |
         if [ ! -f $(go env GOPATH)/bin/goimports ]; then
           echo "📦 Installing goimports..."
           go install golang.org/x/tools/cmd/goimports@latest
         fi
-      - go fmt ./...
-      - $(go env GOPATH)/bin/goimports -w .
-      - echo "📝 Formatting documentation..."
-      - cd docs-site && npm run format
+      - go fmt ./... > /dev/null 2>&1
+      - $(go env GOPATH)/bin/goimports -w . > /dev/null 2>&1
+      - touch .task/fmt-timestamp
       - echo "✅ Code formatted"
+
+  docs-fmt:
+    desc: "📝 Format documentation"
+    dir: docs-site
+    sources:
+      - "**/*.md"
+      - "package.json"
+    generates:
+      - "../.task/docs-fmt-timestamp"
+    silent: true
+    cmds:
+      - mkdir -p ../.task
+      - echo "📝 Formatting documentation..."
+      - npm run format
+      - touch ../.task/docs-fmt-timestamp
+      - echo "✅ Documentation formatted"
 
   security:
     desc: "🔒 Run security vulnerability scan"
@@ -516,11 +668,22 @@ tasks:
     cmds:
       - echo "🔒 Running security scan..."
       - |
+        # Install security tools if needed
         if ! command -v govulncheck >/dev/null 2>&1; then
           echo "📦 Installing govulncheck..."
           go install golang.org/x/vuln/cmd/govulncheck@latest
         fi
+      - echo "🔍 Running vulnerability scan..."
       - govulncheck ./...
+      - echo "🔍 Running basic security checks..."
+      - |
+        # Check for hardcoded secrets patterns (excluding test files and generated code)
+        if grep -r -E "(password|pwd|secret|key|token)\s*[:=]\s*['\"][^'\"]{8,}" --include="*.go" --exclude="*_test.go" --exclude="*_generated.go" . ; then
+          echo "⚠️ Potential hardcoded secrets found"
+          exit 1
+        fi
+        
+        echo "✅ Basic security checks passed"
       - echo "✅ Security scan complete"
 
   # ============================================================================
@@ -536,11 +699,20 @@ tasks:
       - cd docs-site && npm run docs:generate
       - echo "✅ Documentation generated"
 
+  docs-serve:
+    desc: "🌐 Serve documentation locally"
+    deps: [build]
+    silent: true
+    cmds:
+      - echo "🌐 Starting documentation server..."
+      - cd docs-site && npm run docs:serve
+
   # ============================================================================
   # DOCKER
   # ============================================================================
   docker-build:
     desc: "🐳 Build Docker image"
+    deps: [build]
     silent: true
     cmds:
       - echo "🐳 Building Docker image..."
@@ -565,6 +737,10 @@ tasks:
       - echo "🧹 Cleaning build artifacts..."
       - rm -rf {{.BUILD_DIR}}/
       - rm -f coverage.out *.test *.prof
+      - rm -f .deps-timestamp .lint-timestamp .fmt-timestamp .docs-fmt-timestamp
+      - echo "🧹 Cleaning generated code..."
+      - find internal/ -name '*_generated.go' -type f -delete
+      - echo "🧹 Cleaning Go build cache..."
       - go clean -cache
       - echo "📚 Cleaning documentation..."
       - cd docs-site && npm run docs:clean
@@ -626,6 +802,7 @@ tasks:
       - echo ""
       - echo "📚 Documentation:"
       - echo "   docs           - Generate documentation"
+      - echo "   docs-serve     - Serve documentation locally"
       - echo ""
       - echo "🐳 Docker:"
       - echo "   docker-build   - Build Docker image"
@@ -637,6 +814,8 @@ tasks:
       - echo ""
       - echo "🛠️ Development:"
       - echo "   setup-hooks    - Install Git hooks"
+      - echo "   sync-go-version - Sync Go version across config files"
+      - echo "   check-go-version - Check Go version consistency"
       - echo "   deps           - Update dependencies"
       - echo ""
       - echo "ℹ️  Info:"

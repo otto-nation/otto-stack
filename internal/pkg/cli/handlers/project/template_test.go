@@ -3,6 +3,8 @@ package project
 import (
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,22 +16,7 @@ func TestGenerateEnvFile(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	projectConfig := &ProjectConfig{
-		Project: struct {
-			Name        string
-			Environment string
-		}{
-			Name:        TestProjectName,
-			Environment: TestEnvironmentLocal,
-		},
-		Stack: struct {
-			Enabled []string
-		}{
-			Enabled: []string{TestServicePostgres},
-		},
-	}
-
-	err = handler.generateEnvFile([]string{TestServicePostgres}, projectConfig)
+	err = handler.generateEnvFile([]string{TestServicePostgres}, TestProjectName, &base.BaseCommand{Output: ui.NewOutput()})
 	if err != nil {
 		t.Logf("Expected error in test environment: %v", err)
 	}
@@ -43,22 +30,7 @@ func TestGenerateDockerCompose(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	projectConfig := &ProjectConfig{
-		Project: struct {
-			Name        string
-			Environment string
-		}{
-			Name:        TestProjectName,
-			Environment: TestEnvironmentLocal,
-		},
-		Stack: struct {
-			Enabled []string
-		}{
-			Enabled: []string{TestServicePostgres},
-		},
-	}
-
-	err = handler.generateDockerCompose([]string{TestServicePostgres}, projectConfig)
+	err = handler.generateDockerCompose([]string{TestServicePostgres}, TestProjectName, &base.BaseCommand{Output: ui.NewOutput()})
 	if err != nil {
 		t.Logf("Expected error in test environment: %v", err)
 	}
@@ -71,7 +43,7 @@ func TestGenerateInitialComposeFiles(t *testing.T) {
 
 	err := handler.generateInitialComposeFiles([]string{TestServicePostgres}, TestProjectName,
 		map[string]bool{"skip_warnings": false},
-		map[string]bool{"auto_start": true})
+		map[string]bool{"auto_start": true}, &base.BaseCommand{Output: ui.NewOutput()})
 
 	if err != nil {
 		t.Logf("Expected error in test environment: %v", err)

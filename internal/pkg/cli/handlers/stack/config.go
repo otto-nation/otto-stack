@@ -2,44 +2,67 @@ package stack
 
 import (
 	"fmt"
-	"log/slog"
+	"os"
+	"path/filepath"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/utils"
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
+
 	"gopkg.in/yaml.v3"
 )
 
-// loggerAdapter interface for accessing underlying slog.Logger
-type loggerAdapter interface {
-	SlogLogger() *slog.Logger
+// LoadProjectConfig loads the otto-stack project configuration with local overrides
+func LoadProjectConfig(configPath string) (*config.Config, error) {
+	// Load base config
+	baseConfig, err := loadSingleConfig(configPath)
+	if err != nil {
+		return nil, fmt.Errorf(core.MsgStack_failed_load_base_config, err)
+	}
+
+	// Try to load local config
+	localPath := filepath.Join(core.OttoStackDir, core.LocalConfigFileName)
+	localConfig, err := loadSingleConfig(localPath)
+	if err != nil {
+		// Local config is optional, return base config if not found
+		if os.IsNotExist(err) {
+			return baseConfig, nil
+		}
+		return nil, fmt.Errorf(core.MsgStack_failed_load_local_config, err)
+	}
+
+	// Merge configs (local overrides base)
+	merged := mergeProjectConfigs(baseConfig, localConfig)
+	return merged, nil
 }
 
-// ProjectConfig represents the otto-stack project configuration
-type ProjectConfig struct {
-	Project struct {
-		Name        string `yaml:"name"`
-		Environment string `yaml:"environment"`
-	} `yaml:"project"`
-	Stack struct {
-		Enabled []string `yaml:"enabled"`
-	} `yaml:"stack"`
-}
-
-// LoadProjectConfig loads the otto-stack project configuration
-func LoadProjectConfig(configPath string) (*ProjectConfig, error) {
-	data, err := utils.ReadFileLines(configPath)
+// loadSingleConfig loads a single config file
+func loadSingleConfig(configPath string) (*config.Config, error) {
+	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, err
 	}
 
-	content := ""
-	for _, line := range data {
-		content += line + "\n"
-	}
-
-	var cfg ProjectConfig
-	if err := yaml.Unmarshal([]byte(content), &cfg); err != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", err)
+	var cfg config.Config
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf(core.MsgStack_failed_parse_config, err)
 	}
 
 	return &cfg, nil
+}
+
+// mergeProjectConfigs merges local config into base config
+func mergeProjectConfigs(base, local *config.Config) *config.Config {
+	merged := *base // Copy base
+
+	// Override project settings if specified in local
+	if local.Project.Name != "" {
+		merged.Project.Name = local.Project.Name
+	}
+
+	// Override stack settings if specified in local
+	if len(local.Stack.Enabled) > 0 {
+		merged.Stack.Enabled = local.Stack.Enabled
+	}
+
+	return &merged
 }

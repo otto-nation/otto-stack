@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	pkgTypes "github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/spf13/cobra"
 )
 
@@ -20,47 +19,55 @@ func NewExecHandler() *ExecHandler {
 }
 
 // Handle executes the exec command
-func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	// Get CI-friendly flags
-	ciFlags := utils.GetCIFlags(cmd)
-
-	if len(args) < 2 {
-		utils.HandleError(ciFlags, fmt.Errorf("%s", constants.MsgRequiresServiceAndCommand.Content))
-		return nil
+func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	if len(args) < core.MinArgumentCount {
+		return fmt.Errorf("%s", core.MsgErrors_requires_service_and_command)
 	}
+
+	// Check initialization first
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		utils.HandleError(ciFlags, err)
-		return nil
+		return err
 	}
 	defer cleanup()
 
 	serviceName := args[0]
 	command := args[1:]
 
-	// Get flags
-	interactive, _ := cmd.Flags().GetBool(constants.FlagInteractive)
-	tty, _ := cmd.Flags().GetBool(constants.FlagTTY)
-	user, _ := cmd.Flags().GetString(constants.FlagUser)
-	workdir, _ := cmd.Flags().GetString(constants.FlagWorkdir)
+	// Parse all flags with validation - single line!
+	flags, err := core.ParseExecFlags(cmd)
+	if err != nil {
+		return err
+	}
 
-	// Create exec options
-	options := pkgTypes.ExecOptions{
-		Interactive: interactive,
-		TTY:         tty,
-		User:        user,
-		WorkingDir:  workdir,
+	// Create exec options - clean usage with no repetitive error handling
+	options := docker.ExecOptions{
+		Interactive: flags.Interactive,
+		TTY:         flags.TTY,
+		User:        flags.User,
+		WorkingDir:  flags.Workdir,
 	}
 
 	// Execute command using Docker client
-	return setup.DockerClient.Containers().Exec(ctx, setup.Config.Project.Name, serviceName, command, options)
+	// Execute command in service container
+	dockerArgs := []string{"compose", "-f", docker.DockerComposeFilePath, "-p", setup.Config.Project.Name, "exec"}
+	if options.User != "" {
+		dockerArgs = append(dockerArgs, "--user", options.User)
+	}
+	if options.WorkingDir != "" {
+		dockerArgs = append(dockerArgs, "--workdir", options.WorkingDir)
+	}
+	dockerArgs = append(dockerArgs, serviceName)
+	dockerArgs = append(dockerArgs, command...)
+
+	return setup.DockerClient.RunCommand(ctx, dockerArgs...)
 }
 
 // ValidateArgs validates the command arguments
 func (h *ExecHandler) ValidateArgs(args []string) error {
-	if len(args) < 2 {
-		return fmt.Errorf("%s", constants.MsgRequiresServiceAndCommand.Content)
+	if len(args) < core.MinArgumentCount {
+		return fmt.Errorf("%s", core.MsgErrors_requires_service_and_command)
 	}
 	return nil
 }

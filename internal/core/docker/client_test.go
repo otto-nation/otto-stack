@@ -2,9 +2,9 @@ package docker
 
 import (
 	"log/slog"
-	"os"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,7 +17,7 @@ func TestNewClient(t *testing.T) {
 	}{
 		{
 			name:        "create client with valid logger",
-			logger:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
+			logger:      logger.GetLogger(),
 			expectError: false,
 		},
 		{
@@ -51,9 +51,9 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestClient_Close(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	testLogger := logger.GetLogger()
 
-	client, err := NewClient(logger)
+	client, err := NewClient(testLogger)
 	if err != nil {
 		t.Skipf("Docker not available: %v", err)
 	}
@@ -72,9 +72,9 @@ func TestClient_Close(t *testing.T) {
 }
 
 func TestClient_GetCli(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	testLogger := logger.GetLogger()
 
-	client, err := NewClient(logger)
+	client, err := NewClient(testLogger)
 	if err != nil {
 		t.Skipf("Docker not available: %v", err)
 	}
@@ -87,16 +87,16 @@ func TestClient_GetCli(t *testing.T) {
 }
 
 func TestClient_GetLogger(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	testLogger := logger.GetLogger()
 
-	client, err := NewClient(logger)
+	client, err := NewClient(testLogger)
 	if err != nil {
 		t.Skipf("Docker not available: %v", err)
 	}
 	defer func() { _ = client.Close() }()
 
 	t.Run("get logger", func(t *testing.T) {
-		assert.Equal(t, logger, client.logger)
+		assert.Equal(t, testLogger, client.logger)
 	})
 }
 

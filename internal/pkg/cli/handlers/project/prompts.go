@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 // ErrGoBack is returned when user wants to go back
@@ -28,9 +28,9 @@ func (h *InitHandler) promptForProjectDetails() (string, error) {
 
 	// Project name prompt
 	namePrompt := &survey.Input{
-		Message: constants.PromptProjectName,
+		Message: core.PromptProjectName,
 		Default: defaultName,
-		Help:    constants.HelpProjectName,
+		Help:    core.HelpProjectName,
 	}
 
 	if err := survey.AskOne(namePrompt, &projectName, survey.WithValidator(func(ans any) error {
@@ -44,7 +44,7 @@ func (h *InitHandler) promptForProjectDetails() (string, error) {
 
 // promptForServices prompts user to select services with category navigation
 func (h *InitHandler) promptForServices() ([]string, error) {
-	serviceUtils := utils.NewServiceUtils()
+	serviceUtils := services.NewServiceUtils()
 
 	// Get available services by category
 	categories, err := serviceUtils.GetServicesByCategory()
@@ -58,11 +58,11 @@ func (h *InitHandler) promptForServices() ([]string, error) {
 
 	// Convert map to ordered slice for navigation
 	var categoryNames []string
-	var categoryServicesList [][]types.ServiceInfo
-	for categoryName, services := range categories {
-		if len(services) > 0 {
+	var categoryServicesList [][]services.ServiceConfig
+	for categoryName, categoryServices := range categories {
+		if len(categoryServices) > 0 {
 			categoryNames = append(categoryNames, categoryName)
-			categoryServicesList = append(categoryServicesList, services)
+			categoryServicesList = append(categoryServicesList, categoryServices)
 		}
 	}
 
@@ -72,32 +72,28 @@ func (h *InitHandler) promptForServices() ([]string, error) {
 	// Navigate through categories with back support
 	for categoryIndex < len(categoryNames) {
 		categoryName := categoryNames[categoryIndex]
-		services := categoryServicesList[categoryIndex]
-
-		constants.SendMessage(constants.MsgSelectServices, categoryName)
+		categoryServices := categoryServicesList[categoryIndex]
 
 		var serviceOptions []string
-		for _, service := range services {
+		for _, service := range categoryServices {
 			description := service.Description
 			if description == "" {
-				description = constants.MsgNoDescription.Content
+				description = core.MsgServices_no_description
 			}
 			serviceOptions = append(serviceOptions, fmt.Sprintf("%s - %s", service.Name, description))
 		}
 
+		// Add "Go Back" option if not on first category
 		if categoryIndex > 0 {
-			serviceOptions = append(serviceOptions, constants.PromptGoBack)
+			serviceOptions = append(serviceOptions, core.PromptGoBack)
 		}
 
 		var selected []string
 		prompt := &survey.MultiSelect{
-			Message: fmt.Sprintf(constants.MsgSelectServices.Content, categoryName),
+			Message: fmt.Sprintf(core.MsgServices_select, categoryName),
 			Options: serviceOptions,
-			Help:    constants.HelpServiceSelection,
+			Help:    core.HelpServiceSelection,
 		}
-
-		// Set custom template with back instructions
-		survey.MultiSelectQuestionTemplate = constants.MultiSelectTemplateWithBack
 
 		if err := survey.AskOne(prompt, &selected); err != nil {
 			return nil, fmt.Errorf("failed to select %s services: %w", categoryName, err)
@@ -105,14 +101,15 @@ func (h *InitHandler) promptForServices() ([]string, error) {
 
 		// Check if user selected "Go Back"
 		goBack := false
-		var categoryServices []string
+		var selectedServiceNames []string
 		for _, selection := range selected {
-			if selection == constants.PromptGoBack {
+			if selection == core.PromptGoBack {
 				goBack = true
 				break
 			}
+			// Extract service name from "name - description" format
 			serviceName := strings.Split(selection, " - ")[0]
-			categoryServices = append(categoryServices, serviceName)
+			selectedServiceNames = append(selectedServiceNames, serviceName)
 		}
 
 		if goBack && categoryIndex > 0 {
@@ -121,7 +118,7 @@ func (h *InitHandler) promptForServices() ([]string, error) {
 		}
 
 		// Add selected services to the total
-		allSelectedServices = append(allSelectedServices, categoryServices...)
+		allSelectedServices = append(allSelectedServices, selectedServiceNames...)
 		categoryIndex++
 	}
 
@@ -137,65 +134,62 @@ func (h *InitHandler) promptForAdvancedOptions() (map[string]bool, map[string]bo
 	validation := make(map[string]bool)
 	advanced := make(map[string]bool)
 
-	// Ask if user wants advanced options
-	var wantsAdvanced bool
-	advancedPrompt := &survey.Confirm{
-		Message: constants.PromptAdvancedConfig,
-		Default: false,
-		Help:    constants.HelpAdvancedConfig,
-	}
-
-	if err := survey.AskOne(advancedPrompt, &wantsAdvanced); err != nil {
-		return validation, advanced, fmt.Errorf("failed to get advanced options preference: %w", err)
-	}
-
-	if !wantsAdvanced {
+	// Check if there are any validation options available
+	if len(core.ValidationOptions) == 0 {
 		return validation, advanced, nil
 	}
 
-	// Validation options
-	var validationKeys []string
-	for key := range constants.ValidationOptions {
-		validationKeys = append(validationKeys, key)
+	// Ask if user wants validation options
+	var wantsValidation bool
+	validationPrompt := &survey.Confirm{
+		Message: "Enable validation checks?",
+		Default: true,
+		Help:    "Run validation checks to catch potential issues early",
 	}
 
-	var selectedValidation []string
-	validationPrompt := &survey.MultiSelect{
-		Message: constants.PromptValidationOptions,
-		Options: validationKeys,
-		Help:    constants.HelpValidationOptions,
+	if err := survey.AskOne(validationPrompt, &wantsValidation); err != nil {
+		return validation, advanced, fmt.Errorf("failed to get validation preference: %w", err)
 	}
 
-	if err := survey.AskOne(validationPrompt, &selectedValidation); err != nil {
-		return validation, advanced, fmt.Errorf("failed to get validation options: %w", err)
+	if !wantsValidation {
+		return validation, advanced, nil
 	}
 
-	for _, option := range selectedValidation {
-		if key, exists := constants.ValidationOptions[option]; exists {
-			validation[key] = true
+	// Build validation options dynamically from available options (only optional ones)
+	var validationOptions []string
+	var descriptionToKey = make(map[string]string)
+
+	optionalValidations := []string{
+		core.ValidationPorts,
+		core.ValidationResourceLimits,
+		core.ValidationEnvironmentVariables,
+		core.ValidationFilePermissions,
+		core.ValidationNetworkConnectivity,
+		core.ValidationStorageRequirements,
+	}
+
+	for _, key := range optionalValidations {
+		if description, exists := core.ValidationOptions[key]; exists {
+			validationOptions = append(validationOptions, description)
+			descriptionToKey[description] = key
 		}
 	}
 
-	// Advanced options
-	var advancedKeys []string
-	for key := range constants.AdvancedOptions {
-		advancedKeys = append(advancedKeys, key)
+	var selectedValidation []string
+	validationSelectPrompt := &survey.MultiSelect{
+		Message: "Select validation checks:",
+		Options: validationOptions,
+		Help:    "Choose which validation checks to run during initialization",
 	}
 
-	var selectedAdvanced []string
-	advancedPrompt2 := &survey.MultiSelect{
-		Message: constants.PromptAdvancedFeatures,
-		Options: advancedKeys,
-		Help:    constants.HelpAdvancedFeatures,
+	if err := survey.AskOne(validationSelectPrompt, &selectedValidation); err != nil {
+		return validation, advanced, fmt.Errorf("failed to get validation options: %w", err)
 	}
 
-	if err := survey.AskOne(advancedPrompt2, &selectedAdvanced); err != nil {
-		return validation, advanced, fmt.Errorf("failed to get advanced features: %w", err)
-	}
-
-	for _, option := range selectedAdvanced {
-		if key, exists := constants.AdvancedOptions[option]; exists {
-			advanced[key] = true
+	// Map selected descriptions back to keys
+	for _, description := range selectedValidation {
+		if key, exists := descriptionToKey[description]; exists {
+			validation[key] = true
 		}
 	}
 
@@ -203,17 +197,17 @@ func (h *InitHandler) promptForAdvancedOptions() (map[string]bool, map[string]bo
 }
 
 // confirmInitializationWithBack shows a summary and asks for confirmation with back option
-func (h *InitHandler) confirmInitializationWithBack(projectName string, services []string, validation, advanced map[string]bool) (string, error) {
-	constants.SendMessage(constants.MsgInitSummary)
-	constants.SendMessage(constants.MsgProject, projectName)
-	constants.SendMessage(constants.MsgServices, strings.Join(services, ", "))
+func (h *InitHandler) confirmInitializationWithBack(projectName string, services []string, validation, advanced map[string]bool, base *base.BaseCommand) (string, error) {
+	base.Output.Header(core.MsgInit_summary)
+	base.Output.Info(core.MsgInit_project_summary, projectName)
+	base.Output.Info(core.MsgInit_services_summary, strings.Join(services, ", "))
 
 	if len(validation) > 0 {
 		var validationFeatures []string
 		for feature := range validation {
 			validationFeatures = append(validationFeatures, feature)
 		}
-		constants.SendMessage(constants.MsgValidation, strings.Join(validationFeatures, ", "))
+		base.Output.Info(core.MsgInit_validation_summary, strings.Join(validationFeatures, ", "))
 	}
 
 	if len(advanced) > 0 {
@@ -221,23 +215,19 @@ func (h *InitHandler) confirmInitializationWithBack(projectName string, services
 		for feature := range advanced {
 			advancedFeatures = append(advancedFeatures, feature)
 		}
-		constants.SendMessage(constants.MsgAdvanced, strings.Join(advancedFeatures, ", "))
+		base.Output.Info(core.MsgInit_advanced_summary, strings.Join(advancedFeatures, ", "))
 	}
 
 	var action string
 	actionPrompt := &survey.Select{
-		Message: constants.PromptActionSelect,
-		Options: constants.ActionOptions,
-		Default: constants.PromptProceedInit,
+		Message: core.PromptActionSelect,
+		Options: []string{core.ActionProceed, core.ActionBack, core.ActionCancel},
+		Default: core.ActionProceed,
 	}
 
 	if err := survey.AskOne(actionPrompt, &action); err != nil {
 		return "", fmt.Errorf("failed to get action: %w", err)
 	}
 
-	if mappedAction, exists := constants.ActionOptionMap[action]; exists {
-		return mappedAction, nil
-	}
-
-	return constants.ActionCancel, nil
+	return action, nil
 }

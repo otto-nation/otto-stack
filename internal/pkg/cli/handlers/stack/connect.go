@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	pkgTypes "github.com/otto-nation/otto-stack/internal/pkg/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -22,57 +21,82 @@ func NewConnectHandler() *ConnectHandler {
 }
 
 // Handle executes the connect command
-func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Get CI-friendly flags
-	ciFlags := utils.GetCIFlags(cmd)
+	ciFlags := ci.GetFlags(cmd)
 
 	if len(args) < 1 {
-		utils.HandleError(ciFlags, fmt.Errorf("%s", constants.MsgRequiresServiceName.Content))
-		return nil
+		return fmt.Errorf("%s", core.Messages[core.MsgErrors_requires_service_name])
 	}
 
+	// Check initialization first
+
 	if !ciFlags.Quiet {
-		ui.Header("Connecting to %s", args[0])
+		base.Output.Header(core.MsgStack_connecting_to, args[0])
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		utils.HandleError(ciFlags, err)
-		return nil
+		return err // Return error directly for clean output
+	}
+	defer cleanup()
+
+	if !ciFlags.Quiet {
+		base.Output.Header(core.MsgStack_connecting_to, args[0])
 	}
 	defer cleanup()
 
 	serviceName := args[0]
 
-	// Get flags
-	database, _ := cmd.Flags().GetString(constants.FlagDatabase)
-	user, _ := cmd.Flags().GetString(constants.FlagUser)
-	host, _ := cmd.Flags().GetString(constants.FlagHost)
-	port, _ := cmd.Flags().GetInt(constants.FlagPort)
-	readOnly, _ := cmd.Flags().GetBool(constants.FlagReadOnly)
+	// Parse all flags with validation - single line!
+	flags, err := core.ParseConnectFlags(cmd)
+	if err != nil {
+		return err
+	}
 
 	// Create connection command based on service type
-	command, err := h.getConnectionCommand(serviceName, database, user, host, port, readOnly)
+	command, err := h.getConnectionCommand(serviceName, flags.Database, flags.User, flags.Host, flags.Port, flags.ReadOnly)
 	if err != nil {
-		utils.HandleError(ciFlags, err)
+		ci.HandleError(ciFlags, err)
 		return nil
 	}
 
 	// Execute connection command
-	options := pkgTypes.ExecOptions{
+	options := docker.ExecOptions{
 		Interactive: true,
 		TTY:         true,
 	}
 
-	return setup.DockerClient.Containers().Exec(ctx, setup.Config.Project.Name, serviceName, command, options)
+	dockerArgs := []string{"compose", "-f", docker.DockerComposeFilePath, "-p", setup.Config.Project.Name, "exec"}
+	if options.User != "" {
+		dockerArgs = append(dockerArgs, "--user", options.User)
+	}
+	if options.WorkingDir != "" {
+		dockerArgs = append(dockerArgs, "--workdir", options.WorkingDir)
+	}
+	dockerArgs = append(dockerArgs, serviceName)
+	dockerArgs = append(dockerArgs, command...)
+
+	return setup.DockerClient.RunCommand(ctx, dockerArgs...)
 }
 
 // getConnectionCommand returns the appropriate connection command for the service
-func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host string, port int, readOnly bool) ([]string, error) {
-	config, err := services.GetServiceConnectionConfig(serviceName)
+func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host string, port int, _ bool) ([]string, error) {
+	manager, err := services.New()
 	if err != nil {
-		return nil, fmt.Errorf(constants.MsgUnsupportedServiceType.Content, serviceName)
+		return nil, fmt.Errorf("failed to create service manager: %w", err)
 	}
+
+	service, err := manager.GetService(serviceName)
+	if err != nil {
+		return nil, fmt.Errorf("unsupported service type: %s", serviceName)
+	}
+
+	if service.Service.Connection == nil {
+		return nil, fmt.Errorf("service %s does not support connections", serviceName)
+	}
+
+	config := service.Service.Connection
 
 	cmd := []string{config.Client}
 
@@ -91,7 +115,7 @@ func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host 
 	}
 
 	// Add host flag if specified and not localhost
-	if config.HostFlag != "" && host != "" && host != constants.ServiceLocalhost {
+	if config.HostFlag != "" && host != "" && host != services.ServiceLocalhost {
 		cmd = append(cmd, config.HostFlag, host)
 	}
 
@@ -109,7 +133,7 @@ func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host 
 // ValidateArgs validates the command arguments
 func (h *ConnectHandler) ValidateArgs(args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("%s", constants.MsgRequiresServiceName.Content)
+		return fmt.Errorf("%s", core.Messages[core.MsgErrors_requires_service_name])
 	}
 	return nil
 }

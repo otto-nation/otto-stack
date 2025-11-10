@@ -3,18 +3,21 @@ package project
 import (
 	"fmt"
 	"os"
+	"strings"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 )
 
 // createDirectoryStructure creates the necessary directory structure
 func (h *InitHandler) createDirectoryStructure() error {
 	directories := []string{
-		constants.DevStackDir,
+		core.OttoStackDir,
 	}
 
 	for _, dir := range directories {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		if err := os.MkdirAll(dir, core.DirPermReadWriteExec); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
@@ -23,24 +26,21 @@ func (h *InitHandler) createDirectoryStructure() error {
 }
 
 // createConfigFile creates the main configuration file
-func (h *InitHandler) createConfigFile(projectName string, services []string, validation, advanced map[string]bool) error {
-	configContent, err := h.generateConfig(projectName, services, validation, advanced)
-	if err != nil {
-		return fmt.Errorf("failed to generate config: %w", err)
-	}
+func (h *InitHandler) createConfigFile(projectName string, services []string, base *base.BaseCommand) error {
+	configContent := h.generateConfig(projectName, services)
 
-	configPath := constants.DevStackDir + "/" + constants.ConfigFileName
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	configPath := core.OttoStackDir + "/" + core.ConfigFileName
+	if err := os.WriteFile(configPath, []byte(configContent), core.FilePermReadWrite); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	constants.SendMessage(constants.MsgCreatedFile, configPath)
+	base.Output.Success(core.MsgSuccess_created_file, configPath)
 	return nil
 }
 
 // createGitignoreEntries adds entries to .gitignore
-func (h *InitHandler) createGitignoreEntries() error {
-	gitignorePath := constants.GitignoreFileName
+func (h *InitHandler) createGitignoreEntries(base *base.BaseCommand) error {
+	gitignorePath := core.GitIgnoreFileName
 
 	// Check if .gitignore exists
 	var existingContent []byte
@@ -51,7 +51,7 @@ func (h *InitHandler) createGitignoreEntries() error {
 	// Check if entries already exist
 	existingStr := string(existingContent)
 	hasDevStackEntries := false
-	for _, entry := range constants.GitignoreEntries {
+	for _, entry := range core.GitignoreEntries {
 		if entry != "" && contains(existingStr, entry) {
 			hasDevStackEntries = true
 			break
@@ -59,29 +59,29 @@ func (h *InitHandler) createGitignoreEntries() error {
 	}
 
 	if hasDevStackEntries {
-		constants.SendMessage(constants.MsgGitignoreExists)
+		base.Output.Info("%s", core.MsgFiles_gitignore_exists)
 		return nil
 	}
 
 	// Append entries
-	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, core.FilePermReadWrite)
 	if err != nil {
 		return fmt.Errorf("failed to open .gitignore: %w", err)
 	}
 	defer func() { _ = file.Close() }()
 
-	for _, entry := range constants.GitignoreEntries {
+	for _, entry := range core.GitignoreEntries {
 		if _, err := file.WriteString(entry + "\n"); err != nil {
 			return fmt.Errorf("failed to write to .gitignore: %w", err)
 		}
 	}
 
-	constants.SendMessage(constants.MsgUpdatedGitignore)
+	base.Output.Success("%s", core.MsgSuccess_updated_gitignore)
 	return nil
 }
 
 // createReadme creates a README file for the project
-func (h *InitHandler) createReadme(projectName string, services []string) error {
+func (h *InitHandler) createReadme(projectName string, services []string, base *base.BaseCommand) error {
 	readmeContent := fmt.Sprintf(`# %s Otto Stack
 
 This directory contains the development stack configuration for %s.
@@ -119,15 +119,15 @@ The following services are configured:
 
 Run `+"`%s --help`"+` for a full list of available commands.
 `, projectName, projectName, formatServicesList(services),
-		constants.AppName, constants.AppName, constants.AppName,
-		constants.ConfigFileName, constants.DockerComposeFileName, constants.AppName)
+		core.AppName, core.AppName, core.AppName,
+		core.ConfigFileName, docker.DockerComposeFileName, core.AppName)
 
-	readmePath := constants.DevStackDir + "/" + constants.ReadmeFileName
-	if err := os.WriteFile(readmePath, []byte(readmeContent), 0644); err != nil {
+	readmePath := core.OttoStackDir + "/" + core.ReadmeFileName
+	if err := os.WriteFile(readmePath, []byte(readmeContent), core.FilePermReadWrite); err != nil {
 		return fmt.Errorf("failed to create README: %w", err)
 	}
 
-	constants.SendMessage(constants.MsgCreatedFile, readmePath)
+	base.Output.Success(core.MsgSuccess_created_file, readmePath)
 	return nil
 }
 
@@ -137,11 +137,11 @@ func formatServicesList(services []string) string {
 		return "- No services configured"
 	}
 
-	result := ""
+	var builder strings.Builder
 	for _, service := range services {
-		result += fmt.Sprintf("- %s\n", service)
+		builder.WriteString(fmt.Sprintf("- %s\n", service))
 	}
-	return result
+	return builder.String()
 }
 
 // contains checks if a string contains a substring

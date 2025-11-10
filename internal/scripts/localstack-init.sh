@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # Configuration
 AWS_ENDPOINT="http://localstack-core:4566"
 AWS_REGION="us-east-1"
-CONFIG_FILE="/config/otto-stack-config.yml"
+CONFIG_FILE="/config/otto-stack-config.json"
 
 # Helper functions
 log_info() {

@@ -3,35 +3,43 @@ package stack
 import (
 	"context"
 	"fmt"
-	"strings"
+	"log/slog"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
 // StatusHandler handles the status command
-type StatusHandler struct{}
+type StatusHandler struct {
+	logger *slog.Logger
+}
 
 // NewStatusHandler creates a new status handler
 func NewStatusHandler() *StatusHandler {
-	return &StatusHandler{}
+	return &StatusHandler{
+		logger: logger.GetLogger(),
+	}
 }
 
 // Handle executes the status command
-func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	// Check initialization first
+
 	// Get CI-friendly flags
-	ciFlags := utils.GetCIFlags(cmd)
+	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
-		ui.Header(constants.MsgStatus)
+		base.Output.Header(core.MsgStatus)
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		utils.HandleError(ciFlags, err)
+		ci.HandleError(ciFlags, err)
 		return nil
 	}
 	defer cleanup()
@@ -43,37 +51,44 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	}
 
 	// Apply same service resolution as up command
-	serviceUtils := utils.NewServiceUtils()
-	resolvedServices, err := serviceUtils.ResolveServices(serviceNames)
+	manager, err := services.New()
 	if err != nil {
-		utils.HandleError(ciFlags, fmt.Errorf("failed to resolve services: %w", err))
+		ci.HandleError(ciFlags, fmt.Errorf("failed to create service manager: %w", err))
 		return nil
 	}
 
+	// Validate services exist
+	if err := manager.ValidateServices(serviceNames); err != nil {
+		ci.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
+		return nil
+	}
+
+	resolvedServices := serviceNames
+
 	// Get service status
-	statuses, err := setup.DockerClient.Containers().List(ctx, setup.Config.Project.Name, resolvedServices)
+	statuses, err := setup.DockerClient.GetDockerServiceStatus(ctx, setup.Config.Project.Name, resolvedServices)
 	if err != nil {
-		utils.HandleError(ciFlags, fmt.Errorf("failed to get service status: %w", err))
+		ci.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_get_service_status, err))
 		return nil
 	}
 
 	// Handle CI-friendly output
 	if ciFlags.JSON {
-		utils.OutputResult(ciFlags, map[string]any{
+		ci.OutputResult(ciFlags, map[string]any{
 			"services": statuses,
 			"count":    len(statuses),
-		}, constants.ExitSuccess)
+		}, core.ExitSuccess)
 		return nil
 	}
 
 	// Display user-friendly status
 	if len(statuses) == 0 {
-		constants.SendMessage(constants.Message{Level: constants.LevelInfo, Content: "No services are currently running"})
+		// Restart operation
 		return nil
 	}
 
-	fmt.Printf("%-20s %-12s %s\n", constants.StatusHeaderService, constants.StatusHeaderState, constants.StatusHeaderHealth)
-	fmt.Println(strings.Repeat(constants.StatusSeparator, 45))
+	fmt.Printf("%-20s %-12s %s\n", ui.StatusHeaderService, ui.StatusHeaderState, ui.StatusHeaderHealth)
+	fmt.Println(ui.StatusSeparator)
 	for _, status := range statuses {
 		fmt.Printf("%-20s %-12s %s\n", status.Name, status.State, status.Health)
 	}

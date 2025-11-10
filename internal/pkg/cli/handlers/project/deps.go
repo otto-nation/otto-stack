@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
 
@@ -20,21 +20,23 @@ func NewDepsHandler() *DepsHandler {
 }
 
 // Handle executes the deps command
-func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	ui.Header("Service Dependencies")
+func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	// Check initialization first
+
+	base.Output.Header("%s", core.MsgDependencies_header)
 
 	// Get output format
-	format, _ := cmd.Flags().GetString("output")
+	format, _ := cmd.Flags().GetString(core.FlagFormat)
 
 	// Load service dependencies
-	serviceUtils := utils.NewServiceUtils()
+	serviceUtils := services.NewServiceUtils()
 	dependencies, err := serviceUtils.LoadAllServiceDependencies()
 	if err != nil {
 		return fmt.Errorf("failed to load dependencies: %w", err)
 	}
 
 	if len(dependencies) == 0 {
-		ui.Info("No service dependencies found")
+		base.Output.Info("%s", core.MsgDependencies_none_found)
 		return nil
 	}
 
@@ -57,10 +59,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Display results
-	formatter, err := display.CreateFormatter(format, cmd.OutOrStdout())
-	if err != nil {
-		return fmt.Errorf("failed to create formatter: %w", err)
-	}
+	formatter := display.New(cmd.OutOrStdout(), base.Output)
 
 	// Convert to ServiceStatus format for display
 	var services []display.ServiceStatus
@@ -71,7 +70,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		})
 	}
 
-	if err := formatter.FormatStatus(services, display.StatusOptions{}); err != nil {
+	if err := formatter.FormatStatus(services, display.Options{Format: format}); err != nil {
 		return fmt.Errorf("failed to format output: %w", err)
 	}
 

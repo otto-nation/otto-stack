@@ -80,6 +80,12 @@ update_golangci_config() {
         return 0
     fi
 
+    # Check if the file has a go: field at all
+    if ! grep -q -E '^\s*go:\s*"' "$GOLANGCI_CONFIG"; then
+        # No go: field exists, skip this check as golangci-lint will use go.mod version
+        return 0
+    fi
+
     # Extract current version from golangci config
     local current_version=$(grep -E '^\s*go:\s*"' "$GOLANGCI_CONFIG" | sed 's/.*"\([^"]*\)".*/\1/' || echo "")
 
@@ -216,17 +222,69 @@ check_all_versions() {
 # Function to fix all versions
 fix_all_versions() {
     local go_version=$1
+    local changes_made=false
 
-    print_status "$BLUE" "Fixing Go version inconsistencies..."
-    print_status "$BLUE" "Target version: $go_version"
-    echo
+    # Check if any changes are needed first
+    local go_mod_needs_update=false
+    local golangci_needs_update=false
+    local dockerfile_needs_update=false
 
-    update_go_mod "$go_version" false
-    update_golangci_config "$go_version" false
-    update_dockerfile "$go_version" false
+    # Check go.mod
+    if [[ -f "$PROJECT_ROOT/go.mod" ]]; then
+        local current_go_version
+        current_go_version=$(grep "^go " "$PROJECT_ROOT/go.mod" | awk '{print $2}' || echo "")
+        local expected_version
+        expected_version=$(echo "$go_version" | sed 's/\([0-9]*\.[0-9]*\).*/\1/')
+        if [[ "$current_go_version" != "$expected_version" ]]; then
+            go_mod_needs_update=true
+            changes_made=true
+        fi
+    fi
 
-    echo
-    print_status "$GREEN" "✅ All files synchronized to Go version: $go_version"
+    # Check .golangci.yml
+    if [[ -f "$GOLANGCI_CONFIG" ]]; then
+        # Only check if the file has a go: field
+        if grep -q -E '^\s*go:\s*"' "$GOLANGCI_CONFIG"; then
+            local current_golangci_version
+            current_golangci_version=$(grep -E '^\s*go:\s*"' "$GOLANGCI_CONFIG" | sed 's/.*"\([^"]*\)".*/\1/' || echo "")
+            if [[ "$current_golangci_version" != "$go_version" ]]; then
+                golangci_needs_update=true
+                changes_made=true
+            fi
+        fi
+    fi
+
+    # Check Dockerfile
+    if [[ -f "$PROJECT_ROOT/Dockerfile" ]]; then
+        local current_dockerfile_version
+        current_dockerfile_version=$(grep "FROM golang:" "$PROJECT_ROOT/Dockerfile" | head -1 | sed 's/.*golang:\([0-9.]*\).*/\1/' || echo "")
+        local expected_dockerfile_version
+        expected_dockerfile_version=$(echo "$go_version" | sed 's/\([0-9]*\.[0-9]*\).*/\1/')
+        if [[ "$current_dockerfile_version" != "$expected_dockerfile_version" ]]; then
+            dockerfile_needs_update=true
+            changes_made=true
+        fi
+    fi
+
+    # Only show messages and make changes if needed
+    if [[ "$changes_made" == true ]]; then
+        print_status "$BLUE" "Fixing Go version inconsistencies..."
+        print_status "$BLUE" "Target version: $go_version"
+        echo
+
+        if [[ "$go_mod_needs_update" == true ]]; then
+            update_go_mod "$go_version" false
+        fi
+        if [[ "$golangci_needs_update" == true ]]; then
+            update_golangci_config "$go_version" false
+        fi
+        if [[ "$dockerfile_needs_update" == true ]]; then
+            update_dockerfile "$go_version" false
+        fi
+
+        echo
+        print_status "$GREEN" "✅ All files synchronized to Go version: $go_version"
+    fi
 }
 
 # Main function

@@ -2,16 +2,14 @@ package stack
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"path/filepath"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
-	cliTypes "github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
-	"github.com/otto-nation/otto-stack/internal/pkg/utils"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -24,53 +22,69 @@ func NewDownHandler() *DownHandler {
 }
 
 // Handle executes the down command
-func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *cliTypes.BaseCommand) error {
-	ui.Header(constants.MsgStopping)
+func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	// Check initialization first
 
-	// Check if otto-stack is initialized
-	configPath := filepath.Join(constants.DevStackDir, constants.ConfigFileName)
-	if !utils.FileExists(configPath) {
-		return errors.New(constants.ErrNotInitialized)
-	}
-
-	// Load project configuration
-	cfg, err := LoadProjectConfig(configPath)
-	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
-	}
-
-	// Create Docker client
-	logger := base.Logger.(loggerAdapter)
-	dockerClient, err := docker.NewClient(logger.SlogLogger())
-	if err != nil {
-		return fmt.Errorf("failed to create Docker client: %w", err)
-	}
+	// Start operation logging only after initialization check passes
+	logger.Info(logger.LogMsgStartingOperation, logger.LogFieldOperation, logger.OperationStackDown, logger.LogFieldServices, args)
 	defer func() {
-		if err := dockerClient.Close(); err != nil {
-			base.Logger.Error("Failed to close Docker client", "error", err)
+		if r := recover(); r != nil {
+			logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationStackDown, logger.LogFieldError, fmt.Errorf("panic: %v", r))
+			panic(r)
 		}
 	}()
 
-	// Parse flags
-	timeout, _ := cmd.Flags().GetInt("timeout")
+	ciFlags := ci.GetFlags(cmd)
 
-	options := types.StopOptions{
-		Timeout: timeout,
-		Remove:  true,
+	if ciFlags.DryRun {
+		base.Output.Info("%s", core.MsgDry_run_showing_what_would_happen)
+		base.Output.Info(core.MsgDry_run_would_stop_services, fmt.Sprintf("%v", args))
+		return nil
 	}
 
+	base.Output.Header(core.MsgStopping)
+	logger.Info(logger.LogMsgServiceAction, logger.LogFieldAction, logger.ActionStop, logger.LogFieldService, "stack", logger.LogFieldServices, args)
+
+	// Parse all flags with validation - single line!
+	flags, err := core.ParseDownFlags(cmd)
+	if err != nil {
+		logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationStackDown, logger.LogFieldError, err)
+		return err
+	}
+
+	// Load project configuration
+	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
+	cfg, err := LoadProjectConfig(configPath)
+	if err != nil {
+		return fmt.Errorf(core.MsgStack_failed_load_config, err)
+	}
+
+	// Create Docker client
+	dockerClient, err := docker.NewClient(nil)
+	if err != nil {
+		return fmt.Errorf(core.MsgStack_failed_create_docker_client, err)
+	}
+	defer func() {
+		_ = dockerClient.Close()
+	}()
+
 	// Determine services to stop
-	serviceNames := args
-	if len(serviceNames) == 0 {
-		serviceNames = cfg.Stack.Enabled
+	// Convert CLI options to internal options
+	internalOptions := docker.StopOptions{
+		Timeout:       flags.Timeout,
+		Remove:        flags.Remove,
+		RemoveVolumes: flags.Volumes,
+		RemoveOrphans: flags.RemoveOrphans,
 	}
 
 	// Stop services
-	if err := dockerClient.Containers().Stop(ctx, cfg.Project.Name, serviceNames, options); err != nil {
-		return fmt.Errorf("failed to stop services: %w", err)
+	if err := dockerClient.ComposeDown(ctx, cfg.Project.Name, internalOptions); err != nil {
+		logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationStackDown, logger.LogFieldError, err)
+		return fmt.Errorf(core.MsgStack_failed_stop_services, err)
 	}
 
-	ui.Success(constants.MsgStopSuccess)
+	base.Output.Success(core.MsgStopSuccess)
+	logger.Info(logger.LogMsgOperationCompleted, logger.LogFieldOperation, logger.OperationStackDown)
 	return nil
 }
 

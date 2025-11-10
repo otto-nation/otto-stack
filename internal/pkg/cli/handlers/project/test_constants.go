@@ -1,11 +1,11 @@
 package project
 
-import "github.com/otto-nation/otto-stack/internal/pkg/constants"
+import "github.com/otto-nation/otto-stack/internal/core"
 
 // Test constants to eliminate magic strings and provide context
 const (
 	// Test directory patterns
-	TestTempDirPattern = constants.AppName + "-test-*"
+	TestTempDirPattern = core.AppName + "-test-*"
 
 	// Test project names
 	TestProjectName        = "test-project"
@@ -20,7 +20,7 @@ const (
 	// Test file content
 	TestConfigContent    = "test: config"
 	TestReadmeContent    = "# Test Project"
-	TestGitignoreContent = "*.log\n*.tmp"
+	TestGitignoreContent = "*.bak\n*.tmp"
 	TestExistingContent  = "# Existing content"
 
 	// Test validation messages
@@ -33,24 +33,22 @@ const (
 
 // Use constants from the constants package
 const (
-	// Test environments (use actual constants)
-	TestEnvironmentLocal = constants.DefaultEnvironment
-	TestEnvironmentDev   = "development"
-	TestEnvironmentProd  = "production"
+	// Test project types
+	TestProjectTypeDocker = "docker"
 
 	// Test gitignore entries (use actual constants)
-	TestGitignoreEntry = constants.DevStackDir + "/" + constants.EnvGeneratedFileName
+	TestGitignoreEntry = core.OttoStackDir + "/" + core.EnvGeneratedFileName
 )
 
 // Test CLI commands
 var (
-	CmdDevStackUp     = constants.AppName + " up"
-	CmdDevStackDown   = constants.AppName + " down"
-	CmdDevStackStatus = constants.AppName + " status"
+	CmdDevStackUp     = core.AppName + " up"
+	CmdDevStackDown   = core.AppName + " down"
+	CmdDevStackStatus = core.AppName + " status"
 )
 
 // Test file paths (use actual constants for consistency)
 var (
-	TestConfigFilePath = constants.DevStackDir + "/" + constants.ConfigFileName
-	TestReadmeFilePath = constants.DevStackDir + "/" + constants.ReadmeFileName
+	TestConfigFilePath = core.OttoStackDir + "/" + core.ConfigFileName
+	TestReadmeFilePath = core.OttoStackDir + "/" + core.ReadmeFileName
 )

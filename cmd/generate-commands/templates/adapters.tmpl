@@ -1,0 +1,63 @@
+type serviceManagerAdapter struct {
+	manager *services.Orchestrator
+}
+
+func (s *serviceManagerAdapter) StartServices(ctx context.Context, serviceNames []string, options docker.StartOptions) error {
+	return s.manager.StartServices(ctx, serviceNames, options)
+}
+
+func (s *serviceManagerAdapter) StopServices(ctx context.Context, serviceNames []string, options docker.StopOptions) error {
+	return s.manager.StopServices(ctx, serviceNames, options)
+}
+
+func (s *serviceManagerAdapter) GetServiceStatus(ctx context.Context, serviceNames []string) ([]docker.DockerServiceStatus, error) {
+	return s.manager.GetServiceStatus(ctx, serviceNames)
+}
+
+type loggerAdapter struct {
+	logger *slog.Logger
+}
+
+func (l *loggerAdapter) Info(msg string, args ...any) {
+	l.logger.Info(msg, args...)
+}
+
+func (l *loggerAdapter) Error(msg string, args ...any) {
+	l.logger.Error(msg, args...)
+}
+
+func (l *loggerAdapter) Debug(msg string, args ...any) {
+	l.logger.Debug(msg, args...)
+}
+
+func (l *loggerAdapter) SlogLogger() *slog.Logger {
+	return l.logger
+}
+
+type outputAdapter struct {
+	output *ui.Output
+}
+
+func (o *outputAdapter) Success(msg string, args ...any) {
+	o.output.Success(msg, args...)
+}
+
+func (o *outputAdapter) Error(msg string, args ...any) {
+	o.output.Error(msg, args...)
+}
+
+func (o *outputAdapter) Warning(msg string, args ...any) {
+	o.output.Warning(msg, args...)
+}
+
+func (o *outputAdapter) Info(msg string, args ...any) {
+	o.output.Info(msg, args...)
+}
+
+func (o *outputAdapter) Header(msg string, args ...any) {
+	o.output.Header(msg, args...)
+}
+
+func (o *outputAdapter) Muted(msg string, args ...any) {
+	o.output.Muted(msg, args...)
+}

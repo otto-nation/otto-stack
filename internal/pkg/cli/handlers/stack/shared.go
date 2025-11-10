@@ -4,45 +4,43 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	utilsPkg "github.com/otto-nation/otto-stack/internal/pkg/utils"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
 )
 
 // CoreSetup contains shared setup data for core commands
 type CoreSetup struct {
-	Config       *ProjectConfig
+	Config       *config.Config
 	DockerClient *docker.Client
 }
 
 // SetupCoreCommand performs common initialization for core commands
-func SetupCoreCommand(ctx context.Context, base *types.BaseCommand) (*CoreSetup, func(), error) {
-	// Check if otto-stack is initialized
-	configPath := filepath.Join(constants.DevStackDir, constants.ConfigFileName)
-	if !utilsPkg.FileExists(configPath) {
-		return nil, nil, errors.New(constants.ErrNotInitialized)
+func SetupCoreCommand(ctx context.Context, base *base.BaseCommand) (*CoreSetup, func(), error) {
+	// Check if otto-stack is initialized (redundant check for safety)
+	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return nil, nil, errors.New(core.MsgErrors_not_initialized)
 	}
 
 	// Load project configuration
 	cfg, err := LoadProjectConfig(configPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to load configuration: %w", err)
+		return nil, nil, fmt.Errorf(core.MsgStack_failed_load_config, err)
 	}
 
 	// Create Docker client
-	logger := base.Logger.(loggerAdapter)
-	dockerClient, err := docker.NewClient(logger.SlogLogger())
+	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create Docker client: %w", err)
+		return nil, nil, fmt.Errorf(core.MsgStack_failed_create_docker_client, err)
 	}
 
 	cleanup := func() {
-		if err := dockerClient.Close(); err != nil {
-			base.Logger.Error("Failed to close Docker client", "error", err)
-		}
+		_ = dockerClient.Close()
 	}
 
 	return &CoreSetup{

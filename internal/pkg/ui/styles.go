@@ -1,69 +1,42 @@
 package ui
 
-import (
-	"github.com/charmbracelet/lipgloss"
-)
+// formatColored applies color if color is enabled
+func formatColored(text, color string, noColor bool) string {
+	if noColor {
+		return text
+	}
+	return color + text + ColorReset
+}
 
-var (
-	// Colors
-	primaryColor = lipgloss.Color("#00D4AA")
-	successColor = lipgloss.Color("#00C851")
-	warningColor = lipgloss.Color("#FF8800")
-	errorColor   = lipgloss.Color("#FF4444")
-	infoColor    = lipgloss.Color("#33B5E5")
-	mutedColor   = lipgloss.Color("#666666")
+// formatSuccess formats success messages
+func formatSuccess(text string, noColor bool) string {
+	return formatColored(IconSuccess+" "+text, ColorGreen+ColorBold, noColor)
+}
 
-	// Base styles
-	baseStyle = lipgloss.NewStyle().
-			Padding(0, 1)
+// formatError formats error messages
+func formatError(text string, noColor bool) string {
+	return formatColored(IconError+" "+text, ColorRed+ColorBold, noColor)
+}
 
-	// Message styles
-	SuccessStyle = baseStyle.
-			Foreground(successColor).
-			Bold(true)
+// formatWarning formats warning messages
+func formatWarning(text string, noColor bool) string {
+	return formatColored(IconWarning+"  "+text, ColorYellow+ColorBold, noColor)
+}
 
-	ErrorStyle = baseStyle.
-			Foreground(errorColor).
-			Bold(true)
+// formatInfo formats info messages
+func formatInfo(text string, noColor bool) string {
+	return formatColored(IconInfo+"  "+text, ColorBlue, noColor)
+}
 
-	WarningStyle = baseStyle.
-			Foreground(warningColor).
-			Bold(true)
+// formatHeader formats header messages
+func formatHeader(text string, noColor bool) string {
+	if noColor {
+		return "\n=== " + text + " ===\n"
+	}
+	return formatColored("\n"+IconHeader+" "+text+"\n", ColorGreen+ColorBold, noColor)
+}
 
-	InfoStyle = baseStyle.
-			Foreground(infoColor)
-
-	MutedStyle = baseStyle.
-			Foreground(mutedColor)
-
-	// Header styles
-	HeaderStyle = lipgloss.NewStyle().
-			Foreground(primaryColor).
-			Bold(true).
-			Padding(1, 2).
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(primaryColor)
-
-	SubHeaderStyle = lipgloss.NewStyle().
-			Foreground(primaryColor).
-			Bold(true).
-			Padding(0, 1)
-
-	// List styles
-	ListItemStyle = lipgloss.NewStyle().
-			Padding(0, 2)
-
-	SelectedItemStyle = ListItemStyle.
-				Foreground(primaryColor).
-				Bold(true)
-
-	// Box styles
-	BoxStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(mutedColor).
-			Padding(1, 2).
-			Margin(1, 0)
-
-	HighlightBoxStyle = BoxStyle.
-				BorderForeground(primaryColor)
-)
+// formatMuted formats muted text
+func formatMuted(text string, noColor bool) string {
+	return formatColored(text, ColorGray, noColor)
+}

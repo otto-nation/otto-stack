@@ -3,40 +3,53 @@ package project
 import (
 	"context"
 	"fmt"
+	"slices"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
 
 // InitHandler handles the init command
 type InitHandler struct {
-	serviceUtils *utils.ServiceUtils
+	serviceUtils     *services.ServiceUtils
+	selectedServices []string
 }
 
 // NewInitHandler creates a new InitHandler
 func NewInitHandler() *InitHandler {
 	return &InitHandler{
-		serviceUtils: utils.NewServiceUtils(),
+		serviceUtils: services.NewServiceUtils(),
 	}
 }
 
 // Handle executes the init command
-func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	force, _ := cmd.Flags().GetBool(constants.FlagForce)
+func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	logger.Info(logger.LogMsgStartingOperation, logger.LogFieldOperation, logger.OperationInit)
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationInit, logger.LogFieldError, fmt.Errorf("panic: %v", r))
+			panic(r)
+		}
+	}()
 
-	ui.Header(constants.MsgInitializing)
-
-	// Validate environment
-	if err := h.validateInitEnvironment(); err != nil && !force {
-		return fmt.Errorf("%s", constants.MsgValidationFailed.Content)
+	// Parse all flags with validation - single line!
+	_, err := core.ParseInitFlags(cmd)
+	if err != nil {
+		logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationInit, logger.LogFieldError, err)
+		return err
 	}
 
-	// Validate directory structure
-	if err := h.validateDirectoryStructure(); err != nil && !force {
-		return fmt.Errorf("%s", constants.MsgDirectoryValidationFailed.Content)
+	ciFlags := ci.GetFlags(cmd)
+
+	base.Output.Header("%s", core.MsgProcess_initializing)
+	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
+
+	if ciFlags.NonInteractive {
+		return fmt.Errorf("%s", core.MsgNon_interactive_mode_requires_config)
 	}
 
 	// Prompt for project details
@@ -55,6 +68,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		if err != nil {
 			return fmt.Errorf("failed to select services: %w", err)
 		}
+		h.selectedServices = services
 
 		// Validate selected services
 		if err := h.validateServices(services); err != nil {
@@ -67,20 +81,25 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 			return fmt.Errorf("failed to get advanced options: %w", err)
 		}
 
+		// Run selected validations
+		if err := h.runValidations(validation, base); err != nil {
+			return fmt.Errorf("validation failed: %w", err)
+		}
+
 		// Confirm initialization (with back option)
-		action, err := h.confirmInitializationWithBack(projectName, services, validation, advanced)
+		action, err := h.confirmInitializationWithBack(projectName, services, validation, advanced, base)
 		if err != nil {
 			return fmt.Errorf("failed to get confirmation: %w", err)
 		}
 
 		switch action {
-		case constants.ActionProceed:
+		case core.ActionProceed:
 			goto exitLoop
-		case constants.ActionBack:
-			constants.SendMessage(constants.MsgGoingBack)
+		case core.ActionBack:
+			base.Output.Info("%s", core.MsgInit_going_back)
 			continue
 		default:
-			constants.SendMessage(constants.MsgInitCancelled)
+			base.Output.Info("%s", core.MsgInit_cancelled)
 			return nil
 		}
 	}
@@ -92,30 +111,30 @@ exitLoop:
 	}
 
 	// Create configuration file
-	if err := h.createConfigFile(projectName, services, validation, advanced); err != nil {
+	if err := h.createConfigFile(projectName, services, base); err != nil {
 		return fmt.Errorf("failed to create config file: %w", err)
 	}
 
 	// Generate initial compose files
-	if err := h.generateInitialComposeFiles(services, projectName, validation, advanced); err != nil {
+	if err := h.generateInitialComposeFiles(services, projectName, validation, advanced, base); err != nil {
 		return fmt.Errorf("failed to generate compose files: %w", err)
 	}
 
 	// Create .gitignore entries
-	if err := h.createGitignoreEntries(); err != nil {
-		constants.SendMessage(constants.MsgFailedGitignore, err)
+	if err := h.createGitignoreEntries(base); err != nil {
+		base.Output.Warning(core.MsgWarnings_failed_gitignore, err)
 	}
 
 	// Create README
-	if err := h.createReadme(projectName, services); err != nil {
-		constants.SendMessage(constants.MsgFailedReadme, err)
+	if err := h.createReadme(projectName, services, base); err != nil {
+		base.Output.Warning(core.MsgWarnings_failed_readme, err)
 	}
 
-	ui.Success(constants.MsgInitSuccess)
-	constants.SendMessage(constants.MsgNextSteps)
-	constants.SendMessage(constants.MsgStep1, constants.DevStackDir, constants.ConfigFileName)
-	constants.SendMessage(constants.MsgStep2, constants.AppName+" up")
-	constants.SendMessage(constants.MsgStep3, constants.AppName+" status")
+	base.Output.Success("%s", core.MsgSuccess_init)
+	base.Output.Info("%s", core.MsgInit_next_steps)
+	base.Output.Info(core.MsgInit_step_review_config, core.OttoStackDir, core.ConfigFileName)
+	base.Output.Info(core.MsgInit_step_start_stack, core.AppName)
+	base.Output.Info(core.MsgInit_step_check_status, core.AppName)
 
 	return nil
 }
@@ -128,4 +147,38 @@ func (h *InitHandler) ValidateArgs(args []string) error {
 // GetRequiredFlags returns required flags for this command
 func (h *InitHandler) GetRequiredFlags() []string {
 	return []string{}
+}
+
+// runValidations executes selected validation functions
+func (h *InitHandler) runValidations(selectedValidations map[string]bool, base *base.BaseCommand) error {
+	// Always run required validations
+	for validationKey := range core.ValidationOptions {
+		validationFunc, exists := ValidationRegistry[validationKey]
+		if !exists {
+			continue
+		}
+
+		// Run if it's required OR if user selected it
+		isRequired := isRequiredValidation(validationKey)
+		isSelected := selectedValidations[validationKey]
+
+		if isRequired || isSelected {
+			if err := validationFunc(h, base); err != nil {
+				return fmt.Errorf("validation '%s' failed: %w", validationKey, err)
+			}
+		}
+	}
+	return nil
+}
+
+// isRequiredValidation checks if a validation is required based on YAML config
+func isRequiredValidation(key string) bool {
+	requiredValidations := []string{
+		core.ValidationDocker,
+		core.ValidationDockerCompose,
+		core.ValidationConfigSyntax,
+		core.ValidationServiceDefinitions,
+	}
+
+	return slices.Contains(requiredValidations, key)
 }

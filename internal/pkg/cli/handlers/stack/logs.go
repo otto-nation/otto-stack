@@ -4,11 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	pkgTypes "github.com/otto-nation/otto-stack/internal/pkg/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
 
@@ -21,25 +21,27 @@ func NewLogsHandler() *LogsHandler {
 }
 
 // Handle executes the logs command
-func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
+func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	// Check initialization first
+
 	// Get CI-friendly flags
-	ciFlags := utils.GetCIFlags(cmd)
+	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
-		ui.Header(constants.MsgLogs)
+		base.Output.Header(core.MsgLogs)
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		utils.HandleError(ciFlags, err)
-		return nil
+		return err
 	}
 	defer cleanup()
 
-	// Get flags
-	follow, _ := cmd.Flags().GetBool(constants.FlagFollow)
-	tail, _ := cmd.Flags().GetString(constants.FlagTail)
-	timestamps, _ := cmd.Flags().GetBool(constants.FlagTimestamps)
+	// Parse all flags with validation - single line!
+	flags, err := core.ParseLogsFlags(cmd)
+	if err != nil {
+		return err
+	}
 
 	// Determine services
 	serviceNames := args
@@ -48,22 +50,22 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Apply service resolution
-	serviceUtils := utils.NewServiceUtils()
+	serviceUtils := services.NewServiceUtils()
 	resolvedServices, err := serviceUtils.ResolveServices(serviceNames)
 	if err != nil {
-		utils.HandleError(ciFlags, fmt.Errorf(constants.MsgFailedResolveServices.Content, err))
+		ci.HandleError(ciFlags, fmt.Errorf("failed to resolve services: %w", err))
 		return nil
 	}
 
-	// Create log options
-	options := pkgTypes.LogOptions{
-		Follow:     follow,
-		Tail:       tail,
-		Timestamps: timestamps,
+	// Create log options - clean usage with no repetitive error handling
+	options := docker.LogOptions{
+		Follow:     flags.Follow,
+		Timestamps: flags.Timestamps,
+		Tail:       flags.Tail,
 	}
 
 	// Get logs using Docker client
-	return setup.DockerClient.Containers().Logs(ctx, setup.Config.Project.Name, resolvedServices, options)
+	return setup.DockerClient.ComposeLogs(ctx, setup.Config.Project.Name, resolvedServices, options)
 }
 
 // ValidateArgs validates the command arguments
