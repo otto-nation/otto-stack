@@ -21,8 +21,6 @@ container:
     MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-password}
     MYSQL_DATABASE: ${MYSQL_DATABASE:-local_dev}
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 512m
   health_check:
     test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]

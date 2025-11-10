@@ -22,8 +22,6 @@ container:
     POSTGRES_DB: ${POSTGRES_DB:-local_dev}
     POSTGRES_USER: ${POSTGRES_USER:-postgres}
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 512m
   command:
     - postgres

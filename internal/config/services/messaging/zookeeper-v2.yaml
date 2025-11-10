@@ -14,8 +14,6 @@ container:
       internal: "2181"
       protocol: tcp
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 256m
   health_check:
     test: ["CMD", "sh", "-c", "echo 'ruok' | nc localhost 2181"]

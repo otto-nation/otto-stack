@@ -15,11 +15,15 @@ container:
       internal: "9099"
       protocol: tcp
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 1024m
   health_check:
-    test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9099"]
+    test:
+      [
+        "CMD",
+        "kafka-broker-api-versions",
+        "--bootstrap-server",
+        "localhost:9099",
+      ]
     interval: 30s
     timeout: 10s
     retries: 3

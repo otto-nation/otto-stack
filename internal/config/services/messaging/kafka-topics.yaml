@@ -16,8 +16,6 @@ environment:
 docker:
   image: confluentinc/cp-kafka:latest
   restart: "no"
-  networks:
-    - otto-stack
   memory_limit: 256m
   command:
     - "sh"

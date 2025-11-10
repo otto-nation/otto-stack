@@ -23,8 +23,6 @@ connection:
 docker:
   image: provectuslabs/kafka-ui:latest
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 256m
   environment:
     - KAFKA_CLUSTERS_0_NAME=otto-stack

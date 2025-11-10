@@ -23,8 +23,6 @@ container:
       internal: "8055"
       protocol: tcp
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 512m
   health_check:
     test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]

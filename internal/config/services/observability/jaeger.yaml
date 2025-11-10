@@ -25,8 +25,6 @@ connection:
   url_pattern: "http://localhost:{{.Port}}"
 docker:
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 512m
   environment:
     - COLLECTOR_OTLP_ENABLED=true

@@ -42,8 +42,6 @@ documentation:
 docker:
   image: localstack/localstack:latest
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 512m
   environment:
     - LOCALSTACK_HOST=${LOCALSTACK_HOST:-localhost}

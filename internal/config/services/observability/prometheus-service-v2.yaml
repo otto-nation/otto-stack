@@ -14,8 +14,6 @@ container:
       internal: "9089"
       protocol: tcp
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 256m
   command:
     - --config.file=/etc/prometheus/prometheus.yml
@@ -26,7 +24,15 @@ container:
     - --web.enable-lifecycle
     - --web.enable-admin-api
   health_check:
-    test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9089/-/healthy"]
+    test:
+      [
+        "CMD",
+        "wget",
+        "--no-verbose",
+        "--tries=1",
+        "--spider",
+        "http://localhost:9089/-/healthy",
+      ]
     interval: 30s
     timeout: 10s
     retries: 3

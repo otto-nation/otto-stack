@@ -20,8 +20,6 @@ environment:
   KAFKA_URL: kafka://${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092}
 docker:
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 1024m
   environment:
     - KAFKA_BROKER_ID=1

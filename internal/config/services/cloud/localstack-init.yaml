@@ -19,8 +19,6 @@ environment:
 docker:
   image: amazon/aws-cli:latest
   restart: "no"
-  networks:
-    - otto-stack
   memory_limit: 128m
   command:
     - "sh"

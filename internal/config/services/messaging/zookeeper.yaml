@@ -16,8 +16,6 @@ environment:
   ZOOKEEPER_URL: ${ZOOKEEPER_HOST:-localhost}:${ZOOKEEPER_PORT:-2181}
 docker:
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 256m
   environment:
     - ZOOKEEPER_CLIENT_PORT=2181

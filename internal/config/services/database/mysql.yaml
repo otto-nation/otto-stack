@@ -30,8 +30,6 @@ dependencies:
     - sql
 docker:
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 512m
   environment:
     - MYSQL_DATABASE=${MYSQL_DATABASE:-local_dev}
