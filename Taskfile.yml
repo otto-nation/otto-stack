@@ -551,6 +551,42 @@ tasks:
       - touch .task/lint-timestamp
       - echo "✅ All linting checks passed!"
 
+  lint:go:
+    desc: "🔍 Run Go-only linting (vet + golangci-lint) - for CI"
+    deps: [deps, fmt]
+    sources:
+      - "**/*.go"
+      - ".golangci.yml"
+      - "go.mod"
+      - "go.sum"
+    generates:
+      - ".task/go-lint-timestamp"
+    silent: true
+    cmds:
+      - mkdir -p .task
+      - echo "🔍 Running go vet..."
+      - go vet ./...
+      - echo "🔍 Running golangci-lint..."
+      - |
+        GOLANGCI_PATH="$(go env GOPATH)/bin/golangci-lint"
+        EXPECTED_VERSION="{{.GOLANGCI_LINT_VERSION}}"
+
+        if [ ! -f "$GOLANGCI_PATH" ]; then
+          echo "📦 Installing golangci-lint $EXPECTED_VERSION..."
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
+        else
+          CURRENT_VERSION="v$($GOLANGCI_PATH version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 || echo "unknown")"
+          if [ "$CURRENT_VERSION" != "$EXPECTED_VERSION" ]; then
+            echo "📦 Updating golangci-lint from $CURRENT_VERSION to $EXPECTED_VERSION..."
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
+          fi
+        fi
+        
+        $GOLANGCI_PATH config verify
+        $GOLANGCI_PATH run ./cmd/otto-stack/... ./internal/...
+      - touch .task/go-lint-timestamp
+      - echo "✅ Go linting checks passed!"
+
   lint:docs:
     desc: "📝 Lint documentation files"
     sources:

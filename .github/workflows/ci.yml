@@ -44,7 +44,7 @@ jobs:
         run: task fmt-check
 
       - name: Run linting
-        run: task lint
+        run: task lint:go
 
       - name: Run unit tests
         run: task test-unit
