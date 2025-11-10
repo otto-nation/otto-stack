@@ -40,29 +40,51 @@ tasks:
   # ============================================================================
   generate:
     desc: "🔧 Generate code from YAML configs"
-    sources:
-      - "internal/config/commands.yaml"
-      - "internal/config/services/**/*.yaml"
-      - "cmd/generate-*/main.go"
-      - "cmd/generate-*/templates/*.tmpl"
-    generates:
-      - "internal/pkg/cli/generated/constants_generated.go"
-      - "internal/pkg/cli/generated/commands_generated.go"
-      - "internal/pkg/constants/services_generated.go"
-      - "internal/pkg/constants/types_generated.go"
+    deps: [generate:cli, generate:services, generate:commands]
     silent: true
     cmds:
-      - echo "🔧 Generating code from YAML configs..."
-      - |
-        echo "🔧 Cleaning existing generated files..."
-        find internal/ -name '*_generated.go' -type f -delete
-        echo "🔧 Running generate-cli..."
-        go run ./cmd/generate-cli
-        echo "🔧 Running generate-services..."
-        go run ./cmd/generate-services
-        echo "🔧 Running generate-commands..."
-        go run ./cmd/generate-commands
       - echo "✅ Generated code from YAML configs"
+
+  generate:cli:
+    desc: "🔧 Generate CLI code"
+    sources:
+      - "internal/config/commands.yaml"
+      - "cmd/generate-cli/main.go"
+      - "cmd/generate-cli/templates/*.tmpl"
+    generates:
+      - "internal/pkg/cli/commands_generated.go"
+    silent: true
+    cmds:
+      - echo "🔧 Running generate-cli..."
+      - go run ./cmd/generate-cli
+
+  generate:services:
+    desc: "🔧 Generate service code"
+    sources:
+      - "internal/config/services/**/*.yaml"
+      - "cmd/generate-services/main.go"
+      - "cmd/generate-services/templates/*.tmpl"
+    generates:
+      - "internal/pkg/services/services_generated.go"
+      - "internal/pkg/services/types_generated.go"
+      - "internal/pkg/services/schema_generated.go"
+    silent: true
+    cmds:
+      - echo "🔧 Running generate-services..."
+      - go run ./cmd/generate-services
+
+  generate:commands:
+    desc: "🔧 Generate command code"
+    sources:
+      - "internal/config/commands.yaml"
+      - "cmd/generate-commands/main.go"
+      - "cmd/generate-commands/templates/*.tmpl"
+    generates:
+      - "internal/core/constants_generated.go"
+    silent: true
+    cmds:
+      - echo "🔧 Running generate-commands..."
+      - go run ./cmd/generate-commands
 
   # ============================================================================
   # BUILD
@@ -138,13 +160,14 @@ tasks:
       - "go.sum"
       - "**/*.go"
     generates:
-      - ".deps-timestamp"
+      - ".task/deps-timestamp"
     silent: true
     cmds:
+      - mkdir -p .task
       - echo "📥 Downloading Go dependencies..."
       - go mod download
       - go mod tidy
-      - touch .deps-timestamp
+      - touch .task/deps-timestamp
       - echo "✅ Dependencies updated"
 
   # ============================================================================
@@ -295,7 +318,6 @@ tasks:
     silent: true
     cmds:
       - echo "🔧 Auto-fixing formatting and modules..."
-      - git diff --name-only > /tmp/git_before_fixes || touch /tmp/git_before_fixes
       - task: generate
       - task: fmt
       - task: docs-fmt
@@ -307,24 +329,19 @@ tasks:
     cmds:
       - |
         echo "✅ Verifying fixes..."
-        # Check if pre-commit-fix made changes by comparing before/after states
-        if [ -f /tmp/git_before_fixes ]; then
-          git diff --name-only > /tmp/git_after_fixes
-          if ! cmp -s /tmp/git_before_fixes /tmp/git_after_fixes; then
-            echo ""
-            echo "❌ Pre-commit failed: Files were modified during formatting"
-            echo ""
-            echo "📋 Modified files:"
-            git diff --name-only
-            echo ""
-            echo "🔧 Please add these changes and commit again:"
-            echo "   git add ."
-            echo "   git commit"
-            echo ""
-            rm -f /tmp/git_before_fixes /tmp/git_after_fixes
-            exit 1
-          fi
-          rm -f /tmp/git_before_fixes /tmp/git_after_fixes
+        # Check if there are any unstaged changes after formatting
+        if ! git diff --quiet; then
+          echo ""
+          echo "❌ Pre-commit failed: Files were modified during formatting"
+          echo ""
+          echo "📋 Modified files:"
+          git diff --name-only
+          echo ""
+          echo "🔧 Please add these changes and commit again:"
+          echo "   git add ."
+          echo "   git commit"
+          echo ""
+          exit 1
         fi
       - task: lint
       - task: validate-homebrew-formula
@@ -503,31 +520,14 @@ tasks:
       - "go.mod"
       - "go.sum"
     generates:
-      - ".lint-timestamp"
+      - ".task/lint-timestamp"
     silent: true
     cmds:
+      - mkdir -p .task
       - echo "🔍 Running go vet..."
       - go vet ./...
       - echo "🔍 Running golangci-lint..."
       - |
-        if [ ! -f $(go env GOPATH)/bin/golangci-lint ]; then
-          echo "📦 Installing golangci-lint..."
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
-        fi
-      - $(go env GOPATH)/bin/golangci-lint run ./cmd/otto-stack/... ./internal/...
-      - touch .lint-timestamp
-      - echo "✅ All linting checks passed!"
-      - echo "🔍 Running golangci-lint config verify..."
-      - |
-        if [ ! -f .golangci.yml ]; then
-          echo "❌ .golangci.yml config file not found!"
-          exit 1
-        fi
-      - |
-        if [ ! -f .golangci.yml ]; then
-          echo "❌ .golangci.yml config file not found!"
-          exit 1
-        fi
         GOLANGCI_PATH="$(go env GOPATH)/bin/golangci-lint"
         EXPECTED_VERSION="{{.GOLANGCI_LINT_VERSION}}"
 
@@ -535,20 +535,54 @@ tasks:
           echo "📦 Installing golangci-lint $EXPECTED_VERSION..."
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
         else
-          CURRENT_VERSION=$($GOLANGCI_PATH version --format short 2>/dev/null | head -1 || echo "unknown")
+          CURRENT_VERSION="v$($GOLANGCI_PATH version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 || echo "unknown")"
           if [ "$CURRENT_VERSION" != "$EXPECTED_VERSION" ]; then
             echo "📦 Updating golangci-lint from $CURRENT_VERSION to $EXPECTED_VERSION..."
             curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
           fi
         fi
-        $(go env GOPATH)/bin/golangci-lint config verify
-      - echo "✅ golangci-lint config is valid"
-      - echo "🔍 Running golangci-lint..."
-      - $(go env GOPATH)/bin/golangci-lint run ./cmd/otto-stack/... ./internal/...
-      - echo "📝 Linting documentation..."
-      - cd docs-site && npm run lint:md
-      - cd docs-site && npm run lint:links
+        
+        $GOLANGCI_PATH config verify
+        $GOLANGCI_PATH run ./cmd/otto-stack/... ./internal/...
+      - task: lint:docs
+      - touch .task/lint-timestamp
       - echo "✅ All linting checks passed!"
+
+  lint:docs:
+    desc: "📝 Lint documentation files"
+    sources:
+      - "docs-site/content/**/*.md"
+      - "docs-site/README.md"
+      - "docs-site/.markdownlint.jsonc"
+      - "docs-site/.mlc_config.json"
+    generates:
+      - ".task/docs-lint-timestamp"
+    silent: true
+    cmds:
+      - mkdir -p .task
+      - echo "📝 Linting documentation..."
+      - |
+        cd docs-site
+        # Run markdown lint and link check in parallel
+        npm run lint:md &
+        LINT_PID=$!
+        npm run lint:links &
+        LINKS_PID=$!
+        
+        # Wait for both to complete
+        wait $LINT_PID
+        LINT_EXIT=$?
+        wait $LINKS_PID
+        LINKS_EXIT=$?
+        
+        # Check if either failed
+        if [ $LINT_EXIT -ne 0 ] || [ $LINKS_EXIT -ne 0 ]; then
+          echo "❌ Documentation linting failed"
+          exit 1
+        fi
+        
+        cd ..
+        touch .task/docs-lint-timestamp
 
   fmt:
     desc: "✨ Format Go code with gofmt and goimports"
@@ -557,18 +591,19 @@ tasks:
       - "go.mod"
       - "go.sum"
     generates:
-      - ".fmt-timestamp"
+      - ".task/fmt-timestamp"
     silent: true
     cmds:
+      - mkdir -p .task
       - echo "✨ Formatting Go code..."
       - |
         if [ ! -f $(go env GOPATH)/bin/goimports ]; then
           echo "📦 Installing goimports..."
           go install golang.org/x/tools/cmd/goimports@latest
         fi
-      - go fmt ./...
-      - $(go env GOPATH)/bin/goimports -w .
-      - touch .fmt-timestamp
+      - go fmt ./... > /dev/null 2>&1
+      - $(go env GOPATH)/bin/goimports -w . > /dev/null 2>&1
+      - touch .task/fmt-timestamp
       - echo "✅ Code formatted"
 
   docs-fmt:
@@ -578,12 +613,13 @@ tasks:
       - "**/*.md"
       - "package.json"
     generates:
-      - "../.docs-fmt-timestamp"
+      - "../.task/docs-fmt-timestamp"
     silent: true
     cmds:
+      - mkdir -p ../.task
       - echo "📝 Formatting documentation..."
       - npm run format
-      - touch ../.docs-fmt-timestamp
+      - touch ../.task/docs-fmt-timestamp
       - echo "✅ Documentation formatted"
 
   security:

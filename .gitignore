@@ -2,11 +2,8 @@
 internal/**/*_generated.go
 internal/pkg/ci/generated.go
 
-# Taskfile
-.fmt-timestamp
-.lint-timestamp
-.deps-timestamp
-.docs-fmt-timestamp
+# Task timestamp files
+.task/
 
 # Build artifacts and binaries
 build/
