@@ -95,10 +95,10 @@ Share your development environment configuration:
 
 ```bash
 # Export current configuration
-otto-stack config export > otto-stack.yaml
+otto-stack config export > otto-stack-config.yaml
 
 # Team members can import it
-otto-stack config import otto-stack.yaml
+otto-stack config import otto-stack-config.yaml
 otto-stack up
 ```
 

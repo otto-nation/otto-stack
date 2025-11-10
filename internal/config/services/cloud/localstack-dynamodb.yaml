@@ -13,6 +13,33 @@ service:
       - dynamodb
       - nosql
 
+configuration_schema:
+  tables:
+    type: array
+    description: DynamoDB tables to create
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          required: true
+          description: Table name
+        hash_key:
+          type: string
+          required: true
+          description: Partition key
+        range_key:
+          type: string
+          description: Sort key
+        read_capacity:
+          type: integer
+          default: 5
+          description: Read capacity units
+        write_capacity:
+          type: integer
+          default: 5
+          description: Write capacity units
+
 documentation:
   examples:
     - aws --endpoint-url=http://localhost:4566 dynamodb list-tables

@@ -43,6 +43,28 @@ service:
       - tracing
       - observability
 
+configuration_schema:
+  sampling:
+    type: object
+    description: Jaeger sampling configuration
+    properties:
+      default_strategy:
+        type: string
+        default: "probabilistic"
+        description: Default sampling strategy
+      max_traces_per_second:
+        type: integer
+        default: 100
+        description: Maximum traces per second
+  storage:
+    type: object
+    description: Storage configuration
+    properties:
+      type:
+        type: string
+        default: "memory"
+        description: Storage backend type
+
 documentation:
   examples:
     - curl -f http://localhost:16686/

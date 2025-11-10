@@ -1,739 +1,416 @@
 ---
-title: "Configuration"
-description: "Complete configuration guide for otto-stack with examples and best practices"
-lead: "Learn how to configure otto-stack for your development environment"
+title: "Configuration Guide"
+description: "Complete guide to configuring otto-stack services"
+lead: "Learn how to configure services for your specific needs"
 date: "2025-10-01"
-lastmod: "2025-10-11"
-draft: false
-weight: 40
-toc: true
+lastmod: "2025-11-10"
+draft: "false"
+weight: "25"
+toc: "true"
 ---
 
-# Configuration Guide (otto-stack)
+# Configuration Guide
 
-> For troubleshooting configuration issues, see [Troubleshooting Guide](troubleshooting.md).
+Otto-stack uses a single configuration file `otto-stack-config.yaml` to define your entire development stack.
 
-This guide covers all configuration options for **otto-stack**, from basic setups to advanced configurations with multiple services.
+## Configuration File Structure
 
-## 📋 Overview
+```yaml
+project:
+  name: "my-app"
 
-**otto-stack** uses a single `otto-stack-config.yaml` file to define your entire development stack. This configuration-driven approach ensures consistency across team members and projects.
+stack:
+  enabled:
+    - postgres
+    - redis
+    - kafka
 
-> For a quick checklist of configuration best practices, see the end of this guide.
+service_configuration:
+  postgres:
+    database: "my_app_db"
+    password: "secure_password"
+  redis:
+    password: "redis_password"
+    max_memory: "512m"
+```
 
-## 🚀 Quick Start
-
-### 1. Create Configuration File
-
-See the [README](../README.md) for a quick start and command reference.
-
-For a full configuration schema and examples, continue below.
-
-## 🏗️ Configuration Schema
+## Configuration Sections
 
 ### Project Configuration
 
-```yaml
-project:
-  # Used for container names and network naming
-  name: "my-project"
-  # Development environment identifier
-  environment: "local"
-```
+The `project` section defines basic project metadata:
+
+- **name** (required): Your project name
+
+### Stack Configuration
+
+The `stack` section defines which services to enable:
+
+- **enabled**: Array of service names to include in your stack
+
+## Available Services
+
+Otto-stack supports the following services:
+
+- **jaeger** - Distributed tracing system
+- **kafka** - Apache Kafka messaging platform
+- **localstack-dynamodb** - DynamoDB emulation
+- **localstack-s3** - S3 storage emulation
+- **localstack-sns** - SNS notification service emulation
+- **localstack-sqs** - SQS queue service emulation
+- **mysql** - MySQL relational database
+- **postgres** - PostgreSQL relational database
+- **prometheus-service** - Metrics collection and monitoring
+- **redis** - In-memory data store
+
+For detailed information about each service, see the [Services Guide](services.md).
+
+## Service Configuration Details
+
+### jaeger
+
+Jaeger distributed tracing system for monitoring and troubleshooting microservices
+
+#### sampling
+
+Jaeger sampling configuration
+
+- Type: `object`
 
 **Properties:**
 
-- `name` (required): Project identifier used in container and network names
-- `environment` (optional): Environment label (default: "local")
+- **default_strategy** (`string`) = `probabilistic`: Default sampling strategy
+- **max_traces_per_second** (`integer`) = `100`: Maximum traces per second
 
-### Services Configuration
+#### storage
 
-```yaml
-services:
-  enabled:
-    - redis # In-memory data store
-    - postgres # Primary database
-    - mysql # Alternative database
-    - jaeger # Distributed tracing
-    - prometheus # Metrics collection
-    - localstack # AWS services emulation
-    - kafka # Event streaming platform
-```
+Storage configuration
 
-**Available Services:**
-
-- **redis**: In-memory data structure store
-- **postgres**: PostgreSQL relational database
-- **mysql**: MySQL relational database
-- **jaeger**: Distributed tracing system
-- **prometheus**: Metrics collection and monitoring
-- **localstack**: AWS services emulation (SQS, SNS, DynamoDB, S3, etc.)
-- **kafka**: Apache Kafka event streaming platform
-
-### Validation Configuration
-
-```yaml
-validation:
-  skip_warnings: false # Skip resource and compatibility warnings
-  allow_multiple_databases: false # Permit both MySQL and PostgreSQL
-  auto_start: true # Start services after setup
-  pull_latest_images: true # Pull latest Docker images
-  cleanup_on_recreate: false # Keep data when recreating services
-```
-
-## ⚙️ Service Overrides
-
-Customize any service configuration using the `overrides` section:
-
-### Redis Configuration
-
-```yaml
-overrides:
-  redis:
-    port: 6379
-    password: "dev-password"
-    memory_limit: "256m"
-    persistence: true
-    config: |
-      maxmemory-policy allkeys-lru
-      save 900 1
-```
+- Type: `object`
 
 **Properties:**
 
-- `port`: Redis port (default: 6379)
-- `password`: Redis password (default: auto-generated)
-- `memory_limit`: Container memory limit
-- `persistence`: Enable RDB persistence (default: true)
-- `config`: Additional Redis configuration
+- **type** (`string`) = `memory`: Storage backend type
 
-### PostgreSQL Configuration
+##### Example Configuration
 
 ```yaml
-overrides:
-  postgres:
-    port: 5432
-    database: "my_app_dev"
-    username: "app_user"
-    password: "dev-password"
-    memory_limit: "512m"
-    shared_preload_libraries: "pg_stat_statements"
-    log_statement: "all"
+sampling:
+  default_strategy: probabilistic
+  max_traces_per_second: 100
+storage:
+  type: memory
 ```
 
-**Properties:**
+### kafka
 
-- `port`: PostgreSQL port (default: 5432)
-- `database`: Database name (default: based on project name)
-- `username`: Database user (default: based on project name)
-- `password`: Database password (default: auto-generated)
-- `memory_limit`: Container memory limit
-- `shared_preload_libraries`: PostgreSQL extensions
-- `log_statement`: SQL logging level
+Complete Apache Kafka messaging platform with UI and topic management
 
-### MySQL Configuration
+#### topics
 
-```yaml
-overrides:
-  mysql:
-    port: 3306
-    database: "my_app_dev"
-    username: "app_user"
-    password: "dev-password"
-    root_password: "root-password"
-    memory_limit: "512m"
-    character_set: "utf8mb4"
-    collation: "utf8mb4_unicode_ci"
-```
+Kafka topics to create
 
-**Properties:**
+- Type: `array`
 
-- `port`: MySQL port (default: 3306)
-- `database`: Database name
-- `username`: Database user
-- `password`: User password
-- `root_password`: Root password
-- `memory_limit`: Container memory limit
-- `character_set`: Default character set
-- `collation`: Default collation
+**Items:**
 
-### Jaeger Configuration
+- **name** (`string`) _required_: Topic name
+- **partitions** (`integer`) = `3`: Number of partitions
+- **replication_factor** (`integer`) = `1`: Replication factor
+
+##### Example Configuration
 
 ```yaml
-overrides:
-  jaeger:
-    ui_port: 16686
-    otlp_grpc_port: 4317
-    otlp_http_port: 4318
-    memory_limit: "256m"
-    sampling_strategy: |
-      {
-        "service_strategies": [
-          {
-            "service": "my-service",
-            "type": "probabilistic",
-            "param": 1.0
-          }
-        ],
-        "default_strategy": {
-          "type": "probabilistic",
-          "param": 0.1
-        }
-      }
-```
-
-**Properties:**
-
-- `ui_port`: Jaeger UI port (default: 16686)
-- `otlp_grpc_port`: OTLP gRPC receiver port (default: 4317)
-- `otlp_http_port`: OTLP HTTP receiver port (default: 4318)
-- `memory_limit`: Container memory limit
-- `sampling_strategy`: Jaeger sampling configuration
-
-### Prometheus Configuration
-
-```yaml
-overrides:
-  prometheus:
-    port: 9090
-    scrape_interval: "15s"
-    memory_limit: "256m"
-    retention_time: "15d"
-    scrape_configs: |
-      - job_name: 'my-app'
-        static_configs:
-          - targets: ['host.docker.internal:8080']
-        scrape_interval: 5s
-        metrics_path: '/actuator/prometheus'
-```
-
-**Properties:**
-
-- `port`: Prometheus port (default: 9090)
-- `scrape_interval`: Global scrape interval
-- `memory_limit`: Container memory limit
-- `retention_time`: Metrics retention period
-- `scrape_configs`: Additional scrape configurations
-
-### LocalStack Configuration
-
-```yaml
-overrides:
-  localstack:
-    port: 4566
-    dashboard_port: 8055
-    memory_limit: "512m"
-    services:
-      - sqs
-      - sns
-      - dynamodb
-      - s3
-
-    # SQS queues to create automatically
-    sqs_queues:
-      - name: "user-events"
-        visibility_timeout: 30
-        message_retention_period: 1209600 # 14 days
-        max_receive_count: 3
-        dead_letter_queue: true # Creates "user-events-dlq"
-      - name: "notifications"
-        dead_letter_queue: "notifications-dlq" # Custom DLQ name
-
-    # SNS topics to create automatically
-    sns_topics:
-      - name: "user-notifications"
-        display_name: "User Notifications"
-        subscriptions:
-          - protocol: "sqs"
-            endpoint: "user-events"
-            raw_message_delivery: true
-
-    # DynamoDB tables to create automatically
-    dynamodb_tables:
-      - name: "users"
-        attribute_definitions:
-          - AttributeName: "userId"
-            AttributeType: "S"
-          - AttributeName: "email"
-            AttributeType: "S"
-        key_schema:
-          - AttributeName: "userId"
-            KeyType: "HASH"
-        provisioned_throughput:
-          ReadCapacityUnits: 5
-          WriteCapacityUnits: 5
-        global_secondary_indexes:
-          - IndexName: "EmailIndex"
-            KeySchema:
-              - AttributeName: "email"
-                KeyType: "HASH"
-            Projection:
-              ProjectionType: "ALL"
-            ProvisionedThroughput:
-              ReadCapacityUnits: 5
-              WriteCapacityUnits: 5
-```
-
-**LocalStack Properties:**
-
-- `port`: Main LocalStack port (default: 4566)
-- `dashboard_port`: LocalStack Web UI port (default: 8055)
-- `services`: AWS services to enable
-- `sqs_queues`: SQS queues to auto-create
-- `sns_topics`: SNS topics to auto-create
-- `dynamodb_tables`: DynamoDB tables to auto-create
-
-**SQS Queue Properties:**
-
-- `name`: Queue name (required)
-- `visibility_timeout`: Message visibility timeout in seconds
-- `message_retention_period`: Message retention in seconds
-- `max_receive_count`: Max receives before DLQ
-- `dead_letter_queue`: `true` for auto-naming, string for custom name
-
-**SNS Topic Properties:**
-
-- `name`: Topic name (required)
-- `display_name`: Human-readable name
-- `subscriptions`: Array of subscriptions
-
-**DynamoDB Table Properties:**
-
-- `name`: Table name (required)
-- `attribute_definitions`: Column definitions
-- `key_schema`: Primary key definition
-- `provisioned_throughput`: Read/write capacity
-- `global_secondary_indexes`: GSI definitions
-
-### Kafka Configuration
-
-```yaml
-overrides:
-  kafka:
-    port: 9092
-    ui_port: 8080
-    zookeeper_port: 2181
-    memory_limit: "1g"
-    auto_create_topics: true
-    num_partitions: 3
+topics:
+  - name: example-name
+    partitions: 3
     replication_factor: 1
+```
 
-    # Custom topics to create
+### localstack-dynamodb
+
+LocalStack DynamoDB NoSQL database emulation
+
+#### tables
+
+DynamoDB tables to create
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`) _required_: Table name
+- **hash_key** (`string`) _required_: Partition key
+- **range_key** (`string`): Sort key
+- **read_capacity** (`integer`) = `5`: Read capacity units
+- **write_capacity** (`integer`) = `5`: Write capacity units
+
+##### Example Configuration
+
+```yaml
+tables:
+  - name: example-name
+    hash_key: example-hash_key
+    range_key: example-range_key
+    read_capacity: 5
+    write_capacity: 5
+```
+
+### localstack-s3
+
+LocalStack S3 (Simple Storage Service) emulation
+
+#### buckets
+
+S3 buckets to create
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`) _required_: Bucket name
+- **versioning** (`boolean`) = `false`: Enable versioning
+- **public_read** (`boolean`) = `false`: Allow public read access
+
+##### Example Configuration
+
+```yaml
+buckets:
+  - name: example-name
+    versioning: false
+    public_read: false
+```
+
+### localstack-sns
+
+LocalStack SNS (Simple Notification Service) emulation
+
+#### topics
+
+SNS topics to create
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`) _required_: Topic name
+- **subscriptions** (`array`): Topic subscriptions
+
+##### Example Configuration
+
+```yaml
+topics:
+  - name: example-name
+```
+
+### localstack-sqs
+
+LocalStack SQS (Simple Queue Service) emulation
+
+#### queues
+
+SQS queues to create
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`) _required_: Queue name
+- **visibility_timeout** (`integer`) = `30`: Message visibility timeout in seconds
+- **dead_letter_queue** (`string`): Dead letter queue name
+- **max_receive_count** (`integer`) = `3`: Max receive count before moving to DLQ
+
+##### Example Configuration
+
+```yaml
+queues:
+  - name: example-name
+    visibility_timeout: 30
+    dead_letter_queue: example-dead_letter_queue
+    max_receive_count: 3
+```
+
+### mysql
+
+MySQL relational database for persistent data storage
+
+#### database
+
+Default database name
+
+- Type: `string`
+- Default: `local_dev`
+
+#### password
+
+Root password
+
+- Type: `string`
+- Default: `password`
+
+#### user
+
+Database user
+
+- Type: `string`
+- Default: `root`
+
+##### Example Configuration
+
+```yaml
+database: local_dev
+password: password
+user: root
+```
+
+### postgres
+
+PostgreSQL relational database for persistent data storage
+
+#### database
+
+Default database name
+
+- Type: `string`
+- Default: `local_dev`
+
+#### password
+
+Database password
+
+- Type: `string`
+- Default: `password`
+
+#### user
+
+Database user
+
+- Type: `string`
+- Default: `postgres`
+
+##### Example Configuration
+
+```yaml
+database: local_dev
+password: password
+user: postgres
+```
+
+### prometheus-service
+
+Prometheus metrics collection and monitoring system
+
+#### scrape_configs
+
+Prometheus scrape configurations
+
+- Type: `array`
+
+**Items:**
+
+- **job_name** (`string`) _required_: Job name
+- **static_configs** (`array`): Static target configurations
+- **scrape_interval** (`string`) = `15s`: Scrape interval
+
+##### Example Configuration
+
+```yaml
+scrape_configs:
+  - job_name: example-job_name
+    scrape_interval: 15s
+```
+
+### redis
+
+Redis in-memory data store for caching and session storage
+
+#### password
+
+Redis password
+
+- Type: `string`
+- Default: `password`
+
+#### max_memory
+
+Maximum memory limit
+
+- Type: `string`
+- Default: `256m`
+
+#### databases
+
+Number of databases
+
+- Type: `integer`
+- Default: `16`
+
+##### Example Configuration
+
+```yaml
+password: password
+max_memory: 256m
+databases: 16
+```
+
+## Complete Example
+
+```yaml
+project:
+  name: my-app
+stack:
+  enabled:
+    - postgres
+    - redis
+    - kafka
+    - localstack-sqs
+service_configuration:
+  redis:
+    password: password
+    max_memory: 256m
+    databases: 16
+  localstack-dynamodb:
+    tables:
+      - name: example-name
+        hash_key: example-hash_key
+        range_key: example-range_key
+        read_capacity: 5
+        write_capacity: 5
+  localstack-s3:
+    buckets:
+      - name: example-name
+        versioning: false
+        public_read: false
+  localstack-sns:
     topics:
-      - name: "user-events"
+      - name: example-name
+  localstack-sqs:
+    queues:
+      - name: example-name
+        visibility_timeout: 30
+        dead_letter_queue: example-dead_letter_queue
+        max_receive_count: 3
+  mysql:
+    database: local_dev
+    password: password
+    user: root
+  postgres:
+    database: local_dev
+    password: password
+    user: postgres
+  kafka:
+    topics:
+      - name: example-name
         partitions: 3
         replication_factor: 1
-        cleanup_policy: "delete"
-        retention_ms: 604800000 # 7 days
-      - name: "order-processing"
-        partitions: 6
-        replication_factor: 1
-      - name: "user-profiles"
-        partitions: 2
-        cleanup_policy: "compact"
-```
-
-**Kafka Properties:**
-
-- `port`: Kafka broker port (default: 9092)
-- `ui_port`: Kafka UI port (default: 8080)
-- `zookeeper_port`: Zookeeper port (default: 2181)
-- `auto_create_topics`: Enable automatic topic creation
-- `num_partitions`: Default partitions for auto-created topics
-- `topics`: Custom topics to create
-
-**Topic Properties:**
-
-- `name`: Topic name (required)
-- `partitions`: Number of partitions
-- `replication_factor`: Replication factor
-- `cleanup_policy`: `delete`, `compact`, or `compact,delete`
-- `retention_ms`: Message retention in milliseconds
-
-## 📚 Common Configuration Examples
-
-### Minimal Setup (Caching + Tracing)
-
-```yaml
-project:
-  name: "minimal-api"
-  environment: "local"
-
-services:
-  enabled:
-    - redis
-    - jaeger
-
-overrides:
-  redis:
-    memory_limit: "128m"
-```
-
-### Database Development
-
-```yaml
-project:
-  name: "data-api"
-  environment: "local"
-
-services:
-  enabled:
-    - redis
-    - postgres
-    - jaeger
-
-overrides:
-  postgres:
-    database: "data_api_dev"
-    username: "data_user"
-    log_statement: "all" # Log all SQL statements
-```
-
-### Full Observability Stack
-
-```yaml
-project:
-  name: "monitored-api"
-  environment: "local"
-
-services:
-  enabled:
-    - redis
-    - postgres
-    - jaeger
-    - prometheus
-
-overrides:
-  prometheus:
-    scrape_configs: |
-      - job_name: 'my-app'
-        static_configs:
-          - targets: ['host.docker.internal:8080']
-        metrics_path: '/actuator/prometheus'
-```
-
-### AWS Development
-
-```yaml
-project:
-  name: "cloud-api"
-  environment: "local"
-
-services:
-  enabled:
-    - redis
-    - postgres
-    - jaeger
-    - localstack
-
-overrides:
-  localstack:
-    services:
-      - sqs
-      - sns
-      - s3
-      - dynamodb
-    sqs_queues:
-      - name: "user-events"
-        dead_letter_queue: true
-      - name: "notifications"
-    sns_topics:
-      - name: "user-notifications"
-        subscriptions:
-          - protocol: "sqs"
-            endpoint: "user-events"
-```
-
-### Event-Driven Architecture
-
-```yaml
-project:
-  name: "event-api"
-  environment: "local"
-
-services:
-  enabled:
-    - redis
-    - postgres
-    - jaeger
-    - kafka
-
-overrides:
-  kafka:
-    auto_create_topics: true
-    topics:
-      - name: "user-events"
-        partitions: 3
-      - name: "order-events"
-        partitions: 6
-      - name: "user-profiles"
-        cleanup_policy: "compact"
-```
-
-### High-Performance Setup
-
-```yaml
-project:
-  name: "high-perf-api"
-  environment: "local"
-
-services:
-  enabled:
-    - redis
-    - postgres
-
-overrides:
-  redis:
-    memory_limit: "1g"
-    config: |
-      maxmemory-policy allkeys-lru
-      tcp-keepalive 60
-  postgres:
-    memory_limit: "1g"
-    shared_preload_libraries: "pg_stat_statements"
-    shared_buffers: "256MB"
-    effective_cache_size: "1GB"
-
-validation:
-  skip_warnings: true # Skip resource warnings
-```
-
-## 🔧 Advanced Configuration
-
-### Environment-Specific Configurations
-
-You can create different configurations for different environments:
-
-```bash
-# Development configuration
-cp otto-stack-config.yaml otto-stack-config.dev.yaml
-
-# Testing configuration
-cp otto-stack-config.yaml otto-stack-config.test.yaml
-
-# Use specific config
-otto-stack --config=otto-stack-config.test.yaml up
-```
-
-### Configuration Validation
-
-The framework validates your configuration and provides warnings:
-
-```yaml
-validation:
-  skip_warnings: false # Show all warnings
-  allow_multiple_databases: true # Allow both MySQL and PostgreSQL
-  auto_start: true # Start services after setup
-  strict_mode: false # Strict validation mode
-```
-
-### Resource Management
-
-```yaml
-# Global resource settings
-resources:
-  memory_limit: "8g" # Total memory limit for all services
-  cpu_limit: "4" # Total CPU limit
-  disk_limit: "50g" # Total disk limit
-
-# Apply to all services
-overrides:
-  global:
-    memory_limit: "512m" # Default memory per service
-    restart_policy: "unless-stopped"
-```
-
-### Custom Networks
-
-```yaml
-# Custom Docker network configuration
-network:
-  name: "my-app-network"
-  driver: "bridge"
-  subnet: "172.20.0.0/16"
-  ip_range: "172.20.240.0/20"
-```
-
-## 🚨 Configuration Best Practices
-
-### 1. Resource Allocation
-
-- **Development**: Allocate 6-8GB RAM total
-- **CI/CD**: Use minimal configurations
-- **Team Sharing**: Use consistent configurations
-
-### 2. Security
-
-```yaml
-# Use strong passwords in team configurations
-overrides:
-  postgres:
-    password: "${POSTGRES_PASSWORD:-dev-password}"
-  redis:
-    password: "${REDIS_PASSWORD:-dev-password}"
-```
-
-### 3. Performance
-
-```yaml
-# Optimize for development speed
-overrides:
-  postgres:
-    fsync: "off" # Faster writes (development only)
-    synchronous_commit: "off" # Async commits
-  redis:
-    save: "" # Disable persistence for speed
-```
-
-### 4. Debugging
-
-```yaml
-# Enable detailed logging for debugging
-overrides:
-  postgres:
-    log_statement: "all"
-    log_duration: "on"
-  kafka:
-    log_level: "DEBUG"
-```
-
-## 🔄 Configuration Migration
-
-### From Template-Based Setup
-
-If migrating from the old template system:
-
-```bash
-# Create equivalent config
-cat > otto-stack-config.yaml << EOF
-services:
-  enabled:
-    - redis
-    - postgres
-    - jaeger
-EOF
-```
-
-### Version Updates
-
-When updating the framework:
-
-```bash
-# Backup current config
-cp otto-stack-config.yaml otto-stack-config.yaml.bak
-
-# Generate new sample
-otto-stack init
-
-# Merge changes manually
-diff otto-stack-config.yaml.bak otto-stack-config.yaml
-```
-
-## 📋 Configuration Reference
-
-### Complete Example
-
-```yaml
-# Complete configuration example
-project:
-  name: "my-awesome-api"
-  environment: "local"
-
-services:
-  enabled:
-    - redis
-    - postgres
-    - jaeger
-    - prometheus
-    - localstack
-    - kafka
-
-overrides:
-  redis:
-    port: 6379
-    password: "dev-redis-password"
-    memory_limit: "256m"
-
-  postgres:
-    port: 5432
-    database: "awesome_api_dev"
-    username: "api_user"
-    password: "dev-db-password"
-    memory_limit: "512m"
-
   jaeger:
-    ui_port: 16686
-    memory_limit: "256m"
-
-  prometheus:
-    port: 9090
-    scrape_interval: "15s"
-
-  localstack:
-    services: ["sqs", "sns", "s3"]
-    sqs_queues:
-      - name: "events"
-        dead_letter_queue: true
-
-  kafka:
-    auto_create_topics: true
-    topics:
-      - name: "user-events"
-        partitions: 3
-
-validation:
-  skip_warnings: false
-  allow_multiple_databases: false
-  auto_start: true
+    sampling:
+      default_strategy: probabilistic
+      max_traces_per_second: 100
+    storage:
+      type: memory
+  prometheus-service:
+    scrape_configs:
+      - job_name: example-job_name
+        scrape_interval: 15s
 ```
-
-## 🆘 Troubleshooting Configuration
-
-### Common Issues
-
-**Invalid YAML syntax:**
-
-```bash
-# Validate YAML syntax
-python -c "import yaml; yaml.safe_load(open('otto-stack-config.yaml'))"
-```
-
-**Service conflicts:**
-
-```bash
-# Check for port conflicts
-otto-stack doctor
-```
-
-**Resource warnings:**
-
-```bash
-# Run with verbose output for debugging
-otto-stack --verbose up
-```
-
-**Configuration not found:**
-
-```bash
-# Create default configuration
-otto-stack init
-```
-
-### Debug Mode
-
-```bash
-# Run with verbose debug information
-otto-stack --verbose up
-
-# Validate system and configuration
-otto-stack doctor
-```
-
-## 🧭 See Also
-
-- [README](../README.md)
-- [Services Guide](services.md)
-- [Usage Guide](usage.md)
-- [Integration Guide](integration.md)
-- [Troubleshooting Guide](troubleshooting.md)
-- [Contributing Guide](contributing.md)

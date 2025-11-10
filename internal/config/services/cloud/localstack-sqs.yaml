@@ -13,6 +13,29 @@ service:
       - sqs
       - messaging-queue
 
+configuration_schema:
+  queues:
+    type: array
+    description: SQS queues to create
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          required: true
+          description: Queue name
+        visibility_timeout:
+          type: integer
+          default: 30
+          description: Message visibility timeout in seconds
+        dead_letter_queue:
+          type: string
+          description: Dead letter queue name
+        max_receive_count:
+          type: integer
+          default: 3
+          description: Max receive count before moving to DLQ
+
 documentation:
   examples:
     - aws --endpoint-url=http://localhost:4566 sqs list-queues

@@ -42,6 +42,12 @@ type ServiceConstants struct {
 	Networks        []constantData
 	MemoryLimits    []constantData
 	Protocols       []constantData
+	ConfigSchemas   []ServiceConfigSchema
+}
+
+type ServiceConfigSchema struct {
+	ServiceName string
+	Schema      map[string]interface{}
 }
 
 type collectors struct {
@@ -59,6 +65,7 @@ type collectors struct {
 	networks        map[string]string
 	memoryLimits    map[string]string
 	protocols       map[string]string
+	configSchemas   []ServiceConfigSchema
 }
 
 func main() {
@@ -139,6 +146,7 @@ func (c *collectors) processFile(path string) error {
 	c.addEnvironment(service, serviceName)
 	c.addHealth(service, serviceName)
 	c.addTags(service)
+	c.addConfigSchema(service, serviceName)
 
 	return nil
 }
@@ -283,6 +291,18 @@ func (c *collectors) addTags(service map[string]any) {
 	}
 }
 
+func (c *collectors) addConfigSchema(service map[string]any, serviceName string) {
+	schema, ok := service["configuration_schema"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	c.configSchemas = append(c.configSchemas, ServiceConfigSchema{
+		ServiceName: serviceName,
+		Schema:      schema,
+	})
+}
+
 func (c *collectors) toConstants() *ServiceConstants {
 	return &ServiceConstants{
 		Categories:      stringMapToConstants(c.categories),
@@ -299,6 +319,7 @@ func (c *collectors) toConstants() *ServiceConstants {
 		Networks:        stringMapToConstants(c.networks),
 		MemoryLimits:    stringMapToConstants(c.memoryLimits),
 		Protocols:       stringMapToConstants(c.protocols),
+		ConfigSchemas:   c.configSchemas,
 	}
 }
 

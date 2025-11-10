@@ -12,6 +12,26 @@ service:
       - streaming
       - event-processing
 
+configuration_schema:
+  topics:
+    type: array
+    description: Kafka topics to create
+    items:
+      type: object
+      properties:
+        name:
+          type: string
+          required: true
+          description: Topic name
+        partitions:
+          type: integer
+          default: 3
+          description: Number of partitions
+        replication_factor:
+          type: integer
+          default: 1
+          description: Replication factor
+
 documentation:
   examples:
     - kafka-console-producer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --topic test-topic

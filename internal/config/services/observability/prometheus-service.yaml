@@ -47,6 +47,25 @@ service:
       - metrics
       - monitoring
 
+configuration_schema:
+  scrape_configs:
+    type: array
+    description: Prometheus scrape configurations
+    items:
+      type: object
+      properties:
+        job_name:
+          type: string
+          required: true
+          description: Job name
+        static_configs:
+          type: array
+          description: Static target configurations
+        scrape_interval:
+          type: string
+          default: "15s"
+          description: Scrape interval
+
 documentation:
   examples:
     - curl http://localhost:9089/metrics
