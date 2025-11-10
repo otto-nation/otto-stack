@@ -10,13 +10,21 @@ mkdir -p .git/hooks
 cat > .git/hooks/pre-commit << 'EOF'
 #!/bin/bash
 set -e
+if [ "$NO_VERIFY" ]; then
+    echo 'pre-commit hook skipped' 1>&2
+    exit 0
+fi
 task pre-commit
 EOF
 
-# Pre-push hook  
+# Pre-push hook
 cat > .git/hooks/pre-push << 'EOF'
 #!/bin/bash
 set -e
+if [ "$NO_VERIFY" ]; then
+    echo 'pre-commit hook skipped' 1>&2
+    exit 0
+fi
 task pre-push
 EOF
 

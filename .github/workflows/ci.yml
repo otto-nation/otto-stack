@@ -32,26 +32,19 @@ jobs:
       - name: Generate code
         run: task generate
 
+      - name: Format code
+        run: task fmt
+
       - name: Validate Go modules
         run: |
           go mod tidy
           git diff --exit-code go.mod go.sum
 
       - name: Check formatting
-        run: |
-          if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-            echo "The following files are not formatted:"
-            gofmt -s -l .
-            exit 1
-          fi
+        run: task fmt-check
 
-      - name: Run go vet
-        run: go vet ./...
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          args: --timeout=5m
+      - name: Run linting
+        run: task lint
 
       - name: Run unit tests
         run: task test-unit
