@@ -51,18 +51,20 @@ service:
         default: ["-h", "localhost", "-P", "3306", "-u", "root", "-p"]
 
 configuration_schema:
-  database:
-    type: string
-    default: "local_dev"
-    description: Default database name
-  password:
-    type: string
-    default: "password"
-    description: Root password
-  user:
-    type: string
-    default: "root"
-    description: Database user
+  type: object
+  properties:
+    database:
+      type: string
+      default: "local_dev"
+      description: Default database name
+    password:
+      type: string
+      default: "password"
+      description: Root password
+    user:
+      type: string
+      default: "root"
+      description: Database user
 
 documentation:
   examples:

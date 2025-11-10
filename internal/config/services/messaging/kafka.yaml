@@ -13,24 +13,26 @@ service:
       - event-processing
 
 configuration_schema:
-  topics:
-    type: array
-    description: Kafka topics to create
-    items:
-      type: object
-      properties:
-        name:
-          type: string
-          required: true
-          description: Topic name
-        partitions:
-          type: integer
-          default: 3
-          description: Number of partitions
-        replication_factor:
-          type: integer
-          default: 1
-          description: Replication factor
+  type: object
+  properties:
+    topics:
+      type: array
+      description: Kafka topics to create
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            description: Topic name
+          partitions:
+            type: integer
+            default: 3
+            description: Number of partitions
+          replication_factor:
+            type: integer
+            default: 1
+            description: Replication factor
+        required: ["name"]
 
 documentation:
   examples:

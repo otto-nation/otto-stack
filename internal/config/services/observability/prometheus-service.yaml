@@ -48,23 +48,25 @@ service:
       - monitoring
 
 configuration_schema:
-  scrape_configs:
-    type: array
-    description: Prometheus scrape configurations
-    items:
-      type: object
-      properties:
-        job_name:
-          type: string
-          required: true
-          description: Job name
-        static_configs:
-          type: array
-          description: Static target configurations
-        scrape_interval:
-          type: string
-          default: "15s"
-          description: Scrape interval
+  type: object
+  properties:
+    scrape_configs:
+      type: array
+      description: Prometheus scrape configurations
+      items:
+        type: object
+        properties:
+          job_name:
+            type: string
+            description: Job name
+          static_configs:
+            type: array
+            description: Static target configurations
+          scrape_interval:
+            type: string
+            default: "15s"
+            description: Scrape interval
+        required: ["job_name"]
 
 documentation:
   examples:

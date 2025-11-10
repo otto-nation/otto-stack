@@ -4,19 +4,43 @@ class SchemaParser {
   transformSchema(rawSchema) {
     if (!rawSchema) return null;
 
+    // Handle new JSON Schema format with properties wrapper
+    const schemaProperties = rawSchema.properties || rawSchema;
+    const requiredFields = rawSchema.required || [];
+
+    // Skip if schemaProperties is not an object
+    if (!schemaProperties || typeof schemaProperties !== "object") {
+      return null;
+    }
+
     return {
-      fields: Object.entries(rawSchema).map(([key, config]) => ({
-        name: key,
-        type: config.type,
-        description: config.description,
-        required: config.required || false,
-        default: config.default,
-        items: config.items ? this.transformItems(config.items) : null,
-        properties: config.properties
-          ? this.transformProperties(config.properties)
-          : null,
-      })),
-      examples: this.generateSchemaExamples(rawSchema),
+      fields: Object.entries(schemaProperties).map(([key, config]) => {
+        // Handle malformed config objects
+        if (!config || typeof config !== "object") {
+          return {
+            name: key,
+            type: "unknown",
+            description: "Configuration field",
+            required: false,
+            default: null,
+            items: null,
+            properties: null,
+          };
+        }
+
+        return {
+          name: key,
+          type: config.type || "unknown",
+          description: config.description || "",
+          required: requiredFields.includes(key),
+          default: config.default,
+          items: config.items ? this.transformItems(config.items) : null,
+          properties: config.properties
+            ? this.transformProperties(config.properties)
+            : null,
+        };
+      }),
+      examples: this.generateSchemaExamples(schemaProperties),
     };
   }
 

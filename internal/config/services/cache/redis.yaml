@@ -47,18 +47,20 @@ service:
         default: ["-h", "localhost", "-p", "6379"]
 
 configuration_schema:
-  password:
-    type: string
-    default: "password"
-    description: Redis password
-  max_memory:
-    type: string
-    default: "256m"
-    description: Maximum memory limit
-  databases:
-    type: integer
-    default: 16
-    description: Number of databases
+  type: object
+  properties:
+    password:
+      type: string
+      default: "password"
+      description: Redis password
+    max_memory:
+      type: string
+      default: "256m"
+      description: Maximum memory limit
+    databases:
+      type: integer
+      default: 16
+      description: Number of databases
 
 documentation:
   examples:

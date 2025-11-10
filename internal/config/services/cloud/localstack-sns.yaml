@@ -14,30 +14,31 @@ service:
       - notifications
 
 configuration_schema:
-  topics:
-    type: array
-    description: SNS topics to create
-    items:
-      type: object
-      properties:
-        name:
-          type: string
-          required: true
-          description: Topic name
-        subscriptions:
-          type: array
-          description: Topic subscriptions
-          items:
-            type: object
-            properties:
-              protocol:
-                type: string
-                required: true
-                description: Subscription protocol (sqs, http, etc.)
-              endpoint:
-                type: string
-                required: true
-                description: Subscription endpoint
+  type: object
+  properties:
+    topics:
+      type: array
+      description: SNS topics to create
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            description: Topic name
+          subscriptions:
+            type: array
+            description: Topic subscriptions
+            items:
+              type: object
+              properties:
+                protocol:
+                  type: string
+                  description: Subscription protocol (sqs, http, etc.)
+                endpoint:
+                  type: string
+                  description: Subscription endpoint
+              required: ["protocol", "endpoint"]
+        required: ["name"]
 
 documentation:
   examples:

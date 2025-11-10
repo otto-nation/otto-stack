@@ -14,24 +14,26 @@ service:
       - object-storage
 
 configuration_schema:
-  buckets:
-    type: array
-    description: S3 buckets to create
-    items:
-      type: object
-      properties:
-        name:
-          type: string
-          required: true
-          description: Bucket name
-        versioning:
-          type: boolean
-          default: false
-          description: Enable versioning
-        public_read:
-          type: boolean
-          default: false
-          description: Allow public read access
+  type: object
+  properties:
+    buckets:
+      type: array
+      description: S3 buckets to create
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            description: Bucket name
+          versioning:
+            type: boolean
+            default: false
+            description: Enable versioning
+          public_read:
+            type: boolean
+            default: false
+            description: Allow public read access
+        required: ["name"]
 
 documentation:
   examples:

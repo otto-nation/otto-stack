@@ -65,7 +65,9 @@ spring.datasource.url=jdbc:mysql://localhost:3306/my_app_dev
 #### Use Cases
 
 - Primary application database
+
 - Transactional data storage
+
 - Relational data modeling
 
 ---
@@ -118,8 +120,11 @@ spring.datasource.url=jdbc:postgresql://localhost:5432/my_app_dev
 #### Use Cases
 
 - Primary application database
+
 - Transactional data storage
+
 - Relational data modeling
+
 - ACID compliance requirements
 
 ---
@@ -174,9 +179,13 @@ spring.data.redis.host=localhost
 #### Use Cases
 
 - Session storage
+
 - Application caching
+
 - Rate limiting
+
 - Pub/Sub messaging
+
 - Temporary data storage
 
 ---
@@ -197,8 +206,10 @@ Kafka topics to create
 
 **Items:**
 
-- **name** (`string`) _required_: Topic name
+- **name** (`string`): Topic name
+
 - **partitions** (`integer`) = `3`: Number of partitions
+
 - **replication_factor** (`integer`) = `1`: Replication factor
 
 ##### Example Configuration
@@ -223,9 +234,13 @@ kafka-console-consumer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:
 #### Use Cases
 
 - Event streaming and processing
+
 - Message queuing and pub/sub
+
 - Real-time data pipelines
+
 - Microservices communication
+
 - Log aggregation and analytics
 
 ---
@@ -243,8 +258,11 @@ kafka-broker-api-versions --bootstrap-server localhost:9099
 #### Use Cases
 
 - Event-driven microservices architecture
+
 - Real-time data streaming and processing
+
 - Message queuing between services
+
 - Data pipeline and ETL processes
 
 ---
@@ -262,8 +280,11 @@ curl -f http://localhost:8099/actuator/health
 #### Use Cases
 
 - Topic management and browsing
+
 - Message inspection and debugging
+
 - Cluster monitoring and health checks
+
 - Consumer group management
 
 ---
@@ -281,8 +302,11 @@ echo 'ruok' | nc localhost 2181
 #### Use Cases
 
 - Kafka cluster coordination
+
 - Distributed configuration management
+
 - Service discovery
+
 - Leader election
 
 ---
@@ -306,7 +330,9 @@ aws --endpoint-url=http://localhost:4566 sqs list-queues
 #### Use Cases
 
 - Complete AWS service emulation for local development
+
 - Cloud service testing without AWS costs
+
 - Offline development environment with pre-configured resources
 
 ---
@@ -325,10 +351,14 @@ DynamoDB tables to create
 
 **Items:**
 
-- **name** (`string`) _required_: Table name
-- **hash_key** (`string`) _required_: Partition key
+- **name** (`string`): Table name
+
+- **hash_key** (`string`): Partition key
+
 - **range_key** (`string`): Sort key
+
 - **read_capacity** (`integer`) = `5`: Read capacity units
+
 - **write_capacity** (`integer`) = `5`: Write capacity units
 
 ##### Example Configuration
@@ -351,8 +381,11 @@ aws --endpoint-url=http://localhost:4566 dynamodb list-tables
 #### Use Cases
 
 - NoSQL database testing
+
 - High-performance data storage
+
 - Session management
+
 - Event sourcing patterns
 
 ---
@@ -371,8 +404,10 @@ S3 buckets to create
 
 **Items:**
 
-- **name** (`string`) _required_: Bucket name
+- **name** (`string`): Bucket name
+
 - **versioning** (`boolean`): Enable versioning
+
 - **public_read** (`boolean`): Allow public read access
 
 ##### Example Configuration
@@ -393,8 +428,11 @@ aws --endpoint-url=http://localhost:4566 s3 ls
 #### Use Cases
 
 - File storage and retrieval testing
+
 - Static asset hosting
+
 - Data backup and archival
+
 - Content distribution testing
 
 ---
@@ -413,7 +451,8 @@ SNS topics to create
 
 **Items:**
 
-- **name** (`string`) _required_: Topic name
+- **name** (`string`): Topic name
+
 - **subscriptions** (`array`): Topic subscriptions
 
 ##### Example Configuration
@@ -432,8 +471,11 @@ aws --endpoint-url=http://localhost:4566 sns list-topics
 #### Use Cases
 
 - Pub/sub messaging patterns
+
 - Event notifications
+
 - Fan-out message distribution
+
 - Integration with SQS subscriptions
 
 ---
@@ -452,9 +494,12 @@ SQS queues to create
 
 **Items:**
 
-- **name** (`string`) _required_: Queue name
+- **name** (`string`): Queue name
+
 - **visibility_timeout** (`integer`) = `30`: Message visibility timeout in seconds
+
 - **dead_letter_queue** (`string`): Dead letter queue name
+
 - **max_receive_count** (`integer`) = `3`: Max receive count before moving to DLQ
 
 ##### Example Configuration
@@ -476,7 +521,9 @@ aws --endpoint-url=http://localhost:4566 sqs list-queues
 #### Use Cases
 
 - Message queue testing
+
 - Asynchronous processing development
+
 - Event-driven architecture testing
 
 ---
@@ -498,6 +545,7 @@ Jaeger sampling configuration
 **Properties:**
 
 - **default_strategy** (`string`) = `probabilistic`: Default sampling strategy
+
 - **max_traces_per_second** (`integer`) = `100`: Maximum traces per second
 
 #### storage
@@ -529,8 +577,11 @@ curl -f http://localhost:16686/
 #### Use Cases
 
 - Distributed tracing
+
 - Performance monitoring
+
 - Service dependency analysis
+
 - Request flow visualization
 
 ---
@@ -549,8 +600,10 @@ Prometheus scrape configurations
 
 **Items:**
 
-- **job_name** (`string`) _required_: Job name
+- **job_name** (`string`): Job name
+
 - **static_configs** (`array`): Static target configurations
+
 - **scrape_interval** (`string`) = `15s`: Scrape interval
 
 ##### Example Configuration
@@ -570,7 +623,9 @@ curl http://localhost:9089/metrics
 #### Use Cases
 
 - Application metrics collection
+
 - Performance monitoring
+
 - Alerting and notifications
 
 ---
