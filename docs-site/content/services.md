@@ -1,12 +1,12 @@
 ---
-title: "Services"
-description: "Available services and configuration options"
-lead: "Explore all the services you can use with otto-stack"
+title: Services
+description: Available services and configuration options
+lead: Explore all the services you can use with otto-stack
 date: "2025-10-01"
 lastmod: "2025-11-10"
-draft: "false"
-weight: "30"
-toc: "true"
+draft: false
+weight: 30
+toc: true
 ---
 
 # Available Services
@@ -17,65 +17,9 @@ Each service can be configured through the `service_configuration` section in yo
 
 ## 🗄️ Database
 
-### localstack-dynamodb
-
-LocalStack DynamoDB NoSQL database emulation
-
-**Provides:** dynamodb, nosql
-
-**Requires:** localstack
-
-#### Configuration Options
-
-#### tables
-
-DynamoDB tables to create
-
-- Type: `array`
-
-**Items:**
-
-- **name** (`string`) _required_: Table name
-- **hash_key** (`string`) _required_: Partition key
-- **range_key** (`string`): Sort key
-- **read_capacity** (`integer`) = `5`: Read capacity units
-- **write_capacity** (`integer`) = `5`: Write capacity units
-
-##### Example Configuration
-
-```yaml
-tables:
-  - name: example-name
-    hash_key: example-hash_key
-    range_key: example-range_key
-    read_capacity: 5
-    write_capacity: 5
-```
-
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 dynamodb list-tables
-```
-
-#### Use Cases
-
-- NoSQL database testing
-- High-performance data storage
-- Session management
-- Event sourcing patterns
-
----
-
 ### mysql
 
 MySQL relational database for persistent data storage
-
-**Default Port:** 3306
-
-**Connection Type:** cli
-
-**Provides:** database, sql
 
 #### Configuration Options
 
@@ -129,12 +73,6 @@ spring.datasource.url=jdbc:mysql://localhost:3306/my_app_dev
 ### postgres
 
 PostgreSQL relational database for persistent data storage
-
-**Default Port:** 5432
-
-**Connection Type:** cli
-
-**Provides:** database, sql
 
 #### Configuration Options
 
@@ -191,12 +129,6 @@ spring.datasource.url=jdbc:postgresql://localhost:5432/my_app_dev
 ### redis
 
 Redis in-memory data store for caching and session storage
-
-**Default Port:** 6379
-
-**Connection Type:** cli
-
-**Provides:** cache
 
 #### Configuration Options
 
@@ -255,8 +187,6 @@ spring.data.redis.host=localhost
 
 Complete Apache Kafka messaging platform with UI and topic management
 
-**Provides:** messaging, streaming, event-processing
-
 #### Configuration Options
 
 #### topics
@@ -304,12 +234,6 @@ kafka-console-consumer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:
 
 Apache Kafka broker for event streaming and messaging
 
-**Default Port:** 9099
-
-**Provides:** messaging, streaming
-
-**Requires:** zookeeper
-
 #### Examples
 
 ```bash
@@ -329,16 +253,6 @@ kafka-broker-api-versions --bootstrap-server localhost:9099
 
 Web UI for Kafka cluster management and topic browsing
 
-**Default Port:** 8099
-
-**Connection Type:** web
-
-**Provides:** ui, management
-
-**Requires:** kafka-broker
-
-**Web Interface:** [Kafka UI](http://localhost:8099)
-
 #### Examples
 
 ```bash
@@ -354,13 +268,179 @@ curl -f http://localhost:8099/actuator/health
 
 ---
 
+### zookeeper
+
+Apache Zookeeper coordination service for distributed systems
+
+#### Examples
+
+```bash
+echo 'ruok' | nc localhost 2181
+```
+
+#### Use Cases
+
+- Kafka cluster coordination
+- Distributed configuration management
+- Service discovery
+- Leader election
+
+---
+
+## ☁️ Cloud
+
+### localstack
+
+Complete LocalStack AWS emulation environment
+
+#### Examples
+
+```bash
+aws --endpoint-url=http://localhost:4566 s3 ls
+```
+
+```bash
+aws --endpoint-url=http://localhost:4566 sqs list-queues
+```
+
+#### Use Cases
+
+- Complete AWS service emulation for local development
+- Cloud service testing without AWS costs
+- Offline development environment with pre-configured resources
+
+---
+
+### localstack-dynamodb
+
+LocalStack DynamoDB NoSQL database emulation
+
+#### Configuration Options
+
+#### tables
+
+DynamoDB tables to create
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`) _required_: Table name
+- **hash_key** (`string`) _required_: Partition key
+- **range_key** (`string`): Sort key
+- **read_capacity** (`integer`) = `5`: Read capacity units
+- **write_capacity** (`integer`) = `5`: Write capacity units
+
+##### Example Configuration
+
+```yaml
+tables:
+  - name: example-name
+    hash_key: example-hash_key
+    range_key: example-range_key
+    read_capacity: 5
+    write_capacity: 5
+```
+
+#### Examples
+
+```bash
+aws --endpoint-url=http://localhost:4566 dynamodb list-tables
+```
+
+#### Use Cases
+
+- NoSQL database testing
+- High-performance data storage
+- Session management
+- Event sourcing patterns
+
+---
+
+### localstack-s3
+
+LocalStack S3 (Simple Storage Service) emulation
+
+#### Configuration Options
+
+#### buckets
+
+S3 buckets to create
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`) _required_: Bucket name
+- **versioning** (`boolean`): Enable versioning
+- **public_read** (`boolean`): Allow public read access
+
+##### Example Configuration
+
+```yaml
+buckets:
+  - name: example-name
+    versioning: false
+    public_read: false
+```
+
+#### Examples
+
+```bash
+aws --endpoint-url=http://localhost:4566 s3 ls
+```
+
+#### Use Cases
+
+- File storage and retrieval testing
+- Static asset hosting
+- Data backup and archival
+- Content distribution testing
+
+---
+
+### localstack-sns
+
+LocalStack SNS (Simple Notification Service) emulation
+
+#### Configuration Options
+
+#### topics
+
+SNS topics to create
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`) _required_: Topic name
+- **subscriptions** (`array`): Topic subscriptions
+
+##### Example Configuration
+
+```yaml
+topics:
+  - name: example-name
+```
+
+#### Examples
+
+```bash
+aws --endpoint-url=http://localhost:4566 sns list-topics
+```
+
+#### Use Cases
+
+- Pub/sub messaging patterns
+- Event notifications
+- Fan-out message distribution
+- Integration with SQS subscriptions
+
+---
+
 ### localstack-sqs
 
 LocalStack SQS (Simple Queue Service) emulation
-
-**Provides:** sqs, messaging-queue
-
-**Requires:** localstack
 
 #### Configuration Options
 
@@ -401,134 +481,11 @@ aws --endpoint-url=http://localhost:4566 sqs list-queues
 
 ---
 
-## ☁️ Cloud
-
-### localstack
-
-Complete LocalStack AWS emulation environment
-
-**Provides:** aws-emulation, cloud-services
-
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 s3 ls
-```
-
-```bash
-aws --endpoint-url=http://localhost:4566 sqs list-queues
-```
-
-#### Use Cases
-
-- Complete AWS service emulation for local development
-- Cloud service testing without AWS costs
-- Offline development environment with pre-configured resources
-
----
-
-### localstack-s3
-
-LocalStack S3 (Simple Storage Service) emulation
-
-**Provides:** s3, object-storage
-
-**Requires:** localstack
-
-#### Configuration Options
-
-#### buckets
-
-S3 buckets to create
-
-- Type: `array`
-
-**Items:**
-
-- **name** (`string`) _required_: Bucket name
-- **versioning** (`boolean`) = `false`: Enable versioning
-- **public_read** (`boolean`) = `false`: Allow public read access
-
-##### Example Configuration
-
-```yaml
-buckets:
-  - name: example-name
-    versioning: false
-    public_read: false
-```
-
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 s3 ls
-```
-
-#### Use Cases
-
-- File storage and retrieval testing
-- Static asset hosting
-- Data backup and archival
-- Content distribution testing
-
----
-
-### localstack-sns
-
-LocalStack SNS (Simple Notification Service) emulation
-
-**Provides:** sns, notifications
-
-**Requires:** localstack
-
-#### Configuration Options
-
-#### topics
-
-SNS topics to create
-
-- Type: `array`
-
-**Items:**
-
-- **name** (`string`) _required_: Topic name
-- **subscriptions** (`array`): Topic subscriptions
-
-##### Example Configuration
-
-```yaml
-topics:
-  - name: example-name
-```
-
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 sns list-topics
-```
-
-#### Use Cases
-
-- Pub/sub messaging patterns
-- Event notifications
-- Fan-out message distribution
-- Integration with SQS subscriptions
-
----
-
 ## 🔍 Observability
 
 ### jaeger
 
 Jaeger distributed tracing system for monitoring and troubleshooting microservices
-
-**Default Port:** 16686
-
-**Connection Type:** web
-
-**Provides:** tracing, observability
-
-**Web Interface:** [Jaeger UI](http://localhost:16686)
 
 #### Configuration Options
 
@@ -582,14 +539,6 @@ curl -f http://localhost:16686/
 
 Prometheus metrics collection and monitoring system
 
-**Default Port:** 9089
-
-**Connection Type:** web
-
-**Provides:** metrics, monitoring
-
-**Web Interface:** [Prometheus UI](http://localhost:9089)
-
 #### Configuration Options
 
 #### scrape_configs
@@ -623,30 +572,5 @@ curl http://localhost:9089/metrics
 - Application metrics collection
 - Performance monitoring
 - Alerting and notifications
-
----
-
-## 🔧 Other
-
-### zookeeper
-
-Apache Zookeeper coordination service for distributed systems
-
-**Default Port:** 2181
-
-**Provides:** coordination
-
-#### Examples
-
-```bash
-echo 'ruok' | nc localhost 2181
-```
-
-#### Use Cases
-
-- Kafka cluster coordination
-- Distributed configuration management
-- Service discovery
-- Leader election
 
 ---

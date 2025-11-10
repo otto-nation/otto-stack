@@ -16,11 +16,6 @@ class ServicesGuideGenerator {
     const services = this.analyzer.loadAllServices();
     const categories = this.analyzer.categorizeServices(services);
 
-    const templateData = {
-      serviceCount: Object.keys(services).length,
-      categories: this.processCategoriesForTemplate(categories, services),
-    };
-
     const today = new Date().toISOString().split("T")[0];
     const frontmatter = {
       title: "Services",
@@ -54,13 +49,18 @@ Each service can be configured through the \`service_configuration\` section in 
           .sort(([a], [b]) => a.localeCompare(b))
           .forEach(([name, config]) => {
             const serviceData = this.processServiceForTemplate(name, config);
-            content += this.templateRenderer.render("service.md", serviceData);
+            content += this.renderServiceSection(serviceData);
           });
       },
     );
 
     const frontmatterYaml = require("js-yaml").dump(frontmatter);
     return `---\n${frontmatterYaml}---\n\n${content}`;
+  }
+
+  renderServiceSection(serviceData) {
+    // Render the service template with proper Handlebars processing
+    return this.templateRenderer.render("service.md", serviceData);
   }
 
   processServiceForTemplate(name, config) {
@@ -97,11 +97,17 @@ Each service can be configured through the \`service_configuration\` section in 
       }
     }
 
+    // Add examples and use cases from documentation
+    const examples = config.documentation?.examples || [];
+    const useCases = config.documentation?.use_cases || [];
+
     return {
       name,
       description: config.description,
       details,
       configurationSchema,
+      examples,
+      useCases,
     };
   }
 

@@ -5,7 +5,7 @@ Otto-stack uses a single configuration file `otto-stack-config.yaml` to define y
 ## Configuration File Structure
 
 ```yaml
-{ { structureExample } }
+{ { { structureExample } } }
 ```
 
 ## Configuration Sections
@@ -31,52 +31,20 @@ Otto-stack supports the following services:
 - {{this}}
   {{/each}}
 
-For detailed information about each service, see the [Services Guide](services.md).
+For detailed information about each service, including configuration options and examples, see the [Services Guide](services.md).
 
-## Service Configuration Details
+## Service Configuration
 
-{{#each configurableServices}}
+Services can be configured in the `service_configuration` section. Each service has its own configuration schema with specific options for customization.
 
-### {{name}}
-
-{{#if description}}
-{{description}}
-{{/if}}
-
-{{#each configSections}}
-
-#### {{name}}
-
-{{#if description}}
-{{description}}
-{{/if}}
-
-- Type: `{{type}}`
-
-{{#if properties}}
-**Properties:**
-
-{{#each properties}}
-
-- **{{name}}** (`{{type}}`){{#if required}} _required_{{/if}}{{#if default}} = `{{default}}`{{/if}}: {{description}}
-  {{/each}}
-  {{/if}}
-
-{{#if example}}
-
-##### Example Configuration
-
-```yaml
-{ { example } }
-```
-
-{{/if}}
-
-{{/each}}
-{{/each}}
+For complete service configuration details, examples, and available options, refer to the [Services Guide](services.md).
 
 ## Complete Example
 
+Here's a complete configuration example with multiple services:
+
 ```yaml
-{ { completeExample } }
+{ { { completeExample } } }
 ```
+
+For more configuration examples and service-specific options, see the [Services Guide](services.md).

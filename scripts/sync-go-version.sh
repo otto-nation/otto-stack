@@ -80,6 +80,12 @@ update_golangci_config() {
         return 0
     fi
 
+    # Check if the file has a go: field at all
+    if ! grep -q -E '^\s*go:\s*"' "$GOLANGCI_CONFIG"; then
+        # No go: field exists, skip this check as golangci-lint will use go.mod version
+        return 0
+    fi
+
     # Extract current version from golangci config
     local current_version=$(grep -E '^\s*go:\s*"' "$GOLANGCI_CONFIG" | sed 's/.*"\([^"]*\)".*/\1/' || echo "")
 
@@ -237,11 +243,14 @@ fix_all_versions() {
 
     # Check .golangci.yml
     if [[ -f "$GOLANGCI_CONFIG" ]]; then
-        local current_golangci_version
-        current_golangci_version=$(grep "go:" "$GOLANGCI_CONFIG" | sed 's/.*go: *"\([^"]*\)".*/\1/' || echo "")
-        if [[ "$current_golangci_version" != "$go_version" ]]; then
-            golangci_needs_update=true
-            changes_made=true
+        # Only check if the file has a go: field
+        if grep -q -E '^\s*go:\s*"' "$GOLANGCI_CONFIG"; then
+            local current_golangci_version
+            current_golangci_version=$(grep -E '^\s*go:\s*"' "$GOLANGCI_CONFIG" | sed 's/.*"\([^"]*\)".*/\1/' || echo "")
+            if [[ "$current_golangci_version" != "$go_version" ]]; then
+                golangci_needs_update=true
+                changes_made=true
+            fi
         fi
     fi
 

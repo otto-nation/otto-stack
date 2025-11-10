@@ -51,7 +51,7 @@
 ##### Example Configuration
 
 ```yaml
-{ { toYaml configurationSchema.examples } }
+{ { { toYaml configurationSchema.examples } } }
 ```
 
 {{/if}}
@@ -64,7 +64,7 @@
 {{#each examples}}
 
 ```bash
-{{this}}
+{{{this}}}
 ```
 
 {{/each}}

@@ -1,6 +1,6 @@
 module.exports = {
   generators: [
-    { name: 'cli-reference', enabled: true, output: 'reference.md' },
+    { name: 'cli-reference', enabled: true, output: 'cli-reference.md' },
     { name: 'services-guide', enabled: true, output: 'services.md' },
     { name: 'configuration-guide', enabled: true, output: 'configuration.md' },
     { name: 'homepage', enabled: true, output: '_index.md' }
@@ -8,7 +8,7 @@ module.exports = {
 
   validation: {
     enabled: true,
-    strict: false // Set to true to fail on warnings
+    strict: true // Fail on validation errors
   },
 
   templates: './templates',
