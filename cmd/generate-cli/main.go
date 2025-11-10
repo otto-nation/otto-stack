@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"text/template"
@@ -14,8 +15,51 @@ const (
 	CommandsYAMLPath     = "internal/config/commands.yaml"
 	CoreTemplateFilePath = "cmd/generate-cli/templates/core.tmpl"
 	CLITemplateFilePath  = "cmd/generate-cli/templates/ci.tmpl"
-	CoreGeneratedPath    = "internal/core/cli_generated.go"
+	CoreGeneratedPath    = "internal/core/constants_generated.go"
 	CIGeneratedPath      = "internal/pkg/ci/generated.go"
+	CoreTemplateName     = "core"
+)
+
+const (
+	// YAML keys
+	KeyCommands    = "commands"
+	KeyMessages    = "messages"
+	KeyIcons       = "icons"
+	KeyGlobal      = "global"
+	KeyFlags       = "flags"
+	KeyValidation  = "validation"
+	KeyType        = "type"
+	KeyDescription = "description"
+)
+
+const (
+	// Type strings
+	TypeString      = "string"
+	TypeInt         = "int"
+	TypeBool        = "bool"
+	TypeStringArray = "stringArray"
+)
+
+const (
+	// Prefix strings
+	PrefixCommand = "Command"
+	PrefixFlag    = "Flag"
+	PrefixMsg     = "Msg"
+	PrefixIcon    = "Icon"
+	PrefixParse   = "Parse"
+	SuffixFlags   = "Flags"
+)
+
+const (
+	// Special case strings for toPascalCase
+	CaseJSON  = "json"
+	CaseYAML  = "yaml"
+	CaseXML   = "xml"
+	CaseHTTP  = "http"
+	CaseHTTPS = "https"
+	CaseTTY   = "tty"
+	CaseURL   = "url"
+	CaseAPI   = "api"
 )
 
 type commandData struct {
@@ -36,6 +80,11 @@ type flagField struct {
 	Type     string
 	FlagName string
 	YAMLType string
+}
+
+type validationOption struct {
+	Key         string
+	Description string
 }
 
 func main() {
@@ -76,29 +125,42 @@ func generateCoreConstants() error {
 		return fmt.Errorf("failed to load raw config: %w", err)
 	}
 
-	tmpl, err := template.ParseFiles(CoreTemplateFilePath)
+	tmpl, err := template.New(CoreTemplateName).Funcs(template.FuncMap{
+		"toPascalCase": toPascalCase,
+	}).ParseFiles(CoreTemplateFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to parse constants template: %w", err)
 	}
 
+	tmpl = tmpl.Lookup(filepath.Base(CoreTemplateFilePath))
+
 	file, err := os.Create(CoreGeneratedPath)
 	if err != nil {
-		return fmt.Errorf("failed to create constants file: %w", err)
+		// Try creating the directory and retry
+		if err := os.MkdirAll(filepath.Dir(CoreGeneratedPath), 0755); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+		file, err = os.Create(CoreGeneratedPath)
+		if err != nil {
+			return fmt.Errorf("failed to create constants file: %w", err)
+		}
 	}
 	defer func() { _ = file.Close() }()
 
 	data := struct {
-		Commands     []constantData
-		Flags        []constantData
-		Messages     []constantData
-		Icons        []constantData
-		CommandsData []commandData
+		Commands          []constantData
+		Flags             []constantData
+		Messages          []constantData
+		Icons             []constantData
+		CommandsData      []commandData
+		ValidationOptions []validationOption
 	}{
-		Commands:     collectCommandConstants(rawConfig),
-		Flags:        collectFlagsData(rawConfig),
-		Messages:     collectMessagesData(rawConfig),
-		Icons:        collectIconsData(rawConfig),
-		CommandsData: collectCommandsData(rawConfig),
+		Commands:          collectCommandConstants(rawConfig),
+		Flags:             collectFlagsData(rawConfig),
+		Messages:          collectMessagesData(rawConfig),
+		Icons:             collectIconsData(rawConfig),
+		CommandsData:      collectCommandsData(rawConfig),
+		ValidationOptions: collectValidationOptions(rawConfig),
 	}
 
 	return tmpl.Execute(file, data)
@@ -137,7 +199,7 @@ func collectCommandConstants(rawConfig map[string]any) []constantData {
 	commands := getCommands(rawConfig)
 	for cmdName := range commands {
 		constants = append(constants, constantData{
-			Name:  "Command" + toPascalCase(cmdName),
+			Name:  PrefixCommand + toPascalCase(cmdName),
 			Value: strconv.Quote(cmdName),
 		})
 	}
@@ -153,7 +215,7 @@ func collectFlagsData(rawConfig map[string]any) []constantData {
 
 	for flagName := range flagNames {
 		flags = append(flags, constantData{
-			Name:  "Flag" + toPascalCase(flagName),
+			Name:  PrefixFlag + toPascalCase(flagName),
 			Value: strconv.Quote(flagName),
 		})
 	}
@@ -265,7 +327,7 @@ func extractCommandFlags(cmd map[string]any) []flagField {
 }
 
 const (
-	defaultFlagType = "string"
+	defaultFlagType = TypeString
 )
 
 func createFlagField(flagName string, flagData any) flagField {
@@ -289,7 +351,7 @@ func createFlagField(flagName string, flagData any) flagField {
 
 // Helper functions to reduce nesting
 func getCommands(rawConfig map[string]any) map[string]any {
-	if commands, ok := rawConfig["commands"].(map[string]any); ok {
+	if commands, ok := rawConfig[KeyCommands].(map[string]any); ok {
 		return commands
 	}
 	return make(map[string]any)
@@ -401,6 +463,36 @@ func toPascalCase(s string) string {
 		}
 	}
 	return strings.Join(parts, "")
+}
+
+func collectValidationOptions(rawConfig map[string]any) []validationOption {
+	var options []validationOption
+
+	validation := getValidation(rawConfig)
+	for key, data := range validation {
+		if option := createValidationOption(key, data); option.Key != "" {
+			options = append(options, option)
+		}
+	}
+
+	return options
+}
+
+func createValidationOption(key string, data any) validationOption {
+	dataMap := getCategoryMap(data)
+	desc := getStringValue(dataMap["description"])
+	if desc == "" {
+		return validationOption{}
+	}
+
+	return validationOption{Key: key, Description: desc}
+}
+
+func getValidation(rawConfig map[string]any) map[string]any {
+	if validation, ok := rawConfig["validation"].(map[string]any); ok {
+		return validation
+	}
+	return make(map[string]any)
 }
 
 func goTypeFromYAML(yamlType string) string {

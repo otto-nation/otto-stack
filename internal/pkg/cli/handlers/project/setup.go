@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 )
 
@@ -119,7 +120,7 @@ The following services are configured:
 Run `+"`%s --help`"+` for a full list of available commands.
 `, projectName, projectName, formatServicesList(services),
 		core.AppName, core.AppName, core.AppName,
-		core.ConfigFileName, core.DockerComposeFileName, core.AppName)
+		core.ConfigFileName, docker.DockerComposeFileName, core.AppName)
 
 	readmePath := core.OttoStackDir + "/" + core.ReadmeFileName
 	if err := os.WriteFile(readmePath, []byte(readmeContent), core.FilePermReadWrite); err != nil {

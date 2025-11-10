@@ -9,7 +9,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -24,9 +23,6 @@ func NewLogsHandler() *LogsHandler {
 // Handle executes the logs command
 func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Check initialization first
-	if err := validation.CheckInitialization(); err != nil {
-		return err
-	}
 
 	// Get CI-friendly flags
 	ciFlags := ci.GetFlags(cmd)

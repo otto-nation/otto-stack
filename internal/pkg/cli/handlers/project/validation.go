@@ -2,39 +2,10 @@ package project
 
 import (
 	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core"
-	"github.com/otto-nation/otto-stack/internal/core/docker"
-	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
-
-// validateInitEnvironment validates the environment before initialization
-func (h *InitHandler) validateInitEnvironment(_ *base.BaseCommand) error {
-	// Check if already initialized
-	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
-	if _, err := os.Stat(configPath); err == nil {
-		return fmt.Errorf("%s is already initialized in this directory", core.AppNameLower)
-	}
-	// Also check for .yaml extension
-	yamlConfigPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
-	if _, err := os.Stat(yamlConfigPath); err == nil {
-		return fmt.Errorf("%s is already initialized in this directory", core.AppNameLower)
-	}
-
-	// Check for required tools
-	requiredTools := []string{docker.DockerCmd}
-	for _, tool := range requiredTools {
-		if !h.isCommandAvailable(tool) {
-			return fmt.Errorf(core.MsgValidation_required_tool_unavailable, tool)
-		}
-	}
-
-	return nil
-}
 
 // validateProjectName validates the project name
 func (h *InitHandler) validateProjectName(name string) error {
@@ -90,37 +61,4 @@ func (h *InitHandler) validateServices(serviceNames []string) error {
 	}
 
 	return nil
-}
-
-// validateDirectoryStructure ensures the directory structure is valid for initialization
-func (h *InitHandler) validateDirectoryStructure(base *base.BaseCommand) error {
-	// Check if we're in a git repository (optional but recommended)
-	if _, err := os.Stat(".git"); os.IsNotExist(err) {
-		base.Output.Warning("%s", core.MsgWarnings_not_git_repository)
-	}
-
-	// Check for conflicting files
-	conflictingFiles := []string{
-		"docker-compose.yml",
-		"docker-compose.yaml",
-	}
-
-	for _, file := range conflictingFiles {
-		if _, err := os.Stat(file); err == nil {
-			return fmt.Errorf(core.MsgValidation_conflicting_file_exists, file)
-		}
-	}
-
-	return nil
-}
-
-// isCommandAvailable checks if a command is available in PATH
-func (h *InitHandler) isCommandAvailable(command string) bool {
-	if command == "" {
-		return false
-	}
-
-	// Use exec.LookPath which is cross-platform
-	_, err := exec.LookPath(command)
-	return err == nil
 }

@@ -8,8 +8,8 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
-	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -24,9 +24,6 @@ func NewDownHandler() *DownHandler {
 // Handle executes the down command
 func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Check initialization first
-	if err := validation.CheckInitialization(); err != nil {
-		return err
-	}
 
 	// Start operation logging only after initialization check passes
 	logger.Info(logger.LogMsgStartingOperation, logger.LogFieldOperation, logger.OperationStackDown, logger.LogFieldServices, args)
@@ -36,6 +33,14 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 			panic(r)
 		}
 	}()
+
+	ciFlags := ci.GetFlags(cmd)
+
+	if ciFlags.DryRun {
+		base.Output.Info("%s", core.MsgDry_run_showing_what_would_happen)
+		base.Output.Info(core.MsgDry_run_would_stop_services, fmt.Sprintf("%v", args))
+		return nil
+	}
 
 	base.Output.Header(core.MsgStopping)
 	logger.Info(logger.LogMsgServiceAction, logger.LogFieldAction, logger.ActionStop, logger.LogFieldService, "stack", logger.LogFieldServices, args)

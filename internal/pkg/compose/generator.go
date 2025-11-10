@@ -48,7 +48,7 @@ func (g *Generator) buildServices(serviceNames []string) map[string]any {
 	serviceList := make(map[string]any)
 
 	for _, serviceName := range serviceNames {
-		serviceDef, err := g.manager.GetServiceV2(serviceName)
+		serviceDef, err := g.manager.GetService(serviceName)
 		if err != nil {
 			continue
 		}
@@ -58,21 +58,21 @@ func (g *Generator) buildServices(serviceNames []string) map[string]any {
 			continue
 		}
 
-		serviceList[serviceName] = g.buildServiceFromV2(serviceDef)
+		serviceList[serviceName] = g.buildService(serviceDef)
 	}
 
 	return serviceList
 }
 
-func (g *Generator) buildServiceFromV2(v2 *services.ServiceConfig) map[string]any {
+func (g *Generator) buildService(config *services.ServiceConfig) map[string]any {
 	service := map[string]any{
-		dockerConstants.ComposeFieldImage: v2.Container.Image,
+		dockerConstants.ComposeFieldImage: config.Container.Image,
 	}
 
-	// Convert V2 ports to compose format
-	if len(v2.Container.Ports) > 0 {
+	// Convert ports to compose format
+	if len(config.Container.Ports) > 0 {
 		var ports []string
-		for _, port := range v2.Container.Ports {
+		for _, port := range config.Container.Ports {
 			portStr := fmt.Sprintf("%s:%s", port.External, port.Internal)
 			if port.Protocol != "" && port.Protocol != "tcp" {
 				portStr += "/" + port.Protocol
@@ -82,13 +82,13 @@ func (g *Generator) buildServiceFromV2(v2 *services.ServiceConfig) map[string]an
 		service[dockerConstants.ComposeFieldPorts] = ports
 	}
 
-	if len(v2.Container.Environment) > 0 {
-		service[dockerConstants.ComposeFieldEnvironment] = v2.Container.Environment
+	if len(config.Container.Environment) > 0 {
+		service[dockerConstants.ComposeFieldEnvironment] = config.Container.Environment
 	}
 
-	if len(v2.Container.Volumes) > 0 {
+	if len(config.Container.Volumes) > 0 {
 		var volumes []string
-		for _, vol := range v2.Container.Volumes {
+		for _, vol := range config.Container.Volumes {
 			volStr := fmt.Sprintf("%s:%s", vol.Name, vol.Mount)
 			if vol.ReadOnly {
 				volStr += ":ro"
@@ -98,34 +98,34 @@ func (g *Generator) buildServiceFromV2(v2 *services.ServiceConfig) map[string]an
 		service[dockerConstants.ComposeFieldVolumes] = volumes
 	}
 
-	if v2.Container.Restart != "" {
-		service[dockerConstants.ComposeFieldRestart] = string(v2.Container.Restart)
+	if config.Container.Restart != "" {
+		service[dockerConstants.ComposeFieldRestart] = string(config.Container.Restart)
 	}
 
-	if len(v2.Container.Command) > 0 {
-		service[dockerConstants.ComposeFieldCommand] = v2.Container.Command
+	if len(config.Container.Command) > 0 {
+		service[dockerConstants.ComposeFieldCommand] = config.Container.Command
 	}
 
-	if v2.Container.MemoryLimit != "" {
-		service["mem_limit"] = v2.Container.MemoryLimit
+	if config.Container.MemoryLimit != "" {
+		service["mem_limit"] = config.Container.MemoryLimit
 	}
 
 	// Add health check if present
-	if v2.Container.HealthCheck != nil {
+	if config.Container.HealthCheck != nil {
 		healthCheck := map[string]any{
-			"test": v2.Container.HealthCheck.Test,
+			"test": config.Container.HealthCheck.Test,
 		}
-		if v2.Container.HealthCheck.Interval > 0 {
-			healthCheck["interval"] = v2.Container.HealthCheck.Interval.String()
+		if config.Container.HealthCheck.Interval > 0 {
+			healthCheck["interval"] = config.Container.HealthCheck.Interval.String()
 		}
-		if v2.Container.HealthCheck.Timeout > 0 {
-			healthCheck["timeout"] = v2.Container.HealthCheck.Timeout.String()
+		if config.Container.HealthCheck.Timeout > 0 {
+			healthCheck["timeout"] = config.Container.HealthCheck.Timeout.String()
 		}
-		if v2.Container.HealthCheck.Retries > 0 {
-			healthCheck["retries"] = v2.Container.HealthCheck.Retries
+		if config.Container.HealthCheck.Retries > 0 {
+			healthCheck["retries"] = config.Container.HealthCheck.Retries
 		}
-		if v2.Container.HealthCheck.StartPeriod > 0 {
-			healthCheck["start_period"] = v2.Container.HealthCheck.StartPeriod.String()
+		if config.Container.HealthCheck.StartPeriod > 0 {
+			healthCheck["start_period"] = config.Container.HealthCheck.StartPeriod.String()
 		}
 		service["healthcheck"] = healthCheck
 	}

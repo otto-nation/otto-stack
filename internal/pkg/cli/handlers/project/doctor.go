@@ -12,7 +12,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
-	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -36,9 +35,6 @@ func (h *DoctorHandler) GetRequiredFlags() []string {
 
 func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Check initialization first
-	if err := validation.CheckInitialization(); err != nil {
-		return err
-	}
 
 	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandDoctor, logger.LogFieldProject, "health_check")
 
@@ -67,7 +63,7 @@ func (h *DoctorHandler) checkDocker(base *base.BaseCommand) bool {
 
 	if !h.isCommandAvailable(docker.DockerCmd) {
 		base.Output.Error("%s", core.MsgDoctor_docker_not_found)
-		base.Output.Muted(core.MsgDoctor_docker_install_help, core.DockerInstallURL)
+		base.Output.Muted(core.MsgDoctor_docker_install_help, docker.DockerInstallURL)
 		return false
 	}
 
@@ -123,7 +119,7 @@ func (h *DoctorHandler) checkConfiguration(base *base.BaseCommand) bool {
 	}
 
 	// Check if docker-compose file exists
-	composePath := filepath.Join(core.OttoStackDir, core.DockerComposeFileName)
+	composePath := filepath.Join(core.OttoStackDir, docker.DockerComposeFileName)
 	if _, err := os.Stat(composePath); os.IsNotExist(err) {
 		base.Output.Error("%s", core.MsgDoctor_docker_compose_missing)
 		base.Output.Muted("%s", core.MsgDoctor_config_incomplete)

@@ -22,19 +22,8 @@ const (
 	SummaryHealthy          = "Healthy"
 )
 
-// File extensions
-const (
-	ServiceConfigExtension = ".yaml"
-	ServiceConfigExtAlt    = ".yml"
-)
-
 // Directory names
 const (
 	ServicesDir         = "internal/config/services"
 	EmbeddedServicesDir = "services"
-)
-
-// Format constants
-const (
-	FormatJSON = "json"
 )

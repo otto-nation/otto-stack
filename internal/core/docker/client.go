@@ -48,7 +48,7 @@ func (c *Client) Close() error {
 
 // Compose operations using docker compose CLI
 func (c *Client) ComposeUp(ctx context.Context, project string, services []string, options StartOptions) error {
-	args := []string{"compose", "-f", DockerComposeFile, "-p", project, "up", "-d"}
+	args := []string{"compose", "-f", DockerComposeFilePath, "-p", project, "up", "-d"}
 	if options.Build {
 		args = append(args, "--build")
 	}
@@ -63,7 +63,7 @@ func (c *Client) ComposeUp(ctx context.Context, project string, services []strin
 func (c *Client) ComposeDown(ctx context.Context, project string, options StopOptions) error {
 	var args []string
 	if options.Remove {
-		args = []string{"compose", "-f", DockerComposeFile, "-p", project, "down"}
+		args = []string{"compose", "-f", DockerComposeFilePath, "-p", project, "down"}
 		if options.RemoveOrphans {
 			args = append(args, "--remove-orphans")
 		}
@@ -71,7 +71,7 @@ func (c *Client) ComposeDown(ctx context.Context, project string, options StopOp
 			args = append(args, "--volumes")
 		}
 	} else {
-		args = []string{"compose", "-f", DockerComposeFile, "-p", project, "stop"}
+		args = []string{"compose", "-f", DockerComposeFilePath, "-p", project, "stop"}
 		if options.Timeout > 0 {
 			args = append(args, "--timeout", fmt.Sprintf("%d", options.Timeout))
 		}
@@ -81,7 +81,7 @@ func (c *Client) ComposeDown(ctx context.Context, project string, options StopOp
 }
 
 func (c *Client) ComposeLogs(ctx context.Context, project string, services []string, options LogOptions) error {
-	args := []string{"compose", "-f", DockerComposeFile, "-p", project, "logs"}
+	args := []string{"compose", "-f", DockerComposeFilePath, "-p", project, "logs"}
 	if options.Follow {
 		args = append(args, "--follow")
 	}

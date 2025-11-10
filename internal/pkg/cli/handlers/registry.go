@@ -1,6 +1,8 @@
 package handlers
 
-import "github.com/otto-nation/otto-stack/internal/pkg/base"
+import (
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+)
 
 type HandlerFactory func(string) base.CommandHandler
 

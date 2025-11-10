@@ -3,9 +3,11 @@ package project
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
@@ -13,7 +15,8 @@ import (
 
 // InitHandler handles the init command
 type InitHandler struct {
-	serviceUtils *services.ServiceUtils
+	serviceUtils     *services.ServiceUtils
+	selectedServices []string
 }
 
 // NewInitHandler creates a new InitHandler
@@ -34,23 +37,19 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}()
 
 	// Parse all flags with validation - single line!
-	flags, err := core.ParseInitFlags(cmd)
+	_, err := core.ParseInitFlags(cmd)
 	if err != nil {
 		logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationInit, logger.LogFieldError, err)
 		return err
 	}
 
+	ciFlags := ci.GetFlags(cmd)
+
 	base.Output.Header("%s", core.MsgProcess_initializing)
 	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
 
-	// Validate environment
-	if err := h.validateInitEnvironment(base); err != nil && !flags.Force {
-		return fmt.Errorf(core.MsgValidation_failed, err)
-	}
-
-	// Validate directory structure
-	if err := h.validateDirectoryStructure(base); err != nil && !flags.Force {
-		return fmt.Errorf(core.MsgValidation_directory_failed, err)
+	if ciFlags.NonInteractive {
+		return fmt.Errorf("%s", core.MsgNon_interactive_mode_requires_config)
 	}
 
 	// Prompt for project details
@@ -69,6 +68,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		if err != nil {
 			return fmt.Errorf("failed to select services: %w", err)
 		}
+		h.selectedServices = services
 
 		// Validate selected services
 		if err := h.validateServices(services); err != nil {
@@ -79,6 +79,11 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		validation, advanced, err = h.promptForAdvancedOptions()
 		if err != nil {
 			return fmt.Errorf("failed to get advanced options: %w", err)
+		}
+
+		// Run selected validations
+		if err := h.runValidations(validation, base); err != nil {
+			return fmt.Errorf("validation failed: %w", err)
 		}
 
 		// Confirm initialization (with back option)
@@ -142,4 +147,38 @@ func (h *InitHandler) ValidateArgs(args []string) error {
 // GetRequiredFlags returns required flags for this command
 func (h *InitHandler) GetRequiredFlags() []string {
 	return []string{}
+}
+
+// runValidations executes selected validation functions
+func (h *InitHandler) runValidations(selectedValidations map[string]bool, base *base.BaseCommand) error {
+	// Always run required validations
+	for validationKey := range core.ValidationOptions {
+		validationFunc, exists := ValidationRegistry[validationKey]
+		if !exists {
+			continue
+		}
+
+		// Run if it's required OR if user selected it
+		isRequired := isRequiredValidation(validationKey)
+		isSelected := selectedValidations[validationKey]
+
+		if isRequired || isSelected {
+			if err := validationFunc(h, base); err != nil {
+				return fmt.Errorf("validation '%s' failed: %w", validationKey, err)
+			}
+		}
+	}
+	return nil
+}
+
+// isRequiredValidation checks if a validation is required based on YAML config
+func isRequiredValidation(key string) bool {
+	requiredValidations := []string{
+		core.ValidationDocker,
+		core.ValidationDockerCompose,
+		core.ValidationConfigSyntax,
+		core.ValidationServiceDefinitions,
+	}
+
+	return slices.Contains(requiredValidations, key)
 }

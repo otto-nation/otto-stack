@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
@@ -35,7 +36,7 @@ func (h *InitHandler) generateInitialComposeFiles(services []string, projectName
 	}
 
 	base.Output.Success(core.MsgSuccess_generated_files,
-		filepath.Join(core.OttoStackDir, core.DockerComposeFileName),
+		filepath.Join(core.OttoStackDir, docker.DockerComposeFileName),
 		filepath.Join(core.OttoStackDir, core.EnvGeneratedFileName))
 
 	return nil
@@ -72,7 +73,7 @@ func (h *InitHandler) generateDockerCompose(services []string, projectName strin
 		return fmt.Errorf("failed to generate docker-compose YAML: %w", err)
 	}
 
-	composePath := filepath.Join(core.OttoStackDir, core.DockerComposeFileName)
+	composePath := filepath.Join(core.OttoStackDir, docker.DockerComposeFileName)
 	if err := os.WriteFile(composePath, composeYAML, core.FilePermReadWrite); err != nil {
 		return fmt.Errorf("failed to write %s: %w", composePath, err)
 	}

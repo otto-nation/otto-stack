@@ -10,7 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/validation"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/spf13/cobra"
 )
 
@@ -25,11 +25,16 @@ func NewRestartHandler() *RestartHandler {
 // Handle executes the restart command
 func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Check initialization first
-	if err := validation.CheckInitialization(); err != nil {
-		return err
-	}
 
 	base.Output.Header(core.MsgRestarting)
+
+	ciFlags := ci.GetFlags(cmd)
+
+	if ciFlags.DryRun {
+		base.Output.Info("%s", core.MsgDry_run_showing_what_would_happen)
+		base.Output.Info(core.MsgDry_run_would_restart_services, fmt.Sprintf("%v", args))
+		return nil
+	}
 
 	// Check if otto-stack is initialized
 	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)

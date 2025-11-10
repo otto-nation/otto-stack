@@ -4,14 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/validation"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -30,9 +29,6 @@ func NewStatusHandler() *StatusHandler {
 // Handle executes the status command
 func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Check initialization first
-	if err := validation.CheckInitialization(); err != nil {
-		return err
-	}
 
 	// Get CI-friendly flags
 	ciFlags := ci.GetFlags(cmd)
@@ -91,8 +87,8 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		return nil
 	}
 
-	fmt.Printf("%-20s %-12s %s\n", core.StatusHeaderService, core.StatusHeaderState, core.StatusHeaderHealth)
-	fmt.Println(strings.Repeat(core.StatusSeparator, core.StatusSeparatorLength))
+	fmt.Printf("%-20s %-12s %s\n", ui.StatusHeaderService, ui.StatusHeaderState, ui.StatusHeaderHealth)
+	fmt.Println(ui.StatusSeparator)
 	for _, status := range statuses {
 		fmt.Printf("%-20s %-12s %s\n", status.Name, status.State, status.Health)
 	}

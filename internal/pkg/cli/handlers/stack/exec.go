@@ -7,7 +7,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -26,9 +25,6 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Check initialization first
-	if err := validation.CheckInitialization(); err != nil {
-		return err
-	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
@@ -55,7 +51,7 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	// Execute command using Docker client
 	// Execute command in service container
-	dockerArgs := []string{"compose", "-f", docker.DockerComposeFile, "-p", setup.Config.Project.Name, "exec"}
+	dockerArgs := []string{"compose", "-f", docker.DockerComposeFilePath, "-p", setup.Config.Project.Name, "exec"}
 	if options.User != "" {
 		dockerArgs = append(dockerArgs, "--user", options.User)
 	}

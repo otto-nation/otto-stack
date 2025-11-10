@@ -1,11 +1,17 @@
 package docker
 
+import (
+	pkgCore "github.com/otto-nation/otto-stack/internal/core"
+)
+
 // Docker constants
 const (
-	DockerCmd           = "docker"
-	DockerComposeFile   = "otto-stack/docker-compose.yml"
-	ComposeProjectLabel = "com.docker.compose.project"
-	ComposeServiceLabel = "com.docker.compose.service"
+	DockerCmd             = "docker"
+	ComposeProjectLabel   = "com.docker.compose.project"
+	ComposeServiceLabel   = "com.docker.compose.service"
+	DockerInstallURL      = "https://docs.docker.com/get-docker/"
+	DockerComposeFileName = "docker-compose.yml"
+	DockerComposeFilePath = pkgCore.AppName + "/docker-compose.yml"
 )
 
 // Docker commands

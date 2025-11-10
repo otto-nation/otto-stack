@@ -9,7 +9,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 	"github.com/spf13/cobra"
 )
 
@@ -31,9 +30,6 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Check initialization first
-	if err := validation.CheckInitialization(); err != nil {
-		return err
-	}
 
 	if !ciFlags.Quiet {
 		base.Output.Header(core.MsgStack_connecting_to, args[0])
@@ -71,7 +67,7 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		TTY:         true,
 	}
 
-	dockerArgs := []string{"compose", "-f", docker.DockerComposeFile, "-p", setup.Config.Project.Name, "exec"}
+	dockerArgs := []string{"compose", "-f", docker.DockerComposeFilePath, "-p", setup.Config.Project.Name, "exec"}
 	if options.User != "" {
 		dockerArgs = append(dockerArgs, "--user", options.User)
 	}
@@ -91,7 +87,7 @@ func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host 
 		return nil, fmt.Errorf("failed to create service manager: %w", err)
 	}
 
-	service, err := manager.GetServiceV2(serviceName)
+	service, err := manager.GetService(serviceName)
 	if err != nil {
 		return nil, fmt.Errorf("unsupported service type: %s", serviceName)
 	}

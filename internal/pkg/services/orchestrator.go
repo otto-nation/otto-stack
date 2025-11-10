@@ -72,7 +72,7 @@ func (o *Orchestrator) GetLogs(ctx context.Context, services []string, options d
 
 func (o *Orchestrator) ExecCommand(ctx context.Context, service string, cmd []string, options docker.ExecOptions) error {
 	// Use docker compose exec for better integration
-	args := []string{"compose", "-f", docker.DockerComposeFile, "-p", o.getProjectName(), "exec"}
+	args := []string{"compose", "-f", docker.DockerComposeFilePath, "-p", o.getProjectName(), "exec"}
 	if options.User != "" {
 		args = append(args, "--user", options.User)
 	}

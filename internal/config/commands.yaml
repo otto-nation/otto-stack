@@ -18,6 +18,58 @@ metadata:
   cli_version: "0.1.0"
   description: "Development stack management tool"
 
+validation:
+  docker:
+    name: "Docker availability"
+    description: "Validate Docker installation and daemon status"
+    commands: ["up", "down", "validate", "doctor"]
+    required: true
+  docker-compose:
+    name: "Docker Compose availability"
+    description: "Validate Docker Compose installation"
+    commands: ["up", "down", "validate", "doctor"]
+    required: true
+  config-syntax:
+    name: "Configuration syntax"
+    description: "Validate YAML/JSON configuration syntax"
+    commands: ["validate", "init"]
+    required: true
+  service-definitions:
+    name: "Service definitions"
+    description: "Validate service definitions and dependencies"
+    commands: ["up", "validate"]
+    required: true
+  ports:
+    name: "Port conflict check"
+    description: "Scan for ports already in use by selected services"
+    commands: ["up", "validate"]
+    required: false
+  resource-limits:
+    name: "Resource limits"
+    description: "Validate resource limits and requirements"
+    commands: ["up", "validate"]
+    required: false
+  environment-variables:
+    name: "Environment variables"
+    description: "Validate required environment variables"
+    commands: ["validate", "doctor"]
+    required: false
+  file-permissions:
+    name: "File permissions"
+    description: "Check file and directory permissions"
+    commands: ["init", "validate"]
+    required: false
+  network-connectivity:
+    name: "Network connectivity"
+    description: "Validate network connectivity requirements"
+    commands: ["up", "doctor"]
+    required: false
+  storage-requirements:
+    name: "Storage requirements"
+    description: "Check available disk space and storage"
+    commands: ["init", "validate"]
+    required: false
+
 # Centralized messages for consistency and i18n
 messages:
   process:
@@ -26,6 +78,18 @@ messages:
     stopping: "Stopping Otto Stack"
     generating_env: "Generating environment file..."
     generating_compose: "Generating docker-compose.yml..."
+
+  dry_run:
+    showing_what_would_happen: "Dry run mode - showing what would happen without executing"
+    would_start_services: "Would start services: %s"
+    would_stop_services: "Would stop services: %s"
+    would_restart_services: "Would restart services: %s"
+    would_use_config: "Would use config: %s"
+    would_clean: "Would clean: %s"
+
+  non_interactive:
+    mode_requires_config: "Non-interactive mode requires explicit configuration - interactive setup required"
+    skipping_confirmation: "Skipping confirmation in non-interactive mode"
 
   success:
     init: "otto stack initialized successfully!"
@@ -239,11 +303,6 @@ handlers:
 
 global:
   flags:
-    config:
-      short: "c"
-      type: "string"
-      description: "Config file (default: $HOME/.otto-stack.yaml)"
-      default: ""
     verbose:
       short: "v"
       type: "bool"

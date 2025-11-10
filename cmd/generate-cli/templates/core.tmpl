@@ -88,6 +88,21 @@ var Icons = map[string]string{
 {{range .Icons}}	"{{.Key}}": {{.Value}},
 {{end}}}
 
+// ValidationOptions contains available validation options
+var ValidationOptions = map[string]string{
+{{range .ValidationOptions}}	"{{.Key}}": "{{.Description}}",
+{{end}}}
+
+// Validation constants
+const (
+{{range .ValidationOptions}}	Validation{{.Key | toPascalCase}} = "{{.Key}}"
+{{end}})
+
+// ValidationKeys contains all validation option keys
+var ValidationKeys = []string{
+{{range .ValidationOptions}}	Validation{{.Key | toPascalCase}},
+{{end}}}
+
 {{range .CommandsData}}
 // {{.StructName}} holds the parsed flags for the {{.CommandName}} command
 type {{.StructName}} struct {

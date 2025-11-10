@@ -13,11 +13,11 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -39,9 +39,6 @@ func NewUpHandler() *UpHandler {
 // Handle executes the up command
 func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Check initialization first
-	if err := validation.CheckInitialization(); err != nil {
-		return err
-	}
 
 	// Check initialization first, before any output
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
@@ -52,6 +49,15 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 
 	// Start operation logging only after initialization check passes
 	logger.Info(logger.LogMsgStartingOperation, logger.LogFieldOperation, logger.OperationStackUp, logger.LogFieldServices, args)
+
+	ciFlags := ci.GetFlags(cmd)
+
+	if ciFlags.DryRun {
+		base.Output.Info("%s", core.MsgDry_run_showing_what_would_happen)
+		base.Output.Info(core.MsgDry_run_would_start_services, fmt.Sprintf("%v", args))
+		base.Output.Info(core.MsgDry_run_would_use_config, filepath.Join(core.OttoStackDir, core.ConfigFileName))
+		return nil
+	}
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationStackUp, logger.LogFieldError, fmt.Errorf("panic: %v", r))
@@ -145,7 +151,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf(core.MsgStack_failed_marshal_compose, err)
 	}
 
-	composePath := docker.DockerComposeFile
+	composePath := docker.DockerComposeFilePath
 	if err := os.WriteFile(composePath, composeData, core.FilePermReadWrite); err != nil {
 		return fmt.Errorf(core.MsgStack_failed_write_compose, err)
 	}
@@ -223,7 +229,7 @@ func (h *UpHandler) cleanupRemovedServices(ctx context.Context, setup *CoreSetup
 		return nil
 	}
 
-	base.Output.Info(core.MsgStack_removing_services, removedServices)
+	base.Output.Info(core.MsgStack_removing_services, fmt.Sprintf("%v", removedServices))
 	return setup.DockerClient.ComposeDown(ctx, setup.Config.Project.Name, docker.StopOptions{
 		Remove:        true,
 		RemoveVolumes: true,

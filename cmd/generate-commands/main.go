@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"text/template"
 
@@ -68,7 +69,14 @@ func generateCommands(commandConfig pkgConfig.CommandConfig) error {
 	// Create output file
 	file, err := os.Create(GeneratedFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
+		// Try creating the directory and retry
+		if err := os.MkdirAll(filepath.Dir(GeneratedFilePath), 0755); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+		file, err = os.Create(GeneratedFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to create file: %w", err)
+		}
 	}
 	defer func() { _ = file.Close() }()
 
