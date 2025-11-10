@@ -349,20 +349,30 @@ tasks:
 
   validate-homebrew-formula:
     desc: "🍺 Validate Homebrew formula syntax and style"
+    sources:
+      - "Formula/otto-stack.rb"
+    generates:
+      - ".task/homebrew-validation-timestamp"
     silent: true
     cmds:
+      - mkdir -p .task
       - |
-        echo "🍺 Validating Homebrew formula..."
-        if [ -f "Formula/otto-stack.rb" ]; then
-          if command -v brew >/dev/null 2>&1; then
-            brew style Formula/otto-stack.rb
-            echo "✅ Homebrew formula validation passed"
-          else
-            echo "⚠️  Homebrew not installed, skipping formula validation"
-          fi
-        else
+        if [ ! -f "Formula/otto-stack.rb" ]; then
           echo "ℹ️  No Homebrew formula found, skipping validation"
+          touch .task/homebrew-validation-timestamp
+          exit 0
         fi
+        
+        echo "🍺 Validating Homebrew formula..."
+        if ! command -v brew >/dev/null 2>&1; then
+          echo "⚠️  Homebrew not installed, skipping formula validation"
+          touch .task/homebrew-validation-timestamp
+          exit 0
+        fi
+        
+        brew style Formula/otto-stack.rb
+        touch .task/homebrew-validation-timestamp
+        echo "✅ Homebrew formula validation passed"
 
   pre-push:
     desc: "🚀 Run all pre-push checks"
