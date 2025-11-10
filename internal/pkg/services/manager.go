@@ -10,13 +10,13 @@ import (
 
 // Manager handles all service operations
 type Manager struct {
-	servicesV2 map[string]ServiceConfigV2
+	services map[string]ServiceConfig
 }
 
 // New creates a new service manager
 func New() (*Manager, error) {
 	manager := &Manager{
-		servicesV2: make(map[string]ServiceConfigV2),
+		services: make(map[string]ServiceConfig),
 	}
 
 	if err := manager.loadServices(); err != nil {
@@ -26,24 +26,24 @@ func New() (*Manager, error) {
 	return manager, nil
 }
 
-// GetService returns a service by name (V2 format only)
-func (m *Manager) GetService(name string) (ServiceConfigV2, error) {
-	service, exists := m.servicesV2[name]
+// GetService returns a service by name
+func (m *Manager) GetService(name string) (*ServiceConfig, error) {
+	service, exists := m.services[name]
 	if !exists {
-		return ServiceConfigV2{}, fmt.Errorf("service not found: %s", name)
+		return nil, fmt.Errorf("service not found: %s", name)
 	}
-	return service, nil
+	return &service, nil
 }
 
 // GetAllServices returns all services
-func (m *Manager) GetAllServices() map[string]ServiceConfigV2 {
-	return m.servicesV2
+func (m *Manager) GetAllServices() map[string]ServiceConfig {
+	return m.services
 }
 
 // ValidateServices validates a list of service names
 func (m *Manager) ValidateServices(serviceNames []string) error {
 	for _, name := range serviceNames {
-		if _, exists := m.servicesV2[name]; !exists {
+		if _, exists := m.services[name]; !exists {
 			return fmt.Errorf("unknown service: %s", name)
 		}
 	}
@@ -59,33 +59,25 @@ func (m *Manager) GetDependencies(serviceName string) ([]string, error) {
 	return service.Service.Dependencies.Required, nil
 }
 
-// GetServiceV2 returns a service by name in V2 format
-func (m *Manager) GetServiceV2(name string) (*ServiceConfigV2, error) {
-	if service, exists := m.servicesV2[name]; exists {
-		return &service, nil
-	}
-	return nil, fmt.Errorf("service not found: %s", name)
-}
-
 // BuildConnectCommand builds a connection command for a service
 func (m *Manager) BuildConnectCommand(serviceName string, options map[string]string) ([]string, error) {
-	v2Service, err := m.GetServiceV2(serviceName)
+	service, err := m.GetService(serviceName)
 	if err != nil {
 		return nil, err
 	}
 
-	return m.buildV2ConnectCommand(v2Service, options)
+	return m.buildConnectCommand(service, options)
 }
 
-// buildV2ConnectCommand builds connection command from V2 management spec
-func (m *Manager) buildV2ConnectCommand(v2 *ServiceConfigV2, options map[string]string) ([]string, error) {
-	if v2.Service.Management == nil || v2.Service.Management.Connect == nil {
-		return nil, fmt.Errorf("no connect operation configured for service: %s", v2.Name)
+// buildConnectCommand builds connection command from management spec
+func (m *Manager) buildConnectCommand(service *ServiceConfig, options map[string]string) ([]string, error) {
+	if service.Service.Management == nil || service.Service.Management.Connect == nil {
+		return nil, fmt.Errorf("no connect operation configured for service: %s", service.Name)
 	}
 
-	connect := v2.Service.Management.Connect
+	connect := service.Service.Management.Connect
 	if len(connect.Command) == 0 {
-		return nil, fmt.Errorf("no connect command configured for service: %s", v2.Name)
+		return nil, fmt.Errorf("no connect command configured for service: %s", service.Name)
 	}
 
 	cmd := make([]string, len(connect.Command))
@@ -98,8 +90,8 @@ func (m *Manager) buildV2ConnectCommand(v2 *ServiceConfigV2, options map[string]
 
 	// Apply any provided options/overrides
 	for key, value := range options {
-		if key == "database" && v2.Service.Connection != nil && v2.Service.Connection.DBFlag != "" {
-			cmd = append(cmd, v2.Service.Connection.DBFlag, value)
+		if key == "database" && service.Service.Connection != nil && service.Service.Connection.DBFlag != "" {
+			cmd = append(cmd, service.Service.Connection.DBFlag, value)
 		}
 		// Add more option handling as needed
 	}
@@ -152,49 +144,41 @@ func (m *Manager) loadCategoryServices(category string) error {
 	return nil
 }
 
-// loadService loads a single service from YAML (V2 only)
+// loadService loads a single service from YAML
 func (m *Manager) loadService(category, serviceName string) error {
-	// Try V2 format
-	v2Path := fmt.Sprintf("%s/%s/%s-v2.yaml", EmbeddedServicesDir, category, serviceName)
-	if data, err := config.EmbeddedServicesFS.ReadFile(v2Path); err == nil {
-		return m.loadV2Service(data, serviceName, category)
-	}
-
-	// Try exact filename (for services like redis-v2)
+	// Try exact filename first
 	exactPath := fmt.Sprintf("%s/%s/%s.yaml", EmbeddedServicesDir, category, serviceName)
 	if data, err := config.EmbeddedServicesFS.ReadFile(exactPath); err == nil {
-		return m.loadV2Service(data, serviceName, category)
+		return m.parseService(data, serviceName, category)
 	}
 
 	return fmt.Errorf("service file not found: %s", serviceName)
 }
 
-func (m *Manager) loadV2Service(data []byte, serviceName, category string) error {
-	var serviceV2 ServiceConfigV2
-	if err := yaml.Unmarshal(data, &serviceV2); err != nil {
-		return fmt.Errorf("failed to parse V2 service YAML: %w", err)
+func (m *Manager) parseService(data []byte, serviceName, category string) error {
+	var service ServiceConfig
+	if err := yaml.Unmarshal(data, &service); err != nil {
+		return fmt.Errorf("failed to parse service YAML: %w", err)
 	}
 
 	// Set category if not specified in YAML
-	if serviceV2.Category == "" {
-		serviceV2.Category = category
+	if service.Category == "" {
+		service.Category = category
 	}
 
 	// Use the name from the YAML file, not the filename
-	actualServiceName := serviceV2.Name
+	actualServiceName := service.Name
 	if actualServiceName == "" {
 		actualServiceName = serviceName
 	}
 
-	m.servicesV2[actualServiceName] = serviceV2
+	m.services[actualServiceName] = service
 	return nil
 }
 
-// isV2Format detects if the YAML is in V2 format
-
-// ExecuteCustomOperation executes V2 custom management operations
+// ExecuteCustomOperation executes custom management operations
 func (m *Manager) ExecuteCustomOperation(serviceName, operationName string) ([]string, error) {
-	service, err := m.GetServiceV2(serviceName)
+	service, err := m.GetService(serviceName)
 	if err != nil {
 		return nil, err
 	}

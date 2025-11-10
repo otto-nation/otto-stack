@@ -64,7 +64,7 @@ func (g *Generator) buildServices(serviceNames []string) map[string]any {
 	return serviceList
 }
 
-func (g *Generator) buildServiceFromV2(v2 *services.ServiceConfigV2) map[string]any {
+func (g *Generator) buildServiceFromV2(v2 *services.ServiceConfig) map[string]any {
 	service := map[string]any{
 		dockerConstants.ComposeFieldImage: v2.Container.Image,
 	}

@@ -302,6 +302,8 @@ func (c *collectors) toConstants() *ServiceConstants {
 	}
 }
 
+const ReadExecutePermissions = 0755
+
 func generateConstants(serviceConstants *ServiceConstants) error {
 	tmpl, err := template.ParseFiles(TemplateFilePath)
 	if err != nil {
@@ -310,7 +312,14 @@ func generateConstants(serviceConstants *ServiceConstants) error {
 
 	file, err := os.Create(GeneratedFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
+		// Try creating the directory and retry
+		if err := os.MkdirAll(filepath.Dir(GeneratedFilePath), ReadExecutePermissions); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+		file, err = os.Create(GeneratedFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to create file: %w", err)
+		}
 	}
 	defer func() { _ = file.Close() }()
 
@@ -325,7 +334,14 @@ func generateTypes() error {
 
 	file, err := os.Create(TypesGeneratedFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to create types file: %w", err)
+		// Try creating the directory and retry
+		if err := os.MkdirAll(filepath.Dir(TypesGeneratedFilePath), ReadExecutePermissions); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+		file, err = os.Create(TypesGeneratedFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to create types file: %w", err)
+		}
 	}
 	defer func() { _ = file.Close() }()
 
@@ -340,7 +356,14 @@ func generateSchema() error {
 
 	file, err := os.Create(SchemaGeneratedFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to create schema file: %w", err)
+		// Try creating the directory and retry
+		if err := os.MkdirAll(filepath.Dir(SchemaGeneratedFilePath), ReadExecutePermissions); err != nil {
+			return fmt.Errorf("failed to create directory: %w", err)
+		}
+		file, err = os.Create(SchemaGeneratedFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to create schema file: %w", err)
+		}
 	}
 	defer func() { _ = file.Close() }()
 

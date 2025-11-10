@@ -39,7 +39,7 @@ func addServiceEnv(content *strings.Builder, serviceName string) {
 		return
 	}
 
-	var service services.ServiceConfigV2
+	var service services.ServiceConfig
 	if err := yaml.Unmarshal(data, &service); err != nil {
 		return
 	}

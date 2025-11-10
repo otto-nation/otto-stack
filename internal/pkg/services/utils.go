@@ -21,11 +21,15 @@ func (u *ServiceUtils) ResolveServices(serviceNames []string) ([]string, error) 
 }
 
 // LoadServicesByCategory loads services organized by category
-func (u *ServiceUtils) LoadServicesByCategory() (map[string][]ServiceConfigV2, error) {
+func (u *ServiceUtils) LoadServicesByCategory() (map[string][]ServiceConfig, error) {
 	allServices := u.manager.GetAllServices()
-	categories := make(map[string][]ServiceConfigV2)
+	categories := make(map[string][]ServiceConfig)
 
 	for _, service := range allServices {
+		// Skip hidden services
+		if service.Hidden {
+			continue
+		}
 		categories[service.Category] = append(categories[service.Category], service)
 	}
 
@@ -33,12 +37,12 @@ func (u *ServiceUtils) LoadServicesByCategory() (map[string][]ServiceConfigV2, e
 }
 
 // LoadServiceConfig loads a specific service configuration
-func (u *ServiceUtils) LoadServiceConfig(serviceName string) (*ServiceConfigV2, error) {
-	return u.manager.GetServiceV2(serviceName)
+func (u *ServiceUtils) LoadServiceConfig(serviceName string) (*ServiceConfig, error) {
+	return u.manager.GetService(serviceName)
 }
 
 // GetServicesByCategory loads services organized by category (alias)
-func (u *ServiceUtils) GetServicesByCategory() (map[string][]ServiceConfigV2, error) {
+func (u *ServiceUtils) GetServicesByCategory() (map[string][]ServiceConfig, error) {
 	return u.LoadServicesByCategory()
 }
 

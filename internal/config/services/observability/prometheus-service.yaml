@@ -1,26 +1,18 @@
 name: prometheus-service
 description: Prometheus metrics collection and monitoring system
-category: observability
-visibility: visible
-ports:
-  - "9089:9089"
-dependencies:
-  required: []
-  soft: []
-  conflicts: []
-  provides:
-    - metrics
-    - monitoring
+service_type: container
+
 environment:
   PROMETHEUS_HOST: ${PROMETHEUS_HOST:-localhost}
   PROMETHEUS_PORT: ${PROMETHEUS_PORT:-9090}
   PROMETHEUS_URL: http://${PROMETHEUS_HOST:-localhost}:${PROMETHEUS_PORT:-9090}
-connection:
-  client: web
-  default_port: 9090
-  url_pattern: "http://localhost:{{.Port}}"
-docker:
+
+container:
   image: prom/prometheus:latest
+  ports:
+    - external: "9089"
+      internal: "9089"
+      protocol: tcp
   restart: unless-stopped
   memory_limit: 256m
   command:
@@ -31,20 +23,30 @@ docker:
     - --storage.tsdb.retention.time=15d
     - --web.enable-lifecycle
     - --web.enable-admin-api
-  extra_hosts:
-    - host.docker.internal:host-gateway
   health_check:
     test:
-      - CMD
-      - wget
-      - --no-verbose
-      - --tries=1
-      - --spider
-      - http://localhost:9089/-/healthy
+      [
+        "CMD",
+        "wget",
+        "--no-verbose",
+        "--tries=1",
+        "--spider",
+        "http://localhost:9089/-/healthy",
+      ]
     interval: 30s
     timeout: 10s
     retries: 3
-    start_period: 30s
+
+service:
+  connection:
+    type: web
+    default_port: 9090
+    url_pattern: "http://localhost:9089"
+  dependencies:
+    provides:
+      - metrics
+      - monitoring
+
 documentation:
   examples:
     - curl http://localhost:9089/metrics
@@ -57,38 +59,5 @@ documentation:
     - Alerting and notifications
   web_interfaces:
     - name: Prometheus UI
-      url: http://localhost:${PROMETHEUS_PORT:-9089}
-      description: Prometheus metrics and query interface
-  docs:
-    - name: Prometheus Documentation
-      url: https://prometheus.io/docs/
-  spring_config:
-    properties:
-      - management.endpoints.web.exposure.include=health,info,metrics,prometheus
-      - management.endpoint.prometheus.enabled=true
-      - management.metrics.export.prometheus.enabled=true
-service_configuration:
-  - name: docker_image
-    type: string
-    description: Docker image to use for Prometheus container
-    default: prom/prometheus:latest
-    example: prom/prometheus:v2.47.0
-    required: false
-  - name: port
-    type: integer
-    description: Port number for Prometheus web interface and API
-    default: "${PROMETHEUS_PORT:-9089}"
-    example: "9091"
-    required: false
-  - name: memory_limit
-    type: string
-    description: Memory limit for Prometheus container
-    default: 512m
-    example: 1g
-    required: false
-  - name: retention_time
-    type: string
-    description: How long to retain metrics data
-    default: 15d
-    example: 30d
-    required: false
+      url: http://localhost:9089
+      description: Prometheus web interface for querying metrics

@@ -5,8 +5,8 @@ import (
 	"time"
 )
 
-// ServiceConfigV2 represents the service configuration format
-type ServiceConfigV2 struct {
+// ServiceConfig represents the service configuration format
+type ServiceConfig struct {
 	Name        string            `yaml:"name" validate:"required,min=1"`
 	Description string            `yaml:"description" validate:"required,min=1"`
 	Category    string            `yaml:"category,omitempty"`
@@ -127,4 +127,3 @@ type ParameterSpec struct {
 // Legacy types for backward compatibility
 type ConnectionConfig = ConnectionSpec
 type ServiceDependencies = DependenciesSpec
-type OperationV1 = OperationSpec

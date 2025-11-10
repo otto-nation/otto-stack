@@ -52,7 +52,7 @@ func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 }
 
 // buildServiceCatalog converts service data to catalog format
-func (h *ServicesHandler) buildServiceCatalog(categorizedServices map[string][]services.ServiceConfigV2) display.ServiceCatalog {
+func (h *ServicesHandler) buildServiceCatalog(categorizedServices map[string][]services.ServiceConfig) display.ServiceCatalog {
 	catalog := display.ServiceCatalog{
 		Categories: make(map[string][]display.ServiceInfo),
 		Total:      0,

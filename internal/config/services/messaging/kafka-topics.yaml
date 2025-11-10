@@ -1,47 +1,34 @@
 name: kafka-topics
 description: Kafka topic initialization and management service
-category: messaging
-visibility: hidden
+hidden: true
+service_type: container
 
-dependencies:
-  required:
-    - kafka-broker
-  soft: []
-  conflicts: []
-  provides:
-    - topic-management
 environment:
   KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092}
   KAFKA_TOPICS_CONFIG_PATH: /config/otto-stack-config.yml
-docker:
+
+container:
   image: confluentinc/cp-kafka:latest
   restart: "no"
   memory_limit: 256m
   command:
-    - "sh"
-    - "-c"
-    - "chmod +x /scripts/kafka-topics-init.sh && /scripts/kafka-topics-init.sh"
-  simple_volumes:
-    - ./otto-stack/otto-stack-config.yml:/config/otto-stack-config.yml:ro
-    - ./otto-stack/scripts:/scripts:ro
+    - sh
+    - -c
+    - chmod +x /scripts/kafka-topics-init.sh && /scripts/kafka-topics-init.sh
 
-service_configuration:
-  - name: docker_image
-    type: string
-    description: Docker image to use for Kafka topics initialization
-    default: confluentinc/cp-kafka:latest
-    example: confluentinc/cp-kafka:7.4.0
-    required: false
+service:
+  dependencies:
+    required:
+      - kafka-broker
+    provides:
+      - topic-management
 
 documentation:
   examples:
-    - "kafka-topics --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --list"
-  usage_notes: "Dynamically creates Kafka topics based on otto-stack configuration and service overrides"
+    - kafka-topics --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --list
+  usage_notes: Dynamically creates Kafka topics based on otto-stack configuration and service overrides
   links:
-    - "https://kafka.apache.org/documentation/"
-  docs:
-    - name: Apache Kafka Documentation
-      url: https://kafka.apache.org/documentation/
+    - https://kafka.apache.org/documentation/
   use_cases:
     - Automatic Kafka topic creation based on configuration
     - Configurable topic names, partitions, and replication
