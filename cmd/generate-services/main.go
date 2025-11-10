@@ -190,16 +190,16 @@ func (c *collectors) addConnection(service map[string]any, serviceName string) {
 }
 
 func (c *collectors) addDocker(service map[string]any, serviceName string) {
-	docker, ok := service["docker"].(map[string]any)
+	container, ok := service["container"].(map[string]any)
 	if !ok {
 		return
 	}
 
-	if image, ok := docker["image"].(string); ok {
+	if image, ok := container["image"].(string); ok {
 		c.images["Image"+toPascalCase(serviceName)] = image
 	}
 
-	if nets, ok := docker["networks"].([]any); ok {
+	if nets, ok := container["networks"].([]any); ok {
 		for _, net := range nets {
 			if netStr, ok := net.(string); ok {
 				c.networks["Network"+toPascalCase(netStr)] = netStr
@@ -207,31 +207,46 @@ func (c *collectors) addDocker(service map[string]any, serviceName string) {
 		}
 	}
 
-	if mem, ok := docker["memory_limit"].(string); ok {
+	if mem, ok := container["memory_limit"].(string); ok {
 		c.memoryLimits["MemoryLimit"+toPascalCase(mem)] = mem
 	}
 }
 
 func (c *collectors) addPorts(service map[string]any, serviceName string) {
-	ports, ok := service["ports"].([]any)
+	container, ok := service["container"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	ports, ok := container["ports"].([]any)
 	if !ok {
 		return
 	}
 
 	for _, port := range ports {
-		portStr, ok := port.(string)
+		portMap, ok := port.(map[string]any)
 		if !ok {
 			continue
 		}
 
-		parts := strings.Split(portStr, ":")
-		if len(parts) == pathParts {
-			if portNum, err := strconv.Atoi(parts[1]); err == nil {
-				c.ports["Port"+toPascalCase(serviceName)] = portNum
-				c.protocols["ProtocolTcp"] = "tcp"
-				return
-			}
+		external, ok := portMap["external"].(string)
+		if !ok {
+			continue
 		}
+
+		portNum, err := strconv.Atoi(external)
+		if err != nil {
+			continue
+		}
+
+		c.ports["Port"+toPascalCase(serviceName)] = portNum
+
+		protocol := "tcp"
+		if p, ok := portMap["protocol"].(string); ok {
+			protocol = p
+		}
+		c.protocols["Protocol"+toPascalCase(protocol)] = protocol
+		return
 	}
 }
 
