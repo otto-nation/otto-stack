@@ -233,11 +233,13 @@ fix_all_versions() {
     if [[ -f "$PROJECT_ROOT/go.mod" ]]; then
         local current_go_version
         current_go_version=$(grep "^go " "$PROJECT_ROOT/go.mod" | awk '{print $2}' || echo "")
+        # Normalize current version to major.minor
+        local current_major_minor
+        current_major_minor=$(echo "$current_go_version" | sed 's/\([0-9]*\.[0-9]*\).*/\1/')
         local expected_version
         expected_version=$(echo "$go_version" | sed 's/\([0-9]*\.[0-9]*\).*/\1/')
-        if [[ "$current_go_version" != "$expected_version" ]]; then
+        if [[ "$current_major_minor" != "$expected_version" ]]; then
             go_mod_needs_update=true
-            changes_made=true
         fi
     fi
 
@@ -267,7 +269,7 @@ fix_all_versions() {
     fi
 
     # Only show messages and make changes if needed
-    if [[ "$changes_made" == true ]]; then
+    if [[ "$go_mod_needs_update" == true || "$golangci_needs_update" == true || "$dockerfile_needs_update" == true ]]; then
         print_status "$BLUE" "Fixing Go version inconsistencies..."
         print_status "$BLUE" "Target version: $go_version"
         echo
@@ -284,6 +286,8 @@ fix_all_versions() {
 
         echo
         print_status "$GREEN" "✅ All files synchronized to Go version: $go_version"
+    else
+        print_status "$GREEN" "✅ All files already synchronized to Go version: $go_version"
     fi
 }
 
