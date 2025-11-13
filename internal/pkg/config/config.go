@@ -56,6 +56,25 @@ func LoadConfig() (*Config, error) {
 	return mergeConfigs(baseConfig, localConfig), nil
 }
 
+// LoadServiceConfig loads configuration for a specific service
+func LoadServiceConfig(serviceName string) (map[string]any, error) {
+	// Load base service config
+	baseServiceConfig, err := loadServiceConfigFile(serviceName, false)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load local service config if it exists
+	localServiceConfig, err := loadServiceConfigFile(serviceName, true)
+	if err != nil {
+		// Local service config is optional
+		return baseServiceConfig, nil
+	}
+
+	// Merge service configs (local overrides base)
+	return mergeServiceConfigs(baseServiceConfig, localServiceConfig), nil
+}
+
 // LoadCommandConfig loads command configuration from embedded YAML
 func LoadCommandConfig() (map[string]any, error) {
 	var commandConfig map[string]any
@@ -149,13 +168,44 @@ func mergeConfigs(base, local *Config) *Config {
 		merged.Stack.Enabled = local.Stack.Enabled
 	}
 
-	// Merge service configuration
-	if local.ServiceConfiguration != nil {
-		if merged.ServiceConfiguration == nil {
-			merged.ServiceConfiguration = make(map[string]any)
-		}
-		maps.Copy(merged.ServiceConfiguration, local.ServiceConfiguration)
+	return &merged
+}
+
+// loadServiceConfigFile loads service configuration (base or local)
+func loadServiceConfigFile(serviceName string, isLocal bool) (map[string]any, error) {
+	configDir := fmt.Sprintf("%s/%s", core.OttoStackDir, core.ServiceConfigsDir)
+
+	// Build base filename and config type
+	filename := serviceName
+	configType := "service"
+	if isLocal {
+		filename += core.LocalFileExtension
+		configType = "local service"
 	}
 
-	return &merged
+	// Find the config file with either .yml or .yaml extension
+	configPath, err := core.FindYAMLFile(configDir, filename)
+	if err != nil {
+		return nil, fmt.Errorf("%s config not found for: %s", configType, serviceName)
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var config map[string]any
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("failed to parse %s config: %w", configType, err)
+	}
+
+	return config, nil
+}
+
+// mergeServiceConfigs merges base service config with local overrides
+func mergeServiceConfigs(base, local map[string]any) map[string]any {
+	merged := make(map[string]any)
+	maps.Copy(merged, base)
+	maps.Copy(merged, local) // Local overrides base
+	return merged
 }

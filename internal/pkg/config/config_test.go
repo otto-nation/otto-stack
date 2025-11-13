@@ -132,27 +132,6 @@ func TestConfig_Structure(t *testing.T) {
 		assert.Equal(t, config.Project.Name, unmarshaled.Project.Name)
 		assert.Equal(t, config.Stack.Enabled, unmarshaled.Stack.Enabled)
 	})
-
-	t.Run("handles service configuration", func(t *testing.T) {
-		config := Config{
-			Project: ProjectConfig{Name: "test", Type: "app"},
-			Stack:   StackConfig{Enabled: []string{"postgres"}},
-			ServiceConfiguration: map[string]any{
-				"postgres": map[string]any{
-					"database": "test_db",
-					"password": "secret",
-				},
-			},
-		}
-
-		yamlBytes, err := yaml.Marshal(config)
-		assert.NoError(t, err)
-
-		var unmarshaled Config
-		err = yaml.Unmarshal(yamlBytes, &unmarshaled)
-		assert.NoError(t, err)
-		assert.NotEmpty(t, unmarshaled.ServiceConfiguration)
-	})
 }
 
 func TestProjectConfig_Timestamps(t *testing.T) {

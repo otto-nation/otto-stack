@@ -58,7 +58,10 @@ func (g *Generator) buildServices(serviceNames []string) map[string]any {
 			continue
 		}
 
-		serviceList[serviceName] = g.buildService(serviceDef)
+		serviceConfig := g.buildService(serviceDef)
+		if serviceConfig != nil {
+			serviceList[serviceName] = serviceConfig
+		}
 	}
 
 	return serviceList

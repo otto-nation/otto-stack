@@ -3,6 +3,7 @@ package project
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -14,6 +15,7 @@ import (
 func (h *InitHandler) createDirectoryStructure() error {
 	directories := []string{
 		core.OttoStackDir,
+		filepath.Join(core.OttoStackDir, core.ServiceConfigsDir),
 	}
 
 	for _, dir := range directories {

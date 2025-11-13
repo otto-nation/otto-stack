@@ -81,3 +81,37 @@ func (h *InitHandler) generateDockerCompose(services []string, projectName strin
 
 	return nil
 }
+
+// generateServiceConfigs creates service configuration files with documentation links
+func (h *InitHandler) generateServiceConfigs(services []string, base *base.BaseCommand) {
+	base.Output.Info("Generating service configuration files...")
+
+	for _, serviceName := range services {
+		if err := h.generateServiceConfig(serviceName); err != nil {
+			base.Output.Warning("Failed to generate config for %s: %v", serviceName, err)
+		}
+	}
+}
+
+// generateServiceConfig creates a single service configuration file
+func (h *InitHandler) generateServiceConfig(serviceName string) error {
+	configContent := h.generateServiceConfigContent(serviceName)
+
+	configPath := filepath.Join(core.OttoStackDir, core.ServiceConfigsDir, serviceName+core.YMLFileExtension)
+	return os.WriteFile(configPath, []byte(configContent), core.PermReadWrite)
+}
+
+// generateServiceConfigContent generates the content for a service config file
+func (h *InitHandler) generateServiceConfigContent(serviceName string) string {
+	docURL := fmt.Sprintf(core.DocsURL+"/services/%s/", serviceName)
+	title := strings.ReplaceAll(serviceName, "-", " ")
+
+	return fmt.Sprintf(`# %s Configuration
+# For all available options, see: %s
+#
+# This file contains service-specific configuration.
+# Uncomment and modify the options you need.
+
+# Add your %s configuration here
+`, title, docURL, serviceName)
+}

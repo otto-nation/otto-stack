@@ -115,6 +115,9 @@ exitLoop:
 		return fmt.Errorf("failed to create config file: %w", err)
 	}
 
+	// Generate service configuration files
+	h.generateServiceConfigs(services, base)
+
 	// Generate initial compose files
 	if err := h.generateInitialComposeFiles(services, projectName, validation, advanced, base); err != nil {
 		return fmt.Errorf("failed to generate compose files: %w", err)

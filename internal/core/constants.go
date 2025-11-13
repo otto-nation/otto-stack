@@ -1,6 +1,10 @@
 package core
 
-import "strings"
+import (
+	"fmt"
+	"os"
+	"strings"
+)
 
 // Application identity
 const (
@@ -15,23 +19,36 @@ const (
 	GitHubRepo = AppName
 )
 
-// GitHub URL templates
+// GitHub URLs
 const (
 	GitHubRepoURL     = "https://github.com/" + GitHubOrg + "/" + GitHubRepo
 	GitHubReleaseURL  = GitHubRepoURL + "/releases/tag/v%s"
 	GitHubDownloadURL = GitHubRepoURL + "/releases/download/v%s/" + AppName
 )
 
+// Documentation URLs
+const (
+	DocsURL = "https://" + GitHubOrg + ".github.io/" + GitHubRepo + "/"
+)
+
 // File names
 const (
 	ConfigFileName       = "otto-stack-config.yml"
-	LocalConfigFileName  = "otto-stack-config.local.yml"
+	LocalConfigFileName  = "otto-stack-config" + LocalFileExtension + ".yml"
+	ServiceConfigsDir    = "service-configs"
+	ScriptsDir           = "scripts"
 	ReadmeFileName       = "README.md"
 	GitIgnoreFileName    = ".gitignore"
 	StateFileName        = "state.json"
 	OttoStackDir         = AppName
 	EnvGeneratedFileName = ".env.generated"
+	LocalFileExtension   = ".local"
+	YAMLFileExtension    = ".yaml"
+	YMLFileExtension     = ".yml"
 )
+
+// YAML file extensions
+var YAMLExtensions = []string{YMLFileExtension, YAMLFileExtension}
 
 // File and directory permissions
 const (
@@ -104,18 +121,29 @@ const (
 
 // IsYAMLFile checks if a filename has a YAML extension
 func IsYAMLFile(filename string) bool {
-	return strings.HasSuffix(filename, ".yaml") || strings.HasSuffix(filename, ".yml")
+	return strings.HasSuffix(filename, YAMLFileExtension) || strings.HasSuffix(filename, YMLFileExtension)
 }
 
 // TrimYAMLExt removes YAML extension from filename
 func TrimYAMLExt(filename string) string {
-	if name, found := strings.CutSuffix(filename, ".yaml"); found {
+	if name, found := strings.CutSuffix(filename, YAMLFileExtension); found {
 		return name
 	}
-	if name, found := strings.CutSuffix(filename, ".yml"); found {
+	if name, found := strings.CutSuffix(filename, YMLFileExtension); found {
 		return name
 	}
 	return filename
+}
+
+// FindYAMLFile finds a YAML file with either .yml or .yaml extension
+func FindYAMLFile(dir, baseName string) (string, error) {
+	for _, ext := range YAMLExtensions {
+		path := fmt.Sprintf("%s/%s%s", dir, baseName, ext)
+		if _, err := os.Stat(path); err == nil {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("YAML file not found: %s", baseName)
 }
 
 // Action constants
