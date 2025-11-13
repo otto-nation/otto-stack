@@ -310,39 +310,47 @@ tasks:
     silent: true
     cmds:
       - echo "🔒 Running pre-commit checks..."
-      - task: pre-commit-fix
-      - task: pre-commit-verify
-
-  pre-commit-fix:
-    desc: "🔧 Auto-fix formatting and module issues"
-    silent: true
-    cmds:
-      - echo "🔧 Auto-fixing formatting and modules..."
       - task: generate
-      - task: fmt
-      - task: docs-fmt
-      - go mod tidy
-
-  pre-commit-verify:
-    desc: "✅ Verify all checks pass after fixes"
-    silent: true
-    cmds:
       - |
-        echo "✅ Verifying fixes..."
-        # Check if there are any unstaged changes after formatting
-        if ! git diff --quiet; then
-          echo ""
-          echo "❌ Pre-commit failed: Files were modified during formatting"
+        echo "🔧 Auto-fixing formatting and modules..."
+        CHANGES_MADE=false
+        
+        # Check if fmt makes changes
+        git diff --quiet && BEFORE_FMT_CLEAN=true || BEFORE_FMT_CLEAN=false
+        task fmt
+        if [ "$BEFORE_FMT_CLEAN" = "true" ] && ! git diff --quiet; then
+          echo "❌ Code formatting changes detected"
+          CHANGES_MADE=true
+        fi
+        
+        # Check if docs-fmt makes changes  
+        git diff --quiet && BEFORE_DOCS_CLEAN=true || BEFORE_DOCS_CLEAN=false
+        task docs-fmt
+        if [ "$BEFORE_DOCS_CLEAN" = "true" ] && ! git diff --quiet; then
+          echo "❌ Documentation formatting changes detected"
+          CHANGES_MADE=true
+        fi
+        
+        # Check if go mod tidy makes changes
+        git diff --quiet && BEFORE_MOD_CLEAN=true || BEFORE_MOD_CLEAN=false
+        go mod tidy
+        if [ "$BEFORE_MOD_CLEAN" = "true" ] && ! git diff --quiet; then
+          echo "❌ Go module changes detected"
+          CHANGES_MADE=true
+        fi
+        
+        if [ "$CHANGES_MADE" = "true" ]; then
           echo ""
           echo "📋 Modified files:"
           git diff --name-only | sed 's/^/  - /'
           echo ""
-          echo "🔧 Please add these changes and commit again:"
-          echo "   git add ."
+          echo "🔧 Please stage these changes and commit again:"
+          echo "   git add <files>"
           echo "   git commit"
           echo ""
           exit 1
         fi
+      - echo "✅ Verifying fixes..."
       - task: lint
       - task: validate-homebrew-formula
       - echo "✅ Pre-commit checks passed"
