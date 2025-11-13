@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
@@ -15,8 +16,8 @@ import (
 )
 
 // generateConfig generates config using simplified approach
-func (h *InitHandler) generateConfig(name string, services []string) string {
-	configData, err := pkgConfig.GenerateConfig(name, services)
+func (h *InitHandler) generateConfig(name string, services []string, validationOptions map[string]bool) string {
+	configData, err := pkgConfig.GenerateConfigWithValidation(name, services, validationOptions)
 	if err != nil {
 		return "# Error generating config\n"
 	}

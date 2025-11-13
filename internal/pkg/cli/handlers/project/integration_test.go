@@ -79,7 +79,7 @@ func TestCreateConfigFile(t *testing.T) {
 	err := handler.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.createConfigFile(TestProjectName, []string{TestServicePostgres},
+	err = handler.createConfigFile(TestProjectName, []string{TestServicePostgres}, nil,
 		&base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
@@ -118,7 +118,7 @@ func TestCreateReadme(t *testing.T) {
 func TestGenerateConfig(t *testing.T) {
 	handler := NewInitHandler()
 
-	config := handler.generateConfig(TestProjectName, []string{TestServicePostgres})
+	config := handler.generateConfig(TestProjectName, []string{TestServicePostgres}, nil)
 
 	assert.Contains(t, config, TestProjectName)
 	assert.Contains(t, config, TestServicePostgres)

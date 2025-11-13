@@ -76,6 +76,11 @@ func LoadCommandConfigStruct() (*CommandConfig, error) {
 
 // GenerateConfig creates a new otto-stack configuration file
 func GenerateConfig(projectName string, services []string) ([]byte, error) {
+	return GenerateConfigWithValidation(projectName, services, nil)
+}
+
+// GenerateConfigWithValidation creates a new otto-stack configuration file with validation options
+func GenerateConfigWithValidation(projectName string, services []string, validationOptions map[string]bool) ([]byte, error) {
 	config := Config{
 		Project: ProjectConfig{
 			Name: projectName,
@@ -84,6 +89,13 @@ func GenerateConfig(projectName string, services []string) ([]byte, error) {
 		Stack: StackConfig{
 			Enabled: services,
 		},
+	}
+
+	// Add validation options if provided
+	if validationOptions != nil {
+		config.Validation = &ValidationConfig{
+			Options: validationOptions,
+		}
 	}
 
 	return yaml.Marshal(config)

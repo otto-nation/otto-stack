@@ -111,7 +111,7 @@ exitLoop:
 	}
 
 	// Create configuration file
-	if err := h.createConfigFile(projectName, services, base); err != nil {
+	if err := h.createConfigFile(projectName, services, validation, base); err != nil {
 		return fmt.Errorf("failed to create config file: %w", err)
 	}
 
