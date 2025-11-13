@@ -16,6 +16,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	"github.com/otto-nation/otto-stack/internal/pkg/env"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
@@ -157,6 +158,11 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf(core.MsgStack_failed_write_compose, err)
 	}
 
+	// Generate .env.generated file
+	if err := h.generateEnvFile(filteredServices, setup.Config.Project.Name); err != nil {
+		base.Output.Warning("Failed to generate .env file: %v", err)
+	}
+
 	// Start services
 	if err := setup.DockerClient.ComposeUp(ctx, setup.Config.Project.Name, filteredServices, options); err != nil {
 		return fmt.Errorf(core.MsgStack_failed_start_services, err)
@@ -251,4 +257,15 @@ func (h *UpHandler) findRemovedServices(oldServices, newServices []string) []str
 		}
 	}
 	return removed
+}
+
+// generateEnvFile generates .env.generated file with resolved services
+func (h *UpHandler) generateEnvFile(services []string, projectName string) error {
+	envContent, err := env.Generate(projectName, services)
+	if err != nil {
+		return fmt.Errorf("failed to generate env content: %w", err)
+	}
+
+	envPath := filepath.Join(core.OttoStackDir, core.EnvGeneratedFileName)
+	return os.WriteFile(envPath, envContent, core.PermReadWrite)
 }

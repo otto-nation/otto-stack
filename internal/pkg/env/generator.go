@@ -2,13 +2,10 @@ package env
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"gopkg.in/yaml.v3"
 )
 
 // Generate creates environment file content for services
@@ -28,27 +25,30 @@ func Generate(projectName string, services []string) ([]byte, error) {
 }
 
 func addServiceEnv(content *strings.Builder, serviceName string) {
-	yamlPath := filepath.Join(services.ServicesDir, "**", serviceName+".yaml")
-	matches, _ := filepath.Glob(yamlPath)
-	if len(matches) == 0 {
-		return
-	}
-
-	data, err := os.ReadFile(matches[0])
+	manager, err := services.New()
 	if err != nil {
 		return
 	}
 
-	var service services.ServiceConfig
-	if err := yaml.Unmarshal(data, &service); err != nil {
+	service, err := manager.GetService(serviceName)
+	if err != nil {
 		return
 	}
 
-	if len(service.Environment) > 0 {
+	// Add environment variables from the service
+	if len(service.Environment) > 0 || len(service.Container.Environment) > 0 {
 		fmt.Fprintf(content, "# %s\n", strings.ToUpper(serviceName))
+
+		// Add top-level environment variables
 		for key, value := range service.Environment {
 			fmt.Fprintf(content, "%s=%v\n", key, value)
 		}
+
+		// Add container-level environment variables
+		for key, value := range service.Container.Environment {
+			fmt.Fprintf(content, "%s=%v\n", key, value)
+		}
+
 		content.WriteString("\n")
 	}
 }
