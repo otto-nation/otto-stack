@@ -8,7 +8,8 @@ container:
 service:
   dependencies:
     required:
-      - localstack
+      - localstack-core
+      - localstack-init
     provides:
       - sns
       - notifications
