@@ -94,8 +94,8 @@ func TestManager_ResolveServices(t *testing.T) {
 
 	t.Run("handles nonexistent service", func(t *testing.T) {
 		resolved, err := manager.ResolveServices([]string{"nonexistent"})
-		assert.NoError(t, err)                             // Current implementation doesn't validate
-		assert.Equal(t, []string{"nonexistent"}, resolved) // Pass-through behavior
+		assert.NoError(t, err)
+		assert.Empty(t, resolved) // Nonexistent services are filtered out
 	})
 }
 

@@ -204,6 +204,40 @@ func (m *Manager) ExecuteCustomOperation(serviceName, operationName string) ([]s
 
 // ResolveServices applies composite expansion and dependency resolution
 func (m *Manager) ResolveServices(serviceNames []string) ([]string, error) {
-	// Simple pass-through for now - no expansion needed
-	return serviceNames, nil
+	resolved := make(map[string]bool)
+	var result []string
+
+	for _, serviceName := range serviceNames {
+		m.resolveDependenciesRecursive(serviceName, resolved, &result)
+	}
+
+	return result, nil
+}
+
+// resolveDependenciesRecursive recursively resolves dependencies for a service
+func (m *Manager) resolveDependenciesRecursive(serviceName string, resolved map[string]bool, result *[]string) {
+	if resolved[serviceName] {
+		return
+	}
+
+	serviceDef, err := m.GetService(serviceName)
+	if err != nil {
+		return
+	}
+
+	// First resolve all dependencies
+	if serviceDef.Service.Dependencies.Required != nil {
+		for _, dep := range serviceDef.Service.Dependencies.Required {
+			m.resolveDependenciesRecursive(dep, resolved, result)
+		}
+	}
+
+	// Add this service to result if it has an image and hasn't been added yet
+	if serviceDef.Container.Image != "" && !resolved[serviceName] {
+		resolved[serviceName] = true
+		*result = append(*result, serviceName)
+	}
+
+	// Mark as resolved even if no image (composite services)
+	resolved[serviceName] = true
 }

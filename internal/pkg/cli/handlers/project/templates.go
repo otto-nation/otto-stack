@@ -47,7 +47,18 @@ func (h *InitHandler) generateInitialComposeFiles(services []string, projectName
 func (h *InitHandler) generateEnvFile(services []string, projectName string, base *base.BaseCommand) error {
 	base.Output.Info("%s", core.MsgProcess_generating_env)
 
-	envContent, err := env.Generate(projectName, services)
+	// Resolve services to get actual container services
+	manager, err := pkgServices.New()
+	if err != nil {
+		return fmt.Errorf("failed to create service manager: %w", err)
+	}
+
+	resolvedServices, err := manager.ResolveServices(services)
+	if err != nil {
+		return fmt.Errorf("failed to resolve services: %w", err)
+	}
+
+	envContent, err := env.Generate(projectName, resolvedServices)
 	if err != nil {
 		return fmt.Errorf("failed to generate env content: %w", err)
 	}

@@ -47,7 +47,10 @@ func (g *Generator) GenerateYAML(serviceNames []string) ([]byte, error) {
 func (g *Generator) buildServices(serviceNames []string) map[string]any {
 	serviceList := make(map[string]any)
 
-	for _, serviceName := range serviceNames {
+	// Resolve all dependencies first
+	resolvedServices, _ := g.manager.ResolveServices(serviceNames)
+
+	for _, serviceName := range resolvedServices {
 		serviceDef, err := g.manager.GetService(serviceName)
 		if err != nil {
 			continue

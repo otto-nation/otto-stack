@@ -63,10 +63,18 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		return nil
 	}
 
-	resolvedServices := serviceNames
+	// Resolve services to actual container services
+	resolvedServices, err := manager.ResolveServices(serviceNames)
+	if err != nil {
+		ci.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
+		return nil
+	}
+
+	// Filter out init containers (restart: "no") from status display
+	filteredServices := filterInitContainers(manager, resolvedServices)
 
 	// Get service status
-	statuses, err := setup.DockerClient.GetDockerServiceStatus(ctx, setup.Config.Project.Name, resolvedServices)
+	statuses, err := setup.DockerClient.GetDockerServiceStatus(ctx, setup.Config.Project.Name, filteredServices)
 	if err != nil {
 		ci.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_get_service_status, err))
 		return nil
@@ -104,4 +112,15 @@ func (h *StatusHandler) ValidateArgs(args []string) error {
 // GetRequiredFlags returns required flags for this command
 func (h *StatusHandler) GetRequiredFlags() []string {
 	return []string{}
+}
+
+// filterInitContainers removes init containers (restart: "no") from status display
+func filterInitContainers(manager *services.Manager, serviceNames []string) []string {
+	var filtered []string
+	for _, serviceName := range serviceNames {
+		if service, err := manager.GetService(serviceName); err == nil && service.Container.Restart != services.RestartPolicyNo {
+			filtered = append(filtered, serviceName)
+		}
+	}
+	return filtered
 }
