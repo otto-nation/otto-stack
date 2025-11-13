@@ -312,7 +312,6 @@ handlers:
 global:
   flags:
     verbose:
-      short: "v"
       type: "bool"
       description: "Enable verbose output"
       default: false
@@ -326,7 +325,6 @@ global:
       description: "Show version information"
       default: false
     quiet:
-      short: "q"
       type: "bool"
       description: "Suppress non-essential output (CI-friendly)"
       default: false
@@ -403,12 +401,10 @@ commands:
         description: "Build images and start services in background"
     flags:
       detach:
-        short: "d"
         type: "bool"
         description: "Run services in background (detached mode)"
         default: false
       build:
-        short: "b"
         type: "bool"
         description: "Build images before starting services"
         default: false
@@ -421,7 +417,6 @@ commands:
         description: "Don't start linked services"
         default: false
       timeout:
-        short: "t"
         type: "string"
         description: "Timeout for service startup (e.g., 30s, 2m)"
         default: "30s"
@@ -458,12 +453,10 @@ commands:
         description: "Stop services with custom timeout"
     flags:
       remove:
-        short: "r"
         type: "bool"
         description: "Remove containers (default: false, just stops them)"
         default: false
       volumes:
-        short: "v"
         type: "bool"
         description: "Remove named volumes and anonymous volumes"
         default: false
@@ -472,7 +465,6 @@ commands:
         description: "Remove containers for services not in compose file"
         default: false
       timeout:
-        short: "t"
         type: "int"
         description: "Shutdown timeout in seconds"
         default: 10
@@ -503,7 +495,6 @@ commands:
         description: "Restart with custom timeout"
     flags:
       timeout:
-        short: "t"
         type: "int"
         description: "Restart timeout in seconds"
         default: 10
@@ -541,12 +532,10 @@ commands:
         default: "table"
         options: ["table", "json", "yaml"]
       watch:
-        short: "w"
         type: "bool"
         description: "Watch for status changes"
         default: false
       quiet:
-        short: "q"
         type: "bool"
         description: "Only show service names and basic status"
         default: false
@@ -588,7 +577,6 @@ commands:
         description: "Follow log output in real-time"
         default: false
       tail:
-        short: "t"
         type: "string"
         description: "Number of lines to show from end of logs"
         default: "all"
@@ -635,11 +623,6 @@ commands:
         type: "bool"
         description: "Attempt to automatically fix issues"
         default: false
-      verbose:
-        short: "v"
-        type: "bool"
-        description: "Show detailed diagnostic information"
-        default: false
       format:
         type: "string"
         description: "Output format (table|json)"
@@ -673,7 +656,6 @@ commands:
         description: "Username to execute command as"
         default: ""
       workdir:
-        short: "w"
         type: "string"
         description: "Working directory for command"
         default: ""
@@ -683,17 +665,14 @@ commands:
         description: "Keep STDIN open (interactive mode)"
         default: true
       tty:
-        short: "t"
         type: "bool"
         description: "Allocate a pseudo-TTY"
         default: true
       detach:
-        short: "d"
         type: "bool"
         description: "Run command in background"
         default: false
       env:
-        short: "e"
         type: "string"
         description: "Set environment variables (comma-separated key=value pairs)"
         default: ""
@@ -720,7 +699,6 @@ commands:
         description: "Connect to MySQL database"
     flags:
       database:
-        short: "d"
         type: "string"
         description: "Database name to connect to"
         default: ""
@@ -771,17 +749,14 @@ commands:
         description: "Clean up all resources (containers, volumes, images)"
         default: false
       volumes:
-        short: "v"
         type: "bool"
         description: "Remove unused volumes"
         default: false
       images:
-        short: "i"
         type: "bool"
         description: "Remove unused images"
         default: false
       networks:
-        short: "n"
         type: "bool"
         description: "Remove unused networks"
         default: false
@@ -928,7 +903,6 @@ commands:
         description: "Use strict validation rules"
     flags:
       strict:
-        short: "s"
         type: "bool"
         description: "Use strict validation rules"
         default: false
