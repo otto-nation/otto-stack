@@ -46,7 +46,3 @@ documentation:
     - AWS service emulation for local development
     - Cloud service testing without AWS costs
     - Offline development environment
-  web_interfaces:
-    - name: LocalStack Dashboard
-      url: http://localhost:8055
-      description: LocalStack web dashboard for managing services

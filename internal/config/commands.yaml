@@ -94,6 +94,11 @@ messages:
     mode_requires_config: "Non-interactive mode requires explicit configuration - interactive setup required"
     skipping_confirmation: "Skipping confirmation in non-interactive mode"
 
+  web_interfaces:
+    available: "Available"
+    not_available: "Not Available"
+    no_interfaces_found: "No web interfaces found for the specified services"
+
   success:
     init: "otto stack initialized successfully!"
     start: "otto stack started successfully"
@@ -371,7 +376,7 @@ categories:
     name: "Development Tools"
     description: "Commands for development workflow and validation"
     icon: "🛠️"
-    commands: ["validate", "services", "deps", "conflicts"]
+    commands: ["validate", "services", "deps", "conflicts", "web-interfaces"]
 
   utility:
     name: "Utility Commands"
@@ -819,6 +824,29 @@ commands:
         default: false
     related_commands: ["validate"]
 
+  web-interfaces:
+    category: "development"
+    handler: "stack"
+    description: "Show web interfaces for running services"
+    long_description: |
+      Display web interfaces (dashboards, UIs) for running services.
+      Shows URLs and availability status for easy access to service
+      management interfaces.
+    usage: "web-interfaces [service-name] [flags]"
+    examples:
+      - command: "otto-stack web-interfaces"
+        description: "Show all web interfaces for running services"
+      - command: "otto-stack web-interfaces localstack-core"
+        description: "Show interfaces for specific service"
+      - command: "otto-stack web-interfaces --all"
+        description: "Show interfaces for all enabled services"
+    flags:
+      all:
+        type: "bool"
+        description: "Show interfaces for all enabled services, even if not running"
+        default: false
+    related_commands: ["status", "up"]
+
   services:
     category: "development"
     handler: "project"
@@ -1012,3 +1040,11 @@ icons:
     starting: "🟡"
     none: "❓"
     default: "❓"
+  category:
+    lifecycle: "🚀"
+    monitoring: "📊"
+    data: "💾"
+    maintenance: "🧹"
+    development: "🛠️"
+    utility: "ℹ️"
+    web: "🌐"

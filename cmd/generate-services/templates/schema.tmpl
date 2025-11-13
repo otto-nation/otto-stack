@@ -104,10 +104,18 @@ type OperationSpec struct {
 
 // DocumentationSpec defines service documentation
 type DocumentationSpec struct {
-	Examples    []string `yaml:"examples,omitempty"`
-	UsageNotes  string   `yaml:"usage_notes,omitempty"`
-	Links       []string `yaml:"links,omitempty"`
-	UseCases    []string `yaml:"use_cases,omitempty"`
+	Examples      []string       `yaml:"examples,omitempty"`
+	UsageNotes    string         `yaml:"usage_notes,omitempty"`
+	Links         []string       `yaml:"links,omitempty"`
+	UseCases      []string       `yaml:"use_cases,omitempty"`
+	WebInterfaces []WebInterface `yaml:"web_interfaces,omitempty"`
+}
+
+// WebInterface defines a web interface for a service
+type WebInterface struct {
+	Name        string `yaml:"name"`
+	URL         string `yaml:"url"`
+	Description string `yaml:"description"`
 }
 
 // ParametersSpec defines service parameters
