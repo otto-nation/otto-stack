@@ -55,6 +55,9 @@ func (c *Client) ComposeUp(ctx context.Context, project string, services []strin
 	if options.ForceRecreate {
 		args = append(args, "--force-recreate")
 	}
+	if options.RemoveOrphans {
+		args = append(args, "--remove-orphans")
+	}
 	args = append(args, services...)
 
 	return c.RunCommand(ctx, args...)

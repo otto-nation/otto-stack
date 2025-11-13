@@ -13,6 +13,7 @@ type StartOptions struct {
 	Timeout        time.Duration
 	ResolveDeps    bool
 	CheckConflicts bool
+	RemoveOrphans  bool
 }
 
 // StopOptions defines options for stopping services

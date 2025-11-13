@@ -65,8 +65,17 @@ func (g *Generator) buildServices(serviceNames []string) map[string]any {
 }
 
 func (g *Generator) buildService(config *services.ServiceConfig) map[string]any {
+	// Skip services without images - they are logical services only
+	if config.Container.Image == "" {
+		return nil
+	}
+
 	service := map[string]any{
 		dockerConstants.ComposeFieldImage: config.Container.Image,
+	}
+
+	if len(config.Container.Entrypoint) > 0 {
+		service[dockerConstants.ComposeFieldEntrypoint] = config.Container.Entrypoint
 	}
 
 	// Convert ports to compose format
@@ -82,8 +91,17 @@ func (g *Generator) buildService(config *services.ServiceConfig) map[string]any 
 		service[dockerConstants.ComposeFieldPorts] = ports
 	}
 
-	if len(config.Container.Environment) > 0 {
-		service[dockerConstants.ComposeFieldEnvironment] = config.Container.Environment
+	// Merge environment variables from both top-level and container-level
+	envVars := make(map[string]string)
+
+	// Add top-level environment variables first
+	maps.Copy(envVars, config.Environment)
+
+	// Add container-level environment variables (these take precedence)
+	maps.Copy(envVars, config.Container.Environment)
+
+	if len(envVars) > 0 {
+		service[dockerConstants.ComposeFieldEnvironment] = envVars
 	}
 
 	if len(config.Container.Volumes) > 0 {

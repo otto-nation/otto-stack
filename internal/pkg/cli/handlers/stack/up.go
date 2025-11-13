@@ -92,6 +92,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		NoDeps:         flags.NoDeps,
 		ResolveDeps:    flags.ResolveDeps,
 		CheckConflicts: flags.CheckConflicts,
+		RemoveOrphans:  flags.ForceRecreate, // Auto-remove orphans when force recreating
 	}
 
 	// Determine services to start

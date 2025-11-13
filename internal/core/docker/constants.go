@@ -58,6 +58,7 @@ const (
 	ComposeFieldNetworks    = "networks"
 	ComposeFieldName        = "name"
 	ComposeFieldImage       = "image"
+	ComposeFieldEntrypoint  = "entrypoint"
 	ComposeFieldPorts       = "ports"
 	ComposeFieldEnvironment = "environment"
 	ComposeFieldVolumes     = "volumes"
