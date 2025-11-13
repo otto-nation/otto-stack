@@ -17,7 +17,7 @@ func (h *InitHandler) createDirectoryStructure() error {
 	}
 
 	for _, dir := range directories {
-		if err := os.MkdirAll(dir, core.DirPermReadWriteExec); err != nil {
+		if err := os.MkdirAll(dir, core.PermReadWriteExec); err != nil {
 			return fmt.Errorf("failed to create directory %s: %w", dir, err)
 		}
 	}
@@ -30,7 +30,7 @@ func (h *InitHandler) createConfigFile(projectName string, services []string, va
 	configContent := h.generateConfig(projectName, services, validationOptions)
 
 	configPath := core.OttoStackDir + "/" + core.ConfigFileName
-	if err := os.WriteFile(configPath, []byte(configContent), core.FilePermReadWrite); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), core.PermReadWrite); err != nil {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
@@ -64,7 +64,7 @@ func (h *InitHandler) createGitignoreEntries(base *base.BaseCommand) error {
 	}
 
 	// Append entries
-	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, core.FilePermReadWrite)
+	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, core.PermReadWrite)
 	if err != nil {
 		return fmt.Errorf("failed to open .gitignore: %w", err)
 	}
@@ -123,7 +123,7 @@ Run `+"`%s --help`"+` for a full list of available commands.
 		core.ConfigFileName, docker.DockerComposeFileName, core.AppName)
 
 	readmePath := core.OttoStackDir + "/" + core.ReadmeFileName
-	if err := os.WriteFile(readmePath, []byte(readmeContent), core.FilePermReadWrite); err != nil {
+	if err := os.WriteFile(readmePath, []byte(readmeContent), core.PermReadWrite); err != nil {
 		return fmt.Errorf("failed to create README: %w", err)
 	}
 

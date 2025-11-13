@@ -48,11 +48,11 @@ commands:
 help: {}
 `
 				configDir := "internal/config"
-				err := os.MkdirAll(configDir, core.DirPermReadWriteExec)
+				err := os.MkdirAll(configDir, core.PermReadWriteExec)
 				require.NoError(t, err)
 
 				configFile := filepath.Join(configDir, "commands.yaml")
-				err = os.WriteFile(configFile, []byte(configContent), core.FilePermReadWrite)
+				err = os.WriteFile(configFile, []byte(configContent), core.PermReadWrite)
 				require.NoError(t, err)
 
 				t.Cleanup(func() {
@@ -152,11 +152,11 @@ commands:
 help: {}
 `
 		configDir := "internal/config"
-		err := os.MkdirAll(configDir, core.DirPermReadWriteExec)
+		err := os.MkdirAll(configDir, core.PermReadWriteExec)
 		require.NoError(t, err)
 
 		configFile := filepath.Join(configDir, "commands.yaml")
-		err = os.WriteFile(configFile, []byte(configContent), core.FilePermReadWrite)
+		err = os.WriteFile(configFile, []byte(configContent), core.PermReadWrite)
 		require.NoError(t, err)
 
 		t.Cleanup(func() {

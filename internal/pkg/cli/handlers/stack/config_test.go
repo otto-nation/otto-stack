@@ -27,7 +27,7 @@ stack:
     - redis
 `
 	baseConfigPath := filepath.Join(tmpDir, "otto-stack-config.yaml")
-	err = os.WriteFile(baseConfigPath, []byte(baseConfig), core.FilePermReadWrite)
+	err = os.WriteFile(baseConfigPath, []byte(baseConfig), core.PermReadWrite)
 	require.NoError(t, err)
 
 	// Test loading base config only
@@ -38,7 +38,7 @@ stack:
 
 	// Create local override config in otto-stack directory
 	ottoStackDir := filepath.Join(tmpDir, core.OttoStackDir)
-	err = os.MkdirAll(ottoStackDir, core.DirPermReadWriteExec)
+	err = os.MkdirAll(ottoStackDir, core.PermReadWriteExec)
 	require.NoError(t, err)
 
 	localConfig := `
@@ -50,7 +50,7 @@ stack:
     - mongodb
 `
 	localConfigPath := filepath.Join(ottoStackDir, core.LocalConfigFileName)
-	err = os.WriteFile(localConfigPath, []byte(localConfig), core.FilePermReadWrite)
+	err = os.WriteFile(localConfigPath, []byte(localConfig), core.PermReadWrite)
 	require.NoError(t, err)
 
 	// Change to temp directory so LoadProjectConfig can find the local config
@@ -81,19 +81,19 @@ stack:
     - redis
 `
 	baseConfigPath := filepath.Join(tmpDir, "otto-stack-config.yaml")
-	err = os.WriteFile(baseConfigPath, []byte(baseConfig), core.FilePermReadWrite)
+	err = os.WriteFile(baseConfigPath, []byte(baseConfig), core.PermReadWrite)
 	require.NoError(t, err)
 
 	// Create partial local override (only environment) in otto-stack directory
 	ottoStackDir := filepath.Join(tmpDir, core.OttoStackDir)
-	err = os.MkdirAll(ottoStackDir, core.DirPermReadWriteExec)
+	err = os.MkdirAll(ottoStackDir, core.PermReadWriteExec)
 	require.NoError(t, err)
 
 	localConfig := `
 project:
 `
 	localConfigPath := filepath.Join(ottoStackDir, core.LocalConfigFileName)
-	err = os.WriteFile(localConfigPath, []byte(localConfig), core.FilePermReadWrite)
+	err = os.WriteFile(localConfigPath, []byte(localConfig), core.PermReadWrite)
 	require.NoError(t, err)
 
 	// Change to temp directory so LoadProjectConfig can find the local config

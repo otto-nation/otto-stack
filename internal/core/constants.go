@@ -33,10 +33,10 @@ const (
 	EnvGeneratedFileName = ".env.generated"
 )
 
-// File permissions
+// File and directory permissions
 const (
-	FilePermReadWrite    = 0644
-	DirPermReadWriteExec = 0755
+	PermReadWrite     = 0644
+	PermReadWriteExec = 0755
 )
 
 // Exit codes

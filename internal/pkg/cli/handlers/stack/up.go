@@ -141,7 +141,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	}
 
 	// Ensure otto-stack directory exists
-	if err := os.MkdirAll(core.OttoStackDir, core.DirPermReadWriteExec); err != nil {
+	if err := os.MkdirAll(core.OttoStackDir, core.PermReadWriteExec); err != nil {
 		return fmt.Errorf(core.MsgStack_failed_create_directory, err)
 	}
 
@@ -152,7 +152,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	}
 
 	composePath := docker.DockerComposeFilePath
-	if err := os.WriteFile(composePath, composeData, core.FilePermReadWrite); err != nil {
+	if err := os.WriteFile(composePath, composeData, core.PermReadWrite); err != nil {
 		return fmt.Errorf(core.MsgStack_failed_write_compose, err)
 	}
 
@@ -219,7 +219,7 @@ func (h *UpHandler) saveState(state *StackState) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(statePath, data, core.FilePermReadWrite)
+	return os.WriteFile(statePath, data, core.PermReadWrite)
 }
 
 // cleanupRemovedServices removes services no longer in config

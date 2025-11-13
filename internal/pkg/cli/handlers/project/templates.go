@@ -53,7 +53,7 @@ func (h *InitHandler) generateEnvFile(services []string, projectName string, bas
 	}
 
 	envPath := filepath.Join(core.OttoStackDir, core.EnvGeneratedFileName)
-	if err := os.WriteFile(envPath, envContent, core.FilePermReadWrite); err != nil {
+	if err := os.WriteFile(envPath, envContent, core.PermReadWrite); err != nil {
 		return fmt.Errorf("failed to write %s: %w", envPath, err)
 	}
 
@@ -75,7 +75,7 @@ func (h *InitHandler) generateDockerCompose(services []string, projectName strin
 	}
 
 	composePath := filepath.Join(core.OttoStackDir, docker.DockerComposeFileName)
-	if err := os.WriteFile(composePath, composeYAML, core.FilePermReadWrite); err != nil {
+	if err := os.WriteFile(composePath, composeYAML, core.PermReadWrite); err != nil {
 		return fmt.Errorf("failed to write %s: %w", composePath, err)
 	}
 

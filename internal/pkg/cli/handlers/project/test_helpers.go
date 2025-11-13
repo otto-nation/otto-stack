@@ -27,13 +27,13 @@ func setupTestDir(t *testing.T) (cleanup func()) {
 
 // createTestFile creates a file with given content
 func createTestFile(t *testing.T, path, content string) {
-	err := os.WriteFile(path, []byte(content), core.FilePermReadWrite)
+	err := os.WriteFile(path, []byte(content), core.PermReadWrite)
 	require.NoError(t, err)
 }
 
 // createTestConfig creates a config file
 func createTestConfig(t *testing.T) {
-	err := os.MkdirAll(core.OttoStackDir, core.DirPermReadWriteExec)
+	err := os.MkdirAll(core.OttoStackDir, core.PermReadWriteExec)
 	require.NoError(t, err)
 	createTestFile(t, TestConfigFilePath, TestConfigContent)
 }

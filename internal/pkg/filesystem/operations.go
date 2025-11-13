@@ -12,7 +12,7 @@ import (
 // EnsureDir creates a directory if it doesn't exist
 func EnsureDir(dirname string) error {
 	if _, err := os.Stat(dirname); os.IsNotExist(err) {
-		return os.MkdirAll(dirname, core.DirPermReadWriteExec)
+		return os.MkdirAll(dirname, core.PermReadWriteExec)
 	}
 	return nil
 }

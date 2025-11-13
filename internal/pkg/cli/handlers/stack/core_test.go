@@ -111,7 +111,7 @@ stack:
     - postgres`
 
 		configPath := filepath.Join(tmpDir, "config.yml")
-		err := os.WriteFile(configPath, []byte(configContent), core.FilePermReadWrite)
+		err := os.WriteFile(configPath, []byte(configContent), core.PermReadWrite)
 		assert.NoError(t, err)
 
 		cfg, err := LoadProjectConfig(configPath)
@@ -129,7 +129,7 @@ stack:
 
 	t.Run("invalid YAML", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "invalid.yml")
-		err := os.WriteFile(configPath, []byte("invalid: yaml: [unclosed"), core.FilePermReadWrite)
+		err := os.WriteFile(configPath, []byte("invalid: yaml: [unclosed"), core.PermReadWrite)
 		assert.NoError(t, err)
 
 		cfg, err := LoadProjectConfig(configPath)
@@ -143,7 +143,7 @@ stack:
 
 	t.Run("empty config", func(t *testing.T) {
 		configPath := filepath.Join(tmpDir, "empty.yml")
-		err := os.WriteFile(configPath, []byte(""), core.FilePermReadWrite)
+		err := os.WriteFile(configPath, []byte(""), core.PermReadWrite)
 		assert.NoError(t, err)
 
 		cfg, err := LoadProjectConfig(configPath)
