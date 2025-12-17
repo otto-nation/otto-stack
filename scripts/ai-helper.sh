@@ -21,7 +21,7 @@ check_ai_available() {
     fi
   else
     echo "❌ AI not configured. Please set AI_COMMAND in .env file" >&2
-    echo "   Example: AI_COMMAND=q chat --no-interactive" >&2
+    echo "   Example: AI_COMMAND=kiro-cli --no-interactive" >&2
     return 1
   fi
 }

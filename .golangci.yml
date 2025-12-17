@@ -40,6 +40,9 @@ linters:
       - path: "internal/pkg/constants/templates.go"
         linters:
           - lll
+      - path: "internal/scripts/embedded.go"
+        linters:
+          - nestif
 
 formatters:
   enable:
