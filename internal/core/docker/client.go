@@ -21,6 +21,16 @@ const (
 	ResourceImage     ResourceType = "image"
 )
 
+// InitContainerConfig holds configuration for init containers
+type InitContainerConfig struct {
+	Image       string
+	Command     []string
+	Environment map[string]string
+	Volumes     []string
+	WorkingDir  string
+	Networks    []string
+}
+
 type Client struct {
 	cli       *client.Client
 	logger    *slog.Logger
@@ -157,6 +167,37 @@ func (c *Client) RunCommand(ctx context.Context, args ...string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+// RunInitContainer runs an init container and waits for completion
+func (c *Client) RunInitContainer(ctx context.Context, containerName string, config InitContainerConfig) error {
+	args := []string{"run", "--rm", "--name", containerName}
+
+	// Add environment variables
+	for key, value := range config.Environment {
+		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
+	}
+
+	// Add volumes
+	for _, volume := range config.Volumes {
+		args = append(args, "-v", volume)
+	}
+
+	// Add working directory
+	if config.WorkingDir != "" {
+		args = append(args, "-w", config.WorkingDir)
+	}
+
+	// Add networks
+	for _, network := range config.Networks {
+		args = append(args, "--network", network)
+	}
+
+	// Add image and command
+	args = append(args, config.Image)
+	args = append(args, config.Command...)
+
+	return c.RunCommand(ctx, args...)
 }
 
 func contains(slice []string, item string) bool {

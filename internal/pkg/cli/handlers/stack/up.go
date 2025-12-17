@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -19,8 +21,14 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/env"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/scripts"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
+)
+
+const (
+	// DefaultTimeoutSeconds is the default timeout for operations
+	DefaultTimeoutSeconds = 30
 )
 
 // StackState tracks the current state of the stack
@@ -77,12 +85,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	}
 
 	// Parse timeout from string to duration
-	timeoutSecs := 30 // default
-	if flags.Timeout != "" {
-		if parsed, err := strconv.Atoi(flags.Timeout); err == nil {
-			timeoutSecs = parsed
-		}
-	}
+	timeoutSecs := h.parseTimeoutSeconds(flags.Timeout)
 
 	// Clean usage with no repetitive error handling
 	options := docker.StartOptions{
@@ -122,14 +125,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	}
 
 	configChanged := previousState.ConfigHash != configHash
-	if configChanged {
-		// Restart operation
-
-		// Clean up removed services
-		if err := h.cleanupRemovedServices(ctx, setup, previousState.Services, filteredServices, base); err != nil {
-			base.Output.Warning("Failed to clean up removed services: %v", err)
-		}
-	}
+	h.handleConfigChange(ctx, setup, previousState.Services, filteredServices, base, configChanged)
 
 	// Generate compose file
 	generator, err := compose.NewGenerator(setup.Config.Project.Name, services.ServicesDir)
@@ -163,9 +159,14 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		base.Output.Warning("Failed to generate .env file: %v", err)
 	}
 
-	// Start services
+	// Start services first
 	if err := setup.DockerClient.ComposeUp(ctx, setup.Config.Project.Name, filteredServices, options); err != nil {
 		return fmt.Errorf(core.MsgStack_failed_start_services, err)
+	}
+
+	// Run init containers after main services are started
+	if err := h.runInitContainers(ctx, setup, filteredServices, base); err != nil {
+		base.Output.Warning("Failed to run init containers: %v", err)
 	}
 
 	// Save new state
@@ -268,4 +269,247 @@ func (h *UpHandler) generateEnvFile(services []string, projectName string) error
 
 	envPath := filepath.Join(core.OttoStackDir, core.EnvGeneratedFileName)
 	return os.WriteFile(envPath, envContent, core.PermReadWrite)
+}
+
+// runInitContainers discovers and runs initialization containers
+func (h *UpHandler) runInitContainers(ctx context.Context, setup *CoreSetup, resolvedServices []string, base *base.BaseCommand) error {
+	initServices := h.discoverInitServices(resolvedServices)
+	if len(initServices) == 0 {
+		return nil
+	}
+
+	base.Output.Info("Running initialization containers: %v", initServices)
+
+	for _, initService := range initServices {
+		if err := h.runSingleInitContainer(ctx, setup, initService, base); err != nil {
+			return fmt.Errorf("failed to run init container %s: %w", initService, err)
+		}
+	}
+
+	return nil
+}
+
+// discoverInitServices auto-discovers init containers based on config file patterns
+func (h *UpHandler) discoverInitServices(resolvedServices []string) []string {
+	var initServices []string
+
+	configDir := filepath.Join(core.OttoStackDir, core.ServiceConfigsDir)
+
+	// Check if directory exists
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		return initServices
+	}
+
+	// Walk through config files
+	err := filepath.Walk(configDir, func(path string, info os.FileInfo, walkErr error) error {
+		if walkErr != nil || info.IsDir() || !core.IsYAMLFile(info.Name()) {
+			return nil
+		}
+
+		initService := h.processConfigFileForInit(path, info, resolvedServices)
+		h.addUniqueInitService(&initServices, initService)
+
+		return nil
+	})
+
+	if err != nil {
+		return initServices
+	}
+
+	return initServices
+}
+
+// processConfigFileForInit processes a single config file and returns init service name if found
+func (h *UpHandler) processConfigFileForInit(path string, info os.FileInfo, resolvedServices []string) string {
+	// Extract service name from filename (remove extension)
+	serviceName := core.TrimYAMLExt(info.Name())
+	parts := strings.Split(serviceName, "-")
+
+	const minPartsOfServiceName = 2
+	if len(parts) < minPartsOfServiceName {
+		return ""
+	}
+
+	return h.findMatchingInitServiceForFile(parts, path, resolvedServices)
+}
+
+// findMatchingInitServiceForFile finds init service that matches the config file pattern
+func (h *UpHandler) findMatchingInitServiceForFile(parts []string, path string, resolvedServices []string) string {
+	// Try different combinations of service name parts
+	for i := len(parts) - 1; i >= 1; i-- {
+		targetService := strings.Join(parts[:i], "-")
+
+		initService := h.checkServiceMatchForFile(targetService, path, resolvedServices)
+		if initService != "" {
+			return initService
+		}
+	}
+	return ""
+}
+
+// checkServiceMatchForFile checks if target service matches any resolved service
+func (h *UpHandler) checkServiceMatchForFile(targetService, path string, resolvedServices []string) string {
+	for _, resolved := range resolvedServices {
+		if !strings.HasPrefix(resolved, targetService) && resolved != targetService {
+			continue
+		}
+
+		if !h.hasValidConfiguration(path, targetService) {
+			continue
+		}
+
+		return targetService + "-init"
+	}
+	return ""
+}
+
+// hasValidConfiguration checks if a config file has actual resources to create
+func (h *UpHandler) hasValidConfiguration(configPath, targetService string) bool {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return false
+	}
+
+	// Parse YAML to check for actual configuration
+	var config map[string]any
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return false
+	}
+
+	// Check based on service type
+	switch targetService {
+	case "localstack":
+		return h.hasValidLocalStackConfig(config)
+	case services.ServicePostgres:
+		return h.hasValidPostgresConfig(config)
+	}
+
+	return false
+}
+
+// isValidArray checks if an any is a non-empty array
+func (h *UpHandler) isValidArray(value any) bool {
+	if arr, ok := value.([]any); ok {
+		return len(arr) > 0
+	}
+	return false
+}
+
+// hasValidLocalStackConfig checks for valid LocalStack configuration
+func (h *UpHandler) hasValidLocalStackConfig(config map[string]any) bool {
+	if queues, exists := config["queues"]; exists && h.isValidArray(queues) {
+		return true
+	}
+	if topics, exists := config["topics"]; exists && h.isValidArray(topics) {
+		return true
+	}
+	if buckets, exists := config["buckets"]; exists && h.isValidArray(buckets) {
+		return true
+	}
+	return false
+}
+
+// hasValidPostgresConfig checks for valid PostgreSQL configuration
+func (h *UpHandler) hasValidPostgresConfig(config map[string]any) bool {
+	if schemas, exists := config["schemas"]; exists && h.isValidArray(schemas) {
+		return true
+	}
+	if databases, exists := config["databases"]; exists && h.isValidArray(databases) {
+		return true
+	}
+	return false
+}
+
+// parseTimeoutSeconds parses timeout string or returns default
+func (h *UpHandler) parseTimeoutSeconds(timeoutStr string) int {
+	if timeoutStr == "" {
+		return DefaultTimeoutSeconds
+	}
+
+	parsed, err := strconv.Atoi(timeoutStr)
+	if err != nil {
+		return DefaultTimeoutSeconds
+	}
+	return parsed
+}
+
+// handleConfigChange handles configuration changes and cleanup
+func (h *UpHandler) handleConfigChange(ctx context.Context, setup *CoreSetup, oldServices, newServices []string, base *base.BaseCommand, configChanged bool) {
+	if !configChanged {
+		return
+	}
+
+	// Clean up removed services
+	if err := h.cleanupRemovedServices(ctx, setup, oldServices, newServices, base); err != nil {
+		base.Output.Warning("Failed to clean up removed services: %v", err)
+	}
+}
+
+// addUniqueInitService adds init service to list if not empty and not already present
+func (h *UpHandler) addUniqueInitService(initServices *[]string, initService string) {
+	if initService == "" {
+		return
+	}
+
+	if !slices.Contains(*initServices, initService) {
+		*initServices = append(*initServices, initService)
+	}
+}
+
+// runSingleInitContainer runs a single initialization container
+func (h *UpHandler) runSingleInitContainer(ctx context.Context, setup *CoreSetup, initServiceName string, base *base.BaseCommand) error {
+	targetService := strings.TrimSuffix(initServiceName, "-init")
+
+	// Create init container configuration
+	initConfig := h.createInitContainerConfig(targetService, setup)
+
+	// Run the init container
+	containerName := fmt.Sprintf("%s-%s", setup.Config.Project.Name, initServiceName)
+
+	base.Output.Info("Starting init container: %s", containerName)
+
+	// Run container and wait for completion
+	return setup.DockerClient.RunInitContainer(ctx, containerName, initConfig)
+}
+
+// createInitContainerConfig creates configuration for init containers
+func (h *UpHandler) createInitContainerConfig(targetService string, setup *CoreSetup) docker.InitContainerConfig {
+	// Get current working directory for absolute path
+	cwd, _ := os.Getwd()
+	configPath := filepath.Join(cwd, core.OttoStackDir, core.ServiceConfigsDir)
+
+	// Process script to replace $$ with $ for direct docker run
+	processedScript := strings.ReplaceAll(scripts.GenericInitScript, "$$", "$")
+	// Add curl and AWS CLI installation at the beginning of the script
+	processedScript = "apk add --no-cache curl wget aws-cli > /dev/null 2>&1\n" + processedScript
+
+	config := docker.InitContainerConfig{
+		Image:   "alpine:latest",
+		Command: []string{"sh", "-c", processedScript},
+		Environment: map[string]string{
+			"AWS_ACCESS_KEY_ID":     "test",
+			"AWS_DEFAULT_REGION":    "us-east-1",
+			"AWS_SECRET_ACCESS_KEY": "test",
+			"INIT_SERVICE_NAME":     targetService,
+		},
+		Volumes: []string{
+			fmt.Sprintf("%s:/config", configPath),
+		},
+		WorkingDir: "/",
+		Networks:   []string{fmt.Sprintf("%s-network", setup.Config.Project.Name)},
+	}
+
+	// Customize based on service type
+	switch targetService {
+	case "localstack":
+		config.Environment["SERVICE_ENDPOINT_URL"] = "http://localstack-core:4566"
+	case services.ServicePostgres:
+		config.Image = "postgres:15-alpine"
+		config.Environment["PGHOST"] = services.ServicePostgres
+		config.Environment["PGUSER"] = services.ServicePostgres
+		config.Environment["PGPASSWORD"] = "password"
+		config.Environment["SERVICE_ENDPOINT_URL"] = "postgres://postgres:password@postgres:5432"
+	}
+
+	return config
 }

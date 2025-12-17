@@ -811,7 +811,7 @@ commands:
     examples:
       - command: "otto-stack web-interfaces"
         description: "Show all web interfaces for running services"
-      - command: "otto-stack web-interfaces localstack-core"
+      - command: "otto-stack web-interfaces localstack"
         description: "Show interfaces for specific service"
       - command: "otto-stack web-interfaces --all"
         description: "Show interfaces for all enabled services"

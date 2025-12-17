@@ -8,10 +8,10 @@ container:
 service:
   dependencies:
     required:
-      - localstack-core
-      - localstack-init
+      - localstack
     provides:
       - sns
+      - messaging-topic
       - notifications
 
 configuration_schema:

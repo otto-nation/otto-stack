@@ -8,8 +8,7 @@ container:
 service:
   dependencies:
     required:
-      - localstack-core
-      - localstack-init
+      - localstack
     provides:
       - sqs
       - messaging-queue

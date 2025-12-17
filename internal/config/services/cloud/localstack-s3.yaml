@@ -8,7 +8,7 @@ container:
 service:
   dependencies:
     required:
-      - localstack-core
+      - localstack
       - localstack-init
     provides:
       - s3
