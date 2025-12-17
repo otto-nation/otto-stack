@@ -152,6 +152,9 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	}
 
 	composePath := docker.DockerComposeFilePath
+	if err := os.MkdirAll(filepath.Dir(composePath), core.PermReadWriteExec); err != nil {
+		return fmt.Errorf("failed to create generated directory: %w", err)
+	}
 	if err := os.WriteFile(composePath, composeData, core.PermReadWrite); err != nil {
 		return fmt.Errorf(core.MsgStack_failed_write_compose, err)
 	}
@@ -209,10 +212,15 @@ func (h *UpHandler) getConfigHash(config *config.Config) (string, error) {
 
 // loadState loads previous stack state
 func (h *UpHandler) loadState() (*StackState, error) {
-	statePath := filepath.Join(core.OttoStackDir, core.StateFileName)
-	data, err := os.ReadFile(statePath)
+	// Try new location first
+	data, err := os.ReadFile(core.StateFilePath)
 	if err != nil {
-		return nil, err
+		// Fall back to old location for backward compatibility
+		oldStatePath := filepath.Join(core.OttoStackDir, core.StateFileName)
+		data, err = os.ReadFile(oldStatePath)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var state StackState
@@ -224,12 +232,14 @@ func (h *UpHandler) loadState() (*StackState, error) {
 
 // saveState saves current stack state
 func (h *UpHandler) saveState(state *StackState) error {
-	statePath := filepath.Join(core.OttoStackDir, core.StateFileName)
+	if err := os.MkdirAll(filepath.Dir(core.StateFilePath), core.PermReadWriteExec); err != nil {
+		return fmt.Errorf("failed to create generated directory: %w", err)
+	}
 	data, err := json.Marshal(state)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(statePath, data, core.PermReadWrite)
+	return os.WriteFile(core.StateFilePath, data, core.PermReadWrite)
 }
 
 // cleanupRemovedServices removes services no longer in config
@@ -269,8 +279,10 @@ func (h *UpHandler) generateEnvFile(services []string, projectName string) error
 		return fmt.Errorf("failed to generate env content: %w", err)
 	}
 
-	envPath := filepath.Join(core.OttoStackDir, core.EnvGeneratedFileName)
-	return os.WriteFile(envPath, envContent, core.PermReadWrite)
+	if err := os.MkdirAll(filepath.Dir(core.EnvGeneratedFilePath), core.PermReadWriteExec); err != nil {
+		return fmt.Errorf("failed to create generated directory: %w", err)
+	}
+	return os.WriteFile(core.EnvGeneratedFilePath, envContent, core.PermReadWrite)
 }
 
 // runInitContainers discovers and runs initialization containers

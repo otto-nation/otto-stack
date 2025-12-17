@@ -37,8 +37,8 @@ func (h *InitHandler) generateInitialComposeFiles(services []string, projectName
 	}
 
 	base.Output.Success(core.MsgSuccess_generated_files,
-		filepath.Join(core.OttoStackDir, docker.DockerComposeFileName),
-		filepath.Join(core.OttoStackDir, core.EnvGeneratedFileName))
+		docker.DockerComposeFilePath,
+		core.EnvGeneratedFilePath)
 
 	return nil
 }
@@ -63,9 +63,11 @@ func (h *InitHandler) generateEnvFile(services []string, projectName string, bas
 		return fmt.Errorf("failed to generate env content: %w", err)
 	}
 
-	envPath := filepath.Join(core.OttoStackDir, core.EnvGeneratedFileName)
-	if err := os.WriteFile(envPath, envContent, core.PermReadWrite); err != nil {
-		return fmt.Errorf("failed to write %s: %w", envPath, err)
+	if err := os.MkdirAll(filepath.Dir(core.EnvGeneratedFilePath), core.PermReadWriteExec); err != nil {
+		return fmt.Errorf("failed to create generated directory: %w", err)
+	}
+	if err := os.WriteFile(core.EnvGeneratedFilePath, envContent, core.PermReadWrite); err != nil {
+		return fmt.Errorf("failed to write %s: %w", core.EnvGeneratedFilePath, err)
 	}
 
 	return nil
@@ -85,9 +87,11 @@ func (h *InitHandler) generateDockerCompose(services []string, projectName strin
 		return fmt.Errorf("failed to generate docker-compose YAML: %w", err)
 	}
 
-	composePath := filepath.Join(core.OttoStackDir, docker.DockerComposeFileName)
-	if err := os.WriteFile(composePath, composeYAML, core.PermReadWrite); err != nil {
-		return fmt.Errorf("failed to write %s: %w", composePath, err)
+	if err := os.MkdirAll(filepath.Dir(docker.DockerComposeFilePath), core.PermReadWriteExec); err != nil {
+		return fmt.Errorf("failed to create generated directory: %w", err)
+	}
+	if err := os.WriteFile(docker.DockerComposeFilePath, composeYAML, core.PermReadWrite); err != nil {
+		return fmt.Errorf("failed to write %s: %w", docker.DockerComposeFilePath, err)
 	}
 
 	return nil

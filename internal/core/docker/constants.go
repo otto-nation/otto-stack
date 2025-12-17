@@ -11,7 +11,7 @@ const (
 	ComposeServiceLabel   = "com.docker.compose.service"
 	DockerInstallURL      = "https://docs.docker.com/get-docker/"
 	DockerComposeFileName = "docker-compose.yml"
-	DockerComposeFilePath = pkgCore.AppName + "/docker-compose.yml"
+	DockerComposeFilePath = pkgCore.AppName + "/" + pkgCore.GeneratedDir + "/docker-compose.yml"
 )
 
 // Docker commands

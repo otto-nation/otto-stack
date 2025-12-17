@@ -37,6 +37,7 @@ const (
 	LocalConfigFileName  = "otto-stack-config" + LocalFileExtension + ".yml"
 	ServiceConfigsDir    = "service-configs"
 	ScriptsDir           = "scripts"
+	GeneratedDir         = "generated"
 	ReadmeFileName       = "README.md"
 	GitIgnoreFileName    = ".gitignore"
 	StateFileName        = "state.json"
@@ -47,7 +48,12 @@ const (
 	YMLFileExtension     = ".yml"
 )
 
-// YAML file extensions
+// File paths
+const (
+	StateFilePath        = OttoStackDir + "/" + GeneratedDir + "/" + StateFileName
+	EnvGeneratedFilePath = OttoStackDir + "/" + GeneratedDir + "/" + EnvGeneratedFileName
+)
+
 var YAMLExtensions = []string{YMLFileExtension, YAMLFileExtension}
 
 // File and directory permissions
@@ -156,8 +162,7 @@ const (
 // GitignoreEntries contains default .gitignore entries for otto-stack projects
 var GitignoreEntries = []string{
 	"# " + AppNameTitle + " generated files",
-	EnvGeneratedFileName,
-	AppName + "/",
+	AppName + "/" + GeneratedDir + "/",
 	"*.log",
 	".DS_Store",
 }
