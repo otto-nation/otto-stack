@@ -78,13 +78,9 @@ func TestGenerateConfig(t *testing.T) {
 	})
 
 	t.Run("handles empty project name", func(t *testing.T) {
-		configBytes, err := GenerateConfig("", []string{"postgres"})
-		assert.NoError(t, err)
-
-		var config Config
-		err = yaml.Unmarshal(configBytes, &config)
-		assert.NoError(t, err)
-		assert.Equal(t, "", config.Project.Name)
+		_, err := GenerateConfig("", []string{"postgres"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "project name cannot be empty")
 	})
 
 	t.Run("handles empty services list", func(t *testing.T) {

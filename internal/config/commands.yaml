@@ -769,6 +769,11 @@ commands:
         type: "bool"
         description: "Show what would be cleaned without doing it"
         default: false
+      project:
+        short: "p"
+        type: "string"
+        description: "Clean specific project (if not specified, cleans current project)"
+        default: ""
     related_commands: ["down", "doctor"]
     tips:
       - "Use --dry-run first to see what will be removed"
@@ -1022,3 +1027,4 @@ icons:
     development: "🛠️"
     utility: "ℹ️"
     web: "🌐"
+    default: "📦"

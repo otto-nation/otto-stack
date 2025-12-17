@@ -37,9 +37,11 @@ func (h *CompletionHandler) GetRequiredFlags() []string {
 }
 
 func (h *CompletionHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	shell := ci.ShellType(args[0])
+	if err := h.ValidateArgs(args); err != nil {
+		return err
+	}
 
-	// Get the root command to generate completion for
+	shell := ci.ShellType(args[0])
 	rootCmd := cmd.Root()
 
 	switch shell {

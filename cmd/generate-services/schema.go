@@ -88,10 +88,10 @@ func analyzeField(name string, value any) *SchemaField {
 			if _, ok := v[0].(string); ok {
 				field.Type = "[]string"
 			} else {
-				field.Type = "[]map[string]interface{}"
+				field.Type = "[]map[string]any"
 			}
 		} else {
-			field.Type = "[]interface{}"
+			field.Type = "[]any"
 		}
 	case map[string]any:
 		field.Type = structType
@@ -99,7 +99,7 @@ func analyzeField(name string, value any) *SchemaField {
 			field.Children[k] = analyzeField(k, val)
 		}
 	default:
-		field.Type = "interface{}"
+		field.Type = "any"
 	}
 
 	return field

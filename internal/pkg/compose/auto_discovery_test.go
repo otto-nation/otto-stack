@@ -29,14 +29,14 @@ func TestAutoDiscoveryPatternMatching(t *testing.T) {
 		{
 			name:             "LocalStack pattern matching",
 			configFiles:      []string{"localstack-sqs.yml", "localstack-sns.yml"},
-			resolvedServices: []string{"localstack-core", "redis"},
+			resolvedServices: []string{"localstack", "redis"},
 			expectedInits:    []string{"localstack-init"},
-			description:      "Should detect localstack-init when localstack-*.yml files exist and localstack-core is resolved",
+			description:      "Should detect localstack-init when localstack-*.yml files exist and localstack is resolved",
 		},
 		{
 			name:             "Multiple service patterns",
 			configFiles:      []string{"localstack-s3.yml", "postgres-schemas.yml", "kubernetes-deployments.yml"},
-			resolvedServices: []string{"localstack-core", "postgres", "kubernetes"},
+			resolvedServices: []string{"localstack", "postgres", "kubernetes"},
 			expectedInits:    []string{"localstack-init", "postgres-init", "kubernetes-init"},
 			description:      "Should detect init containers for multiple services with config files",
 		},
@@ -50,28 +50,28 @@ func TestAutoDiscoveryPatternMatching(t *testing.T) {
 		{
 			name:             "Partial matches",
 			configFiles:      []string{"localstack-sqs.yml", "postgres-schemas.yml", "redis-config.yml"},
-			resolvedServices: []string{"localstack-core", "mongodb"},
+			resolvedServices: []string{"localstack", "mongodb"},
 			expectedInits:    []string{"localstack-init"},
 			description:      "Should only create init containers for services that are actually resolved",
 		},
 		{
 			name:             "No config files",
 			configFiles:      []string{},
-			resolvedServices: []string{"localstack-core", "postgres", "redis"},
+			resolvedServices: []string{"localstack", "postgres", "redis"},
 			expectedInits:    []string{},
 			description:      "Should not create init containers when no config files exist",
 		},
 		{
 			name:             "Non-pattern files ignored",
 			configFiles:      []string{"localstack-sqs.yml", "random-file.yml", "not-a-pattern.txt"},
-			resolvedServices: []string{"localstack-core"},
+			resolvedServices: []string{"localstack"},
 			expectedInits:    []string{"localstack-init"},
 			description:      "Should ignore files that don't match the {service}-{type}.yml pattern",
 		},
 		{
 			name:             "Duplicate prevention",
 			configFiles:      []string{"localstack-sqs.yml", "localstack-sns.yml", "localstack-s3.yml"},
-			resolvedServices: []string{"localstack-core"},
+			resolvedServices: []string{"localstack"},
 			expectedInits:    []string{"localstack-init"},
 			description:      "Should not create duplicate init containers for multiple configs of same service",
 		},
@@ -183,7 +183,7 @@ func TestAutoDiscoveryFileSystem(t *testing.T) {
 	}
 
 	// Test discovery with services that should match
-	resolvedServices := []string{"localstack-core", "postgres"}
+	resolvedServices := []string{"localstack", "postgres"}
 	initServices := generator.discoverInitServicesForTesting(resolvedServices, tempDir)
 
 	expectedInits := []string{"localstack-init", "postgres-init"}
@@ -220,7 +220,7 @@ func TestAutoDiscoveryNonExistentDirectory(t *testing.T) {
 
 	// Use a non-existent directory path for testing
 	nonExistentPath := filepath.Join(tempDir, "non-existent-configs")
-	initServices := generator.discoverInitServicesForTesting([]string{"localstack-core", "postgres"}, nonExistentPath)
+	initServices := generator.discoverInitServicesForTesting([]string{"localstack", "postgres"}, nonExistentPath)
 
 	if len(initServices) != 0 {
 		t.Errorf("Expected no init services when directory doesn't exist, got %v", initServices)

@@ -45,10 +45,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	defer cleanup()
 
 	// Determine services to check
-	serviceNames := args
-	if len(serviceNames) == 0 {
-		serviceNames = setup.Config.Stack.Enabled
-	}
+	serviceNames := h.resolveServiceNames(args, setup.Config.Stack.Enabled)
 
 	// Apply same service resolution as up command
 	manager, err := services.New()
@@ -123,4 +120,12 @@ func filterInitContainers(manager *services.Manager, serviceNames []string) []st
 		}
 	}
 	return filtered
+}
+
+// resolveServiceNames determines which services to check status for
+func (h *StatusHandler) resolveServiceNames(args, enabledServices []string) []string {
+	if len(args) > 0 {
+		return args
+	}
+	return enabledServices
 }

@@ -15,45 +15,83 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	// Table formatting constants
+	TableWidthCompact  = 42
+	TableWidthStandard = 75
+	TableWidthCatalog  = 80
+	TableWidthHealth   = 90
+
+	// Column widths
+	ColWidthService        = 15
+	ColWidthServiceCompact = 20
+	ColWidthState          = 10
+	ColWidthHealth         = 10
+	ColWidthUptime         = 8
+	ColWidthPorts          = 12
+	ColWidthUpdated        = 10
+	ColWidthCategory       = 15
+	ColWidthDescription    = 20
+	ColWidthCheck          = 25
+	ColWidthMessage        = 40
+
+	// Duration formatting
+	SecondsPerMinute = 60
+	MinutesPerHour   = 60
+	HoursPerDay      = 24
+
+	// Port display limits
+	MaxPortsDisplay = 12
+)
+
+// FormatHandler defines the interface for format-specific handlers
+type FormatHandler interface {
+	Handle(data any) error
+}
+
 // Formatter handles all output formatting
 type Formatter struct {
-	writer io.Writer
-	output base.Output
+	writer   io.Writer
+	output   base.Output
+	handlers map[string]FormatHandler
 }
 
 // New creates a new formatter
 func New(writer io.Writer, output base.Output) *Formatter {
-	return &Formatter{
+	f := &Formatter{
 		writer: writer,
 		output: output,
+	}
+	f.initHandlers()
+	return f
+}
+
+// initHandlers initializes format handlers
+func (f *Formatter) initHandlers() {
+	f.handlers = map[string]FormatHandler{
+		pkgServices.ServiceCatalogJSONFormat: &JSONHandler{writer: f.writer},
+		pkgServices.ServiceCatalogYAMLFormat: &YAMLHandler{writer: f.writer},
 	}
 }
 
 // FormatStatus formats service status information
 func (f *Formatter) FormatStatus(services []ServiceStatus, options Options) error {
-	switch options.Format {
-	case pkgServices.ServiceCatalogJSONFormat:
-		return f.writeJSON(map[string]any{
+	if handler, exists := f.handlers[options.Format]; exists {
+		return handler.Handle(map[string]any{
 			"services": services,
 			"summary":  f.createSummary(services),
 		})
-	case pkgServices.ServiceCatalogYAMLFormat:
-		return f.writeYAML(map[string]any{
-			"services": services,
-			"summary":  f.createSummary(services),
-		})
-	default:
-		return f.formatStatusTable(services, options)
 	}
+	return f.formatStatusTable(services, options)
 }
 
 // FormatServiceCatalog formats service catalog information
 func (f *Formatter) FormatServiceCatalog(catalog ServiceCatalog, options Options) error {
+	if handler, exists := f.handlers[options.Format]; exists {
+		return handler.Handle(catalog)
+	}
+
 	switch options.Format {
-	case pkgServices.ServiceCatalogJSONFormat:
-		return f.writeJSON(catalog)
-	case pkgServices.ServiceCatalogYAMLFormat:
-		return f.writeYAML(catalog)
 	case pkgServices.ServiceCatalogTableFormat:
 		return f.formatCatalogTable(catalog)
 	default:
@@ -63,38 +101,48 @@ func (f *Formatter) FormatServiceCatalog(catalog ServiceCatalog, options Options
 
 // FormatValidation formats validation results
 func (f *Formatter) FormatValidation(result ValidationResult, options Options) error {
-	switch options.Format {
-	case pkgServices.ServiceCatalogJSONFormat:
-		return f.writeJSON(result)
-	case pkgServices.ServiceCatalogYAMLFormat:
-		return f.writeYAML(result)
-	default:
-		return f.formatValidationTable(result)
+	if handler, exists := f.handlers[options.Format]; exists {
+		return handler.Handle(result)
 	}
+	return f.formatValidationTable(result)
 }
 
 // FormatVersion formats version information
 func (f *Formatter) FormatVersion(info VersionInfo, options Options) error {
-	switch options.Format {
-	case pkgServices.ServiceCatalogJSONFormat:
-		return f.writeJSON(info)
-	case pkgServices.ServiceCatalogYAMLFormat:
-		return f.writeYAML(info)
-	default:
-		return f.formatVersionTable(info, options)
+	if handler, exists := f.handlers[options.Format]; exists {
+		return handler.Handle(info)
 	}
+	return f.formatVersionTable(info, options)
 }
 
 // FormatHealth formats health check results
 func (f *Formatter) FormatHealth(report HealthReport, options Options) error {
-	switch options.Format {
-	case pkgServices.ServiceCatalogJSONFormat:
-		return f.writeJSON(report)
-	case pkgServices.ServiceCatalogYAMLFormat:
-		return f.writeYAML(report)
-	default:
-		return f.formatHealthTable(report, options)
+	if handler, exists := f.handlers[options.Format]; exists {
+		return handler.Handle(report)
 	}
+	return f.formatHealthTable(report, options)
+}
+
+// JSONHandler handles JSON formatting
+type JSONHandler struct {
+	writer io.Writer
+}
+
+func (h *JSONHandler) Handle(data any) error {
+	encoder := json.NewEncoder(h.writer)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(data)
+}
+
+// YAMLHandler handles YAML formatting
+type YAMLHandler struct {
+	writer io.Writer
+}
+
+func (h *YAMLHandler) Handle(data any) error {
+	encoder := yaml.NewEncoder(h.writer)
+	defer func() { _ = encoder.Close() }()
+	return encoder.Encode(data)
 }
 
 // Table formatting methods
@@ -105,30 +153,42 @@ func (f *Formatter) formatStatusTable(services []ServiceStatus, options Options)
 	}
 
 	if options.Compact {
-		_, _ = fmt.Fprintf(f.writer, "%-20s %-10s %-12s\n",
-			ui.StatusHeaderService, ui.StatusHeaderState, ui.StatusHeaderHealth)
-		_, _ = fmt.Fprintln(f.writer, strings.Repeat(ui.StatusSeparator, ui.TableWidth42))
-		for _, service := range services {
-			_, _ = fmt.Fprintf(f.writer, "%-20s %-10s %-12s\n",
-				service.Name, f.getStateIcon(service.State)+" "+service.State,
-				f.getHealthIcon(service.Health)+" "+service.Health)
-		}
-		return nil
+		return f.formatCompactStatusTable(services)
 	}
+	return f.formatFullStatusTable(services, options)
+}
 
-	_, _ = fmt.Fprintf(f.writer, "%-15s %-10s %-10s %-8s %-12s %-10s\n",
-		ui.StatusHeaderService, ui.StatusHeaderState, ui.StatusHeaderHealth,
-		"UPTIME", "PORTS", "UPDATED")
-	_, _ = fmt.Fprintln(f.writer, strings.Repeat(ui.StatusSeparator, ui.TableWidth75))
+func (f *Formatter) formatCompactStatusTable(services []ServiceStatus) error {
+	f.writeTableHeader([]string{ui.StatusHeaderService, ui.StatusHeaderState, ui.StatusHeaderHealth},
+		[]int{ColWidthServiceCompact, ColWidthState, ColWidthHealth})
+	f.writeTableSeparator(TableWidthCompact)
 
 	for _, service := range services {
-		_, _ = fmt.Fprintf(f.writer, "%-15s %-10s %-10s %-8s %-12s %-10s\n",
+		f.writeTableRow([]string{
 			service.Name,
-			f.getStateIcon(service.State)+" "+service.State,
-			f.getHealthIcon(service.Health)+" "+service.Health,
+			f.getStateIcon(service.State) + " " + service.State,
+			f.getHealthIcon(service.Health) + " " + service.Health,
+		}, []int{ColWidthServiceCompact, ColWidthState, ColWidthHealth})
+	}
+	return nil
+}
+
+func (f *Formatter) formatFullStatusTable(services []ServiceStatus, options Options) error {
+	headers := []string{ui.StatusHeaderService, ui.StatusHeaderState, ui.StatusHeaderHealth, "UPTIME", "PORTS", "UPDATED"}
+	widths := []int{ColWidthService, ColWidthState, ColWidthHealth, ColWidthUptime, ColWidthPorts, ColWidthUpdated}
+
+	f.writeTableHeader(headers, widths)
+	f.writeTableSeparator(TableWidthStandard)
+
+	for _, service := range services {
+		f.writeTableRow([]string{
+			service.Name,
+			f.getStateIcon(service.State) + " " + service.State,
+			f.getHealthIcon(service.Health) + " " + service.Health,
 			f.formatDuration(service.Uptime),
 			f.formatPorts(service.Ports),
-			service.UpdatedAt.Format("15:04:05"))
+			service.UpdatedAt.Format("15:04:05"),
+		}, widths)
 	}
 
 	if !options.Quiet {
@@ -137,19 +197,39 @@ func (f *Formatter) formatStatusTable(services []ServiceStatus, options Options)
 	return nil
 }
 
+func (f *Formatter) writeTableHeader(headers []string, widths []int) {
+	for i, header := range headers {
+		_, _ = fmt.Fprintf(f.writer, "%-*s ", widths[i], header)
+	}
+	_, _ = fmt.Fprintln(f.writer)
+}
+
+func (f *Formatter) writeTableRow(values []string, widths []int) {
+	for i, value := range values {
+		_, _ = fmt.Fprintf(f.writer, "%-*s ", widths[i], value)
+	}
+	_, _ = fmt.Fprintln(f.writer)
+}
+
+func (f *Formatter) writeTableSeparator(width int) {
+	_, _ = fmt.Fprintln(f.writer, strings.Repeat(ui.StatusSeparator, width))
+}
+
 func (f *Formatter) formatCatalogTable(catalog ServiceCatalog) error {
 	if catalog.Total == 0 {
 		f.output.Info(core.MsgServices_no_description)
 		return nil
 	}
 
-	_, _ = fmt.Fprintf(f.writer, "%-15s %-20s %s\n", "CATEGORY", ui.StatusHeaderService, "DESCRIPTION")
-	_, _ = fmt.Fprintln(f.writer, strings.Repeat(ui.StatusSeparator, ui.TableWidth80))
+	headers := []string{"CATEGORY", ui.StatusHeaderService, "DESCRIPTION"}
+	widths := []int{ColWidthCategory, ColWidthDescription, 0} // Last column flexible
+
+	f.writeTableHeader(headers, widths)
+	f.writeTableSeparator(TableWidthCatalog)
 
 	for categoryName, services := range catalog.Categories {
 		for _, service := range services {
-			_, _ = fmt.Fprintf(f.writer, "%-15s %-20s %s\n",
-				categoryName, service.Name, service.Description)
+			f.writeTableRow([]string{categoryName, service.Name, service.Description}, widths)
 		}
 	}
 	return nil
@@ -168,7 +248,7 @@ func (f *Formatter) formatCatalogGroup(catalog ServiceCatalog) error {
 			continue
 		}
 
-		icon := "📦"
+		icon := ui.IconBox
 		if displayInfo, exists := pkgServices.CategoryDisplayInfo[categoryName]; exists {
 			icon = displayInfo.Icon
 		}
@@ -255,14 +335,20 @@ func (f *Formatter) formatHealthTable(report HealthReport, options Options) erro
 	}
 
 	f.output.Header(core.MsgDoctor_health_check_header, "System")
-	_, _ = fmt.Fprintf(f.writer, "%-25s %-10s %-15s %-40s\n",
-		"CHECK", "STATUS", "CATEGORY", "MESSAGE")
-	_, _ = fmt.Fprintln(f.writer, strings.Repeat(ui.StatusSeparator, ui.TableWidth90))
+	headers := []string{"CHECK", "STATUS", "CATEGORY", "MESSAGE"}
+	widths := []int{ColWidthCheck, ColWidthState, ColWidthCategory, ColWidthMessage}
+
+	f.writeTableHeader(headers, widths)
+	f.writeTableSeparator(TableWidthHealth)
 
 	for _, check := range report.Checks {
 		icon := f.getHealthIcon(check.Status)
-		_, _ = fmt.Fprintf(f.writer, "%-25s %-10s %-15s %-40s\n",
-			check.Name, icon+" "+check.Status, check.Category, check.Message)
+		f.writeTableRow([]string{
+			check.Name,
+			icon + " " + check.Status,
+			check.Category,
+			check.Message,
+		}, widths)
 
 		if options.Verbose && check.Suggestion != "" {
 			_, _ = fmt.Fprintf(f.writer, "   💡 %s\n", check.Suggestion)
@@ -272,18 +358,6 @@ func (f *Formatter) formatHealthTable(report HealthReport, options Options) erro
 }
 
 // Helper methods
-func (f *Formatter) writeJSON(data any) error {
-	encoder := json.NewEncoder(f.writer)
-	encoder.SetIndent("", "  ")
-	return encoder.Encode(data)
-}
-
-func (f *Formatter) writeYAML(data any) error {
-	encoder := yaml.NewEncoder(f.writer)
-	defer func() { _ = encoder.Close() }()
-	return encoder.Encode(data)
-}
-
 func (f *Formatter) createSummary(services []ServiceStatus) map[string]int {
 	summary := map[string]int{pkgServices.SummaryTotal: len(services)}
 	for _, service := range services {
@@ -298,22 +372,28 @@ func (f *Formatter) createSummary(services []ServiceStatus) map[string]int {
 }
 
 func (f *Formatter) formatDuration(d time.Duration) string {
-	if d < time.Minute {
-		return fmt.Sprintf("%ds", int(d.Seconds()))
+	seconds := int(d.Seconds())
+	if seconds < SecondsPerMinute {
+		return fmt.Sprintf("%ds", seconds)
 	}
-	if d < time.Hour {
-		return fmt.Sprintf("%dm", int(d.Minutes()))
+
+	minutes := seconds / SecondsPerMinute
+	if minutes < MinutesPerHour {
+		return fmt.Sprintf("%dm", minutes)
 	}
-	if d < core.HoursPerDay*time.Hour {
-		return fmt.Sprintf("%dh", int(d.Hours()))
+
+	hours := minutes / MinutesPerHour
+	if hours < HoursPerDay {
+		return fmt.Sprintf("%dh", hours)
 	}
-	return fmt.Sprintf("%dd", int(d.Hours()/core.HoursPerDay))
+
+	return fmt.Sprintf("%dd", hours/HoursPerDay)
 }
 
 func (f *Formatter) formatPorts(ports []string) string {
 	joined := strings.Join(ports, ",")
-	if len(joined) > core.MaxCategoryCommands {
-		return joined[:core.MaxCategoryCommands] + "..."
+	if len(joined) > MaxPortsDisplay {
+		return joined[:MaxPortsDisplay] + "..."
 	}
 	return joined
 }

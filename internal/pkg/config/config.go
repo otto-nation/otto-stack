@@ -4,10 +4,29 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/core"
 	"gopkg.in/yaml.v3"
+)
+
+const (
+	// Default configuration values
+	DefaultProjectType = "docker"
+
+	// Error message templates
+	ErrConfigNotFound     = "config file not found: %s"
+	ErrConfigParse        = "failed to parse config: %w"
+	ErrLocalConfigParse   = "failed to parse local config: %w"
+	ErrServiceConfigParse = "failed to parse %s config: %w"
+	ErrServiceNotFound    = "%s config not found for: %s"
+	ErrCommandConfigParse = "failed to parse commands config: %w"
+	ErrLoadBaseConfig     = "failed to load base config: %w"
+
+	// Config types for error messages
+	ConfigTypeService      = "service"
+	ConfigTypeLocalService = "local service"
 )
 
 // CommandConfig represents command configuration (minimal for generators)
@@ -39,39 +58,37 @@ type FlagConfig struct {
 
 // LoadConfig loads otto-stack configuration with local overrides
 func LoadConfig() (*Config, error) {
-	// Load base config
 	baseConfig, err := loadBaseConfig()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load base config: %w", err)
+		return nil, fmt.Errorf(ErrLoadBaseConfig, err)
 	}
 
-	// Load local overrides if they exist
 	localConfig, err := loadLocalConfig()
 	if err != nil {
 		// Local config is optional, just use base
 		return baseConfig, nil
 	}
 
-	// Merge configs (local overrides base)
 	return mergeConfigs(baseConfig, localConfig), nil
 }
 
 // LoadServiceConfig loads configuration for a specific service
 func LoadServiceConfig(serviceName string) (map[string]any, error) {
-	// Load base service config
+	if serviceName == "" {
+		return nil, fmt.Errorf("service name cannot be empty")
+	}
+
 	baseServiceConfig, err := loadServiceConfigFile(serviceName, false)
 	if err != nil {
 		return nil, err
 	}
 
-	// Load local service config if it exists
 	localServiceConfig, err := loadServiceConfigFile(serviceName, true)
 	if err != nil {
 		// Local service config is optional
 		return baseServiceConfig, nil
 	}
 
-	// Merge service configs (local overrides base)
 	return mergeServiceConfigs(baseServiceConfig, localServiceConfig), nil
 }
 
@@ -79,7 +96,7 @@ func LoadServiceConfig(serviceName string) (map[string]any, error) {
 func LoadCommandConfig() (map[string]any, error) {
 	var commandConfig map[string]any
 	if err := yaml.Unmarshal(config.EmbeddedCommandsYAML, &commandConfig); err != nil {
-		return nil, fmt.Errorf("failed to parse commands config: %w", err)
+		return nil, fmt.Errorf(ErrCommandConfigParse, err)
 	}
 	return commandConfig, nil
 }
@@ -88,7 +105,7 @@ func LoadCommandConfig() (map[string]any, error) {
 func LoadCommandConfigStruct() (*CommandConfig, error) {
 	var commandConfig CommandConfig
 	if err := yaml.Unmarshal(config.EmbeddedCommandsYAML, &commandConfig); err != nil {
-		return nil, fmt.Errorf("failed to parse commands config: %w", err)
+		return nil, fmt.Errorf(ErrCommandConfigParse, err)
 	}
 	return &commandConfig, nil
 }
@@ -100,17 +117,20 @@ func GenerateConfig(projectName string, services []string) ([]byte, error) {
 
 // GenerateConfigWithValidation creates a new otto-stack configuration file with validation options
 func GenerateConfigWithValidation(projectName string, services []string, validationOptions map[string]bool) ([]byte, error) {
+	if projectName == "" {
+		return nil, fmt.Errorf("project name cannot be empty")
+	}
+
 	config := Config{
 		Project: ProjectConfig{
 			Name: projectName,
-			Type: "docker", // default type
+			Type: DefaultProjectType,
 		},
 		Stack: StackConfig{
 			Enabled: services,
 		},
 	}
 
-	// Add validation options if provided
 	if validationOptions != nil {
 		config.Validation = &ValidationConfig{
 			Options: validationOptions,
@@ -120,18 +140,33 @@ func GenerateConfigWithValidation(projectName string, services []string, validat
 	return yaml.Marshal(config)
 }
 
+// getConfigPath returns the path to the main config file
+func getConfigPath() string {
+	return filepath.Join(core.OttoStackDir, core.ConfigFileName)
+}
+
+// getLocalConfigPath returns the path to the local config file
+func getLocalConfigPath() string {
+	return filepath.Join(core.OttoStackDir, core.LocalConfigFileName)
+}
+
+// getServiceConfigDir returns the service configs directory path
+func getServiceConfigDir() string {
+	return filepath.Join(core.OttoStackDir, core.ServiceConfigsDir)
+}
+
 // loadBaseConfig loads the main configuration file
 func loadBaseConfig() (*Config, error) {
-	configPath := fmt.Sprintf("%s/%s", core.OttoStackDir, core.ConfigFileName)
+	configPath := getConfigPath()
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("config file not found: %s", configPath)
+		return nil, fmt.Errorf(ErrConfigNotFound, configPath)
 	}
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse config: %w", err)
+		return nil, fmt.Errorf(ErrConfigParse, err)
 	}
 
 	return &config, nil
@@ -139,7 +174,7 @@ func loadBaseConfig() (*Config, error) {
 
 // loadLocalConfig loads local configuration overrides
 func loadLocalConfig() (*Config, error) {
-	configPath := fmt.Sprintf("%s/%s", core.OttoStackDir, core.LocalConfigFileName)
+	configPath := getLocalConfigPath()
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
@@ -148,7 +183,7 @@ func loadLocalConfig() (*Config, error) {
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse local config: %w", err)
+		return nil, fmt.Errorf(ErrLocalConfigParse, err)
 	}
 
 	return &config, nil
@@ -173,20 +208,18 @@ func mergeConfigs(base, local *Config) *Config {
 
 // loadServiceConfigFile loads service configuration (base or local)
 func loadServiceConfigFile(serviceName string, isLocal bool) (map[string]any, error) {
-	configDir := fmt.Sprintf("%s/%s", core.OttoStackDir, core.ServiceConfigsDir)
+	configDir := getServiceConfigDir()
 
-	// Build base filename and config type
 	filename := serviceName
-	configType := "service"
+	configType := ConfigTypeService
 	if isLocal {
 		filename += core.LocalFileExtension
-		configType = "local service"
+		configType = ConfigTypeLocalService
 	}
 
-	// Find the config file with either .yml or .yaml extension
 	configPath, err := core.FindYAMLFile(configDir, filename)
 	if err != nil {
-		return nil, fmt.Errorf("%s config not found for: %s", configType, serviceName)
+		return nil, fmt.Errorf(ErrServiceNotFound, configType, serviceName)
 	}
 
 	data, err := os.ReadFile(configPath)
@@ -196,7 +229,7 @@ func loadServiceConfigFile(serviceName string, isLocal bool) (map[string]any, er
 
 	var config map[string]any
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse %s config: %w", configType, err)
+		return nil, fmt.Errorf(ErrServiceConfigParse, configType, err)
 	}
 
 	return config, nil

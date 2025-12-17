@@ -21,34 +21,24 @@ func NewServicesHandler() *ServicesHandler {
 
 // Handle executes the services command
 func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Parse all flags with validation - single line!
 	flags, err := core.ParseServicesFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	// Load services by category
 	serviceUtils := services.NewServiceUtils()
 	categorizedServices, err := serviceUtils.GetServicesByCategory()
 	if err != nil {
 		return fmt.Errorf(core.MsgErrors_failed_load_services, err)
 	}
 
-	// Build service catalog
 	catalog := h.buildServiceCatalog(categorizedServices)
-
-	// Create formatter and display
-	formatter := display.New(cmd.OutOrStdout(), base.Output)
-	options := display.Options{
-		Format: flags.Format,
-	}
-
-	// Filter by category if specified
 	if flags.Category != "" {
 		catalog = display.FilterCatalogByCategory(catalog, flags.Category)
 	}
 
-	return formatter.FormatServiceCatalog(catalog, options)
+	formatter := display.New(cmd.OutOrStdout(), base.Output)
+	return formatter.FormatServiceCatalog(catalog, display.Options{Format: flags.Format})
 }
 
 // buildServiceCatalog converts service data to catalog format

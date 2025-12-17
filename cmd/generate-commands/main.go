@@ -15,6 +15,7 @@ const (
 	ApatersTemplateFile  = "adapters.tmpl"
 	CommandsTemplateFile = "commands.tmpl"
 	GeneratedFilePath    = "internal/pkg/cli/commands_generated.go"
+	dirPermissions       = 0750
 )
 
 type templateData struct {
@@ -70,7 +71,7 @@ func generateCommands(commandConfig pkgConfig.CommandConfig) error {
 	file, err := os.Create(GeneratedFilePath)
 	if err != nil {
 		// Try creating the directory and retry
-		if err := os.MkdirAll(filepath.Dir(GeneratedFilePath), 0750); err != nil {
+		if err := os.MkdirAll(filepath.Dir(GeneratedFilePath), dirPermissions); err != nil {
 			return fmt.Errorf("failed to create directory: %w", err)
 		}
 		file, err = os.Create(GeneratedFilePath)

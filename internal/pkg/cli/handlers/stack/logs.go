@@ -22,9 +22,6 @@ func NewLogsHandler() *LogsHandler {
 
 // Handle executes the logs command
 func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Check initialization first
-
-	// Get CI-friendly flags
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
@@ -37,35 +34,39 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 	defer cleanup()
 
-	// Parse all flags with validation - single line!
 	flags, err := core.ParseLogsFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	// Determine services
-	serviceNames := args
-	if len(serviceNames) == 0 {
-		serviceNames = setup.Config.Stack.Enabled
-	}
-
-	// Apply service resolution
-	serviceUtils := services.NewServiceUtils()
-	resolvedServices, err := serviceUtils.ResolveServices(serviceNames)
+	serviceNames := h.resolveServiceNames(args, setup.Config.Stack.Enabled)
+	resolvedServices, err := h.resolveServices(serviceNames)
 	if err != nil {
 		ci.HandleError(ciFlags, fmt.Errorf("failed to resolve services: %w", err))
 		return nil
 	}
 
-	// Create log options - clean usage with no repetitive error handling
 	options := docker.LogOptions{
 		Follow:     flags.Follow,
 		Timestamps: flags.Timestamps,
 		Tail:       flags.Tail,
 	}
 
-	// Get logs using Docker client
 	return setup.DockerClient.ComposeLogs(ctx, setup.Config.Project.Name, resolvedServices, options)
+}
+
+// resolveServiceNames determines which services to get logs for
+func (h *LogsHandler) resolveServiceNames(args, enabledServices []string) []string {
+	if len(args) > 0 {
+		return args
+	}
+	return enabledServices
+}
+
+// resolveServices resolves service names using service utils
+func (h *LogsHandler) resolveServices(serviceNames []string) ([]string, error) {
+	serviceUtils := services.NewServiceUtils()
+	return serviceUtils.ResolveServices(serviceNames)
 }
 
 // ValidateArgs validates the command arguments

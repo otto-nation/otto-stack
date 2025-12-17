@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -63,7 +64,14 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 
 	if ciFlags.DryRun {
 		base.Output.Info("%s", core.MsgDry_run_showing_what_would_happen)
-		base.Output.Info(core.MsgDry_run_would_start_services, fmt.Sprintf("%v", args))
+
+		// Determine services that would be started
+		serviceNames := args
+		if len(serviceNames) == 0 {
+			serviceNames = setup.Config.Stack.Enabled
+		}
+
+		base.Output.Info(core.MsgDry_run_would_start_services, fmt.Sprintf("%v", serviceNames))
 		base.Output.Info(core.MsgDry_run_would_use_config, filepath.Join(core.OttoStackDir, core.ConfigFileName))
 		return nil
 	}
@@ -133,7 +141,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		return fmt.Errorf(core.MsgStack_failed_create_generator, err)
 	}
 
-	composeFile, err := generator.Generate(serviceNames)
+	composeData, err := generator.GenerateYAML(serviceNames)
 	if err != nil {
 		return fmt.Errorf(core.MsgStack_failed_generate_compose, err)
 	}
@@ -141,12 +149,6 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	// Ensure otto-stack directory exists
 	if err := os.MkdirAll(core.OttoStackDir, core.PermReadWriteExec); err != nil {
 		return fmt.Errorf(core.MsgStack_failed_create_directory, err)
-	}
-
-	// Write compose file
-	composeData, err := yaml.Marshal(composeFile)
-	if err != nil {
-		return fmt.Errorf(core.MsgStack_failed_marshal_compose, err)
 	}
 
 	composePath := docker.DockerComposeFilePath
@@ -378,10 +380,12 @@ func (h *UpHandler) hasValidConfiguration(configPath, targetService string) bool
 
 	// Check based on service type
 	switch targetService {
-	case "localstack":
+	case services.ServiceLocalstack:
 		return h.hasValidLocalStackConfig(config)
 	case services.ServicePostgres:
 		return h.hasValidPostgresConfig(config)
+	case services.ServiceKafka:
+		return h.hasValidKafkaConfig(config)
 	}
 
 	return false
@@ -420,6 +424,14 @@ func (h *UpHandler) hasValidPostgresConfig(config map[string]any) bool {
 	return false
 }
 
+// hasValidKafkaConfig checks for valid Kafka configuration
+func (h *UpHandler) hasValidKafkaConfig(config map[string]any) bool {
+	if topics, exists := config["topics"]; exists && h.isValidArray(topics) {
+		return true
+	}
+	return false
+}
+
 // parseTimeoutSeconds parses timeout string or returns default
 func (h *UpHandler) parseTimeoutSeconds(timeoutStr string) int {
 	if timeoutStr == "" {
@@ -447,11 +459,7 @@ func (h *UpHandler) handleConfigChange(ctx context.Context, setup *CoreSetup, ol
 
 // addUniqueInitService adds init service to list if not empty and not already present
 func (h *UpHandler) addUniqueInitService(initServices *[]string, initService string) {
-	if initService == "" {
-		return
-	}
-
-	if !slices.Contains(*initServices, initService) {
+	if initService != "" && !slices.Contains(*initServices, initService) {
 		*initServices = append(*initServices, initService)
 	}
 }
@@ -478,37 +486,77 @@ func (h *UpHandler) createInitContainerConfig(targetService string, setup *CoreS
 	cwd, _ := os.Getwd()
 	configPath := filepath.Join(cwd, core.OttoStackDir, core.ServiceConfigsDir)
 
-	// Process script to replace $$ with $ for direct docker run
+	// Use the shell script from embedded.go
 	processedScript := strings.ReplaceAll(scripts.GenericInitScript, "$$", "$")
-	// Add curl and AWS CLI installation at the beginning of the script
-	processedScript = "apk add --no-cache curl wget aws-cli > /dev/null 2>&1\n" + processedScript
 
+	// Load service configuration from YAML
+	manager, err := services.New()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create service manager: %v", err))
+	}
+
+	service, err := manager.GetService(targetService)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to load service configuration for %s: %v", targetService, err))
+	}
+
+	// Build configuration from service YAML
 	config := docker.InitContainerConfig{
-		Image:   "alpine:latest",
+		Image:   services.ImageLocalstack, // Default, will be overridden based on service
 		Command: []string{"sh", "-c", processedScript},
 		Environment: map[string]string{
-			"AWS_ACCESS_KEY_ID":     "test",
-			"AWS_DEFAULT_REGION":    "us-east-1",
-			"AWS_SECRET_ACCESS_KEY": "test",
-			"INIT_SERVICE_NAME":     targetService,
+			services.InitServiceName: targetService,
+			services.InitConfigDir:   "/config",
 		},
 		Volumes: []string{
 			fmt.Sprintf("%s:/config", configPath),
 		},
 		WorkingDir: "/",
-		Networks:   []string{fmt.Sprintf("%s-network", setup.Config.Project.Name)},
+		Networks:   []string{setup.Config.Project.Name + services.NetworkNameSuffix},
 	}
 
-	// Customize based on service type
+	// Extract environment variables from service YAML
+	maps.Copy(config.Environment, service.Environment)
+
+	// Set service endpoint URL based on service configuration
+	if service.Service.Connection != nil && service.Service.Connection.DefaultPort > 0 {
+		config.Environment[services.InitServiceEndpointURL] = fmt.Sprintf("http://%s:%d", targetService, service.Service.Connection.DefaultPort)
+	}
+
+	// Customize based on service type using service YAML data
 	switch targetService {
-	case "localstack":
-		config.Environment["SERVICE_ENDPOINT_URL"] = "http://localstack-core:4566"
+	case services.ServiceLocalstack:
+		config.Environment[services.InitServiceEndpointURL] = fmt.Sprintf("http://localhost:%d", services.PortLocalstack)
 	case services.ServicePostgres:
-		config.Image = "postgres:15-alpine"
-		config.Environment["PGHOST"] = services.ServicePostgres
-		config.Environment["PGUSER"] = services.ServicePostgres
-		config.Environment["PGPASSWORD"] = "password"
-		config.Environment["SERVICE_ENDPOINT_URL"] = "postgres://postgres:password@postgres:5432"
+		// Use postgres image from service YAML
+		if service.Container.Image != "" {
+			config.Image = service.Container.Image
+		}
+
+		// Use PGHOST key from postgres service definition
+		config.Environment[services.EnvPostgresPGHOST] = targetService
+
+		// Build connection URL from service data using postgres service format
+		user := config.Environment[services.EnvPostgresPOSTGRES_USER]
+		password := config.Environment[services.EnvPostgresPOSTGRES_PASSWORD]
+		database := config.Environment[services.EnvPostgresPOSTGRES_DB]
+		port := fmt.Sprintf("%d", services.PortPostgres)
+		if service.Service.Connection != nil && service.Service.Connection.DefaultPort > 0 {
+			port = fmt.Sprintf("%d", service.Service.Connection.DefaultPort)
+		}
+		config.Environment[services.InitServiceEndpointURL] = fmt.Sprintf("postgresql://%s:%s@%s:%s/%s", user, password, targetService, port, database)
+	case services.ServiceKafka:
+		// Use kafka image from service YAML
+		if service.Container.Image != "" {
+			config.Image = service.Container.Image
+		}
+
+		// Set kafka endpoint
+		port := fmt.Sprintf("%d", services.PortKafkaBroker)
+		if service.Service.Connection != nil && service.Service.Connection.DefaultPort > 0 {
+			port = fmt.Sprintf("%d", service.Service.Connection.DefaultPort)
+		}
+		config.Environment[services.InitServiceEndpointURL] = fmt.Sprintf("%s:%s", targetService, port)
 	}
 
 	return config

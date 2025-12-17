@@ -64,6 +64,24 @@ const (
 	ComposeFieldVolumes     = "volumes"
 	ComposeFieldRestart     = "restart"
 	ComposeFieldCommand     = "command"
+	ComposeFieldMemLimit    = "mem_limit"
+	ComposeFieldHealthCheck = "healthcheck"
+	ComposeFieldLabels      = "labels"
+)
+
+// Health check field names
+const (
+	HealthCheckFieldTest        = "test"
+	HealthCheckFieldInterval    = "interval"
+	HealthCheckFieldTimeout     = "timeout"
+	HealthCheckFieldRetries     = "retries"
+	HealthCheckFieldStartPeriod = "start_period"
+)
+
+// Docker volume and protocol constants
+const (
+	VolumeReadOnlySuffix = ":ro"
+	ProtocolSeparator    = "/"
 )
 
 // State constants
@@ -81,4 +99,18 @@ const (
 	HealthUnhealthy = "unhealthy"
 	HealthStarting  = "starting"
 	HealthNone      = "none"
+)
+
+// Otto Stack labels
+const (
+	LabelOttoManaged     = "io.otto-stack.managed"
+	LabelOttoProject     = "io.otto-stack.project"
+	LabelOttoService     = "io.otto-stack.service"
+	LabelOttoVersion     = "io.otto-stack.version"
+	LabelOttoSharingMode = "io.otto-stack.sharing-mode"
+)
+
+// Network names
+const (
+	DefaultNetworkName = "default"
 )

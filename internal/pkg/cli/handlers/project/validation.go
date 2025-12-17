@@ -21,17 +21,17 @@ func (h *InitHandler) validateProjectName(name string) error {
 		return fmt.Errorf("%s", core.MsgValidation_project_name_too_long)
 	}
 
+	// Cannot start with hyphen or underscore
+	if name[0] == '-' || name[0] == '_' {
+		return fmt.Errorf("%s", core.MsgValidation_project_name_invalid_start)
+	}
+
 	// Check for valid characters (alphanumeric, hyphens, underscores)
 	for _, char := range name {
 		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') &&
 			(char < '0' || char > '9') && char != '-' && char != '_' {
 			return fmt.Errorf("%s", core.MsgValidation_project_name_invalid_chars)
 		}
-	}
-
-	// Cannot start with hyphen or underscore
-	if name[0] == '-' || name[0] == '_' {
-		return fmt.Errorf("%s", core.MsgValidation_project_name_invalid_start)
 	}
 
 	return nil

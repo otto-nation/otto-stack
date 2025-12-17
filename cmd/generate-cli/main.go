@@ -119,6 +119,10 @@ func loadCommandConfig() (map[string]any, error) {
 	return config, err
 }
 
+const (
+	dirPermissions = 0750
+)
+
 func generateCoreConstants() error {
 	rawConfig, err := loadCommandConfig()
 	if err != nil {
@@ -137,7 +141,7 @@ func generateCoreConstants() error {
 	file, err := os.Create(CoreGeneratedPath)
 	if err != nil {
 		// Try creating the directory and retry
-		if err := os.MkdirAll(filepath.Dir(CoreGeneratedPath), 0750); err != nil {
+		if err := os.MkdirAll(filepath.Dir(CoreGeneratedPath), dirPermissions); err != nil {
 			return fmt.Errorf("failed to create directory: %w", err)
 		}
 		file, err = os.Create(CoreGeneratedPath)

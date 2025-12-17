@@ -34,15 +34,12 @@ func (h *DoctorHandler) GetRequiredFlags() []string {
 }
 
 func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Check initialization first
-
 	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandDoctor, logger.LogFieldProject, "health_check")
 
 	base.Output.Header("🩺 Otto Stack Health Check")
 	logger.Info("Starting health checks")
 
-	allGood := true &&
-		h.checkDocker(base) &&
+	allGood := h.checkDocker(base) &&
 		h.checkDockerCompose(base) &&
 		h.checkProjectInit(base) &&
 		h.checkConfiguration(base)
@@ -51,11 +48,11 @@ func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		base.Output.Success("All checks passed! Your otto-stack is healthy.")
 		logger.Info("All health checks passed")
 		return nil
-	} else {
-		base.Output.Error("Some issues found")
-		logger.Error("Health checks failed")
-		return fmt.Errorf("health check failed")
 	}
+
+	base.Output.Error("Some issues found")
+	logger.Error("Health checks failed")
+	return fmt.Errorf("health check failed")
 }
 
 func (h *DoctorHandler) checkDocker(base *base.BaseCommand) bool {

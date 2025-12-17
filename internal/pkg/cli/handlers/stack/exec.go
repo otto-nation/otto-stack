@@ -20,11 +20,9 @@ func NewExecHandler() *ExecHandler {
 
 // Handle executes the exec command
 func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	if len(args) < core.MinArgumentCount {
-		return fmt.Errorf("%s", core.MsgErrors_requires_service_and_command)
+	if err := h.ValidateArgs(args); err != nil {
+		return err
 	}
-
-	// Check initialization first
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
@@ -35,33 +33,28 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	serviceName := args[0]
 	command := args[1:]
 
-	// Parse all flags with validation - single line!
 	flags, err := core.ParseExecFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	// Create exec options - clean usage with no repetitive error handling
-	options := docker.ExecOptions{
-		Interactive: flags.Interactive,
-		TTY:         flags.TTY,
-		User:        flags.User,
-		WorkingDir:  flags.Workdir,
-	}
-
-	// Execute command using Docker client
-	// Execute command in service container
-	dockerArgs := []string{"compose", "-f", docker.DockerComposeFilePath, "-p", setup.Config.Project.Name, "exec"}
-	if options.User != "" {
-		dockerArgs = append(dockerArgs, "--user", options.User)
-	}
-	if options.WorkingDir != "" {
-		dockerArgs = append(dockerArgs, "--workdir", options.WorkingDir)
-	}
-	dockerArgs = append(dockerArgs, serviceName)
-	dockerArgs = append(dockerArgs, command...)
-
+	dockerArgs := h.buildDockerArgs(setup.Config.Project.Name, serviceName, command, flags)
 	return setup.DockerClient.RunCommand(ctx, dockerArgs...)
+}
+
+// buildDockerArgs constructs the docker compose exec command arguments
+func (h *ExecHandler) buildDockerArgs(projectName, serviceName string, command []string, flags *core.ExecFlags) []string {
+	args := []string{"compose", "-f", docker.DockerComposeFilePath, "-p", projectName, "exec"}
+
+	if flags.User != "" {
+		args = append(args, "--user", flags.User)
+	}
+	if flags.Workdir != "" {
+		args = append(args, "--workdir", flags.Workdir)
+	}
+
+	args = append(args, serviceName)
+	return append(args, command...)
 }
 
 // ValidateArgs validates the command arguments

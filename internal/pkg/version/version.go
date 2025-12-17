@@ -50,12 +50,16 @@ func GetBuildInfo() *BuildInfo {
 
 // GetAppVersion returns the application version string
 func GetAppVersion() string {
-	if AppVersion == DefaultVersion {
-		if buildInfo, ok := debug.ReadBuildInfo(); ok {
-			return buildInfo.Main.Version
-		}
+	if AppVersion != DefaultVersion {
+		return AppVersion
 	}
-	return AppVersion
+
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		return AppVersion
+	}
+
+	return buildInfo.Main.Version
 }
 
 // GetShortVersion returns a short version string
@@ -76,13 +80,16 @@ func GetFullVersion() string {
 	}
 
 	result := fmt.Sprintf("%s %s", core.AppName, version)
-	if info.GitCommit != DefaultCommit && info.GitCommit != "" {
-		if len(info.GitCommit) > GitCommitHashLength {
-			result += fmt.Sprintf(" (%s)", info.GitCommit[:GitCommitHashLength])
-		} else {
-			result += fmt.Sprintf(" (%s)", info.GitCommit)
-		}
+	if info.GitCommit == DefaultCommit || info.GitCommit == "" {
+		return result
 	}
+
+	if len(info.GitCommit) > GitCommitHashLength {
+		result += fmt.Sprintf(" (%s)", info.GitCommit[:GitCommitHashLength])
+	} else {
+		result += fmt.Sprintf(" (%s)", info.GitCommit)
+	}
+
 	return result
 }
 

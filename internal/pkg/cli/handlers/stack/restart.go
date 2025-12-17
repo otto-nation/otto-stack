@@ -2,10 +2,7 @@ package stack
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
@@ -24,71 +21,60 @@ func NewRestartHandler() *RestartHandler {
 
 // Handle executes the restart command
 func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Check initialization first
-
 	base.Output.Header(core.MsgRestarting)
 
 	ciFlags := ci.GetFlags(cmd)
-
 	if ciFlags.DryRun {
 		base.Output.Info("%s", core.MsgDry_run_showing_what_would_happen)
 		base.Output.Info(core.MsgDry_run_would_restart_services, fmt.Sprintf("%v", args))
 		return nil
 	}
 
-	// Check if otto-stack is initialized
-	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
-	if !func() bool { _, err := os.Stat(configPath); return err == nil }() {
-		return errors.New(core.MsgErrors_not_initialized)
-	}
-
-	// Load project configuration
-	cfg, err := LoadProjectConfig(configPath)
+	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		return fmt.Errorf(core.MsgStack_failed_load_config, err)
+		return err
 	}
+	defer cleanup()
 
-	// Create Docker client
-	dockerClient, err := docker.NewClient(nil)
-	if err != nil {
-		return fmt.Errorf(core.MsgStack_failed_create_docker_client, err)
-	}
-	defer func() {
-		_ = dockerClient.Close()
-	}()
-
-	// Parse all flags with validation - single line!
 	flags, err := core.ParseRestartFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	// Determine services to restart
-	serviceNames := args
-	if len(serviceNames) == 0 {
-		serviceNames = cfg.Stack.Enabled
-	}
+	serviceNames := h.resolveServiceNames(args, setup.Config.Stack.Enabled)
 
-	// Stop services first
-	// Restart operation
-	// Stop services
-	stopOptions := docker.StopOptions{
-		Timeout: flags.Timeout,
-	}
-	if err := dockerClient.ComposeDown(ctx, cfg.Project.Name, stopOptions); err != nil {
-		return fmt.Errorf(core.MsgStack_failed_stop_services, err)
-	}
-
-	// Start services
-	startOptions := docker.StartOptions{
-		Detach: true,
-	}
-	if err := dockerClient.ComposeUp(ctx, cfg.Project.Name, serviceNames, startOptions); err != nil {
-		return fmt.Errorf(core.MsgStack_failed_start_services, err)
+	if err := h.restartServices(ctx, setup, serviceNames, flags); err != nil {
+		return err
 	}
 
 	base.Output.Success(core.MsgRestartSuccess)
-	// Restart operation
+	return nil
+}
+
+// resolveServiceNames determines which services to restart
+func (h *RestartHandler) resolveServiceNames(args, enabledServices []string) []string {
+	if len(args) > 0 {
+		return args
+	}
+	return enabledServices
+}
+
+// restartServices performs the stop and start operations
+func (h *RestartHandler) restartServices(ctx context.Context, setup *CoreSetup, serviceNames []string, flags *core.RestartFlags) error {
+	stopOptions := docker.StopOptions{
+		Timeout: flags.Timeout,
+	}
+	if err := setup.DockerClient.ComposeDown(ctx, setup.Config.Project.Name, stopOptions); err != nil {
+		return fmt.Errorf(core.MsgStack_failed_stop_services, err)
+	}
+
+	startOptions := docker.StartOptions{
+		Detach: true,
+	}
+	if err := setup.DockerClient.ComposeUp(ctx, setup.Config.Project.Name, serviceNames, startOptions); err != nil {
+		return fmt.Errorf(core.MsgStack_failed_start_services, err)
+	}
+
 	return nil
 }
 

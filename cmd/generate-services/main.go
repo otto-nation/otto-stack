@@ -9,6 +9,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"gopkg.in/yaml.v3"
 )
 
@@ -47,7 +48,7 @@ type ServiceConstants struct {
 
 type ServiceConfigSchema struct {
 	ServiceName string
-	Schema      map[string]interface{}
+	Schema      map[string]any
 }
 
 type collectors struct {
@@ -241,7 +242,7 @@ func (c *collectors) addPorts(service map[string]any, serviceName string) {
 
 		c.ports["Port"+toPascalCase(serviceName)] = portNum
 
-		protocol := "tcp"
+		protocol := services.ProtocolTcp
 		if p, ok := portMap["protocol"].(string); ok {
 			protocol = p
 		}

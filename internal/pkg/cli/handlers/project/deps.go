@@ -21,14 +21,10 @@ func NewDepsHandler() *DepsHandler {
 
 // Handle executes the deps command
 func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Check initialization first
-
 	base.Output.Header("%s", core.MsgDependencies_header)
 
-	// Get output format
 	format, _ := cmd.Flags().GetString(core.FlagFormat)
 
-	// Load service dependencies
 	serviceUtils := services.NewServiceUtils()
 	dependencies, err := serviceUtils.LoadAllServiceDependencies()
 	if err != nil {
@@ -40,41 +36,35 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return nil
 	}
 
-	// Create display data
-	var displayData []map[string]any
-	for serviceName, deps := range dependencies {
-		if len(deps) == 0 {
-			displayData = append(displayData, map[string]any{
-				"Service":      serviceName,
-				"Dependencies": "None",
-			})
-		} else {
-			for _, dep := range deps {
-				displayData = append(displayData, map[string]any{
-					"Service":      serviceName,
-					"Dependencies": dep,
-				})
-			}
-		}
-	}
-
-	// Display results
+	services := h.transformDependenciesToServices(dependencies)
 	formatter := display.New(cmd.OutOrStdout(), base.Output)
-
-	// Convert to ServiceStatus format for display
-	var services []display.ServiceStatus
-	for _, item := range displayData {
-		services = append(services, display.ServiceStatus{
-			Name:  item["Service"].(string),
-			State: item["Dependencies"].(string),
-		})
-	}
 
 	if err := formatter.FormatStatus(services, display.Options{Format: format}); err != nil {
 		return fmt.Errorf("failed to format output: %w", err)
 	}
 
 	return nil
+}
+
+// transformDependenciesToServices converts dependencies map to ServiceStatus slice
+func (h *DepsHandler) transformDependenciesToServices(dependencies map[string][]string) []display.ServiceStatus {
+	var services []display.ServiceStatus
+	for serviceName, deps := range dependencies {
+		if len(deps) == 0 {
+			services = append(services, display.ServiceStatus{
+				Name:  serviceName,
+				State: "None",
+			})
+		} else {
+			for _, dep := range deps {
+				services = append(services, display.ServiceStatus{
+					Name:  serviceName,
+					State: dep,
+				})
+			}
+		}
+	}
+	return services
 }
 
 // ValidateArgs validates the command arguments

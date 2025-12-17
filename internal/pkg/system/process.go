@@ -64,19 +64,22 @@ func GetProcessPID(name string) (int, error) {
 		return 0, fmt.Errorf(docker.ErrProcessNotFound, name)
 	}
 
-	if runtime.GOOS == docker.OSWindows {
-		lines := strings.Split(outputStr, "\n")
-		if len(lines) > 0 {
-			fields := strings.Split(lines[0], ",")
-			if len(fields) >= docker.MinFieldCount {
-				pidStr := strings.Trim(fields[1], "\"")
-				return strconv.Atoi(pidStr)
-			}
-		}
+	if runtime.GOOS != docker.OSWindows {
+		pidStr := strings.Split(outputStr, "\n")[0]
+		return strconv.Atoi(pidStr)
+	}
+
+	lines := strings.Split(outputStr, "\n")
+	if len(lines) == 0 {
 		return 0, fmt.Errorf("failed to parse PID from tasklist output")
 	}
 
-	pidStr := strings.Split(outputStr, "\n")[0]
+	fields := strings.Split(lines[0], ",")
+	if len(fields) < docker.MinFieldCount {
+		return 0, fmt.Errorf("failed to parse PID from tasklist output")
+	}
+
+	pidStr := strings.Trim(fields[1], "\"")
 	return strconv.Atoi(pidStr)
 }
 

@@ -20,33 +20,37 @@ func NewConnectHandler() *ConnectHandler {
 	return &ConnectHandler{}
 }
 
-// Handle executes the connect command
-func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Get CI-friendly flags
-	ciFlags := ci.GetFlags(cmd)
-
+// ValidateArgs validates the command arguments
+func (h *ConnectHandler) ValidateArgs(args []string) error {
 	if len(args) < 1 {
 		return fmt.Errorf("%s", core.Messages[core.MsgErrors_requires_service_name])
 	}
+	return nil
+}
 
-	// Check initialization first
+// GetRequiredFlags returns required flags for this command
+func (h *ConnectHandler) GetRequiredFlags() []string {
+	return []string{}
+}
+
+// Handle executes the connect command
+func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	if err := h.ValidateArgs(args); err != nil {
+		return err
+	}
+
+	ciFlags := ci.GetFlags(cmd)
+	serviceName := args[0]
 
 	if !ciFlags.Quiet {
-		base.Output.Header(core.MsgStack_connecting_to, args[0])
+		base.Output.Header(core.MsgStack_connecting_to, serviceName)
 	}
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		return err // Return error directly for clean output
+		return err
 	}
 	defer cleanup()
-
-	if !ciFlags.Quiet {
-		base.Output.Header(core.MsgStack_connecting_to, args[0])
-	}
-	defer cleanup()
-
-	serviceName := args[0]
 
 	// Parse all flags with validation - single line!
 	flags, err := core.ParseConnectFlags(cmd)
@@ -61,23 +65,14 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return nil
 	}
 
-	// Execute connection command
-	options := docker.ExecOptions{
-		Interactive: true,
-		TTY:         true,
-	}
-
-	dockerArgs := []string{"compose", "-f", docker.DockerComposeFilePath, "-p", setup.Config.Project.Name, "exec"}
-	if options.User != "" {
-		dockerArgs = append(dockerArgs, "--user", options.User)
-	}
-	if options.WorkingDir != "" {
-		dockerArgs = append(dockerArgs, "--workdir", options.WorkingDir)
-	}
-	dockerArgs = append(dockerArgs, serviceName)
-	dockerArgs = append(dockerArgs, command...)
-
+	dockerArgs := h.buildDockerArgs(setup.Config.Project.Name, serviceName, command)
 	return setup.DockerClient.RunCommand(ctx, dockerArgs...)
+}
+
+// buildDockerArgs constructs the docker compose exec command arguments
+func (h *ConnectHandler) buildDockerArgs(projectName, serviceName string, command []string) []string {
+	args := []string{"compose", "-f", docker.DockerComposeFilePath, "-p", projectName, "exec", serviceName}
+	return append(args, command...)
 }
 
 // getConnectionCommand returns the appropriate connection command for the service
@@ -128,17 +123,4 @@ func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host 
 	cmd = append(cmd, config.ExtraFlags...)
 
 	return cmd, nil
-}
-
-// ValidateArgs validates the command arguments
-func (h *ConnectHandler) ValidateArgs(args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("%s", core.Messages[core.MsgErrors_requires_service_name])
-	}
-	return nil
-}
-
-// GetRequiredFlags returns required flags for this command
-func (h *ConnectHandler) GetRequiredFlags() []string {
-	return []string{}
 }
