@@ -9,7 +9,7 @@ environment:
   JAEGER_URL: http://${JAEGER_HOST:-localhost}:${JAEGER_PORT:-16686}/status
 
 container:
-  image: jaegertracing/all-in-one:latest
+  image: jaegertracing/jaeger:2.13.0
   ports:
     - external: "16686"
       internal: "16686"
