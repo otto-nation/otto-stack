@@ -17,12 +17,7 @@ type Generator struct {
 }
 
 // NewGenerator creates a new compose generator
-func NewGenerator(projectName string, servicesPath string) (*Generator, error) {
-	manager, err := services.New()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create service manager: %w", err)
-	}
-
+func NewGenerator(projectName string, servicesPath string, manager *services.Manager) (*Generator, error) {
 	return &Generator{
 		projectName: projectName,
 		manager:     manager,

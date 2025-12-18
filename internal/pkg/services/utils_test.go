@@ -83,16 +83,6 @@ func TestServiceUtils_GetServicesByCategory(t *testing.T) {
 	})
 }
 
-func TestServiceUtils_LoadAllServiceDependencies(t *testing.T) {
-	utils := NewServiceUtils()
-
-	t.Run("returns empty map (deprecated)", func(t *testing.T) {
-		deps, err := utils.LoadAllServiceDependencies()
-		assert.NoError(t, err)
-		assert.Empty(t, deps)
-	})
-}
-
 func TestIsYAMLFile(t *testing.T) {
 	tests := []struct {
 		name     string

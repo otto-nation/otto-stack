@@ -3,6 +3,7 @@ package cli
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -51,7 +52,11 @@ func addGlobalFlags(cmd *cobra.Command) {
 func createServiceManager() (*services.Orchestrator, error) {
 	projectRoot := findProjectRoot(".")
 	log := logger.GetLogger()
-	return services.NewOrchestrator(log, projectRoot)
+	dockerClient, err := docker.NewClient(log)
+	if err != nil {
+		return nil, err
+	}
+	return services.NewOrchestrator(log, projectRoot, dockerClient)
 }
 
 func findProjectRoot(startDir string) string {

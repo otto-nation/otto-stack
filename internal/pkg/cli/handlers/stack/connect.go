@@ -77,7 +77,7 @@ func (h *ConnectHandler) buildDockerArgs(projectName, serviceName string, comman
 
 // getConnectionCommand returns the appropriate connection command for the service
 func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host string, port int, _ bool) ([]string, error) {
-	manager, err := services.New()
+	manager, err := GetServicesManager()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create service manager: %w", err)
 	}

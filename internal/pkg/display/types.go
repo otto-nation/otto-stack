@@ -74,9 +74,11 @@ type ServiceInfo struct {
 
 // Options for formatting
 type Options struct {
-	Format  string
-	Quiet   bool
-	Compact bool
-	Verbose bool
-	Full    bool
+	Format          string
+	Quiet           bool
+	Compact         bool
+	Verbose         bool
+	Full            bool
+	ShowSummary     bool
+	GroupByCategory bool
 }

@@ -20,12 +20,7 @@ type Orchestrator struct {
 }
 
 // NewOrchestrator creates a new service orchestrator
-func NewOrchestrator(logger *slog.Logger, projectDir string) (*Orchestrator, error) {
-	dockerClient, err := docker.NewClient(logger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Docker client: %w", err)
-	}
-
+func NewOrchestrator(logger *slog.Logger, projectDir string, dockerClient *docker.Client) (*Orchestrator, error) {
 	return &Orchestrator{
 		docker:     dockerClient,
 		logger:     logger,

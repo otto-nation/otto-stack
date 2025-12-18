@@ -7,7 +7,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
 
@@ -25,11 +24,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	format, _ := cmd.Flags().GetString(core.FlagFormat)
 
-	serviceUtils := services.NewServiceUtils()
-	dependencies, err := serviceUtils.LoadAllServiceDependencies()
-	if err != nil {
-		return fmt.Errorf("failed to load dependencies: %w", err)
-	}
+	dependencies := make(map[string][]string) // No dependencies to load since functionality was deprecated
 
 	if len(dependencies) == 0 {
 		base.Output.Info("%s", core.MsgDependencies_none_found)

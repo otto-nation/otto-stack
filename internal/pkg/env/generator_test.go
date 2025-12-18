@@ -12,7 +12,7 @@ func TestGenerate(t *testing.T) {
 		projectName := "test-project"
 		services := []string{"redis", "postgres"}
 
-		content, err := Generate(projectName, services)
+		content, err := Generate(projectName, services, nil)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, content)
 
@@ -31,7 +31,7 @@ func TestGenerate(t *testing.T) {
 		projectName := "empty-project"
 		services := []string{}
 
-		content, err := Generate(projectName, services)
+		content, err := Generate(projectName, services, nil)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, content)
 
@@ -43,7 +43,7 @@ func TestGenerate(t *testing.T) {
 		projectName := ""
 		services := []string{"redis"}
 
-		content, err := Generate(projectName, services)
+		content, err := Generate(projectName, services, nil)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, content)
 
@@ -56,7 +56,7 @@ func TestGenerate(t *testing.T) {
 		projectName := "format-test"
 		services := []string{"test-service"}
 
-		content, err := Generate(projectName, services)
+		content, err := Generate(projectName, services, nil)
 		assert.NoError(t, err)
 
 		contentStr := string(content)
@@ -75,7 +75,7 @@ func TestGenerate(t *testing.T) {
 		projectName := "timestamp-test"
 		services := []string{}
 
-		content, err := Generate(projectName, services)
+		content, err := Generate(projectName, services, nil)
 		assert.NoError(t, err)
 
 		contentStr := string(content)
@@ -88,7 +88,7 @@ func TestAddServiceEnv(t *testing.T) {
 		var content strings.Builder
 
 		// Should not panic or error
-		addServiceEnv(&content, "nonexistent-service")
+		addServiceEnv(&content, "nonexistent-service", nil)
 
 		// Content should remain empty for nonexistent service
 		assert.Empty(t, content.String())
@@ -101,7 +101,7 @@ func TestAddServiceEnv(t *testing.T) {
 		testServices := []string{"redis", "postgres", "mongodb"}
 
 		for _, service := range testServices {
-			addServiceEnv(&content, service)
+			addServiceEnv(&content, service, nil)
 		}
 
 		// Should not panic and content should be string

@@ -46,11 +46,6 @@ func (u *ServiceUtils) GetServicesByCategory() (map[string][]ServiceConfig, erro
 	return u.LoadServicesByCategory()
 }
 
-// LoadAllServiceDependencies returns empty map (deprecated functionality)
-func (u *ServiceUtils) LoadAllServiceDependencies() (map[string][]string, error) {
-	return make(map[string][]string), nil
-}
-
 // IsYAMLFile checks if filename is a YAML file (alias to constants function)
 func IsYAMLFile(filename string) bool {
 	return core.IsYAMLFile(filename)

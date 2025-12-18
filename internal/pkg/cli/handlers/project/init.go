@@ -36,7 +36,29 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		}
 	}()
 
-	// Parse all flags with validation - single line!
+	if err := h.validateInitFlags(cmd); err != nil {
+		return err
+	}
+
+	projectName, err := h.promptForProjectDetails()
+	if err != nil {
+		return fmt.Errorf("failed to get project details: %w", err)
+	}
+
+	services, validation, advanced, err := h.runServiceSelectionWorkflow(base)
+	if err != nil {
+		return err
+	}
+
+	if err := h.createProjectStructure(projectName, services, validation, advanced, base); err != nil {
+		return err
+	}
+
+	h.displaySuccessMessage(projectName, base)
+	return nil
+}
+
+func (h *InitHandler) validateInitFlags(cmd *cobra.Command) error {
 	_, err := core.ParseInitFlags(cmd)
 	if err != nil {
 		logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationInit, logger.LogFieldError, err)
@@ -44,102 +66,86 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	ciFlags := ci.GetFlags(cmd)
-
-	base.Output.Header("%s", core.MsgProcess_initializing)
-	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
-
 	if ciFlags.NonInteractive {
 		return fmt.Errorf("%s", core.MsgNon_interactive_mode_requires_config)
 	}
+	return nil
+}
 
-	// Prompt for project details
-	projectName, err := h.promptForProjectDetails()
-	if err != nil {
-		return fmt.Errorf("failed to get project details: %w", err)
-	}
-
-	// Service selection loop (allows going back)
-	var services []string
-	var validation, advanced map[string]bool
+func (h *InitHandler) runServiceSelectionWorkflow(base *base.BaseCommand) ([]string, map[string]bool, map[string]bool, error) {
+	base.Output.Header("%s", core.MsgProcess_initializing)
+	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
 
 	for {
-		// Prompt for services
-		services, err = h.promptForServices()
+		services, err := h.promptForServices()
 		if err != nil {
-			return fmt.Errorf("failed to select services: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to select services: %w", err)
 		}
 		h.selectedServices = services
 
-		// Validate selected services
 		if err := h.validateServices(services); err != nil {
-			return fmt.Errorf("service validation failed: %w", err)
+			return nil, nil, nil, fmt.Errorf("service validation failed: %w", err)
 		}
 
-		// Prompt for advanced options
-		validation, advanced, err = h.promptForAdvancedOptions()
+		validation, advanced, err := h.promptForAdvancedOptions()
 		if err != nil {
-			return fmt.Errorf("failed to get advanced options: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to get advanced options: %w", err)
 		}
 
-		// Run selected validations
 		if err := h.runValidations(validation, base); err != nil {
-			return fmt.Errorf("validation failed: %w", err)
+			return nil, nil, nil, fmt.Errorf("validation failed: %w", err)
 		}
 
-		// Confirm initialization (with back option)
-		action, err := h.confirmInitializationWithBack(projectName, services, validation, advanced, base)
+		action, err := h.confirmInitializationWithBack("", services, validation, advanced, base)
 		if err != nil {
-			return fmt.Errorf("failed to get confirmation: %w", err)
+			return nil, nil, nil, fmt.Errorf("failed to get confirmation: %w", err)
 		}
 
 		switch action {
 		case core.ActionProceed:
-			goto exitLoop
+			return services, validation, advanced, nil
 		case core.ActionBack:
 			base.Output.Info("%s", core.MsgInit_going_back)
 			continue
 		default:
 			base.Output.Info("%s", core.MsgInit_cancelled)
-			return nil
+			return nil, nil, nil, nil
 		}
 	}
-exitLoop:
+}
 
-	// Create directory structure
+func (h *InitHandler) createProjectStructure(projectName string, services []string, validation, advanced map[string]bool, base *base.BaseCommand) error {
 	if err := h.createDirectoryStructure(); err != nil {
 		return fmt.Errorf("failed to create directories: %w", err)
 	}
 
-	// Create configuration file
 	if err := h.createConfigFile(projectName, services, validation, base); err != nil {
 		return fmt.Errorf("failed to create config file: %w", err)
 	}
 
-	// Generate service configuration files
 	h.generateServiceConfigs(services, base)
 
-	// Generate initial compose files
 	if err := h.generateInitialComposeFiles(services, projectName, validation, advanced, base); err != nil {
 		return fmt.Errorf("failed to generate compose files: %w", err)
 	}
 
-	// Create .gitignore entries
 	if err := h.createGitignoreEntries(base); err != nil {
 		base.Output.Warning(core.MsgWarnings_failed_gitignore, err)
 	}
 
-	// Create README
 	if err := h.createReadme(projectName, services, base); err != nil {
 		base.Output.Warning(core.MsgWarnings_failed_readme, err)
 	}
 
+	return nil
+}
+
+func (h *InitHandler) displaySuccessMessage(_ string, base *base.BaseCommand) {
 	base.Output.Success("%s", core.MsgSuccess_init)
 	base.Output.Info("%s", core.MsgInit_next_steps)
 	base.Output.Info(core.MsgInit_step_review_config, core.OttoStackDir, core.ConfigFileName)
 	base.Output.Info(core.MsgInit_step_start_stack, core.AppName)
 	base.Output.Info(core.MsgInit_step_check_status, core.AppName)
-
-	return nil
 }
 
 // ValidateArgs validates the command arguments

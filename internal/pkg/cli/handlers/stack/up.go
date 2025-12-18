@@ -63,17 +63,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	ciFlags := ci.GetFlags(cmd)
 
 	if ciFlags.DryRun {
-		base.Output.Info("%s", core.MsgDry_run_showing_what_would_happen)
-
-		// Determine services that would be started
-		serviceNames := args
-		if len(serviceNames) == 0 {
-			serviceNames = setup.Config.Stack.Enabled
-		}
-
-		base.Output.Info(core.MsgDry_run_would_start_services, fmt.Sprintf("%v", serviceNames))
-		base.Output.Info(core.MsgDry_run_would_use_config, filepath.Join(core.OttoStackDir, core.ConfigFileName))
-		return nil
+		return h.handleDryRun(args, setup, base)
 	}
 	defer func() {
 		if r := recover(); r != nil {
@@ -107,17 +97,10 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		RemoveOrphans:  flags.ForceRecreate, // Auto-remove orphans when force recreating
 	}
 
-	// Determine services to start
-	serviceNames := args
-	if len(serviceNames) == 0 {
-		serviceNames = setup.Config.Stack.Enabled
-	}
-
-	// Filter services to only include container services
-	serviceUtils := services.NewServiceUtils()
-	filteredServices, err := serviceUtils.ResolveServices(serviceNames)
+	// Determine and resolve services
+	serviceNames, filteredServices, err := h.resolveServices(args, setup)
 	if err != nil {
-		return fmt.Errorf(core.MsgStack_failed_resolve_services, err)
+		return err
 	}
 
 	// Check for config changes
@@ -135,28 +118,9 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	configChanged := previousState.ConfigHash != configHash
 	h.handleConfigChange(ctx, setup, previousState.Services, filteredServices, base, configChanged)
 
-	// Generate compose file
-	generator, err := compose.NewGenerator(setup.Config.Project.Name, services.ServicesDir)
-	if err != nil {
-		return fmt.Errorf(core.MsgStack_failed_create_generator, err)
-	}
-
-	composeData, err := generator.GenerateYAML(serviceNames)
-	if err != nil {
-		return fmt.Errorf(core.MsgStack_failed_generate_compose, err)
-	}
-
-	// Ensure otto-stack directory exists
-	if err := os.MkdirAll(core.OttoStackDir, core.PermReadWriteExec); err != nil {
-		return fmt.Errorf(core.MsgStack_failed_create_directory, err)
-	}
-
-	composePath := docker.DockerComposeFilePath
-	if err := os.MkdirAll(filepath.Dir(composePath), core.PermReadWriteExec); err != nil {
-		return fmt.Errorf("failed to create generated directory: %w", err)
-	}
-	if err := os.WriteFile(composePath, composeData, core.PermReadWrite); err != nil {
-		return fmt.Errorf(core.MsgStack_failed_write_compose, err)
+	// Generate and write compose file
+	if err := h.generateComposeFile(serviceNames, setup); err != nil {
+		return err
 	}
 
 	// Generate .env.generated file
@@ -164,6 +128,18 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		base.Output.Warning("Failed to generate .env file: %v", err)
 	}
 
+	// Execute Docker operations
+	if err := h.executeDockerOperations(ctx, setup, filteredServices, configHash, options, base); err != nil {
+		return err
+	}
+
+	base.Output.Success(core.MsgStartSuccess)
+	logger.Info(logger.LogMsgOperationCompleted, logger.LogFieldOperation, logger.OperationStackUp)
+	return nil
+}
+
+// executeDockerOperations starts services and runs init containers
+func (h *UpHandler) executeDockerOperations(ctx context.Context, setup *CoreSetup, filteredServices []string, configHash string, options docker.StartOptions, base *base.BaseCommand) error {
 	// Start services first
 	if err := setup.DockerClient.ComposeUp(ctx, setup.Config.Project.Name, filteredServices, options); err != nil {
 		return fmt.Errorf(core.MsgStack_failed_start_services, err)
@@ -183,8 +159,65 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		base.Output.Warning("Failed to save state: %v", err)
 	}
 
-	base.Output.Success(core.MsgStartSuccess)
-	logger.Info(logger.LogMsgOperationCompleted, logger.LogFieldOperation, logger.OperationStackUp)
+	return nil
+}
+
+// generateComposeFile creates and writes the docker-compose file
+func (h *UpHandler) generateComposeFile(serviceNames []string, setup *CoreSetup) error {
+	manager, err := GetServicesManager()
+	if err != nil {
+		return fmt.Errorf("failed to get services manager: %w", err)
+	}
+
+	generator, err := compose.NewGenerator(setup.Config.Project.Name, services.ServicesDir, manager)
+	if err != nil {
+		return fmt.Errorf(core.MsgStack_failed_create_generator, err)
+	}
+
+	composeData, err := generator.GenerateYAML(serviceNames)
+	if err != nil {
+		return fmt.Errorf(core.MsgStack_failed_generate_compose, err)
+	}
+
+	if err := os.MkdirAll(core.OttoStackDir, core.PermReadWriteExec); err != nil {
+		return fmt.Errorf(core.MsgStack_failed_create_directory, err)
+	}
+
+	composePath := docker.DockerComposeFilePath
+	if err := os.MkdirAll(filepath.Dir(composePath), core.PermReadWriteExec); err != nil {
+		return fmt.Errorf("failed to create generated directory: %w", err)
+	}
+
+	return os.WriteFile(composePath, composeData, core.PermReadWrite)
+}
+
+// resolveServices determines and filters services to start
+func (h *UpHandler) resolveServices(args []string, setup *CoreSetup) ([]string, []string, error) {
+	serviceNames := args
+	if len(serviceNames) == 0 {
+		serviceNames = setup.Config.Stack.Enabled
+	}
+
+	serviceUtils := services.NewServiceUtils()
+	filteredServices, err := serviceUtils.ResolveServices(serviceNames)
+	if err != nil {
+		return nil, nil, fmt.Errorf(core.MsgStack_failed_resolve_services, err)
+	}
+
+	return serviceNames, filteredServices, nil
+}
+
+// handleDryRun processes dry run mode
+func (h *UpHandler) handleDryRun(args []string, setup *CoreSetup, base *base.BaseCommand) error { //nolint:unparam
+	base.Output.Info("%s", core.MsgDry_run_showing_what_would_happen)
+
+	serviceNames := args
+	if len(serviceNames) == 0 {
+		serviceNames = setup.Config.Stack.Enabled
+	}
+
+	base.Output.Info(core.MsgDry_run_would_start_services, fmt.Sprintf("%v", serviceNames))
+	base.Output.Info(core.MsgDry_run_would_use_config, filepath.Join(core.OttoStackDir, core.ConfigFileName))
 	return nil
 }
 
@@ -212,15 +245,9 @@ func (h *UpHandler) getConfigHash(config *config.Config) (string, error) {
 
 // loadState loads previous stack state
 func (h *UpHandler) loadState() (*StackState, error) {
-	// Try new location first
 	data, err := os.ReadFile(core.StateFilePath)
 	if err != nil {
-		// Fall back to old location for backward compatibility
-		oldStatePath := filepath.Join(core.OttoStackDir, core.StateFileName)
-		data, err = os.ReadFile(oldStatePath)
-		if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	var state StackState
@@ -274,7 +301,12 @@ func (h *UpHandler) findRemovedServices(oldServices, newServices []string) []str
 
 // generateEnvFile generates .env.generated file with resolved services
 func (h *UpHandler) generateEnvFile(services []string, projectName string) error {
-	envContent, err := env.Generate(projectName, services)
+	manager, err := GetServicesManager()
+	if err != nil {
+		return fmt.Errorf("failed to get services manager: %w", err)
+	}
+
+	envContent, err := env.Generate(projectName, services, manager)
 	if err != nil {
 		return fmt.Errorf("failed to generate env content: %w", err)
 	}
@@ -481,7 +513,10 @@ func (h *UpHandler) runSingleInitContainer(ctx context.Context, setup *CoreSetup
 	targetService := strings.TrimSuffix(initServiceName, "-init")
 
 	// Create init container configuration
-	initConfig := h.createInitContainerConfig(targetService, setup)
+	initConfig, err := h.createInitContainerConfig(targetService, setup)
+	if err != nil {
+		return fmt.Errorf("failed to create init container config: %w", err)
+	}
 
 	// Run the init container
 	containerName := fmt.Sprintf("%s-%s", setup.Config.Project.Name, initServiceName)
@@ -493,28 +528,39 @@ func (h *UpHandler) runSingleInitContainer(ctx context.Context, setup *CoreSetup
 }
 
 // createInitContainerConfig creates configuration for init containers
-func (h *UpHandler) createInitContainerConfig(targetService string, setup *CoreSetup) docker.InitContainerConfig {
-	// Get current working directory for absolute path
-	cwd, _ := os.Getwd()
-	configPath := filepath.Join(cwd, core.OttoStackDir, core.ServiceConfigsDir)
-
-	// Use the shell script from embedded.go
-	processedScript := strings.ReplaceAll(scripts.GenericInitScript, "$$", "$")
-
-	// Load service configuration from YAML
-	manager, err := services.New()
+func (h *UpHandler) createInitContainerConfig(targetService string, setup *CoreSetup) (docker.InitContainerConfig, error) {
+	service, err := h.loadServiceConfig(targetService)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to create service manager: %v", err))
+		return docker.InitContainerConfig{}, err
+	}
+
+	config := h.buildBaseInitConfig(targetService, setup)
+	h.applyServiceEnvironment(config, service)
+	h.customizeForServiceType(config, targetService, service)
+
+	return *config, nil
+}
+
+func (h *UpHandler) loadServiceConfig(targetService string) (*services.ServiceConfig, error) {
+	manager, err := GetServicesManager()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create service manager: %w", err)
 	}
 
 	service, err := manager.GetService(targetService)
 	if err != nil {
-		panic(fmt.Sprintf("Failed to load service configuration for %s: %v", targetService, err))
+		return nil, fmt.Errorf("failed to load service configuration for %s: %w", targetService, err)
 	}
+	return service, nil
+}
 
-	// Build configuration from service YAML
-	config := docker.InitContainerConfig{
-		Image:   services.ImageLocalstack, // Default, will be overridden based on service
+func (h *UpHandler) buildBaseInitConfig(targetService string, setup *CoreSetup) *docker.InitContainerConfig {
+	cwd, _ := os.Getwd()
+	configPath := filepath.Join(cwd, core.OttoStackDir, core.ServiceConfigsDir)
+	processedScript := strings.ReplaceAll(scripts.GenericInitScript, "$$", "$")
+
+	return &docker.InitContainerConfig{
+		Image:   services.ImageLocalstack,
 		Command: []string{"sh", "-c", processedScript},
 		Environment: map[string]string{
 			services.InitServiceName: targetService,
@@ -526,50 +572,61 @@ func (h *UpHandler) createInitContainerConfig(targetService string, setup *CoreS
 		WorkingDir: "/",
 		Networks:   []string{setup.Config.Project.Name + services.NetworkNameSuffix},
 	}
+}
 
-	// Extract environment variables from service YAML
+func (h *UpHandler) applyServiceEnvironment(config *docker.InitContainerConfig, service *services.ServiceConfig) {
 	maps.Copy(config.Environment, service.Environment)
 
-	// Set service endpoint URL based on service configuration
 	if service.Service.Connection != nil && service.Service.Connection.DefaultPort > 0 {
-		config.Environment[services.InitServiceEndpointURL] = fmt.Sprintf("http://%s:%d", targetService, service.Service.Connection.DefaultPort)
+		config.Environment[services.InitServiceEndpointURL] = fmt.Sprintf("http://%s:%d",
+			config.Environment[services.InitServiceName], service.Service.Connection.DefaultPort)
 	}
+}
 
-	// Customize based on service type using service YAML data
+func (h *UpHandler) customizeForServiceType(config *docker.InitContainerConfig, targetService string, service *services.ServiceConfig) {
 	switch targetService {
 	case services.ServiceLocalstack:
-		config.Environment[services.InitServiceEndpointURL] = fmt.Sprintf("http://localhost:%d", services.PortLocalstack)
+		h.configureLocalstack(config)
 	case services.ServicePostgres:
-		// Use postgres image from service YAML
-		if service.Container.Image != "" {
-			config.Image = service.Container.Image
-		}
-
-		// Use PGHOST key from postgres service definition
-		config.Environment[services.EnvPostgresPGHOST] = targetService
-
-		// Build connection URL from service data using postgres service format
-		user := config.Environment[services.EnvPostgresPOSTGRES_USER]
-		password := config.Environment[services.EnvPostgresPOSTGRES_PASSWORD]
-		database := config.Environment[services.EnvPostgresPOSTGRES_DB]
-		port := fmt.Sprintf("%d", services.PortPostgres)
-		if service.Service.Connection != nil && service.Service.Connection.DefaultPort > 0 {
-			port = fmt.Sprintf("%d", service.Service.Connection.DefaultPort)
-		}
-		config.Environment[services.InitServiceEndpointURL] = fmt.Sprintf("postgresql://%s:%s@%s:%s/%s", user, password, targetService, port, database)
+		h.configurePostgres(config, targetService, service)
 	case services.ServiceKafka:
-		// Use kafka image from service YAML
-		if service.Container.Image != "" {
-			config.Image = service.Container.Image
-		}
+		h.configureKafka(config, targetService, service)
+	}
+}
 
-		// Set kafka endpoint
-		port := fmt.Sprintf("%d", services.PortKafkaBroker)
-		if service.Service.Connection != nil && service.Service.Connection.DefaultPort > 0 {
-			port = fmt.Sprintf("%d", service.Service.Connection.DefaultPort)
-		}
-		config.Environment[services.InitServiceEndpointURL] = fmt.Sprintf("%s:%s", targetService, port)
+func (h *UpHandler) configureLocalstack(config *docker.InitContainerConfig) {
+	config.Environment[services.InitServiceEndpointURL] = fmt.Sprintf("http://localhost:%d", services.PortLocalstack)
+}
+
+func (h *UpHandler) configurePostgres(config *docker.InitContainerConfig, targetService string, service *services.ServiceConfig) {
+	if service.Container.Image != "" {
+		config.Image = service.Container.Image
 	}
 
-	return config
+	config.Environment[services.EnvPostgresPGHOST] = targetService
+
+	user := config.Environment[services.EnvPostgresPOSTGRES_USER]
+	password := config.Environment[services.EnvPostgresPOSTGRES_PASSWORD]
+	database := config.Environment[services.EnvPostgresPOSTGRES_DB]
+
+	port := fmt.Sprintf("%d", services.PortPostgres)
+	if service.Service.Connection != nil && service.Service.Connection.DefaultPort > 0 {
+		port = fmt.Sprintf("%d", service.Service.Connection.DefaultPort)
+	}
+
+	config.Environment[services.InitServiceEndpointURL] = fmt.Sprintf("postgresql://%s:%s@%s:%s/%s",
+		user, password, targetService, port, database)
+}
+
+func (h *UpHandler) configureKafka(config *docker.InitContainerConfig, targetService string, service *services.ServiceConfig) {
+	if service.Container.Image != "" {
+		config.Image = service.Container.Image
+	}
+
+	port := fmt.Sprintf("%d", services.PortKafkaBroker)
+	if service.Service.Connection != nil && service.Service.Connection.DefaultPort > 0 {
+		port = fmt.Sprintf("%d", service.Service.Connection.DefaultPort)
+	}
+
+	config.Environment[services.InitServiceEndpointURL] = fmt.Sprintf("%s:%s", targetService, port)
 }

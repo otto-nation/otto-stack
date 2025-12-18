@@ -44,72 +44,54 @@ func (h *InitHandler) promptForProjectDetails() (string, error) {
 
 // promptForServices prompts user to select services with category navigation
 func (h *InitHandler) promptForServices() ([]string, error) {
-	serviceUtils := services.NewServiceUtils()
+	categories, err := h.loadServiceCategories()
+	if err != nil {
+		return nil, err
+	}
 
-	// Get available services by category
+	categoryNames, categoryServicesList := h.prepareCategoryNavigation(categories)
+	if len(categoryNames) == 0 {
+		return nil, fmt.Errorf("no services available")
+	}
+
+	return h.navigateServiceCategories(categoryNames, categoryServicesList)
+}
+
+func (h *InitHandler) loadServiceCategories() (map[string][]services.ServiceConfig, error) {
+	serviceUtils := services.NewServiceUtils()
 	categories, err := serviceUtils.GetServicesByCategory()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load services: %w", err)
 	}
+	return categories, nil
+}
 
-	if len(categories) == 0 {
-		return nil, fmt.Errorf("no services available")
-	}
-
-	// Convert map to ordered slice for navigation
+func (h *InitHandler) prepareCategoryNavigation(categories map[string][]services.ServiceConfig) ([]string, [][]services.ServiceConfig) {
 	var categoryNames []string
 	var categoryServicesList [][]services.ServiceConfig
+
 	for categoryName, categoryServices := range categories {
 		if len(categoryServices) > 0 {
 			categoryNames = append(categoryNames, categoryName)
 			categoryServicesList = append(categoryServicesList, categoryServices)
 		}
 	}
+	return categoryNames, categoryServicesList
+}
 
+func (h *InitHandler) navigateServiceCategories(categoryNames []string, categoryServicesList [][]services.ServiceConfig) ([]string, error) {
 	var allSelectedServices []string
 	categoryIndex := 0
 
-	// Navigate through categories with back support
 	for categoryIndex < len(categoryNames) {
 		categoryName := categoryNames[categoryIndex]
 		categoryServices := categoryServicesList[categoryIndex]
 
-		var serviceOptions []string
-		for _, service := range categoryServices {
-			description := service.Description
-			if description == "" {
-				description = core.MsgServices_no_description
-			}
-			serviceOptions = append(serviceOptions, fmt.Sprintf("%s - %s", service.Name, description))
-		}
+		serviceOptions := h.buildServiceOptions(categoryServices, categoryIndex > 0)
 
-		// Add "Go Back" option if not on first category
-		if categoryIndex > 0 {
-			serviceOptions = append(serviceOptions, core.PromptGoBack)
-		}
-
-		var selected []string
-		prompt := &survey.MultiSelect{
-			Message: fmt.Sprintf(core.MsgServices_select, categoryName),
-			Options: serviceOptions,
-			Help:    core.HelpServiceSelection,
-		}
-
-		if err := survey.AskOne(prompt, &selected); err != nil {
-			return nil, fmt.Errorf("failed to select %s services: %w", categoryName, err)
-		}
-
-		// Check if user selected "Go Back"
-		goBack := false
-		var selectedServiceNames []string
-		for _, selection := range selected {
-			if selection == core.PromptGoBack {
-				goBack = true
-				break
-			}
-			// Extract service name from "name - description" format
-			serviceName := strings.Split(selection, " - ")[0]
-			selectedServiceNames = append(selectedServiceNames, serviceName)
+		selectedServiceNames, goBack, err := h.promptCategoryServices(categoryName, serviceOptions)
+		if err != nil {
+			return nil, err
 		}
 
 		if goBack && categoryIndex > 0 {
@@ -117,7 +99,6 @@ func (h *InitHandler) promptForServices() ([]string, error) {
 			continue
 		}
 
-		// Add selected services to the total
 		allSelectedServices = append(allSelectedServices, selectedServiceNames...)
 		categoryIndex++
 	}
@@ -125,8 +106,47 @@ func (h *InitHandler) promptForServices() ([]string, error) {
 	if len(allSelectedServices) == 0 {
 		return nil, fmt.Errorf("no services selected")
 	}
-
 	return allSelectedServices, nil
+}
+
+func (h *InitHandler) buildServiceOptions(categoryServices []services.ServiceConfig, allowGoBack bool) []string {
+	var serviceOptions []string
+	for _, service := range categoryServices {
+		description := service.Description
+		if description == "" {
+			description = core.MsgServices_no_description
+		}
+		serviceOptions = append(serviceOptions, fmt.Sprintf("%s - %s", service.Name, description))
+	}
+
+	if allowGoBack {
+		serviceOptions = append(serviceOptions, core.PromptGoBack)
+	}
+	return serviceOptions
+}
+
+func (h *InitHandler) promptCategoryServices(categoryName string, serviceOptions []string) ([]string, bool, error) {
+	var selected []string
+	prompt := &survey.MultiSelect{
+		Message: fmt.Sprintf(core.MsgServices_select, categoryName),
+		Options: serviceOptions,
+		Help:    core.HelpServiceSelection,
+	}
+
+	if err := survey.AskOne(prompt, &selected); err != nil {
+		return nil, false, fmt.Errorf("failed to select %s services: %w", categoryName, err)
+	}
+
+	var selectedServiceNames []string
+	for _, selection := range selected {
+		if selection == core.PromptGoBack {
+			return nil, true, nil
+		}
+		serviceName := strings.Split(selection, " - ")[0]
+		selectedServiceNames = append(selectedServiceNames, serviceName)
+	}
+
+	return selectedServiceNames, false, nil
 }
 
 // promptForAdvancedOptions prompts for advanced configuration options

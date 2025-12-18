@@ -11,7 +11,7 @@ import (
 
 func TestNewGenerator(t *testing.T) {
 	t.Run("creates generator successfully", func(t *testing.T) {
-		generator, err := NewGenerator("test-project", "/tmp/services")
+		generator, err := NewGenerator("test-project", "/tmp/services", nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, generator)
 		assert.Equal(t, "test-project", generator.projectName)
@@ -19,7 +19,7 @@ func TestNewGenerator(t *testing.T) {
 	})
 
 	t.Run("handles empty project name", func(t *testing.T) {
-		generator, err := NewGenerator("", "/tmp/services")
+		generator, err := NewGenerator("", "/tmp/services", nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, generator)
 		assert.Equal(t, "", generator.projectName)
@@ -27,7 +27,7 @@ func TestNewGenerator(t *testing.T) {
 }
 
 func TestGenerator_GenerateYAML(t *testing.T) {
-	generator, err := NewGenerator("test-project", "/tmp/services")
+	generator, err := NewGenerator("test-project", "/tmp/services", nil)
 	require.NoError(t, err)
 
 	t.Run("generates valid YAML structure", func(t *testing.T) {
@@ -106,7 +106,7 @@ func TestGenerator_GenerateYAML(t *testing.T) {
 }
 
 func TestGenerator_buildServices(t *testing.T) {
-	generator, err := NewGenerator("test-project", "/tmp/services")
+	generator, err := NewGenerator("test-project", "/tmp/services", nil)
 	require.NoError(t, err)
 
 	t.Run("builds services map", func(t *testing.T) {
@@ -134,7 +134,7 @@ func TestGenerator_buildServices(t *testing.T) {
 
 func TestGenerator_NetworkConfiguration(t *testing.T) {
 	t.Run("creates project-specific network name", func(t *testing.T) {
-		generator, err := NewGenerator("my-awesome-project", "/tmp/services")
+		generator, err := NewGenerator("my-awesome-project", "/tmp/services", nil)
 		require.NoError(t, err)
 
 		yamlBytes, err := generator.GenerateYAML([]string{})
@@ -150,7 +150,7 @@ func TestGenerator_NetworkConfiguration(t *testing.T) {
 	})
 
 	t.Run("handles special characters in project name", func(t *testing.T) {
-		generator, err := NewGenerator("test_project-123", "/tmp/services")
+		generator, err := NewGenerator("test_project-123", "/tmp/services", nil)
 		require.NoError(t, err)
 
 		yamlBytes, err := generator.GenerateYAML([]string{})
@@ -167,7 +167,7 @@ func TestGenerator_NetworkConfiguration(t *testing.T) {
 }
 
 func TestGenerator_YAMLOutput(t *testing.T) {
-	generator, err := NewGenerator("test", "/tmp/services")
+	generator, err := NewGenerator("test", "/tmp/services", nil)
 	require.NoError(t, err)
 
 	t.Run("produces valid YAML syntax", func(t *testing.T) {

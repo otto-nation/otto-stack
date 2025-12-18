@@ -9,7 +9,7 @@ import (
 )
 
 func TestLabelGeneration(t *testing.T) {
-	gen, err := NewGenerator("test-project", "")
+	gen, err := NewGenerator("test-project", "", nil)
 	require.NoError(t, err)
 
 	// Generate YAML for redis service
@@ -42,7 +42,7 @@ func TestLabelGeneration(t *testing.T) {
 }
 
 func TestBuildOttoLabels(t *testing.T) {
-	gen, err := NewGenerator("my-project", "")
+	gen, err := NewGenerator("my-project", "", nil)
 	require.NoError(t, err)
 
 	labels := gen.buildOttoLabels("postgres")

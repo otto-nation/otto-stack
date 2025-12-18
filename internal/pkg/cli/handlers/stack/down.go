@@ -3,7 +3,6 @@ package stack
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
@@ -52,21 +51,11 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	// Load project configuration
-	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
-	cfg, err := LoadProjectConfig(configPath)
+	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
-		return fmt.Errorf(core.MsgStack_failed_load_config, err)
+		return err
 	}
-
-	// Create Docker client
-	dockerClient, err := docker.NewClient(nil)
-	if err != nil {
-		return fmt.Errorf(core.MsgStack_failed_create_docker_client, err)
-	}
-	defer func() {
-		_ = dockerClient.Close()
-	}()
+	defer cleanup()
 
 	// Determine services to stop
 	// Convert CLI options to internal options
@@ -78,7 +67,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Stop services
-	if err := dockerClient.ComposeDown(ctx, cfg.Project.Name, internalOptions); err != nil {
+	if err := setup.DockerClient.ComposeDown(ctx, setup.Config.Project.Name, internalOptions); err != nil {
 		logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationStackDown, logger.LogFieldError, err)
 		return fmt.Errorf(core.MsgStack_failed_stop_services, err)
 	}

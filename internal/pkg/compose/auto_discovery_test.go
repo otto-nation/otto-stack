@@ -104,7 +104,7 @@ func TestAutoDiscoveryPatternMatching(t *testing.T) {
 			}
 
 			// Create generator and test discovery
-			generator, err := NewGenerator("test-project", "")
+			generator, err := NewGenerator("test-project", "", nil)
 			if err != nil {
 				t.Fatalf("Failed to create generator: %v", err)
 			}
@@ -177,7 +177,7 @@ func TestAutoDiscoveryFileSystem(t *testing.T) {
 		}
 	}
 
-	generator, err := NewGenerator("test-project", "")
+	generator, err := NewGenerator("test-project", "", nil)
 	if err != nil {
 		t.Fatalf("Failed to create generator: %v", err)
 	}
@@ -213,7 +213,7 @@ func TestAutoDiscoveryNonExistentDirectory(t *testing.T) {
 	// Test behavior when service-configs directory doesn't exist
 	tempDir := t.TempDir()
 
-	generator, err := NewGenerator("test-project", "")
+	generator, err := NewGenerator("test-project", "", nil)
 	if err != nil {
 		t.Fatalf("Failed to create generator: %v", err)
 	}

@@ -58,7 +58,7 @@ func (h *InitHandler) generateEnvFile(services []string, projectName string, bas
 		return fmt.Errorf("failed to resolve services: %w", err)
 	}
 
-	envContent, err := env.Generate(projectName, resolvedServices)
+	envContent, err := env.Generate(projectName, resolvedServices, manager)
 	if err != nil {
 		return fmt.Errorf("failed to generate env content: %w", err)
 	}
@@ -77,7 +77,12 @@ func (h *InitHandler) generateEnvFile(services []string, projectName string, bas
 func (h *InitHandler) generateDockerCompose(services []string, projectName string, base *base.BaseCommand) error {
 	base.Output.Info("%s", core.MsgProcess_generating_compose)
 
-	generator, err := compose.NewGenerator(projectName, pkgServices.ServicesDir)
+	manager, err := pkgServices.New()
+	if err != nil {
+		return fmt.Errorf("failed to create service manager: %w", err)
+	}
+
+	generator, err := compose.NewGenerator(projectName, pkgServices.ServicesDir, manager)
 	if err != nil {
 		return fmt.Errorf("failed to create compose generator: %w", err)
 	}

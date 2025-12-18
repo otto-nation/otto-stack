@@ -8,7 +8,7 @@ import (
 )
 
 func TestLocalStackDependencyResolution(t *testing.T) {
-	generator, err := NewGenerator("test-project", "")
+	generator, err := NewGenerator("test-project", "", nil)
 	if err != nil {
 		t.Fatalf("Failed to create generator: %v", err)
 	}
@@ -115,7 +115,7 @@ func TestLocalStackDependencyResolution(t *testing.T) {
 }
 
 func TestLocalStackEnvironmentMerging(t *testing.T) {
-	generator, err := NewGenerator("test-project", "")
+	generator, err := NewGenerator("test-project", "", nil)
 	if err != nil {
 		t.Fatalf("Failed to create generator: %v", err)
 	}

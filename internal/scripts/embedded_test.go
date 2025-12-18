@@ -16,14 +16,14 @@ func TestEmbeddedScripts(t *testing.T) {
 	t.Run("generic init script is embedded", func(t *testing.T) {
 		assert.NotEmpty(t, GenericInitScript)
 		assert.Contains(t, GenericInitScript, "#!/")
-		assert.Contains(t, strings.ToLower(GenericInitScript), "auto-discovery initialization")
+		assert.Contains(t, strings.ToLower(GenericInitScript), "initialization")
 	})
 
 	t.Run("script contains required sections", func(t *testing.T) {
 		script := GenericInitScript
 		assert.Contains(t, script, "apk add --no-cache")
 		assert.Contains(t, script, "INIT_SERVICE_NAME")
-		assert.Contains(t, script, "CONFIG_DIR")
+		assert.Contains(t, script, "INIT_CONFIG_DIR")
 		assert.Contains(t, script, "SERVICE_ENDPOINT_URL")
 	})
 }

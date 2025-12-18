@@ -66,7 +66,7 @@ func (h *WebInterfacesHandler) getServiceNames(args []string, setup *CoreSetup) 
 
 // collectInterfaces gathers web interfaces from services
 func (h *WebInterfacesHandler) collectInterfaces(setup *CoreSetup, serviceNames []string, showAll bool) ([]WebInterface, error) {
-	manager, err := services.New()
+	manager, err := GetServicesManager()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create service manager: %w", err)
 	}

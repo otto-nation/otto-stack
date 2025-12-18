@@ -48,7 +48,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	serviceNames := h.resolveServiceNames(args, setup.Config.Stack.Enabled)
 
 	// Apply same service resolution as up command
-	manager, err := services.New()
+	manager, err := GetServicesManager()
 	if err != nil {
 		ci.HandleError(ciFlags, fmt.Errorf("failed to create service manager: %w", err))
 		return nil

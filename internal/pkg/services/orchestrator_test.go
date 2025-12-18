@@ -35,7 +35,7 @@ func TestNewOrchestrator(t *testing.T) {
 		logger := slog.Default()
 		projectDir := "/tmp/test"
 
-		_, err := NewOrchestrator(logger, projectDir)
+		_, err := NewOrchestrator(logger, projectDir, nil)
 		// Note: This might fail if Docker is not available, which is expected in test environment
 		if err != nil {
 			assert.Contains(t, err.Error(), "Docker")
@@ -46,7 +46,7 @@ func TestNewOrchestrator(t *testing.T) {
 		logger := slog.Default()
 		projectDir := ""
 
-		_, err := NewOrchestrator(logger, projectDir)
+		_, err := NewOrchestrator(logger, projectDir, nil)
 		// Should either succeed or fail with Docker-related error
 		if err != nil {
 			assert.NotNil(t, err)
