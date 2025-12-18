@@ -14,10 +14,11 @@ import (
 
 // InitHandler handles the init command
 type InitHandler struct {
-	selectedServices  []string
-	promptManager     *PromptManager
-	validationManager *ValidationManager
-	projectManager    *ProjectManager
+	selectedServices        []string
+	promptManager           *PromptManager
+	validationManager       *ValidationManager
+	projectManager          *ProjectManager
+	serviceSelectionManager *ServiceSelectionManager
 }
 
 // NewInitHandler creates a new InitHandler
@@ -27,6 +28,7 @@ func NewInitHandler() *InitHandler {
 		projectManager:    NewProjectManager(),
 	}
 	handler.promptManager = NewPromptManager(handler)
+	handler.serviceSelectionManager = NewServiceSelectionManager(handler.promptManager, handler.validationManager)
 	return handler
 }
 
@@ -54,7 +56,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgFailedToGetProjectDetails, err)
 	}
 
-	services, validation, advanced, err := h.runServiceSelectionWorkflow(base)
+	services, validation, advanced, err := h.serviceSelectionManager.RunWorkflow(h, base)
 	if err != nil {
 		return err
 	}
@@ -79,48 +81,6 @@ func (h *InitHandler) validateInitFlags(cmd *cobra.Command) error {
 		return pkgerrors.NewValidationError(FieldConfig, core.MsgNon_interactive_mode_requires_config, nil)
 	}
 	return nil
-}
-
-func (h *InitHandler) runServiceSelectionWorkflow(base *base.BaseCommand) ([]string, map[string]bool, map[string]bool, error) {
-	base.Output.Header("%s", core.MsgProcess_initializing)
-	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
-
-	for {
-		services, err := h.promptManager.PromptForServices()
-		if err != nil {
-			return nil, nil, nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionSelectServices, err)
-		}
-		h.selectedServices = services
-
-		if err := h.validateServices(services); err != nil {
-			return nil, nil, nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionValidateServices, err)
-		}
-
-		validation, advanced, err := h.promptManager.PromptForAdvancedOptions()
-		if err != nil {
-			return nil, nil, nil, pkgerrors.NewValidationError(FieldOptions, ActionGetOptions, err)
-		}
-
-		if err := h.validationManager.RunValidations(validation, h, base); err != nil {
-			return nil, nil, nil, pkgerrors.NewValidationError(FieldValidation, ActionValidation, err)
-		}
-
-		action, err := h.promptManager.ConfirmInitialization("", services, validation, advanced, base)
-		if err != nil {
-			return nil, nil, nil, pkgerrors.NewValidationError(FieldConfirmation, ActionGetConfirmation, err)
-		}
-
-		switch action {
-		case core.ActionProceed:
-			return services, validation, advanced, nil
-		case core.ActionBack:
-			base.Output.Info("%s", core.MsgInit_going_back)
-			continue
-		default:
-			base.Output.Info("%s", core.MsgInit_cancelled)
-			return nil, nil, nil, nil
-		}
-	}
 }
 
 func (h *InitHandler) displaySuccessMessage(_ string, base *base.BaseCommand) {
