@@ -54,7 +54,7 @@ func TestHandle_DirectoryValidation(t *testing.T) {
 	assert.True(t,
 		strings.Contains(err.Error(), "Non-interactive mode requires explicit configuration") ||
 			strings.Contains(err.Error(), "non-interactive mode requires") ||
-			strings.Contains(err.Error(), "validation failed") ||
+			strings.Contains(err.Error(), ActionValidation) ||
 			strings.Contains(err.Error(), "directory validation failed") ||
 			strings.Contains(err.Error(), "docker-compose.yml") ||
 			strings.Contains(err.Error(), "required tool 'docker' is not available"),
@@ -83,7 +83,7 @@ func TestHandle_AlreadyInitialized(t *testing.T) {
 	assert.True(t,
 		strings.Contains(err.Error(), "Non-interactive mode requires explicit configuration") ||
 			strings.Contains(err.Error(), "non-interactive mode requires") ||
-			strings.Contains(err.Error(), "validation failed") ||
+			strings.Contains(err.Error(), ActionValidation) ||
 			strings.Contains(err.Error(), "already initialized"),
 		"Expected validation or initialization error, got: %s", err.Error())
 }

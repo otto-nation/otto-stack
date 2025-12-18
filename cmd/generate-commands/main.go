@@ -7,6 +7,8 @@ import (
 	"strings"
 	"text/template"
 
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+
 	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
 )
 
@@ -64,7 +66,7 @@ func generateCommands(commandConfig pkgConfig.CommandConfig) error {
 		TemplateDir+ApatersTemplateFile,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to parse templates: %w", err)
+		return pkgerrors.NewServiceError("generator", "parse templates", err)
 	}
 
 	// Create output file
@@ -72,11 +74,11 @@ func generateCommands(commandConfig pkgConfig.CommandConfig) error {
 	if err != nil {
 		// Try creating the directory and retry
 		if err := os.MkdirAll(filepath.Dir(GeneratedFilePath), dirPermissions); err != nil {
-			return fmt.Errorf("failed to create directory: %w", err)
+			return pkgerrors.NewServiceError("generator", "create directory", err)
 		}
 		file, err = os.Create(GeneratedFilePath)
 		if err != nil {
-			return fmt.Errorf("failed to create file: %w", err)
+			return pkgerrors.NewServiceError("generator", "create file", err)
 		}
 	}
 	defer func() { _ = file.Close() }()
@@ -103,12 +105,12 @@ func generateCommands(commandConfig pkgConfig.CommandConfig) error {
 
 	// Execute main template
 	if err := tmpl.ExecuteTemplate(file, CommandsTemplateFile, data); err != nil {
-		return fmt.Errorf("failed to execute commands template: %w", err)
+		return pkgerrors.NewServiceError("generator", "execute commands template", err)
 	}
 
 	// Execute adapters template
 	if err := tmpl.ExecuteTemplate(file, ApatersTemplateFile, nil); err != nil {
-		return fmt.Errorf("failed to execute adapters template: %w", err)
+		return pkgerrors.NewServiceError("generator", "execute adapters template", err)
 	}
 
 	return nil

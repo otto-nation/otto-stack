@@ -2,11 +2,11 @@ package project
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -35,7 +35,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	formatter := display.New(cmd.OutOrStdout(), base.Output)
 
 	if err := formatter.FormatStatus(services, display.Options{Format: format}); err != nil {
-		return fmt.Errorf("failed to format output: %w", err)
+		return pkgerrors.NewServiceError(ComponentFormatter, ActionFormatOutput, err)
 	}
 
 	return nil

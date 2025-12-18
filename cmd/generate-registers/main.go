@@ -7,6 +7,8 @@ import (
 	"strings"
 	"text/template"
 
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+
 	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
 )
 
@@ -57,13 +59,13 @@ func main() {
 func generateRegisterFile(handler string, commands []string) error {
 	tmpl, err := template.ParseFiles(TemplateFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to parse template: %w", err)
+		return pkgerrors.NewServiceError("generator", "parse template", err)
 	}
 
 	outputPath := fmt.Sprintf(GeneratedFilePath, handler)
 	file, err := os.Create(outputPath)
 	if err != nil {
-		return fmt.Errorf("failed to create file: %w", err)
+		return pkgerrors.NewServiceError("generator", "create file", err)
 	}
 	defer func() { _ = file.Close() }()
 

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"maps"
 
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+
 	"gopkg.in/yaml.v3"
 
 	dockerConstants "github.com/otto-nation/otto-stack/internal/core/docker"
@@ -36,7 +38,7 @@ func (g *Generator) GenerateYAML(serviceNames []string) ([]byte, error) {
 // buildComposeStructure creates the compose structure
 func (g *Generator) buildComposeStructure(serviceNames []string) (map[string]any, error) {
 	if g.projectName == "" {
-		return nil, fmt.Errorf("project name cannot be empty")
+		return nil, pkgerrors.NewValidationError("input", "project name cannot be empty", nil)
 	}
 
 	return map[string]any{

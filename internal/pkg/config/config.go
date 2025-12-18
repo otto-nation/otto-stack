@@ -1,13 +1,13 @@
 package config
 
 import (
-	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/core"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -60,7 +60,7 @@ type FlagConfig struct {
 func LoadConfig() (*Config, error) {
 	baseConfig, err := loadBaseConfig()
 	if err != nil {
-		return nil, fmt.Errorf(ErrLoadBaseConfig, err)
+		return nil, pkgerrors.NewConfigError("", ErrLoadBaseConfig, err)
 	}
 
 	localConfig, err := loadLocalConfig()
@@ -75,7 +75,7 @@ func LoadConfig() (*Config, error) {
 // LoadServiceConfig loads configuration for a specific service
 func LoadServiceConfig(serviceName string) (map[string]any, error) {
 	if serviceName == "" {
-		return nil, fmt.Errorf("service name cannot be empty")
+		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgServiceNameEmpty, nil)
 	}
 
 	baseServiceConfig, err := loadServiceConfigFile(serviceName, false)
@@ -96,7 +96,7 @@ func LoadServiceConfig(serviceName string) (map[string]any, error) {
 func LoadCommandConfig() (map[string]any, error) {
 	var commandConfig map[string]any
 	if err := yaml.Unmarshal(config.EmbeddedCommandsYAML, &commandConfig); err != nil {
-		return nil, fmt.Errorf(ErrCommandConfigParse, err)
+		return nil, pkgerrors.NewConfigError("", ErrCommandConfigParse, err)
 	}
 	return commandConfig, nil
 }
@@ -105,7 +105,7 @@ func LoadCommandConfig() (map[string]any, error) {
 func LoadCommandConfigStruct() (*CommandConfig, error) {
 	var commandConfig CommandConfig
 	if err := yaml.Unmarshal(config.EmbeddedCommandsYAML, &commandConfig); err != nil {
-		return nil, fmt.Errorf(ErrCommandConfigParse, err)
+		return nil, pkgerrors.NewConfigError("", ErrCommandConfigParse, err)
 	}
 	return &commandConfig, nil
 }
@@ -118,7 +118,7 @@ func GenerateConfig(projectName string, services []string) ([]byte, error) {
 // GenerateConfigWithValidation creates a new otto-stack configuration file with validation options
 func GenerateConfigWithValidation(projectName string, services []string, validationOptions map[string]bool) ([]byte, error) {
 	if projectName == "" {
-		return nil, fmt.Errorf("project name cannot be empty")
+		return nil, pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgProjectNameEmpty, nil)
 	}
 
 	config := Config{
@@ -161,12 +161,12 @@ func loadBaseConfig() (*Config, error) {
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return nil, fmt.Errorf(ErrConfigNotFound, configPath)
+		return nil, pkgerrors.NewConfigErrorf(configPath, ErrConfigNotFound, configPath)
 	}
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf(ErrConfigParse, err)
+		return nil, pkgerrors.NewConfigError("", ErrConfigParse, err)
 	}
 
 	return &config, nil
@@ -183,7 +183,7 @@ func loadLocalConfig() (*Config, error) {
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf(ErrLocalConfigParse, err)
+		return nil, pkgerrors.NewConfigError("", ErrLocalConfigParse, err)
 	}
 
 	return &config, nil
@@ -219,7 +219,7 @@ func loadServiceConfigFile(serviceName string, isLocal bool) (map[string]any, er
 
 	configPath, err := core.FindYAMLFile(configDir, filename)
 	if err != nil {
-		return nil, fmt.Errorf(ErrServiceNotFound, configType, serviceName)
+		return nil, pkgerrors.NewConfigErrorf("", ErrServiceNotFound, configType, serviceName)
 	}
 
 	data, err := os.ReadFile(configPath)
@@ -229,7 +229,7 @@ func loadServiceConfigFile(serviceName string, isLocal bool) (map[string]any, er
 
 	var config map[string]any
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf(ErrServiceConfigParse, configType, err)
+		return nil, pkgerrors.NewConfigError("", ErrServiceConfigParse, err)
 	}
 
 	return config, nil

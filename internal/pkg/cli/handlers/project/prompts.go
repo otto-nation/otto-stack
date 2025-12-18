@@ -9,6 +9,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
@@ -22,7 +23,7 @@ func (h *InitHandler) promptForProjectDetails() (string, error) {
 	// Get current directory name as default project name
 	currentDir, err := filepath.Abs(".")
 	if err != nil {
-		return "", fmt.Errorf("failed to get current directory: %w", err)
+		return "", pkgerrors.NewValidationError(pkgerrors.FieldProjectPath, ActionGetCurrentDir, err)
 	}
 	defaultName := filepath.Base(currentDir)
 
@@ -36,7 +37,7 @@ func (h *InitHandler) promptForProjectDetails() (string, error) {
 	if err := survey.AskOne(namePrompt, &projectName, survey.WithValidator(func(ans any) error {
 		return h.validateProjectName(ans.(string))
 	})); err != nil {
-		return "", fmt.Errorf("failed to get project name: %w", err)
+		return "", pkgerrors.NewValidationError(pkgerrors.FieldProjectName, ActionGetProjectName, err)
 	}
 
 	return projectName, nil
@@ -51,7 +52,7 @@ func (h *InitHandler) promptForServices() ([]string, error) {
 
 	categoryNames, categoryServicesList := h.prepareCategoryNavigation(categories)
 	if len(categoryNames) == 0 {
-		return nil, fmt.Errorf("no services available")
+		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgNoServicesAvailable, nil)
 	}
 
 	return h.navigateServiceCategories(categoryNames, categoryServicesList)
@@ -61,7 +62,7 @@ func (h *InitHandler) loadServiceCategories() (map[string][]services.ServiceConf
 	serviceUtils := services.NewServiceUtils()
 	categories, err := serviceUtils.GetServicesByCategory()
 	if err != nil {
-		return nil, fmt.Errorf("failed to load services: %w", err)
+		return nil, pkgerrors.NewServiceError(ComponentServices, ActionLoadServices, err)
 	}
 	return categories, nil
 }
@@ -104,7 +105,7 @@ func (h *InitHandler) navigateServiceCategories(categoryNames []string, category
 	}
 
 	if len(allSelectedServices) == 0 {
-		return nil, fmt.Errorf("no services selected")
+		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgNoServicesSelected, nil)
 	}
 	return allSelectedServices, nil
 }
@@ -134,7 +135,7 @@ func (h *InitHandler) promptCategoryServices(categoryName string, serviceOptions
 	}
 
 	if err := survey.AskOne(prompt, &selected); err != nil {
-		return nil, false, fmt.Errorf("failed to select %s services: %w", categoryName, err)
+		return nil, false, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, "failed to select services", err)
 	}
 
 	var selectedServiceNames []string
@@ -168,7 +169,7 @@ func (h *InitHandler) promptForAdvancedOptions() (map[string]bool, map[string]bo
 	}
 
 	if err := survey.AskOne(validationPrompt, &wantsValidation); err != nil {
-		return validation, advanced, fmt.Errorf("failed to get validation preference: %w", err)
+		return validation, advanced, pkgerrors.NewValidationError(FieldValidation, MsgFailedToGetValidationPreference, err)
 	}
 
 	if !wantsValidation {
@@ -203,7 +204,7 @@ func (h *InitHandler) promptForAdvancedOptions() (map[string]bool, map[string]bo
 	}
 
 	if err := survey.AskOne(validationSelectPrompt, &selectedValidation); err != nil {
-		return validation, advanced, fmt.Errorf("failed to get validation options: %w", err)
+		return validation, advanced, pkgerrors.NewValidationError(FieldValidation, MsgFailedToGetValidationOptions, err)
 	}
 
 	// Map selected descriptions back to keys
@@ -246,7 +247,7 @@ func (h *InitHandler) confirmInitializationWithBack(projectName string, services
 	}
 
 	if err := survey.AskOne(actionPrompt, &action); err != nil {
-		return "", fmt.Errorf("failed to get action: %w", err)
+		return "", pkgerrors.NewValidationError(FieldAction, MsgFailedToGetAction, err)
 	}
 
 	return action, nil

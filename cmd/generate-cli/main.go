@@ -8,6 +8,8 @@ import (
 	"strings"
 	"text/template"
 
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -126,14 +128,14 @@ const (
 func generateCoreConstants() error {
 	rawConfig, err := loadCommandConfig()
 	if err != nil {
-		return fmt.Errorf("failed to load raw config: %w", err)
+		return pkgerrors.NewServiceError("generator", "load raw config", err)
 	}
 
 	tmpl, err := template.New(CoreTemplateName).Funcs(template.FuncMap{
 		"toPascalCase": toPascalCase,
 	}).ParseFiles(CoreTemplateFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to parse constants template: %w", err)
+		return pkgerrors.NewServiceError("generator", "parse constants template", err)
 	}
 
 	tmpl = tmpl.Lookup(filepath.Base(CoreTemplateFilePath))
@@ -142,11 +144,11 @@ func generateCoreConstants() error {
 	if err != nil {
 		// Try creating the directory and retry
 		if err := os.MkdirAll(filepath.Dir(CoreGeneratedPath), dirPermissions); err != nil {
-			return fmt.Errorf("failed to create directory: %w", err)
+			return pkgerrors.NewServiceError("generator", "create directory", err)
 		}
 		file, err = os.Create(CoreGeneratedPath)
 		if err != nil {
-			return fmt.Errorf("failed to create constants file: %w", err)
+			return pkgerrors.NewServiceError("generator", "create constants file", err)
 		}
 	}
 	defer func() { _ = file.Close() }()
@@ -173,12 +175,12 @@ func generateCoreConstants() error {
 func generateCIUtilities() error {
 	tmpl, err := template.ParseFiles(CLITemplateFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to parse CI template: %w", err)
+		return pkgerrors.NewServiceError("generator", "parse CI template", err)
 	}
 
 	file, err := os.Create(CIGeneratedPath)
 	if err != nil {
-		return fmt.Errorf("failed to create CI file: %w", err)
+		return pkgerrors.NewServiceError("generator", "create CI file", err)
 	}
 	defer func() { _ = file.Close() }()
 

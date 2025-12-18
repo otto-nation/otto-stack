@@ -9,6 +9,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -95,7 +96,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 func (h *CleanupHandler) performCleanup(ctx context.Context, setup *CoreSetup, cmd *cobra.Command, base *base.BaseCommand) error {
 	flags, err := core.ParseCleanupFlags(cmd)
 	if err != nil {
-		return fmt.Errorf("failed to parse cleanup flags: %w", err)
+		return pkgerrors.NewValidationError("flags", "failed to parse cleanup flags", err)
 	}
 
 	ciFlags := ci.GetFlags(cmd)
@@ -123,7 +124,7 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *CoreSetup, c
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to list containers: %w", err)
+		return pkgerrors.NewDockerError(OpListContainers, "", err)
 	}
 
 	if len(containers) == 0 {

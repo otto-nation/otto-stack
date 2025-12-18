@@ -8,6 +8,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
@@ -23,7 +24,7 @@ func NewConnectHandler() *ConnectHandler {
 // ValidateArgs validates the command arguments
 func (h *ConnectHandler) ValidateArgs(args []string) error {
 	if len(args) < 1 {
-		return fmt.Errorf("%s", core.Messages[core.MsgErrors_requires_service_name])
+		return pkgerrors.NewValidationError("service-name", "service name is required", nil)
 	}
 	return nil
 }
@@ -79,16 +80,16 @@ func (h *ConnectHandler) buildDockerArgs(projectName, serviceName string, comman
 func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host string, port int, _ bool) ([]string, error) {
 	manager, err := GetServicesManager()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create service manager: %w", err)
+		return nil, pkgerrors.NewServiceError(ComponentServiceManager, ActionCreateManager, err)
 	}
 
 	service, err := manager.GetService(serviceName)
 	if err != nil {
-		return nil, fmt.Errorf("unsupported service type: %s", serviceName)
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "unsupported service type: %s", serviceName)
 	}
 
 	if service.Service.Connection == nil {
-		return nil, fmt.Errorf("service %s does not support connections", serviceName)
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "service %s does not support connections", serviceName)
 	}
 
 	config := service.Service.Connection

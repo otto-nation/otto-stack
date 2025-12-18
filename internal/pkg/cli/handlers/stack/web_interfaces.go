@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
@@ -68,7 +70,7 @@ func (h *WebInterfacesHandler) getServiceNames(args []string, setup *CoreSetup) 
 func (h *WebInterfacesHandler) collectInterfaces(setup *CoreSetup, serviceNames []string, showAll bool) ([]WebInterface, error) {
 	manager, err := GetServicesManager()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create service manager: %w", err)
+		return nil, pkgerrors.NewServiceError(ComponentServiceManager, ActionCreateManager, err)
 	}
 
 	resolvedServices, err := manager.ResolveServices(serviceNames)

@@ -9,6 +9,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
 
 // createDirectoryStructure creates the necessary directory structure
@@ -20,7 +21,7 @@ func (h *InitHandler) createDirectoryStructure() error {
 
 	for _, dir := range directories {
 		if err := os.MkdirAll(dir, core.PermReadWriteExec); err != nil {
-			return fmt.Errorf("failed to create directory %s: %w", dir, err)
+			return pkgerrors.NewConfigError(dir, MsgFailedToCreateDirectory, err)
 		}
 	}
 
@@ -33,7 +34,7 @@ func (h *InitHandler) createConfigFile(projectName string, services []string, va
 
 	configPath := core.OttoStackDir + "/" + core.ConfigFileName
 	if err := os.WriteFile(configPath, []byte(configContent), core.PermReadWrite); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
+		return pkgerrors.NewConfigError(configPath, MsgFailedToWriteConfigFile, err)
 	}
 
 	base.Output.Success(core.MsgSuccess_created_file, configPath)
@@ -68,13 +69,13 @@ func (h *InitHandler) createGitignoreEntries(base *base.BaseCommand) error {
 	// Append entries
 	file, err := os.OpenFile(gitignorePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, core.PermReadWrite)
 	if err != nil {
-		return fmt.Errorf("failed to open .gitignore: %w", err)
+		return pkgerrors.NewServiceError(ComponentFile, ActionOpenFile, err)
 	}
 	defer func() { _ = file.Close() }()
 
 	for _, entry := range core.GitignoreEntries {
 		if _, err := file.WriteString(entry + "\n"); err != nil {
-			return fmt.Errorf("failed to write to .gitignore: %w", err)
+			return pkgerrors.NewServiceError(ComponentFile, ActionWriteGitignore, err)
 		}
 	}
 

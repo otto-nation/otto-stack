@@ -36,7 +36,7 @@ func TestHandle_ValidationFailure(t *testing.T) {
 	assert.True(t,
 		strings.Contains(err.Error(), "Non-interactive mode requires explicit configuration") ||
 			strings.Contains(err.Error(), "non-interactive mode requires") ||
-			strings.Contains(err.Error(), "validation failed") ||
+			strings.Contains(err.Error(), ActionValidation) ||
 			strings.Contains(err.Error(), "already initialized"),
 		"Expected validation or initialization error, got: %s", err.Error())
 }
@@ -56,7 +56,7 @@ func TestHandle_WithForceFlag(t *testing.T) {
 
 	err := handler.Handle(context.Background(), cmd, []string{}, base)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "failed to get project details")
+	assert.Contains(t, err.Error(), MsgFailedToGetProjectDetails)
 }
 
 func TestCreateDirectoryStructure(t *testing.T) {

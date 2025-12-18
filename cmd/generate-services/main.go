@@ -9,6 +9,8 @@ import (
 	"strings"
 	"text/template"
 
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"gopkg.in/yaml.v3"
 )
@@ -344,18 +346,18 @@ const ReadExecutePermissions = 0755
 func generateConstants(serviceConstants *ServiceConstants) error {
 	tmpl, err := template.ParseFiles(TemplateFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to parse template: %w", err)
+		return pkgerrors.NewServiceError("generator", "parse template", err)
 	}
 
 	file, err := os.Create(GeneratedFilePath)
 	if err != nil {
 		// Try creating the directory and retry
 		if err := os.MkdirAll(filepath.Dir(GeneratedFilePath), ReadExecutePermissions); err != nil {
-			return fmt.Errorf("failed to create directory: %w", err)
+			return pkgerrors.NewServiceError("generator", "create directory", err)
 		}
 		file, err = os.Create(GeneratedFilePath)
 		if err != nil {
-			return fmt.Errorf("failed to create file: %w", err)
+			return pkgerrors.NewServiceError("generator", "create file", err)
 		}
 	}
 	defer func() { _ = file.Close() }()
@@ -366,18 +368,18 @@ func generateConstants(serviceConstants *ServiceConstants) error {
 func generateTypes() error {
 	tmpl, err := template.ParseFiles(TypesTemplateFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to parse types template: %w", err)
+		return pkgerrors.NewServiceError("generator", "parse types template", err)
 	}
 
 	file, err := os.Create(TypesGeneratedFilePath)
 	if err != nil {
 		// Try creating the directory and retry
 		if err := os.MkdirAll(filepath.Dir(TypesGeneratedFilePath), ReadExecutePermissions); err != nil {
-			return fmt.Errorf("failed to create directory: %w", err)
+			return pkgerrors.NewServiceError("generator", "create directory", err)
 		}
 		file, err = os.Create(TypesGeneratedFilePath)
 		if err != nil {
-			return fmt.Errorf("failed to create types file: %w", err)
+			return pkgerrors.NewServiceError("generator", "create types file", err)
 		}
 	}
 	defer func() { _ = file.Close() }()
@@ -388,18 +390,18 @@ func generateTypes() error {
 func generateSchema() error {
 	tmpl, err := template.ParseFiles(SchemaTemplateFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to parse schema template: %w", err)
+		return pkgerrors.NewServiceError("generator", "parse schema template", err)
 	}
 
 	file, err := os.Create(SchemaGeneratedFilePath)
 	if err != nil {
 		// Try creating the directory and retry
 		if err := os.MkdirAll(filepath.Dir(SchemaGeneratedFilePath), ReadExecutePermissions); err != nil {
-			return fmt.Errorf("failed to create directory: %w", err)
+			return pkgerrors.NewServiceError("generator", "create directory", err)
 		}
 		file, err = os.Create(SchemaGeneratedFilePath)
 		if err != nil {
-			return fmt.Errorf("failed to create schema file: %w", err)
+			return pkgerrors.NewServiceError("generator", "create schema file", err)
 		}
 	}
 	defer func() { _ = file.Close() }()

@@ -12,6 +12,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/env"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	pkgServices "github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
@@ -28,12 +29,12 @@ func (h *InitHandler) generateConfig(name string, services []string, validationO
 func (h *InitHandler) generateInitialComposeFiles(services []string, projectName string, _, _ map[string]bool, base *base.BaseCommand) error {
 	// Generate .env.generated
 	if err := h.generateEnvFile(services, projectName, base); err != nil {
-		return fmt.Errorf("failed to generate .env file: %w", err)
+		return pkgerrors.NewServiceError(ComponentEnv, ActionGenerateEnvFile, err)
 	}
 
 	// Generate docker-compose.yml
 	if err := h.generateDockerCompose(services, projectName, base); err != nil {
-		return fmt.Errorf("failed to generate docker-compose.yml: %w", err)
+		return pkgerrors.NewServiceError(ComponentCompose, ActionGenerateDockerCompose, err)
 	}
 
 	base.Output.Success(core.MsgSuccess_generated_files,
@@ -50,24 +51,24 @@ func (h *InitHandler) generateEnvFile(services []string, projectName string, bas
 	// Resolve services to get actual container services
 	manager, err := pkgServices.New()
 	if err != nil {
-		return fmt.Errorf("failed to create service manager: %w", err)
+		return pkgerrors.NewServiceError(ComponentServiceManager, ActionCreateManager, err)
 	}
 
 	resolvedServices, err := manager.ResolveServices(services)
 	if err != nil {
-		return fmt.Errorf("failed to resolve services: %w", err)
+		return pkgerrors.NewServiceError(ComponentServices, ActionResolveServices, err)
 	}
 
 	envContent, err := env.Generate(projectName, resolvedServices, manager)
 	if err != nil {
-		return fmt.Errorf("failed to generate env content: %w", err)
+		return pkgerrors.NewConfigError(core.EnvGeneratedFilePath, ActionGenerateEnv, err)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(core.EnvGeneratedFilePath), core.PermReadWriteExec); err != nil {
-		return fmt.Errorf("failed to create generated directory: %w", err)
+		return pkgerrors.NewServiceError(ComponentDirectory, ActionCreateDirectory, err)
 	}
 	if err := os.WriteFile(core.EnvGeneratedFilePath, envContent, core.PermReadWrite); err != nil {
-		return fmt.Errorf("failed to write %s: %w", core.EnvGeneratedFilePath, err)
+		return pkgerrors.NewServiceError(ComponentFile, ActionWriteFile, err)
 	}
 
 	return nil
@@ -79,24 +80,24 @@ func (h *InitHandler) generateDockerCompose(services []string, projectName strin
 
 	manager, err := pkgServices.New()
 	if err != nil {
-		return fmt.Errorf("failed to create service manager: %w", err)
+		return pkgerrors.NewServiceError(ComponentServiceManager, ActionCreateManager, err)
 	}
 
 	generator, err := compose.NewGenerator(projectName, pkgServices.ServicesDir, manager)
 	if err != nil {
-		return fmt.Errorf("failed to create compose generator: %w", err)
+		return pkgerrors.NewServiceError(ComponentCompose, ActionCreateComposeGenerator, err)
 	}
 
 	composeYAML, err := generator.GenerateYAML(services)
 	if err != nil {
-		return fmt.Errorf("failed to generate docker-compose YAML: %w", err)
+		return pkgerrors.NewServiceError(ComponentCompose, ActionGenerateDockerComposeYAML, err)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(docker.DockerComposeFilePath), core.PermReadWriteExec); err != nil {
-		return fmt.Errorf("failed to create generated directory: %w", err)
+		return pkgerrors.NewServiceError(ComponentDirectory, ActionCreateDirectory, err)
 	}
 	if err := os.WriteFile(docker.DockerComposeFilePath, composeYAML, core.PermReadWrite); err != nil {
-		return fmt.Errorf("failed to write %s: %w", docker.DockerComposeFilePath, err)
+		return pkgerrors.NewServiceError(ComponentFile, ActionWriteFile, err)
 	}
 
 	return nil

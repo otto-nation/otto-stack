@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
@@ -16,7 +18,7 @@ import (
 func ExecuteFactory() error {
 	rootCmd, err := cli.BuildRootCommand()
 	if err != nil {
-		return fmt.Errorf("failed to build root command: %w", err)
+		return pkgerrors.NewServiceError("cli", "build root command", err)
 	}
 
 	cobra.OnInitialize(initConfig)

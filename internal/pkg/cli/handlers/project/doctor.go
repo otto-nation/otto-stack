@@ -2,7 +2,6 @@ package project
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +9,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
@@ -52,7 +52,7 @@ func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 
 	base.Output.Error("Some issues found")
 	logger.Error("Health checks failed")
-	return fmt.Errorf("health check failed")
+	return pkgerrors.NewValidationError(FieldHealth, MsgHealthCheckFailed, nil)
 }
 
 func (h *DoctorHandler) checkDocker(base *base.BaseCommand) bool {

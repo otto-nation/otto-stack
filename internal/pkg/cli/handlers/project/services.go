@@ -2,11 +2,11 @@ package project
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
@@ -23,13 +23,13 @@ func NewServicesHandler() *ServicesHandler {
 func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	flags, err := core.ParseServicesFlags(cmd)
 	if err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.FieldFlags, ActionParseFlags, err)
 	}
 
 	serviceUtils := services.NewServiceUtils()
 	categorizedServices, err := serviceUtils.GetServicesByCategory()
 	if err != nil {
-		return fmt.Errorf(core.MsgErrors_failed_load_services, err)
+		return pkgerrors.NewServiceError(ComponentServices, ActionLoadCatalog, err)
 	}
 
 	catalog := h.buildServiceCatalog(categorizedServices)

@@ -2,10 +2,11 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"path/filepath"
 	"time"
+
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
@@ -89,7 +90,7 @@ func (o *Orchestrator) CleanupResources(ctx context.Context, options docker.Clea
 		Remove:        true,
 		RemoveVolumes: options.RemoveVolumes,
 	}); err != nil {
-		return fmt.Errorf("failed to stop services: %w", err)
+		return pkgerrors.NewServiceError("system", "stop services", err)
 	}
 
 	// Clean up additional resources if requested

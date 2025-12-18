@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"time"
 
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 )
 
@@ -71,12 +73,12 @@ func GetProcessPID(name string) (int, error) {
 
 	lines := strings.Split(outputStr, "\n")
 	if len(lines) == 0 {
-		return 0, fmt.Errorf("failed to parse PID from tasklist output")
+		return 0, pkgerrors.NewValidationError("input", "failed to parse PID from tasklist output", nil)
 	}
 
 	fields := strings.Split(lines[0], ",")
 	if len(fields) < docker.MinFieldCount {
-		return 0, fmt.Errorf("failed to parse PID from tasklist output")
+		return 0, pkgerrors.NewValidationError("input", "failed to parse PID from tasklist output", nil)
 	}
 
 	pidStr := strings.Trim(fields[1], "\"")

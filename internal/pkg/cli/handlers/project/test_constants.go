@@ -1,6 +1,8 @@
 package project
 
-import "github.com/otto-nation/otto-stack/internal/core"
+import (
+	"github.com/otto-nation/otto-stack/internal/core"
+)
 
 // Test constants to eliminate magic strings and provide context
 const (
@@ -26,7 +28,6 @@ const (
 	// Test validation messages
 	MsgAlreadyInitialized = "already initialized"
 	MsgRequiredTool       = "required tool"
-	MsgNoServicesSelected = "no services selected"
 	MsgInvalidService     = "invalid service"
 	MsgDuplicateService   = "duplicate service"
 )

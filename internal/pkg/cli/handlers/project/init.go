@@ -8,6 +8,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
@@ -16,13 +17,15 @@ import (
 // InitHandler handles the init command
 type InitHandler struct {
 	serviceUtils     *services.ServiceUtils
+	configService    services.ConfigService
 	selectedServices []string
 }
 
 // NewInitHandler creates a new InitHandler
 func NewInitHandler() *InitHandler {
 	return &InitHandler{
-		serviceUtils: services.NewServiceUtils(),
+		serviceUtils:  services.NewServiceUtils(),
+		configService: services.NewConfigService(),
 	}
 }
 
@@ -42,7 +45,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	projectName, err := h.promptForProjectDetails()
 	if err != nil {
-		return fmt.Errorf("failed to get project details: %w", err)
+		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgFailedToGetProjectDetails, err)
 	}
 
 	services, validation, advanced, err := h.runServiceSelectionWorkflow(base)
@@ -67,7 +70,7 @@ func (h *InitHandler) validateInitFlags(cmd *cobra.Command) error {
 
 	ciFlags := ci.GetFlags(cmd)
 	if ciFlags.NonInteractive {
-		return fmt.Errorf("%s", core.MsgNon_interactive_mode_requires_config)
+		return pkgerrors.NewValidationError(FieldConfig, core.MsgNon_interactive_mode_requires_config, nil)
 	}
 	return nil
 }
@@ -79,26 +82,26 @@ func (h *InitHandler) runServiceSelectionWorkflow(base *base.BaseCommand) ([]str
 	for {
 		services, err := h.promptForServices()
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to select services: %w", err)
+			return nil, nil, nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionSelectServices, err)
 		}
 		h.selectedServices = services
 
 		if err := h.validateServices(services); err != nil {
-			return nil, nil, nil, fmt.Errorf("service validation failed: %w", err)
+			return nil, nil, nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionValidateServices, err)
 		}
 
 		validation, advanced, err := h.promptForAdvancedOptions()
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to get advanced options: %w", err)
+			return nil, nil, nil, pkgerrors.NewValidationError(FieldOptions, ActionGetOptions, err)
 		}
 
 		if err := h.runValidations(validation, base); err != nil {
-			return nil, nil, nil, fmt.Errorf("validation failed: %w", err)
+			return nil, nil, nil, pkgerrors.NewValidationError(FieldValidation, ActionValidation, err)
 		}
 
 		action, err := h.confirmInitializationWithBack("", services, validation, advanced, base)
 		if err != nil {
-			return nil, nil, nil, fmt.Errorf("failed to get confirmation: %w", err)
+			return nil, nil, nil, pkgerrors.NewValidationError(FieldConfirmation, ActionGetConfirmation, err)
 		}
 
 		switch action {
@@ -116,17 +119,17 @@ func (h *InitHandler) runServiceSelectionWorkflow(base *base.BaseCommand) ([]str
 
 func (h *InitHandler) createProjectStructure(projectName string, services []string, validation, advanced map[string]bool, base *base.BaseCommand) error {
 	if err := h.createDirectoryStructure(); err != nil {
-		return fmt.Errorf("failed to create directories: %w", err)
+		return pkgerrors.NewServiceError(ComponentProject, ActionCreateDirectories, err)
 	}
 
 	if err := h.createConfigFile(projectName, services, validation, base); err != nil {
-		return fmt.Errorf("failed to create config file: %w", err)
+		return pkgerrors.NewConfigError("", ActionCreateConfigFile, err)
 	}
 
 	h.generateServiceConfigs(services, base)
 
 	if err := h.generateInitialComposeFiles(services, projectName, validation, advanced, base); err != nil {
-		return fmt.Errorf("failed to generate compose files: %w", err)
+		return pkgerrors.NewServiceError(ComponentCompose, ActionGenerateFiles, err)
 	}
 
 	if err := h.createGitignoreEntries(base); err != nil {
@@ -173,7 +176,7 @@ func (h *InitHandler) runValidations(selectedValidations map[string]bool, base *
 
 		if isRequired || isSelected {
 			if err := validationFunc(h, base); err != nil {
-				return fmt.Errorf("validation '%s' failed: %w", validationKey, err)
+				return pkgerrors.NewValidationError(FieldValidation, "validation failed", err)
 			}
 		}
 	}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
@@ -50,7 +52,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	// Apply same service resolution as up command
 	manager, err := GetServicesManager()
 	if err != nil {
-		ci.HandleError(ciFlags, fmt.Errorf("failed to create service manager: %w", err))
+		ci.HandleError(ciFlags, pkgerrors.NewServiceError(ComponentServiceManager, ActionCreateManager, err))
 		return nil
 	}
 
