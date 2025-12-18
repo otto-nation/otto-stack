@@ -3,30 +3,36 @@ package project
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
 
 // InitHandler handles the init command
 type InitHandler struct {
-	serviceUtils     *services.ServiceUtils
-	configService    services.ConfigService
-	selectedServices []string
+	selectedServices  []string
+	promptManager     *PromptManager
+	validationManager *ValidationManager
+	projectManager    *ProjectManager
 }
 
 // NewInitHandler creates a new InitHandler
 func NewInitHandler() *InitHandler {
-	return &InitHandler{
-		serviceUtils:  services.NewServiceUtils(),
-		configService: services.NewConfigService(),
+	handler := &InitHandler{
+		validationManager: NewValidationManager(),
+		projectManager:    NewProjectManager(),
 	}
+	handler.promptManager = NewPromptManager(handler)
+	return handler
+}
+
+// ValidateProjectName implements ProjectValidator interface
+func (h *InitHandler) ValidateProjectName(name string) error {
+	return h.validateProjectName(name)
 }
 
 // Handle executes the init command
@@ -43,7 +49,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	projectName, err := h.promptForProjectDetails()
+	projectName, err := h.promptManager.PromptForProjectDetails()
 	if err != nil {
 		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgFailedToGetProjectDetails, err)
 	}
@@ -53,7 +59,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	if err := h.createProjectStructure(projectName, services, validation, advanced, base); err != nil {
+	if err := h.projectManager.CreateProjectStructure(projectName, services, validation, advanced, base); err != nil {
 		return err
 	}
 
@@ -80,7 +86,7 @@ func (h *InitHandler) runServiceSelectionWorkflow(base *base.BaseCommand) ([]str
 	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
 
 	for {
-		services, err := h.promptForServices()
+		services, err := h.promptManager.PromptForServices()
 		if err != nil {
 			return nil, nil, nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionSelectServices, err)
 		}
@@ -90,16 +96,16 @@ func (h *InitHandler) runServiceSelectionWorkflow(base *base.BaseCommand) ([]str
 			return nil, nil, nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionValidateServices, err)
 		}
 
-		validation, advanced, err := h.promptForAdvancedOptions()
+		validation, advanced, err := h.promptManager.PromptForAdvancedOptions()
 		if err != nil {
 			return nil, nil, nil, pkgerrors.NewValidationError(FieldOptions, ActionGetOptions, err)
 		}
 
-		if err := h.runValidations(validation, base); err != nil {
+		if err := h.validationManager.RunValidations(validation, h, base); err != nil {
 			return nil, nil, nil, pkgerrors.NewValidationError(FieldValidation, ActionValidation, err)
 		}
 
-		action, err := h.confirmInitializationWithBack("", services, validation, advanced, base)
+		action, err := h.promptManager.ConfirmInitialization("", services, validation, advanced, base)
 		if err != nil {
 			return nil, nil, nil, pkgerrors.NewValidationError(FieldConfirmation, ActionGetConfirmation, err)
 		}
@@ -115,32 +121,6 @@ func (h *InitHandler) runServiceSelectionWorkflow(base *base.BaseCommand) ([]str
 			return nil, nil, nil, nil
 		}
 	}
-}
-
-func (h *InitHandler) createProjectStructure(projectName string, services []string, validation, advanced map[string]bool, base *base.BaseCommand) error {
-	if err := h.createDirectoryStructure(); err != nil {
-		return pkgerrors.NewServiceError(ComponentProject, ActionCreateDirectories, err)
-	}
-
-	if err := h.createConfigFile(projectName, services, validation, base); err != nil {
-		return pkgerrors.NewConfigError("", ActionCreateConfigFile, err)
-	}
-
-	h.generateServiceConfigs(services, base)
-
-	if err := h.generateInitialComposeFiles(services, projectName, validation, advanced, base); err != nil {
-		return pkgerrors.NewServiceError(ComponentCompose, ActionGenerateFiles, err)
-	}
-
-	if err := h.createGitignoreEntries(base); err != nil {
-		base.Output.Warning(core.MsgWarnings_failed_gitignore, err)
-	}
-
-	if err := h.createReadme(projectName, services, base); err != nil {
-		base.Output.Warning(core.MsgWarnings_failed_readme, err)
-	}
-
-	return nil
 }
 
 func (h *InitHandler) displaySuccessMessage(_ string, base *base.BaseCommand) {
@@ -162,35 +142,3 @@ func (h *InitHandler) GetRequiredFlags() []string {
 }
 
 // runValidations executes selected validation functions
-func (h *InitHandler) runValidations(selectedValidations map[string]bool, base *base.BaseCommand) error {
-	// Always run required validations
-	for validationKey := range core.ValidationOptions {
-		validationFunc, exists := ValidationRegistry[validationKey]
-		if !exists {
-			continue
-		}
-
-		// Run if it's required OR if user selected it
-		isRequired := isRequiredValidation(validationKey)
-		isSelected := selectedValidations[validationKey]
-
-		if isRequired || isSelected {
-			if err := validationFunc(h, base); err != nil {
-				return pkgerrors.NewValidationError(FieldValidation, "validation failed", err)
-			}
-		}
-	}
-	return nil
-}
-
-// isRequiredValidation checks if a validation is required based on YAML config
-func isRequiredValidation(key string) bool {
-	requiredValidations := []string{
-		core.ValidationDocker,
-		core.ValidationDockerCompose,
-		core.ValidationConfigSyntax,
-		core.ValidationServiceDefinitions,
-	}
-
-	return slices.Contains(requiredValidations, key)
-}

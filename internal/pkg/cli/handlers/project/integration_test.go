@@ -64,7 +64,7 @@ func TestCreateDirectoryStructure(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.createDirectoryStructure()
+	err := handler.projectManager.createDirectoryStructure()
 	assert.NoError(t, err)
 
 	_, err = os.Stat(core.OttoStackDir)
@@ -76,10 +76,10 @@ func TestCreateConfigFile(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.createDirectoryStructure()
+	err := handler.projectManager.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.createConfigFile(TestProjectName, []string{TestServicePostgres}, nil,
+	err = handler.projectManager.createConfigFile(TestProjectName, []string{TestServicePostgres}, nil,
 		&base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
@@ -92,7 +92,7 @@ func TestCreateGitignoreEntries(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.createGitignoreEntries(&base.BaseCommand{Output: ui.NewOutput()})
+	err := handler.projectManager.createGitignoreEntries(&base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	_, err = os.Stat(core.GitIgnoreFileName)
@@ -104,10 +104,10 @@ func TestCreateReadme(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.createDirectoryStructure()
+	err := handler.projectManager.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis}, &base.BaseCommand{Output: ui.NewOutput()})
+	err = handler.projectManager.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis}, &base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	readmePath := filepath.Join(core.OttoStackDir, core.ReadmeFileName)
@@ -118,7 +118,7 @@ func TestCreateReadme(t *testing.T) {
 func TestGenerateConfig(t *testing.T) {
 	handler := NewInitHandler()
 
-	config := handler.generateConfig(TestProjectName, []string{TestServicePostgres}, nil)
+	config := handler.projectManager.generateConfig(TestProjectName, []string{TestServicePostgres}, nil)
 
 	assert.Contains(t, config, TestProjectName)
 	assert.Contains(t, config, TestServicePostgres)

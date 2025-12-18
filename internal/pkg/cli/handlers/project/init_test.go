@@ -14,7 +14,7 @@ import (
 func TestNewInitHandler(t *testing.T) {
 	handler := NewInitHandler()
 	assert.NotNil(t, handler)
-	assert.NotNil(t, handler.serviceUtils)
+	assert.NotNil(t, handler.projectManager)
 }
 
 func TestInitHandler_ValidateArgs(t *testing.T) {
@@ -50,7 +50,7 @@ func TestCreateGitignoreEntries_ExistingContent(t *testing.T) {
 	// Create .gitignore with existing content
 	createTestFile(t, core.GitIgnoreFileName, TestGitignoreContent)
 
-	err := handler.createGitignoreEntries(&base.BaseCommand{Output: ui.NewOutput()})
+	err := handler.projectManager.createGitignoreEntries(&base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	content, err := os.ReadFile(core.GitIgnoreFileName)
@@ -63,10 +63,10 @@ func TestCreateReadme_WithServices(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.createDirectoryStructure()
+	err := handler.projectManager.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis}, &base.BaseCommand{Output: ui.NewOutput()})
+	err = handler.projectManager.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis}, &base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	readmePath := filepath.Join(core.OttoStackDir, core.ReadmeFileName)
