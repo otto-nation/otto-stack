@@ -3,7 +3,7 @@ title: Services
 description: Available services and configuration options
 lead: Explore all the services you can use with otto-stack
 date: "2025-10-01"
-lastmod: "2025-11-10"
+lastmod: "2025-12-17"
 draft: false
 weight: 30
 toc: true
@@ -11,7 +11,7 @@ toc: true
 
 # Available Services
 
-14 services available for your development stack.
+13 services available for your development stack.
 
 Each service can be configured through the `service_configuration` section in your `otto-stack-config.yaml` file. For detailed configuration instructions, see the [Configuration Guide](configuration.md).
 
@@ -312,30 +312,6 @@ echo 'ruok' | nc localhost 2181
 ---
 
 ## ☁️ Cloud
-
-### localstack
-
-Complete LocalStack AWS emulation environment
-
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 s3 ls
-```
-
-```bash
-aws --endpoint-url=http://localhost:4566 sqs list-queues
-```
-
-#### Use Cases
-
-- Complete AWS service emulation for local development
-
-- Cloud service testing without AWS costs
-
-- Offline development environment with pre-configured resources
-
----
 
 ### localstack-dynamodb
 

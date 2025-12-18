@@ -3,7 +3,7 @@ title: Configuration Guide
 description: Complete guide to configuring otto-stack services
 lead: Learn how to configure services for your specific needs
 date: "2025-10-01"
-lastmod: "2025-11-10"
+lastmod: "2025-12-17"
 draft: false
 weight: 25
 toc: true
@@ -44,8 +44,6 @@ Otto-stack supports the following services:
 - **kafka-broker** - Apache Kafka broker for event streaming and messaging
 
 - **kafka-ui** - Web UI for Kafka cluster management and topic browsing
-
-- **localstack** - Complete LocalStack AWS emulation environment
 
 - **localstack-dynamodb** - LocalStack DynamoDB NoSQL database emulation
 

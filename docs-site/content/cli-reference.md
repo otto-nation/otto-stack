@@ -3,7 +3,7 @@ title: CLI Reference
 description: Complete command reference for otto-stack CLI
 lead: Comprehensive reference for all otto-stack CLI commands and their usage
 date: "2025-10-01"
-lastmod: "2025-11-10"
+lastmod: "2025-12-17"
 draft: false
 weight: 50
 toc: true
@@ -43,7 +43,7 @@ Commands for cleanup, initialization, and maintenance
 
 Commands for development workflow and validation
 
-**Commands:** `validate`, `services`, `deps`, `conflicts`
+**Commands:** `validate`, `services`, `deps`, `conflicts`, `web-interfaces`
 
 ### ℹ️ Utility Commands
 
@@ -86,11 +86,11 @@ Build images and start services in background
 
 **Flags:**
 
-- `--detach`, `-d` (`bool`): Run services in background (detached mode) (default: `false`)
-- `--build`, `-b` (`bool`): Build images before starting services (default: `false`)
+- `--detach` (`bool`): Run services in background (detached mode) (default: `false`)
+- `--build` (`bool`): Build images before starting services (default: `false`)
 - `--force-recreate` (`bool`): Recreate containers even if config hasn't changed (default: `false`)
 - `--no-deps` (`bool`): Don't start linked services (default: `false`)
-- `--timeout`, `-t` (`string`): Timeout for service startup (e.g., 30s, 2m) (default: `30s`)
+- `--timeout` (`string`): Timeout for service startup (e.g., 30s, 2m) (default: `30s`)
 - `--resolve-deps` (`bool`): Show dependency resolution tree before starting (default: `false`)
 - `--check-conflicts` (`bool`): Check for service conflicts before starting (default: `false`)
 
@@ -140,10 +140,10 @@ Stop services with custom timeout
 
 **Flags:**
 
-- `--remove`, `-r` (`bool`): Remove containers (default: false, just stops them) (default: `false`)
-- `--volumes`, `-v` (`bool`): Remove named volumes and anonymous volumes (default: `false`)
+- `--remove` (`bool`): Remove containers (default: false, just stops them) (default: `false`)
+- `--volumes` (`bool`): Remove named volumes and anonymous volumes (default: `false`)
 - `--remove-orphans` (`bool`): Remove containers for services not in compose file (default: `false`)
-- `--timeout`, `-t` (`int`): Shutdown timeout in seconds (default: `10`)
+- `--timeout` (`int`): Shutdown timeout in seconds (default: `10`)
 - `--remove-images` (`string`): Remove images (all|local) (default: ``) (options: `all`, `local`)
 
 **Related Commands:** [`up`](#up), [`cleanup`](#cleanup), [`status`](#status)
@@ -184,7 +184,7 @@ Restart with custom timeout
 
 **Flags:**
 
-- `--timeout`, `-t` (`int`): Restart timeout in seconds (default: `10`)
+- `--timeout` (`int`): Restart timeout in seconds (default: `10`)
 - `--no-deps` (`bool`): Don't restart linked services (default: `false`)
 
 **Related Commands:** [`up`](#up), [`down`](#down), [`status`](#status)
@@ -236,8 +236,8 @@ Show only running services
 **Flags:**
 
 - `--format` (`string`): Output format (table|json|yaml) (default: `table`) (options: `table`, `json`, `yaml`)
-- `--watch`, `-w` (`bool`): Watch for status changes (default: `false`)
-- `--quiet`, `-q` (`bool`): Only show service names and basic status (default: `false`)
+- `--watch` (`bool`): Watch for status changes (default: `false`)
+- `--quiet` (`bool`): Only show service names and basic status (default: `false`)
 - `--filter` (`string`): Filter services by status (options: `running`, `stopped`, `starting`, `unhealthy`)
 - `--no-trunc` (`bool`): Don't truncate output (default: `false`)
 
@@ -288,7 +288,7 @@ Show last 100 lines from the past hour
 **Flags:**
 
 - `--follow` (`bool`): Follow log output in real-time (default: `false`)
-- `--tail`, `-t` (`string`): Number of lines to show from end of logs (default: `all`)
+- `--tail` (`string`): Number of lines to show from end of logs (default: `all`)
 - `--since` (`string`): Show logs since timestamp or relative time (default: ``)
 - `--timestamps` (`bool`): Show timestamps in log output (default: `false`)
 - `--no-color` (`bool`): Disable colored output (default: `false`)
@@ -335,7 +335,6 @@ Attempt to fix detected issues
 **Flags:**
 
 - `--fix` (`bool`): Attempt to automatically fix issues (default: `false`)
-- `--verbose`, `-v` (`bool`): Show detailed diagnostic information (default: `false`)
 - `--format` (`string`): Output format (table|json) (default: `table`) (options: `table`, `json`)
 
 **Related Commands:** [`status`](#status), [`logs`](#logs)
@@ -378,11 +377,11 @@ Open bash shell in postgres container
 **Flags:**
 
 - `--user`, `-u` (`string`): Username to execute command as (default: ``)
-- `--workdir`, `-w` (`string`): Working directory for command (default: ``)
+- `--workdir` (`string`): Working directory for command (default: ``)
 - `--interactive`, `-i` (`bool`): Keep STDIN open (interactive mode) (default: `true`)
-- `--tty`, `-t` (`bool`): Allocate a pseudo-TTY (default: `true`)
-- `--detach`, `-d` (`bool`): Run command in background (default: `false`)
-- `--env`, `-e` (`string`): Set environment variables (comma-separated key=value pairs) (default: ``)
+- `--tty` (`bool`): Allocate a pseudo-TTY (default: `true`)
+- `--detach` (`bool`): Run command in background (default: `false`)
+- `--env` (`string`): Set environment variables (comma-separated key=value pairs) (default: ``)
 
 **Related Commands:** [`connect`](#connect), [`logs`](#logs)
 
@@ -423,7 +422,7 @@ Connect to MySQL database
 
 **Flags:**
 
-- `--database`, `-d` (`string`): Database name to connect to (default: ``)
+- `--database` (`string`): Database name to connect to (default: ``)
 - `--user`, `-u` (`string`): Username for connection (default: ``)
 - `--host`, `-h` (`string`): Host to connect to (default: `localhost`)
 - `--port`, `-p` (`int`): Port to connect to (default: `0`)
@@ -469,11 +468,12 @@ Preview what would be cleaned up
 **Flags:**
 
 - `--all`, `-a` (`bool`): Clean up all resources (containers, volumes, images) (default: `false`)
-- `--volumes`, `-v` (`bool`): Remove unused volumes (default: `false`)
-- `--images`, `-i` (`bool`): Remove unused images (default: `false`)
-- `--networks`, `-n` (`bool`): Remove unused networks (default: `false`)
+- `--volumes` (`bool`): Remove unused volumes (default: `false`)
+- `--images` (`bool`): Remove unused images (default: `false`)
+- `--networks` (`bool`): Remove unused networks (default: `false`)
 - `--force`, `-f` (`bool`): Don't prompt for confirmation (default: `false`)
 - `--dry-run` (`bool`): Show what would be cleaned without doing it (default: `false`)
+- `--project`, `-p` (`string`): Clean specific project (if not specified, cleans current project) (default: ``)
 
 **Related Commands:** [`down`](#down), [`doctor`](#doctor)
 
@@ -518,6 +518,42 @@ Overwrite existing configuration
 - `--force`, `-f` (`bool`): Overwrite existing files (default: `false`)
 
 **Related Commands:** [`validate`](#validate)
+
+### `web-interfaces`
+
+Show web interfaces for running services
+
+Display web interfaces (dashboards, UIs) for running services.
+Shows URLs and availability status for easy access to service
+management interfaces.
+
+**Usage:** `otto-stack web-interfaces [service-name] [flags]`
+
+**Examples:**
+
+```bash
+otto-stack web-interfaces
+```
+
+Show all web interfaces for running services
+
+```bash
+otto-stack web-interfaces localstack
+```
+
+Show interfaces for specific service
+
+```bash
+otto-stack web-interfaces --all
+```
+
+Show interfaces for all enabled services
+
+**Flags:**
+
+- `--all` (`bool`): Show interfaces for all enabled services, even if not running (default: `false`)
+
+**Related Commands:** [`status`](#status), [`up`](#up)
 
 ### `services`
 
@@ -646,7 +682,7 @@ Use strict validation rules
 
 **Flags:**
 
-- `--strict`, `-s` (`bool`): Use strict validation rules (default: `false`)
+- `--strict` (`bool`): Use strict validation rules (default: `false`)
 - `--format` (`string`): Output format (table|json) (default: `table`) (options: `table`, `json`)
 - `--fix` (`bool`): Attempt to fix validation errors (default: `false`)
 

@@ -7,7 +7,7 @@ lead: >-
   Streamline your local development with powerful CLI tools and automated
   service management
 date: "2025-10-01"
-lastmod: "2025-11-10"
+lastmod: "2025-12-17"
 draft: false
 weight: 50
 toc: true
