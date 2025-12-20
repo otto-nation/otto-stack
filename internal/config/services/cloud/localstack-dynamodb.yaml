@@ -1,6 +1,6 @@
 name: localstack-dynamodb
 description: LocalStack DynamoDB NoSQL database emulation
-service_type: container
+service_type: configuration
 
 container:
   restart: unless-stopped

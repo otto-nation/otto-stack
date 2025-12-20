@@ -45,6 +45,9 @@ container:
     timeout: 10s
     retries: 3
 
+init_container:
+  image: alpine:latest
+
 service:
   connection:
     type: cli

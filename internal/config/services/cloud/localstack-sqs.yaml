@@ -1,6 +1,6 @@
 name: localstack-sqs
 description: LocalStack SQS (Simple Queue Service) emulation
-service_type: container
+service_type: configuration
 
 container:
   restart: unless-stopped

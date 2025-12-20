@@ -1,6 +1,6 @@
 name: localstack-s3
 description: LocalStack S3 (Simple Storage Service) emulation
-service_type: container
+service_type: configuration
 
 container:
   restart: unless-stopped

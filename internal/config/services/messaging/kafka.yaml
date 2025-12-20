@@ -5,6 +5,9 @@ service_type: container
 container:
   restart: unless-stopped
 
+init_container:
+  image: alpine:latest
+
 service:
   dependencies:
     provides:

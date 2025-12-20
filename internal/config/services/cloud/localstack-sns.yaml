@@ -1,6 +1,6 @@
 name: localstack-sns
 description: LocalStack SNS (Simple Notification Service) emulation
-service_type: container
+service_type: configuration
 
 container:
   restart: unless-stopped
