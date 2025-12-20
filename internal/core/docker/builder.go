@@ -4,8 +4,6 @@ import (
 	"context"
 	"os/exec"
 	"strings"
-
-	"github.com/otto-nation/otto-stack/internal/core"
 )
 
 // CommandBuilder provides a fluent interface for building docker commands
@@ -140,11 +138,11 @@ func (cb *ComposeBuilder) WithFlags(flags ...string) *ComposeBuilder {
 // Up executes compose up
 func (cb *ComposeBuilder) Up() error {
 	if cb.project != "" {
-		cb.Flag("project-name", cb.project)
+		cb.Flag(FlagProjectName, cb.project)
 	}
 
-	cb.Args(core.CommandUp)
-	cb.BoolFlag(core.FlagDetach)
+	cb.Args(ComposeUpCmd)
+	cb.BoolFlag(FlagDetach)
 
 	if len(cb.services) > 0 {
 		cb.Args(cb.services...)
@@ -156,11 +154,11 @@ func (cb *ComposeBuilder) Up() error {
 // Down executes compose down
 func (cb *ComposeBuilder) Down() error {
 	if cb.project != "" {
-		cb.Flag("project-name", cb.project)
+		cb.Flag(FlagProjectName, cb.project)
 	}
 
-	cb.Args(core.CommandDown)
-	cb.BoolFlag(core.FlagVolumes)
+	cb.Args(ComposeDownCmd)
+	cb.BoolFlag(FlagVolumes)
 
 	return cb.Run()
 }
@@ -168,14 +166,49 @@ func (cb *ComposeBuilder) Down() error {
 // Logs executes compose logs
 func (cb *ComposeBuilder) Logs() error {
 	if cb.project != "" {
-		cb.Flag("project-name", cb.project)
+		cb.Flag(FlagProjectName, cb.project)
 	}
 
-	cb.Args(core.CommandLogs)
+	cb.Args(ComposeLogsCmd)
 
 	if len(cb.services) > 0 {
 		cb.Args(cb.services...)
 	}
 
 	return cb.Run()
+}
+
+// Exec executes compose exec
+func (cb *ComposeBuilder) Exec(serviceName string, command ...string) *ComposeBuilder {
+	if cb.project != "" {
+		cb.Flag(FlagProjectName, cb.project)
+	}
+
+	cb.Args(ComposeExecCmd)
+	cb.Args(serviceName)
+	cb.Args(command...)
+
+	return cb
+}
+
+// File sets the compose file path
+func (cb *ComposeBuilder) File(path string) *ComposeBuilder {
+	cb.Flag(FlagFile, path)
+	return cb
+}
+
+// User sets the user for exec command
+func (cb *ComposeBuilder) User(user string) *ComposeBuilder {
+	if user != "" {
+		cb.Flag(FlagUser, user)
+	}
+	return cb
+}
+
+// Workdir sets the working directory for exec command
+func (cb *ComposeBuilder) Workdir(workdir string) *ComposeBuilder {
+	if workdir != "" {
+		cb.Flag(FlagWorkdir, workdir)
+	}
+	return cb
 }

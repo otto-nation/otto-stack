@@ -18,6 +18,7 @@ type StartOptions struct {
 
 // StopOptions defines options for stopping services
 type StopOptions struct {
+	Services        []string
 	Timeout         int
 	Remove          bool
 	RemoveVolumes   bool

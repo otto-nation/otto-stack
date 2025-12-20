@@ -45,7 +45,7 @@ func (g *Generator) buildComposeStructure(serviceNames []string) (map[string]any
 		dockerConstants.ComposeFieldServices: g.buildServices(serviceNames),
 		dockerConstants.ComposeFieldNetworks: map[string]any{
 			dockerConstants.DefaultNetworkName: map[string]any{
-				dockerConstants.ComposeFieldName: g.projectName + services.NetworkNameSuffix,
+				dockerConstants.ComposeFieldName: g.projectName + dockerConstants.NetworkNameSuffix,
 			},
 		},
 	}, nil

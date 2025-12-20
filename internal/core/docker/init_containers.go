@@ -62,15 +62,15 @@ func (m *InitContainerManager) buildBaseInitConfig(serviceName string, serviceCo
 
 	return &InitContainerConfig{
 		Image:   m.getInitContainerImage(serviceConfig),
-		Command: []string{"sh", "-c", processedScript},
+		Command: []string{ShellSh, ShellC, processedScript},
 		Environment: map[string]string{
 			InitServiceName: serviceName,
-			InitConfigDir:   "/config",
+			InitConfigDir:   ContainerConfigPath,
 		},
 		Volumes: []string{
-			fmt.Sprintf("%s:/config", configPath),
+			fmt.Sprintf("%s:%s", configPath, ContainerConfigPath),
 		},
-		WorkingDir: "/",
+		WorkingDir: ContainerRootPath,
 		Networks:   []string{projectName + NetworkNameSuffix},
 	}
 }
@@ -115,7 +115,7 @@ func (m *InitContainerManager) executeScript(ctx context.Context, config *InitCo
 	resolvedContent := m.resolveScriptContent(script.Content, serviceName)
 
 	scriptConfig := *config
-	scriptConfig.Command = []string{"sh", "-c", resolvedContent}
+	scriptConfig.Command = []string{ShellSh, ShellC, resolvedContent}
 
 	return m.dockerClient.RunInitContainer(ctx, containerName, scriptConfig)
 }

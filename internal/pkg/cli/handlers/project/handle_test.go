@@ -56,7 +56,7 @@ func TestHandle_DirectoryValidation(t *testing.T) {
 			strings.Contains(err.Error(), "non-interactive mode requires") ||
 			strings.Contains(err.Error(), ActionValidation) ||
 			strings.Contains(err.Error(), "directory validation failed") ||
-			strings.Contains(err.Error(), "docker-compose.yml") ||
+			strings.Contains(err.Error(), docker.DockerComposeFileName) ||
 			strings.Contains(err.Error(), "required tool 'docker' is not available"),
 		"Expected directory validation or Docker availability error, got: %s", err.Error())
 }

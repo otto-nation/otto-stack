@@ -66,14 +66,11 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return nil
 	}
 
-	dockerArgs := h.buildDockerArgs(setup.Config.Project.Name, serviceName, command)
-	return setup.DockerClient.RunCommand(ctx, dockerArgs...)
-}
-
-// buildDockerArgs constructs the docker compose exec command arguments
-func (h *ConnectHandler) buildDockerArgs(projectName, serviceName string, command []string) []string {
-	args := []string{"compose", "-f", docker.DockerComposeFilePath, "-p", projectName, "exec", serviceName}
-	return append(args, command...)
+	return docker.NewComposeBuilder().
+		Project(setup.Config.Project.Name).
+		File(docker.DockerComposeFilePath).
+		Exec(serviceName, command...).
+		Run()
 }
 
 // getConnectionCommand returns the appropriate connection command for the service

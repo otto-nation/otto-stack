@@ -3,7 +3,6 @@ package cli
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -105,7 +104,7 @@ func New{{.FuncName}}Command(serviceManager *services.Orchestrator, logger *slog
 		},
 	}
 
-{{range .Flags}}	{{if eq .Type "bool"}}{{if .Short}}cmd.Flags().BoolP("{{.Name}}", "{{.Short}}", {{if eq .Default "true"}}true{{else}}false{{end}}, "{{.Description}}"){{else}}cmd.Flags().Bool("{{.Name}}", {{if eq .Default "true"}}true{{else}}false{{end}}, "{{.Description}}"){{end}}{{end}}{{if eq .Type "string"}}{{if .Short}}cmd.Flags().StringP("{{.Name}}", "{{.Short}}", "{{.Default}}", "{{.Description}}"){{else}}cmd.Flags().String("{{.Name}}", "{{.Default}}", "{{.Description}}"){{end}}{{end}}{{if eq .Type "int"}}{{if .Short}}cmd.Flags().IntP("{{.Name}}", "{{.Short}}", {{.Default}}, "{{.Description}}"){{else}}cmd.Flags().Int("{{.Name}}", {{.Default}}, "{{.Description}}"){{end}}{{end}}
+{{range .Flags}}	{{if eq .Type "bool"}}{{if .Short}}cmd.Flags().BoolP("{{.Name}}", "{{.Short}}", {{if eq .Default "true"}}true{{else}}false{{end}}, "{{.Description}}"){{else}}cmd.Flags().Bool("{{.Name}}", {{if eq .Default "true"}}true{{else}}false{{end}}, "{{.Description}}"){{end}}{{end}}{{if eq .Type "string"}}{{if .Short}}cmd.Flags().StringP("{{.Name}}", "{{.Short}}", {{if eq .Default "localhost"}}core.ServiceLocalhost{{else}}"{{.Default}}"{{end}}, "{{.Description}}"){{else}}cmd.Flags().String("{{.Name}}", {{if eq .Default "localhost"}}core.ServiceLocalhost{{else}}"{{.Default}}"{{end}}, "{{.Description}}"){{end}}{{end}}{{if eq .Type "int"}}{{if .Short}}cmd.Flags().IntP("{{.Name}}", "{{.Short}}", {{.Default}}, "{{.Description}}"){{else}}cmd.Flags().Int("{{.Name}}", {{.Default}}, "{{.Description}}"){{end}}{{end}}
 {{end}}
 	return cmd
 }

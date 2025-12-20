@@ -7,7 +7,6 @@ import (
 	"os"
 	"slices"
 
-	"github.com/otto-nation/otto-stack/internal/core"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 
 	"github.com/docker/docker/api/types/container"
@@ -64,13 +63,13 @@ func (c *Client) ComposeUp(ctx context.Context, project string, services []strin
 
 	flags := []string{}
 	if options.Build {
-		flags = append(flags, "build")
+		flags = append(flags, FlagBuild)
 	}
 	if options.ForceRecreate {
-		flags = append(flags, "force-recreate")
+		flags = append(flags, FlagForceRecreate)
 	}
 	if options.RemoveOrphans {
-		flags = append(flags, "remove-orphans")
+		flags = append(flags, FlagRemoveOrphans)
 	}
 
 	// Add characteristic-based flags
@@ -114,22 +113,30 @@ func (c *Client) getCharacteristicFlags(characteristics []string) []string {
 
 func (c *Client) composeDownWithRemove(project string, options StopOptions, charFlags []string) error {
 	if options.RemoveOrphans && !options.RemoveVolumes {
-		return c.composeDownCustom(project, charFlags)
+		return c.composeDownCustom(project, options.Services, charFlags)
 	}
 
 	builder := NewComposeBuilder().Project(project)
+	if len(options.Services) > 0 {
+		builder = builder.Services(options.Services...)
+	}
 	if len(charFlags) > 0 {
 		builder = builder.WithFlags(charFlags...)
 	}
 	return builder.Down()
 }
 
-func (c *Client) composeDownCustom(project string, charFlags []string) error {
+func (c *Client) composeDownCustom(project string, services []string, charFlags []string) error {
 	cmd := NewCommand(DockerCmd).
 		Subcommand(DockerComposeCmd).
-		Flag("project-name", project).
-		Args(core.CommandDown).
-		BoolFlag("remove-orphans")
+		Flag(FlagProjectName, project).
+		Args(ComposeDownCmd)
+
+	if len(services) > 0 {
+		cmd = cmd.Args(services...)
+	}
+
+	cmd = cmd.BoolFlag(FlagRemoveOrphans)
 
 	for _, flag := range charFlags {
 		cmd = cmd.BoolFlag(flag)
@@ -144,11 +151,15 @@ func (c *Client) composeDownCustom(project string, charFlags []string) error {
 func (c *Client) composeStop(project string, options StopOptions) error {
 	cmd := NewCommand(DockerCmd).
 		Subcommand(DockerComposeCmd).
-		Flag("project-name", project).
-		Args("stop")
+		Flag(FlagProjectName, project).
+		Args(ComposeStopCmd)
+
+	if len(options.Services) > 0 {
+		cmd = cmd.Args(options.Services...)
+	}
 
 	if options.Timeout > 0 {
-		cmd = cmd.Flag("timeout", fmt.Sprintf("%d", options.Timeout))
+		cmd = cmd.Flag(FlagTimeout, fmt.Sprintf("%d", options.Timeout))
 	}
 
 	builtCmd := cmd.Build()
@@ -162,13 +173,13 @@ func (c *Client) ComposeLogs(ctx context.Context, project string, services []str
 
 	flags := []string{}
 	if options.Follow {
-		flags = append(flags, "follow")
+		flags = append(flags, FlagFollow)
 	}
 	if options.Timestamps {
 		flags = append(flags, "timestamps")
 	}
 	if options.Tail != "" {
-		flags = append(flags, "tail", options.Tail)
+		flags = append(flags, FlagTail, options.Tail)
 	}
 
 	if len(flags) > 0 {
@@ -242,29 +253,29 @@ func (c *Client) RunCommand(ctx context.Context, args ...string) error {
 // RunInitContainer runs an init container and waits for completion
 func (c *Client) RunInitContainer(ctx context.Context, containerName string, config InitContainerConfig) error {
 	builder := NewCommand(DockerCmd).
-		Subcommand("run").
-		BoolFlag("rm").
-		Flag("name", containerName).
+		Subcommand(DockerRunCmd).
+		BoolFlag(FlagRm).
+		Flag(FlagName, containerName).
 		Context(ctx)
 
 	// Add environment variables
 	for key, value := range config.Environment {
-		builder = builder.Flag("e", fmt.Sprintf("%s=%s", key, value))
+		builder = builder.Flag(FlagEnv, fmt.Sprintf("%s=%s", key, value))
 	}
 
 	// Add volumes
 	for _, volume := range config.Volumes {
-		builder = builder.Flag("v", volume)
+		builder = builder.Flag(FlagVolume, volume)
 	}
 
 	// Add working directory
 	if config.WorkingDir != "" {
-		builder = builder.Flag("w", config.WorkingDir)
+		builder = builder.Flag(FlagWorkingDir, config.WorkingDir)
 	}
 
 	// Add networks
 	for _, network := range config.Networks {
-		builder = builder.Flag("network", network)
+		builder = builder.Flag(FlagNetwork, network)
 	}
 
 	// Add image and command

@@ -38,23 +38,13 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	dockerArgs := h.buildDockerArgs(setup.Config.Project.Name, serviceName, command, flags)
-	return setup.DockerClient.RunCommand(ctx, dockerArgs...)
-}
-
-// buildDockerArgs constructs the docker compose exec command arguments
-func (h *ExecHandler) buildDockerArgs(projectName, serviceName string, command []string, flags *core.ExecFlags) []string {
-	args := []string{"compose", "-f", docker.DockerComposeFilePath, "-p", projectName, "exec"}
-
-	if flags.User != "" {
-		args = append(args, "--user", flags.User)
-	}
-	if flags.Workdir != "" {
-		args = append(args, "--workdir", flags.Workdir)
-	}
-
-	args = append(args, serviceName)
-	return append(args, command...)
+	return docker.NewComposeBuilder().
+		Project(setup.Config.Project.Name).
+		File(docker.DockerComposeFilePath).
+		User(flags.User).
+		Workdir(flags.Workdir).
+		Exec(serviceName, command...).
+		Run()
 }
 
 // ValidateArgs validates the command arguments

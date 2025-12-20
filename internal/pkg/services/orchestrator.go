@@ -67,18 +67,13 @@ func (o *Orchestrator) GetLogs(ctx context.Context, services []string, options d
 }
 
 func (o *Orchestrator) ExecCommand(ctx context.Context, service string, cmd []string, options docker.ExecOptions) error {
-	// Use docker compose exec for better integration
-	args := []string{"compose", "-f", docker.DockerComposeFilePath, "-p", o.getProjectName(), "exec"}
-	if options.User != "" {
-		args = append(args, "--user", options.User)
-	}
-	if options.WorkingDir != "" {
-		args = append(args, "--workdir", options.WorkingDir)
-	}
-	args = append(args, service)
-	args = append(args, cmd...)
-
-	return o.docker.RunCommand(ctx, args...)
+	return docker.NewComposeBuilder().
+		Project(o.getProjectName()).
+		File(docker.DockerComposeFilePath).
+		User(options.User).
+		Workdir(options.WorkingDir).
+		Exec(service, cmd...).
+		Run()
 }
 
 // Resource cleanup

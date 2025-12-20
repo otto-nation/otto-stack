@@ -7,6 +7,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
 
@@ -60,14 +61,9 @@ func (h *ConflictsHandler) detectPortConflicts() []string {
 func (h *ConflictsHandler) getServicePorts() map[string][]int {
 	// Simple hardcoded mapping - could be made dynamic later
 	return map[string][]int{
-		"postgres":      {5432},
-		"mysql":         {3306},
-		"redis":         {6379},
-		"mongodb":       {27017},
-		"elasticsearch": {9200},
-		"kibana":        {5601},
-		"nginx":         {80, 443},
-		"web":           {3000, 8080},
+		services.ServicePostgres: {5432},
+		services.ServiceMysql:    {3306},
+		services.ServiceRedis:    {6379},
 	}
 }
 

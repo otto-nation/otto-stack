@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 )
 
@@ -29,13 +30,13 @@ func (hcm *HealthCheckManager) RunAllChecks(base *base.BaseCommand) bool {
 func (hcm *HealthCheckManager) CheckDocker(base *base.BaseCommand) bool {
 	base.Output.Info(core.MsgDoctor_checking_docker)
 
-	if !hcm.isCommandAvailable("docker") {
+	if !hcm.isCommandAvailable(docker.DockerCmd) {
 		base.Output.Error(core.MsgDoctor_docker_not_found)
 		base.Output.Info(core.MsgDoctor_docker_install_help, "https://docs.docker.com/get-docker/")
 		return false
 	}
 
-	cmd := exec.Command("docker", "info")
+	cmd := docker.NewCommand(docker.DockerCmd).Subcommand(docker.DockerInfoCmd).Build()
 	if err := cmd.Run(); err != nil {
 		base.Output.Error(core.MsgDoctor_docker_daemon_not_running)
 		base.Output.Info(core.MsgDoctor_docker_start_help)
@@ -55,7 +56,8 @@ func (hcm *HealthCheckManager) CheckDockerCompose(base *base.BaseCommand) bool {
 		return true
 	}
 
-	if hcm.isCommandAvailable("docker-compose") {
+	cmd := docker.NewCommand(docker.DockerCmd).Subcommand(docker.DockerComposeCmd).Build()
+	if hcm.isCommandAvailable(cmd.String()) {
 		base.Output.Success(core.MsgDoctor_docker_compose_available)
 		return true
 	}
@@ -102,6 +104,6 @@ func (hcm *HealthCheckManager) isCommandAvailable(command string) bool {
 
 // hasDockerComposePlugin checks if Docker Compose plugin is available
 func (hcm *HealthCheckManager) hasDockerComposePlugin() bool {
-	cmd := exec.Command("docker", "compose", "version")
+	cmd := docker.NewCommand(docker.DockerCmd).Subcommand(docker.DockerComposeCmd).Args(docker.DockerVersionCmd).Build()
 	return cmd.Run() == nil
 }
