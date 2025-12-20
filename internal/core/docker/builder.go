@@ -1,113 +1,26 @@
 package docker
 
 import (
-	"context"
-	"os/exec"
-	"strings"
+	"github.com/otto-nation/otto-stack/internal/core"
 )
 
-// CommandBuilder provides a fluent interface for building docker commands
-type CommandBuilder struct {
-	cmd    string
-	subcmd string
-	flags  []string
-	args   []string
-	env    map[string]string
-	ctx    context.Context
+// NewCommand creates a new Docker command builder
+func NewCommand(command string) *core.CommandBuilder {
+	return core.NewCommandBuilder(command)
 }
 
-// NewCommand creates a new docker command builder
-func NewCommand(cmd string) *CommandBuilder {
-	return &CommandBuilder{
-		cmd: cmd,
-		env: make(map[string]string),
-	}
-}
-
-// Subcommand sets the docker subcommand
-func (cb *CommandBuilder) Subcommand(subcmd string) *CommandBuilder {
-	cb.subcmd = subcmd
-	return cb
-}
-
-// Flag adds a flag with optional values
-func (cb *CommandBuilder) Flag(name string, values ...string) *CommandBuilder {
-	flag := "--" + name
-	cb.flags = append(cb.flags, flag)
-	cb.flags = append(cb.flags, values...)
-	return cb
-}
-
-// BoolFlag adds a boolean flag (no value)
-func (cb *CommandBuilder) BoolFlag(name string) *CommandBuilder {
-	cb.flags = append(cb.flags, "--"+name)
-	return cb
-}
-
-// Args adds arguments to the command
-func (cb *CommandBuilder) Args(args ...string) *CommandBuilder {
-	cb.args = append(cb.args, args...)
-	return cb
-}
-
-// Env sets environment variables
-func (cb *CommandBuilder) Env(key, value string) *CommandBuilder {
-	cb.env[key] = value
-	return cb
-}
-
-// Context sets the context for the command
-func (cb *CommandBuilder) Context(ctx context.Context) *CommandBuilder {
-	cb.ctx = ctx
-	return cb
-}
-
-// Build creates the exec.Cmd
-func (cb *CommandBuilder) Build() *exec.Cmd {
-	cmdArgs := []string{}
-
-	if cb.subcmd != "" {
-		cmdArgs = append(cmdArgs, cb.subcmd)
-	}
-
-	cmdArgs = append(cmdArgs, cb.flags...)
-	cmdArgs = append(cmdArgs, cb.args...)
-
-	var cmd *exec.Cmd
-	if cb.ctx != nil {
-		cmd = exec.CommandContext(cb.ctx, cb.cmd, cmdArgs...)
-	} else {
-		cmd = exec.Command(cb.cmd, cmdArgs...)
-	}
-
-	// Set environment variables
-	if len(cb.env) > 0 {
-		env := cmd.Environ()
-		for key, value := range cb.env {
-			env = append(env, key+"="+value)
-		}
-		cmd.Env = env
-	}
-
-	return cmd
-}
-
-// Run executes the command
-func (cb *CommandBuilder) Run() error {
-	return cb.Build().Run()
-}
-
-// ComposeBuilder provides compose-specific functionality
+// ComposeBuilder provides a fluent interface for building docker-compose commands
 type ComposeBuilder struct {
-	*CommandBuilder
+	builder  *core.CommandBuilder
 	project  string
 	services []string
 }
 
-// NewComposeBuilder creates a new compose command builder
+// NewComposeBuilder creates a new compose builder
 func NewComposeBuilder() *ComposeBuilder {
 	return &ComposeBuilder{
-		CommandBuilder: NewCommand(DockerCmd).Subcommand(DockerComposeCmd),
+		builder:  core.NewCommandBuilder(DockerCmd).Subcommand(DockerComposeCmd),
+		services: make([]string, 0),
 	}
 }
 
@@ -123,84 +36,16 @@ func (cb *ComposeBuilder) Services(names ...string) *ComposeBuilder {
 	return cb
 }
 
-// WithFlags adds multiple flags
-func (cb *ComposeBuilder) WithFlags(flags ...string) *ComposeBuilder {
-	for _, flag := range flags {
-		if strings.HasPrefix(flag, "--") {
-			cb.flags = append(cb.flags, flag)
-		} else {
-			cb.BoolFlag(flag)
-		}
-	}
-	return cb
-}
-
-// Up executes compose up
-func (cb *ComposeBuilder) Up() error {
-	if cb.project != "" {
-		cb.Flag(FlagProjectName, cb.project)
-	}
-
-	cb.Args(ComposeUpCmd)
-	cb.BoolFlag(FlagDetach)
-
-	if len(cb.services) > 0 {
-		cb.Args(cb.services...)
-	}
-
-	return cb.Run()
-}
-
-// Down executes compose down
-func (cb *ComposeBuilder) Down() error {
-	if cb.project != "" {
-		cb.Flag(FlagProjectName, cb.project)
-	}
-
-	cb.Args(ComposeDownCmd)
-	cb.BoolFlag(FlagVolumes)
-
-	return cb.Run()
-}
-
-// Logs executes compose logs
-func (cb *ComposeBuilder) Logs() error {
-	if cb.project != "" {
-		cb.Flag(FlagProjectName, cb.project)
-	}
-
-	cb.Args(ComposeLogsCmd)
-
-	if len(cb.services) > 0 {
-		cb.Args(cb.services...)
-	}
-
-	return cb.Run()
-}
-
-// Exec executes compose exec
-func (cb *ComposeBuilder) Exec(serviceName string, command ...string) *ComposeBuilder {
-	if cb.project != "" {
-		cb.Flag(FlagProjectName, cb.project)
-	}
-
-	cb.Args(ComposeExecCmd)
-	cb.Args(serviceName)
-	cb.Args(command...)
-
-	return cb
-}
-
 // File sets the compose file path
 func (cb *ComposeBuilder) File(path string) *ComposeBuilder {
-	cb.Flag(FlagFile, path)
+	cb.builder.Flag(FlagFile, path)
 	return cb
 }
 
 // User sets the user for exec command
 func (cb *ComposeBuilder) User(user string) *ComposeBuilder {
 	if user != "" {
-		cb.Flag(FlagUser, user)
+		cb.builder.Flag(FlagUser, user)
 	}
 	return cb
 }
@@ -208,7 +53,80 @@ func (cb *ComposeBuilder) User(user string) *ComposeBuilder {
 // Workdir sets the working directory for exec command
 func (cb *ComposeBuilder) Workdir(workdir string) *ComposeBuilder {
 	if workdir != "" {
-		cb.Flag(FlagWorkdir, workdir)
+		cb.builder.Flag(FlagWorkdir, workdir)
 	}
 	return cb
+}
+
+// WithFlags adds multiple flags
+func (cb *ComposeBuilder) WithFlags(flags ...string) *ComposeBuilder {
+	for _, flag := range flags {
+		cb.builder.BoolFlag(flag)
+	}
+	return cb
+}
+
+// Up executes compose up
+func (cb *ComposeBuilder) Up() error {
+	if cb.project != "" {
+		cb.builder.Flag(FlagProjectName, cb.project)
+	}
+
+	cb.builder.Args(ComposeUpCmd)
+	cb.builder.BoolFlag(FlagDetach)
+
+	if len(cb.services) > 0 {
+		cb.builder.Args(cb.services...)
+	}
+
+	return cb.builder.Build().Run()
+}
+
+// Down executes compose down
+func (cb *ComposeBuilder) Down() error {
+	if cb.project != "" {
+		cb.builder.Flag(FlagProjectName, cb.project)
+	}
+
+	cb.builder.Args(ComposeDownCmd)
+	cb.builder.BoolFlag(FlagVolumes)
+
+	if len(cb.services) > 0 {
+		cb.builder.Args(cb.services...)
+	}
+
+	return cb.builder.Build().Run()
+}
+
+// Logs executes compose logs
+func (cb *ComposeBuilder) Logs() error {
+	if cb.project != "" {
+		cb.builder.Flag(FlagProjectName, cb.project)
+	}
+
+	cb.builder.Args(ComposeLogsCmd)
+
+	if len(cb.services) > 0 {
+		cb.builder.Args(cb.services...)
+	}
+
+	return cb.builder.Build().Run()
+}
+
+// Exec executes compose exec
+func (cb *ComposeBuilder) Exec(serviceName string, command ...string) *ComposeBuilder {
+	if cb.project != "" {
+		cb.builder.Flag(FlagProjectName, cb.project)
+	}
+
+	cb.builder.Args(ComposeExecCmd)
+	cb.builder.Args(serviceName)
+	cb.builder.Args(command...)
+
+	return cb
+}
+
+// Run executes the built command
+func (cb *ComposeBuilder) Run() error {
+	return cb.builder.Build().Run()
 }
