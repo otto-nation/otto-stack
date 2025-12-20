@@ -6,18 +6,19 @@ import (
 
 // Docker constants
 const (
-	DockerCmd             = "docker"
-	ComposeProjectLabel   = "com.docker.compose.project"
-	ComposeServiceLabel   = "com.docker.compose.service"
-	DockerInstallURL      = "https://docs.docker.com/get-docker/"
-	DockerComposeFileName = "docker-compose.yml"
-	DockerComposeFilePath = pkgCore.AppName + "/" + pkgCore.GeneratedDir + "/docker-compose.yml"
+	DockerCmd                        = "docker"
+	ComposeProjectLabel              = "com.docker.compose.project"
+	ComposeServiceLabel              = "com.docker.compose.service"
+	DockerInstallURL                 = "https://docs.docker.com/get-docker/"
+	DockerComposeFileName            = "docker-compose.yml"
+	DockerComposeFilePath            = pkgCore.OttoStackDir + "/" + DockerComposeFileName
+	ServiceCharacteristicsConfigPath = "internal/config/docker/service_characteristics.yaml"
 )
 
 // Docker commands
 const (
-	DockerInfoCmd    = "docker info"
-	DockerComposeCmd = "docker compose"
+	DockerInfoCmd    = "info"
+	DockerComposeCmd = "compose"
 	DockerVersionCmd = "version"
 )
 
@@ -113,4 +114,17 @@ const (
 // Network names
 const (
 	DefaultNetworkName = "default"
+	NetworkNameSuffix  = "-network"
+)
+
+// Init container images
+const (
+	AlpineLatestImage = "alpine:latest"
+)
+
+// Init container constants
+const (
+	InitServiceEndpointURL = "SERVICE_ENDPOINT_URL"
+	InitServiceName        = "INIT_SERVICE_NAME"
+	InitConfigDir          = "INIT_CONFIG_DIR"
 )

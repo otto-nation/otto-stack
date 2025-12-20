@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"os/exec"
 	"slices"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 
 	"github.com/docker/docker/api/types/container"
@@ -60,55 +60,122 @@ func (c *Client) Close() error {
 
 // Compose operations using docker compose CLI
 func (c *Client) ComposeUp(ctx context.Context, project string, services []string, options StartOptions) error {
-	args := []string{"compose", "-f", DockerComposeFilePath, "-p", project, "up", "-d"}
+	builder := NewComposeBuilder().Project(project).Services(services...)
+
+	flags := []string{}
 	if options.Build {
-		args = append(args, "--build")
+		flags = append(flags, "build")
 	}
 	if options.ForceRecreate {
-		args = append(args, "--force-recreate")
+		flags = append(flags, "force-recreate")
 	}
 	if options.RemoveOrphans {
-		args = append(args, "--remove-orphans")
+		flags = append(flags, "remove-orphans")
 	}
-	args = append(args, services...)
 
-	return c.RunCommand(ctx, args...)
+	// Add characteristic-based flags
+	if len(options.Characteristics) > 0 {
+		resolver, err := NewServiceCharacteristicsResolver()
+		if err == nil {
+			charFlags := resolver.ResolveComposeUpFlags(options.Characteristics)
+			flags = append(flags, charFlags...)
+		}
+	}
+
+	if len(flags) > 0 {
+		builder = builder.WithFlags(flags...)
+	}
+
+	return builder.Up()
 }
 
 func (c *Client) ComposeDown(ctx context.Context, project string, options StopOptions) error {
-	var args []string
+	charFlags := c.getCharacteristicFlags(options.Characteristics)
+
 	if options.Remove {
-		args = []string{"compose", "-f", DockerComposeFilePath, "-p", project, "down"}
-		if options.RemoveOrphans {
-			args = append(args, "--remove-orphans")
-		}
-		if options.RemoveVolumes {
-			args = append(args, "--volumes")
-		}
-	} else {
-		args = []string{"compose", "-f", DockerComposeFilePath, "-p", project, "stop"}
-		if options.Timeout > 0 {
-			args = append(args, "--timeout", fmt.Sprintf("%d", options.Timeout))
-		}
+		return c.composeDownWithRemove(project, options, charFlags)
 	}
 
-	return c.RunCommand(ctx, args...)
+	return c.composeStop(project, options)
+}
+
+func (c *Client) getCharacteristicFlags(characteristics []string) []string {
+	if len(characteristics) == 0 {
+		return nil
+	}
+
+	resolver, err := NewServiceCharacteristicsResolver()
+	if err != nil {
+		return nil
+	}
+
+	return resolver.ResolveComposeDownFlags(characteristics)
+}
+
+func (c *Client) composeDownWithRemove(project string, options StopOptions, charFlags []string) error {
+	if options.RemoveOrphans && !options.RemoveVolumes {
+		return c.composeDownCustom(project, charFlags)
+	}
+
+	builder := NewComposeBuilder().Project(project)
+	if len(charFlags) > 0 {
+		builder = builder.WithFlags(charFlags...)
+	}
+	return builder.Down()
+}
+
+func (c *Client) composeDownCustom(project string, charFlags []string) error {
+	cmd := NewCommand(DockerCmd).
+		Subcommand(DockerComposeCmd).
+		Flag("project-name", project).
+		Args(core.CommandDown).
+		BoolFlag("remove-orphans")
+
+	for _, flag := range charFlags {
+		cmd = cmd.BoolFlag(flag)
+	}
+
+	builtCmd := cmd.Build()
+	builtCmd.Stdout = os.Stdout
+	builtCmd.Stderr = os.Stderr
+	return builtCmd.Run()
+}
+
+func (c *Client) composeStop(project string, options StopOptions) error {
+	cmd := NewCommand(DockerCmd).
+		Subcommand(DockerComposeCmd).
+		Flag("project-name", project).
+		Args("stop")
+
+	if options.Timeout > 0 {
+		cmd = cmd.Flag("timeout", fmt.Sprintf("%d", options.Timeout))
+	}
+
+	builtCmd := cmd.Build()
+	builtCmd.Stdout = os.Stdout
+	builtCmd.Stderr = os.Stderr
+	return builtCmd.Run()
 }
 
 func (c *Client) ComposeLogs(ctx context.Context, project string, services []string, options LogOptions) error {
-	args := []string{"compose", "-f", DockerComposeFilePath, "-p", project, "logs"}
+	builder := NewComposeBuilder().Project(project).Services(services...)
+
+	flags := []string{}
 	if options.Follow {
-		args = append(args, "--follow")
+		flags = append(flags, "follow")
 	}
 	if options.Timestamps {
-		args = append(args, "--timestamps")
+		flags = append(flags, "timestamps")
 	}
 	if options.Tail != "" {
-		args = append(args, "--tail", options.Tail)
+		flags = append(flags, "tail", options.Tail)
 	}
-	args = append(args, services...)
 
-	return c.RunCommand(ctx, args...)
+	if len(flags) > 0 {
+		builder = builder.WithFlags(flags...)
+	}
+
+	return builder.Logs()
 }
 
 // Resource management
@@ -164,8 +231,9 @@ func (c *Client) getContainerHealth(cont container.Summary) DockerHealthStatus {
 	}
 }
 
+// RunCommand executes a docker command with the given arguments
 func (c *Client) RunCommand(ctx context.Context, args ...string) error {
-	cmd := exec.CommandContext(ctx, DockerCmd, args...)
+	cmd := NewCommand(DockerCmd).Args(args...).Context(ctx).Build()
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
@@ -173,33 +241,37 @@ func (c *Client) RunCommand(ctx context.Context, args ...string) error {
 
 // RunInitContainer runs an init container and waits for completion
 func (c *Client) RunInitContainer(ctx context.Context, containerName string, config InitContainerConfig) error {
-	args := []string{"run", "--rm", "--name", containerName}
+	builder := NewCommand(DockerCmd).
+		Subcommand("run").
+		BoolFlag("rm").
+		Flag("name", containerName).
+		Context(ctx)
 
 	// Add environment variables
 	for key, value := range config.Environment {
-		args = append(args, "-e", fmt.Sprintf("%s=%s", key, value))
+		builder = builder.Flag("e", fmt.Sprintf("%s=%s", key, value))
 	}
 
 	// Add volumes
 	for _, volume := range config.Volumes {
-		args = append(args, "-v", volume)
+		builder = builder.Flag("v", volume)
 	}
 
 	// Add working directory
 	if config.WorkingDir != "" {
-		args = append(args, "-w", config.WorkingDir)
+		builder = builder.Flag("w", config.WorkingDir)
 	}
 
 	// Add networks
 	for _, network := range config.Networks {
-		args = append(args, "--network", network)
+		builder = builder.Flag("network", network)
 	}
 
 	// Add image and command
-	args = append(args, config.Image)
-	args = append(args, config.Command...)
-
-	return c.RunCommand(ctx, args...)
+	cmd := builder.Args(config.Image).Args(config.Command...).Build()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func contains(slice []string, item string) bool {

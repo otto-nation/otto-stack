@@ -13,6 +13,24 @@ const (
 	AppNameLower = "otto stack" // Sentence case for messages
 )
 
+// Host constants
+const (
+	ServiceLocalhost = "localhost"
+)
+
+// Port constants
+const (
+	PortPostgreSQL = "5432"
+	PortLocalStack = "4566"
+	PortRedis      = "6379"
+	PortKafka      = "9092"
+)
+
+// AWS constants
+const (
+	DefaultAWSRegion = "us-east-1"
+)
+
 // GitHub repository information
 const (
 	GitHubOrg  = "otto-nation"
@@ -41,7 +59,7 @@ const (
 	ReadmeFileName       = "README.md"
 	GitIgnoreFileName    = ".gitignore"
 	StateFileName        = "state.json"
-	OttoStackDir         = AppName
+	OttoStackDir         = "." + AppName
 	EnvGeneratedFileName = ".env.generated"
 	LocalFileExtension   = ".local"
 	YAMLFileExtension    = ".yaml"

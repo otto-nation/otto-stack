@@ -3,6 +3,14 @@ description: LocalStack core AWS service emulator
 hidden: true
 service_type: container
 
+service:
+  characteristics:
+    - network_service
+  dependencies:
+    provides:
+      - aws-emulation
+      - cloud-core
+
 environment:
   AWS_ACCESS_KEY_ID: test
   AWS_DEFAULT_REGION: us-east-1
@@ -29,13 +37,31 @@ container:
     start_period: 30s
 
 init_container:
-  image: alpine:latest
-
-service:
-  dependencies:
-    provides:
-      - aws-emulation
-      - cloud-core
+  enabled: true
+  image: amazon/aws-cli:latest
+  scripts:
+    - type: aws_resources
+      content: |
+        # Create SQS queues
+        {{range .sqs_queues}}
+        aws --endpoint-url=${SERVICE_ENDPOINT_URL} sqs create-queue --queue-name {{.name}}
+        {{end}}
+        
+        # Create SNS topics  
+        {{range .sns_topics}}
+        aws --endpoint-url=${SERVICE_ENDPOINT_URL} sns create-topic --name {{.name}}
+        {{end}}
+        
+        # Create S3 buckets
+        {{range .s3_buckets}}
+        aws --endpoint-url=${SERVICE_ENDPOINT_URL} s3 mb s3://{{.name}}
+        {{end}}
+  environment:
+    AWS_ACCESS_KEY_ID: test
+    AWS_SECRET_ACCESS_KEY: test
+    AWS_DEFAULT_REGION: us-east-1
+  depends_on_service: true
+  timeout: "30s"
 
 documentation:
   examples:

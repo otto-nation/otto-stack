@@ -3,6 +3,8 @@ package services
 
 import (
 	"time"
+	
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 )
 
 // ServiceConfig represents the service configuration format
@@ -17,6 +19,46 @@ type ServiceConfig struct {
 	Service     ServiceSpec       `yaml:"service,omitempty"`
 	Documentation DocumentationSpec `yaml:"documentation,omitempty"`
 	Parameters  ParametersSpec    `yaml:"parameters,omitempty"`
+	InitContainer *docker.InitContainerSpec `yaml:"init_container,omitempty"`
+}
+
+// GetInitContainerSpec returns the init container specification
+func (sc *ServiceConfig) GetInitContainerSpec() *docker.InitContainerSpec {
+	return sc.InitContainer
+}
+
+// GetInitContainerImage returns the init container image
+func (sc *ServiceConfig) GetInitContainerImage() string {
+	if sc.InitContainer != nil {
+		return sc.InitContainer.Image
+	}
+	return ""
+}
+
+// GetEnvironment returns the service environment variables
+func (sc *ServiceConfig) GetEnvironment() map[string]string {
+	if sc.Environment == nil {
+		return make(map[string]string)
+	}
+	return sc.Environment
+}
+
+// GetConnectionPort returns the connection port for the service
+func (sc *ServiceConfig) GetConnectionPort() int {
+	if sc.Service.Connection != nil && sc.Service.Connection.DefaultPort > 0 {
+		return sc.Service.Connection.DefaultPort
+	}
+	// Fallback to first external port if available
+	if len(sc.Container.Ports) > 0 && sc.Container.Ports[0].External != "" {
+		// This would need proper parsing, but for now return 0
+		return 0
+	}
+	return 0
+}
+
+// HasConnection returns true if the service has connection configuration
+func (sc *ServiceConfig) HasConnection() bool {
+	return sc.Service.Connection != nil
 }
 
 // ContainerSpec defines container configuration

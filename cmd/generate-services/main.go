@@ -10,8 +10,6 @@ import (
 	"text/template"
 
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"gopkg.in/yaml.v3"
 )
 
@@ -23,7 +21,90 @@ const (
 	TypesGeneratedFilePath  = "internal/pkg/services/types_generated.go"
 	SchemaGeneratedFilePath = "internal/pkg/services/schema_generated.go"
 	ServicesDir             = "internal/config/services"
+	ReadExecutePermissions  = 0755
+	YAMLExtension           = ".yaml"
+	DefaultProtocol         = "tcp"
 )
+
+// Keys defines all YAML structure keys
+var Keys = struct {
+	Connection struct {
+		Root         string
+		Client       string
+		DefaultUser  string
+		UserFlag     string
+		HostFlag     string
+		PortFlag     string
+		DatabaseFlag string
+	}
+	Container struct {
+		Root        string
+		Image       string
+		Ports       string
+		Networks    string
+		MemoryLimit string
+		External    string
+		Protocol    string
+	}
+	Service struct {
+		Root            string
+		Characteristics string
+	}
+	Environment  string
+	Dependencies struct {
+		Root     string
+		Provides string
+	}
+	HealthCheck struct {
+		Root     string
+		Endpoint string
+	}
+	Tags         string
+	ConfigSchema string
+}{
+	Connection: struct {
+		Root         string
+		Client       string
+		DefaultUser  string
+		UserFlag     string
+		HostFlag     string
+		PortFlag     string
+		DatabaseFlag string
+	}{"connection", "client", "default_user", "user_flag", "host_flag", "port_flag", "database_flag"},
+	Container: struct {
+		Root        string
+		Image       string
+		Ports       string
+		Networks    string
+		MemoryLimit string
+		External    string
+		Protocol    string
+	}{"container", "image", "ports", "networks", "memory_limit", "external", "protocol"},
+	Service: struct {
+		Root            string
+		Characteristics string
+	}{"service", "characteristics"},
+	Environment: "environment",
+	Dependencies: struct {
+		Root     string
+		Provides string
+	}{"dependencies", "provides"},
+	HealthCheck: struct {
+		Root     string
+		Endpoint string
+	}{"health_check", "endpoint"},
+	Tags:         "tags",
+	ConfigSchema: "configuration_schema",
+}
+
+// Prefix defines constant name prefixes
+var Prefix = struct {
+	Service, Category, Client, DefaultUser, Image, MemoryLimit            string
+	Network, Port, Protocol, Env, EnvKey, Capability, HealthEndpoint, Tag string
+}{
+	"Service", "Category", "Client", "DefaultUser", "Image", "MemoryLimit",
+	"Network", "Port", "Protocol", "Env", "EnvKey", "Capability", "HealthEndpoint", "Tag",
+}
 
 type constantData struct {
 	Name  string
@@ -39,13 +120,20 @@ type ServiceConstants struct {
 	DefaultUsers    []constantData
 	ConnectionFlags []constantData
 	EnvVars         []constantData
+	EnvKeys         []constantData
 	HealthEndpoints []constantData
 	Tags            []constantData
 	Capabilities    []constantData
 	Networks        []constantData
 	MemoryLimits    []constantData
 	Protocols       []constantData
+	Services        []ServiceData
 	ConfigSchemas   []ServiceConfigSchema
+}
+
+type ServiceData struct {
+	Name            string
+	Characteristics []string
 }
 
 type ServiceConfigSchema struct {
@@ -62,12 +150,14 @@ type collectors struct {
 	defaultUsers    map[string]string
 	connectionFlags map[string]string
 	envVars         map[string]string
+	envKeys         map[string]string
 	healthEndpoints map[string]string
 	tags            map[string]string
 	capabilities    map[string]string
 	networks        map[string]string
 	memoryLimits    map[string]string
 	protocols       map[string]string
+	services        []ServiceData
 	configSchemas   []ServiceConfigSchema
 }
 
@@ -97,19 +187,24 @@ func main() {
 }
 
 func extractServiceConstants() (*ServiceConstants, error) {
-	c := newCollectors()
+	collectors := initCollectors()
+	var configSchemas []ServiceConfigSchema
 
 	err := filepath.Walk(ServicesDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || !strings.HasSuffix(path, ".yaml") {
+		if err != nil || !strings.HasSuffix(path, YAMLExtension) {
 			return err
 		}
-		return c.processFile(path)
+		return processServiceFile(path, collectors, &configSchemas)
 	})
 
-	return c.toConstants(), err
+	if err != nil {
+		return nil, err
+	}
+
+	return buildServiceConstants(collectors, configSchemas), nil
 }
 
-func newCollectors() *collectors {
+func initCollectors() *collectors {
 	return &collectors{
 		categories:      make(map[string]string),
 		clients:         make(map[string]string),
@@ -119,6 +214,7 @@ func newCollectors() *collectors {
 		defaultUsers:    make(map[string]string),
 		connectionFlags: make(map[string]string),
 		envVars:         make(map[string]string),
+		envKeys:         make(map[string]string),
 		healthEndpoints: make(map[string]string),
 		tags:            make(map[string]string),
 		capabilities:    make(map[string]string),
@@ -128,7 +224,7 @@ func newCollectors() *collectors {
 	}
 }
 
-func (c *collectors) processFile(path string) error {
+func processServiceFile(path string, collectors *collectors, configSchemas *[]ServiceConfigSchema) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return err
@@ -139,19 +235,234 @@ func (c *collectors) processFile(path string) error {
 		return err
 	}
 
-	serviceName := strings.TrimSuffix(filepath.Base(path), ".yaml")
-
-	c.addBasic(serviceName, path)
-	c.addConnection(service, serviceName)
-	c.addDocker(service, serviceName)
-	c.addPorts(service, serviceName)
-	c.addDependencies(service)
-	c.addEnvironment(service, serviceName)
-	c.addHealth(service, serviceName)
-	c.addTags(service)
-	c.addConfigSchema(service, serviceName)
-
+	serviceName := strings.TrimSuffix(filepath.Base(path), YAMLExtension)
+	processService(service, serviceName, path, collectors, configSchemas)
 	return nil
+}
+
+func buildServiceConstants(collectors *collectors, configSchemas []ServiceConfigSchema) *ServiceConstants {
+	return &ServiceConstants{
+		Categories:      stringMapToConstants(collectors.categories),
+		Clients:         stringMapToConstants(collectors.clients),
+		Ports:           intMapToConstants(collectors.ports),
+		Names:           stringMapToConstants(collectors.names),
+		Images:          stringMapToConstants(collectors.images),
+		DefaultUsers:    stringMapToConstants(collectors.defaultUsers),
+		ConnectionFlags: stringMapToConstants(collectors.connectionFlags),
+		EnvVars:         stringMapToConstants(collectors.envVars),
+		EnvKeys:         stringMapToConstants(collectors.envKeys),
+		HealthEndpoints: stringMapToConstants(collectors.healthEndpoints),
+		Tags:            stringMapToConstants(collectors.tags),
+		Capabilities:    stringMapToConstants(collectors.capabilities),
+		Networks:        stringMapToConstants(collectors.networks),
+		MemoryLimits:    stringMapToConstants(collectors.memoryLimits),
+		Protocols:       stringMapToConstants(collectors.protocols),
+		Services:        collectors.services,
+		ConfigSchemas:   configSchemas,
+	}
+}
+
+func processService(service map[string]any, serviceName, path string, collectors *collectors, configSchemas *[]ServiceConfigSchema) {
+	processBasicInfo(serviceName, path, collectors)
+	processConnection(service, serviceName, collectors)
+	processContainer(service, serviceName, collectors)
+	processEnvironment(service, serviceName, collectors)
+	processDependencies(service, collectors)
+	processHealth(service, serviceName, collectors)
+	processTags(service, collectors)
+	processCharacteristics(service, serviceName, collectors)
+	processConfigSchema(service, serviceName, configSchemas)
+}
+
+func processBasicInfo(serviceName, path string, collectors *collectors) {
+	collectors.names[Prefix.Service+toPascalCase(serviceName)] = serviceName
+
+	parts := strings.Split(path, "/")
+	if len(parts) >= 3 {
+		cat := parts[len(parts)-2]
+		collectors.categories[Prefix.Category+toPascalCase(cat)] = cat
+	}
+}
+
+func processConnection(service map[string]any, serviceName string, collectors *collectors) {
+	conn, ok := service[Keys.Connection.Root].(map[string]any)
+	if !ok {
+		return
+	}
+
+	if client, ok := conn[Keys.Connection.Client].(string); ok {
+		collectors.clients[Prefix.Client+toPascalCase(client)] = client
+	}
+	if user, ok := conn[Keys.Connection.DefaultUser].(string); ok {
+		collectors.defaultUsers[Prefix.DefaultUser+toPascalCase(serviceName)] = user
+	}
+
+	processConnectionFlags(conn, serviceName, collectors)
+}
+
+func processConnectionFlags(conn map[string]any, serviceName string, collectors *collectors) {
+	flags := []string{Keys.Connection.UserFlag, Keys.Connection.HostFlag, Keys.Connection.PortFlag, Keys.Connection.DatabaseFlag}
+	for _, flag := range flags {
+		if val, ok := conn[flag].(string); ok {
+			key := toPascalCase(flag) + toPascalCase(serviceName)
+			collectors.connectionFlags[key] = val
+		}
+	}
+}
+
+func processContainer(service map[string]any, serviceName string, collectors *collectors) {
+	container, ok := service["container"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	processContainerBasics(container, serviceName, collectors)
+	processContainerPorts(container, serviceName, collectors)
+	processContainerNetworks(container, collectors)
+}
+
+func processContainerBasics(container map[string]any, serviceName string, collectors *collectors) {
+	if image, ok := container["image"].(string); ok {
+		collectors.images["Image"+toPascalCase(serviceName)] = image
+	}
+	if mem, ok := container["memory_limit"].(string); ok {
+		collectors.memoryLimits["MemoryLimit"+toPascalCase(mem)] = mem
+	}
+}
+
+func processContainerPorts(container map[string]any, serviceName string, collectors *collectors) {
+	ports, ok := container["ports"].([]any)
+	if !ok || len(ports) == 0 {
+		return
+	}
+
+	portMap, ok := ports[0].(map[string]any)
+	if !ok {
+		return
+	}
+
+	if external, ok := portMap["external"].(string); ok {
+		if portNum, err := strconv.Atoi(external); err == nil {
+			collectors.ports["Port"+toPascalCase(serviceName)] = portNum
+		}
+	}
+
+	protocol := "tcp"
+	if p, ok := portMap["protocol"].(string); ok {
+		protocol = p
+	}
+	collectors.protocols["Protocol"+toPascalCase(protocol)] = protocol
+}
+
+func processContainerNetworks(container map[string]any, collectors *collectors) {
+	nets, ok := container["networks"].([]any)
+	if !ok {
+		return
+	}
+	for _, net := range nets {
+		if netStr, ok := net.(string); ok {
+			collectors.networks["Network"+toPascalCase(netStr)] = netStr
+		}
+	}
+}
+
+func processEnvironment(service map[string]any, serviceName string, collectors *collectors) {
+	env, ok := service["environment"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	for key, value := range env {
+		if strValue, ok := value.(string); ok {
+			envKey := "Env" + toPascalCase(serviceName) + toPascalCase(key)
+			collectors.envVars[envKey] = strValue
+
+			envKeyConstant := "EnvKey" + toPascalCase(key)
+			if _, exists := collectors.envKeys[envKeyConstant]; !exists {
+				collectors.envKeys[envKeyConstant] = key
+			}
+		}
+	}
+}
+
+func processDependencies(service map[string]any, collectors *collectors) {
+	deps, ok := service["dependencies"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	provides, ok := deps["provides"].([]any)
+	if !ok {
+		return
+	}
+
+	for _, cap := range provides {
+		if capStr, ok := cap.(string); ok {
+			collectors.capabilities["Capability"+toPascalCase(capStr)] = capStr
+		}
+	}
+}
+
+func processHealth(service map[string]any, serviceName string, collectors *collectors) {
+	health, ok := service["health_check"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	if endpoint, ok := health["endpoint"].(string); ok {
+		collectors.healthEndpoints["HealthEndpoint"+toPascalCase(serviceName)] = endpoint
+	}
+}
+
+func processTags(service map[string]any, collectors *collectors) {
+	tags, ok := service["tags"].([]any)
+	if !ok {
+		return
+	}
+
+	for _, tag := range tags {
+		if tagStr, ok := tag.(string); ok {
+			collectors.tags["Tag"+toPascalCase(tagStr)] = tagStr
+		}
+	}
+}
+
+func processCharacteristics(service map[string]any, serviceName string, collectors *collectors) {
+	serviceSection, ok := service[Keys.Service.Root].(map[string]any)
+	if !ok {
+		return
+	}
+
+	characteristics, ok := serviceSection[Keys.Service.Characteristics].([]any)
+	if !ok {
+		return
+	}
+
+	var charStrings []string
+	for _, char := range characteristics {
+		if charStr, ok := char.(string); ok {
+			charStrings = append(charStrings, charStr)
+		}
+	}
+
+	if len(charStrings) > 0 {
+		collectors.services = append(collectors.services, ServiceData{
+			Name:            serviceName,
+			Characteristics: charStrings,
+		})
+	}
+}
+
+func processConfigSchema(service map[string]any, serviceName string, configSchemas *[]ServiceConfigSchema) {
+	schema, ok := service["configuration_schema"].(map[string]any)
+	if !ok {
+		return
+	}
+
+	*configSchemas = append(*configSchemas, ServiceConfigSchema{
+		ServiceName: serviceName,
+		Schema:      schema,
+	})
 }
 
 const (
@@ -244,7 +555,7 @@ func (c *collectors) addPorts(service map[string]any, serviceName string) {
 
 		c.ports["Port"+toPascalCase(serviceName)] = portNum
 
-		protocol := services.ProtocolTcp
+		protocol := "tcp"
 		if p, ok := portMap["protocol"].(string); ok {
 			protocol = p
 		}
@@ -281,6 +592,12 @@ func (c *collectors) addEnvironment(service map[string]any, serviceName string) 
 		if strValue, ok := value.(string); ok {
 			envKey := "Env" + toPascalCase(serviceName) + toPascalCase(key)
 			c.envVars[envKey] = strValue
+
+			// Add unique environment keys
+			envKeyConstant := "EnvKey" + toPascalCase(key)
+			if _, exists := c.envKeys[envKeyConstant]; !exists {
+				c.envKeys[envKeyConstant] = key
+			}
 		}
 	}
 }
@@ -331,6 +648,7 @@ func (c *collectors) toConstants() *ServiceConstants {
 		DefaultUsers:    stringMapToConstants(c.defaultUsers),
 		ConnectionFlags: stringMapToConstants(c.connectionFlags),
 		EnvVars:         stringMapToConstants(c.envVars),
+		EnvKeys:         stringMapToConstants(c.envKeys),
 		HealthEndpoints: stringMapToConstants(c.healthEndpoints),
 		Tags:            stringMapToConstants(c.tags),
 		Capabilities:    stringMapToConstants(c.capabilities),
@@ -340,8 +658,6 @@ func (c *collectors) toConstants() *ServiceConstants {
 		ConfigSchemas:   c.configSchemas,
 	}
 }
-
-const ReadExecutePermissions = 0755
 
 func generateConstants(serviceConstants *ServiceConstants) error {
 	tmpl, err := template.ParseFiles(TemplateFilePath)

@@ -6,23 +6,24 @@ import (
 
 // StartOptions defines options for starting services
 type StartOptions struct {
-	Build          bool
-	ForceRecreate  bool
-	NoDeps         bool
-	Detach         bool
-	Timeout        time.Duration
-	ResolveDeps    bool
-	CheckConflicts bool
-	RemoveOrphans  bool
+	Build           bool
+	ForceRecreate   bool
+	NoDeps          bool
+	Detach          bool
+	Timeout         time.Duration
+	ResolveDeps     bool
+	RemoveOrphans   bool
+	Characteristics []string
 }
 
 // StopOptions defines options for stopping services
 type StopOptions struct {
-	Timeout       int
-	Remove        bool
-	RemoveVolumes bool
-	RemoveOrphans bool
-	RemoveImages  string
+	Timeout         int
+	Remove          bool
+	RemoveVolumes   bool
+	RemoveOrphans   bool
+	RemoveImages    string
+	Characteristics []string
 }
 
 // LogOptions defines options for retrieving container logs
