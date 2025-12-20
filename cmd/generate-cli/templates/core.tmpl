@@ -93,6 +93,11 @@ var ValidationOptions = map[string]string{
 {{range .ValidationOptions}}	"{{.Key}}": "{{.Description}}",
 {{end}}}
 
+// ValidationRequired contains which validations are required
+var ValidationRequired = map[string]bool{
+{{range .ValidationOptions}}	"{{.Key}}": {{.Required}},
+{{end}}}
+
 // Validation constants
 const (
 {{range .ValidationOptions}}	Validation{{.Key | toPascalCase}} = "{{.Key}}"

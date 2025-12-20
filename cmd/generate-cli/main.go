@@ -87,6 +87,7 @@ type flagField struct {
 type validationOption struct {
 	Key         string
 	Description string
+	Required    bool
 }
 
 func main() {
@@ -491,7 +492,12 @@ func createValidationOption(key string, data any) validationOption {
 		return validationOption{}
 	}
 
-	return validationOption{Key: key, Description: desc}
+	required := false
+	if reqVal, ok := dataMap["required"].(bool); ok {
+		required = reqVal
+	}
+
+	return validationOption{Key: key, Description: desc, Required: required}
 }
 
 func getValidation(rawConfig map[string]any) map[string]any {
