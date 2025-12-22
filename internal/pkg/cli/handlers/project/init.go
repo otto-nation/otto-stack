@@ -3,6 +3,8 @@ package project
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
@@ -15,6 +17,7 @@ import (
 // InitHandler handles the init command
 type InitHandler struct {
 	selectedServices        []string
+	forceOverwrite          bool
 	promptManager           *PromptManager
 	validationManager       *ValidationManager
 	projectManager          *ProjectManager
@@ -51,12 +54,34 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	projectName, err := h.promptManager.PromptForProjectDetails()
-	if err != nil {
-		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgFailedToGetProjectDetails, err)
+	ciFlags := ci.GetFlags(cmd)
+	initFlags, _ := core.ParseInitFlags(cmd)
+
+	// Default project name to current directory if not provided
+	if initFlags.ProjectName == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return pkgerrors.NewValidationError(core.FlagProjectName, "failed to get current directory", err)
+		}
+		initFlags.ProjectName = filepath.Base(cwd)
 	}
 
-	services, validation, advanced, err := h.serviceSelectionManager.RunWorkflow(h, base)
+	// Set force flag in handler for validation functions
+	h.forceOverwrite = initFlags.Force
+
+	// Check if project is already initialized
+	if _, err := os.Stat(core.OttoStackDir); err == nil && !initFlags.Force {
+		return fmt.Errorf("project already initialized. Use --%s to overwrite", core.FlagForce)
+	}
+
+	var projectName string
+	var services []string
+	var validation map[string]bool
+	var advanced map[string]bool
+	var err error
+
+	processor := NewModeProcessor(ciFlags.NonInteractive, h)
+	projectName, services, validation, advanced, err = processor.Process(initFlags, base)
 	if err != nil {
 		return err
 	}
@@ -78,7 +103,11 @@ func (h *InitHandler) validateInitFlags(cmd *cobra.Command) error {
 
 	ciFlags := ci.GetFlags(cmd)
 	if ciFlags.NonInteractive {
-		return pkgerrors.NewValidationError(FieldConfig, core.MsgNon_interactive_mode_requires_config, nil)
+		// In non-interactive mode, we need services flag
+		initFlags, _ := core.ParseInitFlags(cmd)
+		if initFlags.Services == "" {
+			return pkgerrors.NewValidationError(core.FlagServices, "services are required in non-interactive mode", nil)
+		}
 	}
 	return nil
 }

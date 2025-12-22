@@ -1,8 +1,6 @@
 package project
 
 import (
-	"slices"
-
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
@@ -31,7 +29,7 @@ func (vm *ValidationManager) RunValidations(selectedValidations map[string]bool,
 
 		if isRequired || isSelected {
 			if err := validationFunc(handler, base); err != nil {
-				return pkgerrors.NewValidationError(FieldValidation, "validation failed", err)
+				return pkgerrors.NewValidationError(validationKey, "validation failed", err)
 			}
 		}
 	}
@@ -40,12 +38,5 @@ func (vm *ValidationManager) RunValidations(selectedValidations map[string]bool,
 
 // isRequiredValidation checks if a validation is required based on YAML config
 func (vm *ValidationManager) isRequiredValidation(key string) bool {
-	requiredValidations := []string{
-		core.ValidationDocker,
-		core.ValidationDockerCompose,
-		core.ValidationConfigSyntax,
-		core.ValidationServiceDefinitions,
-	}
-
-	return slices.Contains(requiredValidations, key)
+	return core.ValidationRequired[key]
 }

@@ -6,7 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
@@ -16,6 +19,27 @@ import (
 type ProjectManager struct {
 	serviceUtils  *services.ServiceUtils
 	configService services.ConfigService
+	fileGenerator *services.FileGenerator
+}
+
+// OttoStackConfig represents the otto-stack configuration structure
+type OttoStackConfig struct {
+	Project struct {
+		Name string `yaml:"name"`
+		Type string `yaml:"type"`
+	} `yaml:"project"`
+	Stack struct {
+		Enabled []string `yaml:"enabled"`
+	} `yaml:"stack"`
+	Validation struct {
+		Options map[string]bool `yaml:"options"`
+	} `yaml:"validation"`
+}
+
+// ServiceConfig represents a service configuration file
+type ServiceConfig struct {
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
 }
 
 // NewProjectManager creates a new project manager
@@ -23,6 +47,7 @@ func NewProjectManager() *ProjectManager {
 	return &ProjectManager{
 		serviceUtils:  services.NewServiceUtils(),
 		configService: services.NewConfigService(),
+		fileGenerator: services.NewFileGenerator(),
 	}
 }
 
@@ -84,12 +109,25 @@ func (pm *ProjectManager) createConfigFile(projectName string, services []string
 
 // generateConfig generates the configuration content
 func (pm *ProjectManager) generateConfig(name string, services []string, validationOptions map[string]bool) string {
-	return fmt.Sprintf(`project:
-  name: %s
-  services: [%s]
-validation:
-  enabled: %t
-`, name, strings.Join(services, ", "), len(validationOptions) > 0)
+	config := OttoStackConfig{}
+	config.Project.Name = name
+	config.Project.Type = "docker"
+	config.Stack.Enabled = services
+
+	config.Validation.Options = make(map[string]bool)
+	for _, key := range core.ValidationKeys {
+		if len(validationOptions) == 0 || validationOptions[key] {
+			config.Validation.Options[key] = true
+		}
+	}
+
+	data, err := yaml.Marshal(&config)
+	if err != nil {
+		// Fallback to empty config if marshal fails
+		return "# Error generating configuration\n"
+	}
+
+	return string(data)
 }
 
 // generateServiceConfigs generates service configurations
@@ -110,9 +148,20 @@ func (pm *ProjectManager) generateServiceConfig(serviceName string) error {
 
 // generateServiceConfigContent generates the content for a service configuration
 func (pm *ProjectManager) generateServiceConfigContent(serviceName string) string {
-	return fmt.Sprintf(`name: %s
-description: Configuration for %s service
-`, serviceName, serviceName)
+	config := ServiceConfig{
+		Name:        serviceName,
+		Description: fmt.Sprintf("Configuration for %s service", serviceName),
+	}
+
+	data, err := yaml.Marshal(&config)
+	if err != nil {
+		// Fallback if marshal fails
+		return fmt.Sprintf("name: %s\ndescription: Configuration for %s service\n", serviceName, serviceName)
+	}
+
+	// Add comment header
+	header := fmt.Sprintf("# Documentation: %s/services/%s\n\n", core.DocsURL, serviceName)
+	return header + string(data)
 }
 
 // generateInitialComposeFiles generates Docker Compose files
@@ -129,80 +178,109 @@ func (pm *ProjectManager) generateInitialComposeFiles(services []string, project
 }
 
 // generateEnvFile generates the .env file
-func (pm *ProjectManager) generateEnvFile(_ []string, projectName string, base *base.BaseCommand) error {
-	envContent := fmt.Sprintf("PROJECT_NAME=%s\n", projectName)
-	envPath := ".env"
+func (pm *ProjectManager) generateEnvFile(services []string, projectName string, base *base.BaseCommand) error {
+	resolvedServices := pm.resolveServiceDependencies(services)
 
-	if err := os.WriteFile(envPath, []byte(envContent), core.PermReadWrite); err != nil {
+	if err := pm.fileGenerator.GenerateEnvFile(resolvedServices, projectName); err != nil {
 		return err
 	}
 
-	base.Output.Success("Created environment file: %s", envPath)
+	base.Output.Success("Created environment file: %s", core.ExtENV)
 	return nil
 }
 
 // generateDockerCompose generates the docker-compose.yml file
-func (pm *ProjectManager) generateDockerCompose(services []string, _ string, base *base.BaseCommand) error {
-	composeContent := fmt.Sprintf(`version: '3.8'
-services:
-%s
-`, pm.formatServicesForCompose(services))
+func (pm *ProjectManager) generateDockerCompose(services []string, projectName string, base *base.BaseCommand) error {
+	resolvedServices := pm.resolveServiceDependencies(services)
 
-	composePath := "docker-compose.yml"
-	if err := os.WriteFile(composePath, []byte(composeContent), core.PermReadWrite); err != nil {
+	if err := pm.fileGenerator.GenerateComposeFileWithOriginal(resolvedServices, services, projectName); err != nil {
 		return err
 	}
 
-	base.Output.Success("Created Docker Compose file: %s", composePath)
+	base.Output.Success("Created Docker Compose file: %s", docker.DockerComposeFilePath)
 	return nil
 }
 
-// formatServicesForCompose formats services for docker-compose.yml
-func (pm *ProjectManager) formatServicesForCompose(services []string) string {
-	var result strings.Builder
-	for _, service := range services {
-		result.WriteString(fmt.Sprintf("  %s:\n    image: %s:latest\n", service, service))
+// resolveServiceDependencies resolves configuration services to their container dependencies
+func (pm *ProjectManager) resolveServiceDependencies(serviceList []string) []string {
+	resolved := make(map[string]bool)
+
+	for _, service := range serviceList {
+		// For localstack-* services, resolve to localstack
+		if strings.HasPrefix(service, services.ServiceLocalstack) {
+			resolved[services.ServiceLocalstack] = true
+		} else {
+			resolved[service] = true
+		}
 	}
-	return result.String()
+
+	var result []string
+	for service := range resolved {
+		result = append(result, service)
+	}
+	return result
 }
 
 // createGitignoreEntries adds entries to .gitignore
 func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
-	gitignorePath := ".gitignore"
-
 	entries := []string{
-		"# Otto Stack",
-		".otto-stack/logs/",
-		".env.local",
+		"# " + core.AppNameTitle,
+		core.OttoStackDir + "/logs/",
+		core.ExtENV + core.LocalFileExtension,
 		"*.log",
 	}
 
 	content := strings.Join(entries, "\n") + "\n"
+	gitignorePath := filepath.Join(core.OttoStackDir, core.GitIgnoreFileName)
 
 	if err := os.WriteFile(gitignorePath, []byte(content), core.PermReadWrite); err != nil {
 		return err
 	}
 
-	base.Output.Success("Updated .gitignore file")
+	base.Output.Success("Updated %s file", gitignorePath)
 	return nil
 }
 
 // createReadme creates README file
 func (pm *ProjectManager) createReadme(projectName string, services []string, base *base.BaseCommand) error {
-	readmeContent := fmt.Sprintf(`# %s
+	const readmeTemplate = `# %s
 
-This project was initialized with Otto Stack.
+This project was initialized with %s.
 
 ## Services
 %s
 
-## Getting Started
-1. Review configuration in .otto-stack/config.yml
-2. Start the stack: otto up
-3. Check status: otto status
-`, projectName, pm.formatServicesList(services))
+## Commands
+- ` + "`%s up`" + ` - Start all services
+- ` + "`%s down`" + ` - Stop all services
+- ` + "`%s status`" + ` - Show service status
+- ` + "`%s logs`" + ` - View service logs
+- ` + "`%s validate`" + ` - Validate configuration
 
-	readmePath := filepath.Join(core.OttoStackDir, "README.md")
+## Configuration
+- Main config: ` + "`%s/%s`" + `
+- Service configs: ` + "`%s/%s/`" + `
+
+## File Management
+- **Generated files** (` + "`docker-compose.yml`" + `, ` + "`env.generated`" + `): Automatically regenerated on each ` + "`up`" + ` command
+- **Service configs** (` + "`service-configs/`" + `): Created during ` + "`init`" + `, preserved across ` + "`up`" + ` commands for user customization
+- **User configs** (` + "`otto-stack-config.yml`" + `): Never overwritten, safe to edit
+
+## Documentation
+%s
+`
+
+	readmeContent := fmt.Sprintf(readmeTemplate,
+		projectName,
+		core.AppNameTitle,
+		pm.formatServicesList(services),
+		core.AppName, core.AppName, core.AppName, core.AppName, core.AppName,
+		core.OttoStackDir, core.ConfigFileName,
+		core.OttoStackDir, core.ServiceConfigsDir,
+		core.DocsURL,
+	)
+
+	readmePath := filepath.Join(core.OttoStackDir, core.ReadmeFileName)
 	if err := os.WriteFile(readmePath, []byte(readmeContent), core.PermReadWrite); err != nil {
 		return err
 	}
@@ -215,7 +293,7 @@ This project was initialized with Otto Stack.
 func (pm *ProjectManager) formatServicesList(services []string) string {
 	var result strings.Builder
 	for _, service := range services {
-		result.WriteString(fmt.Sprintf("- %s\n", service))
+		fmt.Fprintf(&result, "- %s\n", service)
 	}
 	return result.String()
 }

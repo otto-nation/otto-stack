@@ -43,7 +43,7 @@ func (ssm *ServiceSelectionManager) RunWorkflow(handler *InitHandler, base *base
 		}
 
 		if err := ssm.validationManager.RunValidations(validation, handler, base); err != nil {
-			return nil, nil, nil, pkgerrors.NewValidationError(FieldValidation, ActionValidation, err)
+			return nil, nil, nil, pkgerrors.NewValidationError("validation-check", ActionValidation, err)
 		}
 
 		action, err := ssm.promptManager.ConfirmInitialization("", services, validation, advanced, base)

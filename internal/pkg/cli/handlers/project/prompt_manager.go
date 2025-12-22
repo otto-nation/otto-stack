@@ -95,10 +95,10 @@ func (pm *PromptManager) PromptForAdvancedOptions() (map[string]bool, map[string
 
 	if enableValidation {
 		// Individual validation options
-		validationOptions := []string{
-			"Docker Compose validation",
-			"Service health checks",
-			"Port conflict detection",
+		// Use ValidationOptions from generated constants
+		validationOptions := make([]string, 0, len(core.ValidationOptions))
+		for _, description := range core.ValidationOptions {
+			validationOptions = append(validationOptions, description)
 		}
 
 		var selectedValidations []string
@@ -113,9 +113,14 @@ func (pm *PromptManager) PromptForAdvancedOptions() (map[string]bool, map[string
 			return validation, advanced, pkgerrors.NewValidationError(FieldValidation, MsgFailedToGetValidationOptions, err)
 		}
 
-		// Convert to map
-		for _, option := range selectedValidations {
-			validation[option] = true
+		// Convert descriptions back to keys
+		for _, selectedDesc := range selectedValidations {
+			for key, description := range core.ValidationOptions {
+				if description == selectedDesc {
+					validation[key] = true
+					break
+				}
+			}
 		}
 	}
 

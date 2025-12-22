@@ -14,11 +14,6 @@ const (
 	TestProjectNameValid   = "valid-project"
 	TestProjectNameInvalid = "invalid@project"
 
-	// Test services
-	TestServicePostgres = "postgres"
-	TestServiceRedis    = "redis"
-	TestServiceNginx    = "nginx"
-
 	// Test file content
 	TestConfigContent    = "test: config"
 	TestReadmeContent    = "# Test Project"

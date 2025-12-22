@@ -9,6 +9,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -79,7 +80,7 @@ func TestCreateConfigFile(t *testing.T) {
 	err := handler.projectManager.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.projectManager.createConfigFile(TestProjectName, []string{TestServicePostgres}, nil,
+	err = handler.projectManager.createConfigFile(TestProjectName, []string{services.ServicePostgres}, nil,
 		&base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
@@ -92,10 +93,15 @@ func TestCreateGitignoreEntries(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.projectManager.createGitignoreEntries(&base.BaseCommand{Output: ui.NewOutput()})
+	// Create directory structure first
+	err := handler.projectManager.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	_, err = os.Stat(core.GitIgnoreFileName)
+	err = handler.projectManager.createGitignoreEntries(&base.BaseCommand{Output: ui.NewOutput()})
+	assert.NoError(t, err)
+
+	gitignorePath := filepath.Join(core.OttoStackDir, core.GitIgnoreFileName)
+	_, err = os.Stat(gitignorePath)
 	assert.NoError(t, err)
 }
 
@@ -107,7 +113,7 @@ func TestCreateReadme(t *testing.T) {
 	err := handler.projectManager.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.projectManager.createReadme(TestProjectName, []string{TestServicePostgres, TestServiceRedis}, &base.BaseCommand{Output: ui.NewOutput()})
+	err = handler.projectManager.createReadme(TestProjectName, []string{services.ServicePostgres, services.ServiceRedis}, &base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	readmePath := filepath.Join(core.OttoStackDir, core.ReadmeFileName)
@@ -118,8 +124,12 @@ func TestCreateReadme(t *testing.T) {
 func TestGenerateConfig(t *testing.T) {
 	handler := NewInitHandler()
 
-	config := handler.projectManager.generateConfig(TestProjectName, []string{TestServicePostgres}, nil)
+	config := handler.projectManager.generateConfig(TestProjectName, []string{services.ServicePostgres}, nil)
 
 	assert.Contains(t, config, TestProjectName)
-	assert.Contains(t, config, TestServicePostgres)
+	assert.Contains(t, config, services.ServicePostgres)
+	assert.Contains(t, config, "validation:")
+	assert.Contains(t, config, "options:")
+	assert.Contains(t, config, core.ValidationDocker+": true")
+	assert.Contains(t, config, core.ValidationConfigSyntax+": true")
 }
