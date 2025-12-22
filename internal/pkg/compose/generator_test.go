@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -11,7 +12,7 @@ import (
 
 func TestNewGenerator(t *testing.T) {
 	t.Run("creates generator successfully", func(t *testing.T) {
-		generator, err := NewGenerator("test-project", "/tmp/services", nil)
+		generator, err := NewGenerator("test-project", "/tmp/services", testutil.NewTestManager(t))
 		assert.NoError(t, err)
 		assert.NotNil(t, generator)
 		assert.Equal(t, "test-project", generator.projectName)
@@ -19,7 +20,7 @@ func TestNewGenerator(t *testing.T) {
 	})
 
 	t.Run("handles empty project name", func(t *testing.T) {
-		generator, err := NewGenerator("", "/tmp/services", nil)
+		generator, err := NewGenerator("", "/tmp/services", testutil.NewTestManager(t))
 		assert.NoError(t, err)
 		assert.NotNil(t, generator)
 		assert.Equal(t, "", generator.projectName)
@@ -27,7 +28,7 @@ func TestNewGenerator(t *testing.T) {
 }
 
 func TestGenerator_GenerateYAML(t *testing.T) {
-	generator, err := NewGenerator("test-project", "/tmp/services", nil)
+	generator, err := NewGenerator("test-project", "/tmp/services", testutil.NewTestManager(t))
 	require.NoError(t, err)
 
 	t.Run("generates valid YAML structure", func(t *testing.T) {
@@ -106,7 +107,7 @@ func TestGenerator_GenerateYAML(t *testing.T) {
 }
 
 func TestGenerator_buildServices(t *testing.T) {
-	generator, err := NewGenerator("test-project", "/tmp/services", nil)
+	generator, err := NewGenerator("test-project", "/tmp/services", testutil.NewTestManager(t))
 	require.NoError(t, err)
 
 	t.Run("builds services map", func(t *testing.T) {

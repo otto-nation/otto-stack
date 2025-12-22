@@ -4,15 +4,21 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/test/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGenerate(t *testing.T) {
 	t.Run("generates basic environment file", func(t *testing.T) {
 		projectName := "test-project"
-		services := []string{"redis", "postgres"}
+		serviceNames := []string{"redis", "postgres"}
 
-		content, err := Generate(projectName, services, nil)
+		manager, err := services.New()
+		require.NoError(t, err)
+
+		content, err := Generate(projectName, serviceNames, manager)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, content)
 
@@ -31,7 +37,7 @@ func TestGenerate(t *testing.T) {
 		projectName := "empty-project"
 		services := []string{}
 
-		content, err := Generate(projectName, services, nil)
+		content, err := Generate(projectName, services, testutil.NewTestManager(t))
 		assert.NoError(t, err)
 		assert.NotEmpty(t, content)
 
@@ -43,7 +49,7 @@ func TestGenerate(t *testing.T) {
 		projectName := ""
 		services := []string{"redis"}
 
-		content, err := Generate(projectName, services, nil)
+		content, err := Generate(projectName, services, testutil.NewTestManager(t))
 		assert.NoError(t, err)
 		assert.NotEmpty(t, content)
 
@@ -56,7 +62,7 @@ func TestGenerate(t *testing.T) {
 		projectName := "format-test"
 		services := []string{"test-service"}
 
-		content, err := Generate(projectName, services, nil)
+		content, err := Generate(projectName, services, testutil.NewTestManager(t))
 		assert.NoError(t, err)
 
 		contentStr := string(content)
@@ -75,7 +81,7 @@ func TestGenerate(t *testing.T) {
 		projectName := "timestamp-test"
 		services := []string{}
 
-		content, err := Generate(projectName, services, nil)
+		content, err := Generate(projectName, services, testutil.NewTestManager(t))
 		assert.NoError(t, err)
 
 		contentStr := string(content)
@@ -88,7 +94,7 @@ func TestAddServiceEnv(t *testing.T) {
 		var content strings.Builder
 
 		// Should not panic or error
-		addServiceEnv(&content, "nonexistent-service", nil)
+		addServiceEnv(&content, "nonexistent-service", testutil.NewTestManager(t))
 
 		// Content should remain empty for nonexistent service
 		assert.Empty(t, content.String())
@@ -98,10 +104,10 @@ func TestAddServiceEnv(t *testing.T) {
 		var content strings.Builder
 
 		// Test with various service names
-		testServices := []string{"redis", "postgres", "mongodb"}
+		testServices := []string{"redis", "postgres", "mysql"}
 
 		for _, service := range testServices {
-			addServiceEnv(&content, service, nil)
+			addServiceEnv(&content, service, testutil.NewTestManager(t))
 		}
 
 		// Should not panic and content should be string

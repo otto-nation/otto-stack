@@ -3,13 +3,18 @@ package compose
 import (
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
 func TestLabelGeneration(t *testing.T) {
-	gen, err := NewGenerator("test-project", "", nil)
+	manager, err := services.New()
+	require.NoError(t, err)
+
+	gen, err := NewGenerator("test-project", "", manager)
 	require.NoError(t, err)
 
 	// Generate YAML for redis service
@@ -42,7 +47,7 @@ func TestLabelGeneration(t *testing.T) {
 }
 
 func TestBuildOttoLabels(t *testing.T) {
-	gen, err := NewGenerator("my-project", "", nil)
+	gen, err := NewGenerator("my-project", "", testutil.NewTestManager(t))
 	require.NoError(t, err)
 
 	labels := gen.buildOttoLabels("postgres")

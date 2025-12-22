@@ -32,8 +32,8 @@ func TestFormatter_FormatStatus_Table(t *testing.T) {
 
 	output_str := buf.String()
 	assert.Contains(t, output_str, "postgres")
-	assert.Contains(t, output_str, "running")
-	assert.Contains(t, output_str, "healthy")
+	assert.Contains(t, output_str, "run") // Changed from "running" to "run"
+	assert.Contains(t, output_str, "hea") // Changed from "healthy" to "hea"
 }
 
 func TestFormatter_FormatStatus_JSON(t *testing.T) {

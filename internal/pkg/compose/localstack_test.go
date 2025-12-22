@@ -4,11 +4,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/test/testutil"
 	"gopkg.in/yaml.v3"
 )
 
 func TestLocalStackDependencyResolution(t *testing.T) {
-	generator, err := NewGenerator("test-project", "", nil)
+	generator, err := NewGenerator("test-project", "", testutil.NewTestManager(t))
 	if err != nil {
 		t.Fatalf("Failed to create generator: %v", err)
 	}
@@ -115,7 +116,7 @@ func TestLocalStackDependencyResolution(t *testing.T) {
 }
 
 func TestLocalStackEnvironmentMerging(t *testing.T) {
-	generator, err := NewGenerator("test-project", "", nil)
+	generator, err := NewGenerator("test-project", "", testutil.NewTestManager(t))
 	if err != nil {
 		t.Fatalf("Failed to create generator: %v", err)
 	}

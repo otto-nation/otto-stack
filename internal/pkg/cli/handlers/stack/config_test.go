@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,7 +35,7 @@ stack:
 	cfg, err := LoadProjectConfig(baseConfigPath)
 	require.NoError(t, err)
 	assert.Equal(t, "test-project", cfg.Project.Name)
-	assert.Equal(t, []string{"postgres", "redis"}, cfg.Stack.Enabled)
+	assert.Equal(t, []string{services.ServicePostgres, services.ServiceRedis}, cfg.Stack.Enabled)
 
 	// Create local override config in otto-stack directory
 	ottoStackDir := filepath.Join(tmpDir, core.OttoStackDir)
@@ -47,7 +48,7 @@ project:
 stack:
   enabled:
     - postgres
-    - mongodb
+    - mysql
 `
 	localConfigPath := filepath.Join(ottoStackDir, core.LocalConfigFileName)
 	err = os.WriteFile(localConfigPath, []byte(localConfig), core.PermReadWrite)
@@ -62,7 +63,7 @@ stack:
 	cfg, err = LoadProjectConfig(baseConfigPath)
 	require.NoError(t, err)
 	assert.Equal(t, "local-project", cfg.Project.Name)
-	assert.Equal(t, []string{"postgres", "mongodb"}, cfg.Stack.Enabled)
+	assert.Equal(t, []string{services.ServicePostgres, services.ServiceMysql}, cfg.Stack.Enabled)
 }
 
 func TestLoadProjectConfigPartialOverride(t *testing.T) {
@@ -104,6 +105,6 @@ project:
 	// Test loading with partial override
 	cfg, err := LoadProjectConfig(baseConfigPath)
 	require.NoError(t, err)
-	assert.Equal(t, "test-project", cfg.Project.Name)                 // unchanged
-	assert.Equal(t, []string{"postgres", "redis"}, cfg.Stack.Enabled) // unchanged
+	assert.Equal(t, "test-project", cfg.Project.Name)                                             // unchanged
+	assert.Equal(t, []string{services.ServicePostgres, services.ServiceRedis}, cfg.Stack.Enabled) // unchanged
 }
