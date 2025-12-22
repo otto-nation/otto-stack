@@ -17,8 +17,10 @@ const (
 	CommandsYAMLPath     = "internal/config/commands.yaml"
 	CoreTemplateFilePath = "cmd/generate-cli/templates/core.tmpl"
 	CLITemplateFilePath  = "cmd/generate-cli/templates/ci.tmpl"
+	CLICommandsTemplate  = "cmd/generate-cli/templates/cli.tmpl"
 	CoreGeneratedPath    = "internal/core/constants_generated.go"
 	CIGeneratedPath      = "internal/pkg/ci/generated.go"
+	CLICommandsPath      = "internal/pkg/cli/cli_generated.go"
 	CoreTemplateName     = "core"
 )
 
@@ -104,6 +106,11 @@ func main() {
 
 	if err := generateCIUtilities(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate CI utilities: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := generateCLICommands(rawConfig); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to generate CLI commands: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -437,9 +444,19 @@ func addCommandFlags(rawConfig map[string]any, flagNames map[string]bool) {
 
 func addGlobalFlags(rawConfig map[string]any, flagNames map[string]bool) {
 	global := getGlobal(rawConfig)
-	globalFlags := getFlags(global)
-	for flagName := range globalFlags {
-		flagNames[flagName] = true
+	if flags, ok := global["flags"].(map[string]any); ok {
+		// Add persistent flags
+		if persistent, ok := flags["persistent"].(map[string]any); ok {
+			for flagName := range persistent {
+				flagNames[flagName] = true
+			}
+		}
+		// Add conditional flags
+		if conditional, ok := flags["conditional"].(map[string]any); ok {
+			for flagName := range conditional {
+				flagNames[flagName] = true
+			}
+		}
 	}
 }
 
@@ -520,4 +537,54 @@ func goTypeFromYAML(yamlType string) string {
 	default:
 		return defaultFlagType
 	}
+}
+
+func generateCLICommands(rawConfig map[string]any) error {
+	tmpl, err := template.New(filepath.Base(CLICommandsTemplate)).Funcs(template.FuncMap{
+		"toPascalCase":       toPascalCase,
+		"getCommandCategory": func(cmdName string) string { return getCommandCategory(rawConfig, cmdName) },
+	}).ParseFiles(CLICommandsTemplate)
+	if err != nil {
+		return pkgerrors.NewServiceError("generator", "parse CLI template", err)
+	}
+
+	file, err := os.Create(CLICommandsPath)
+	if err != nil {
+		if err := os.MkdirAll(filepath.Dir(CLICommandsPath), dirPermissions); err != nil {
+			return pkgerrors.NewServiceError("generator", "create directory", err)
+		}
+		file, err = os.Create(CLICommandsPath)
+		if err != nil {
+			return pkgerrors.NewServiceError("generator", "create CLI file", err)
+		}
+	}
+	defer func() { _ = file.Close() }()
+
+	return tmpl.Execute(file, rawConfig)
+}
+
+func getCommandCategory(rawConfig map[string]any, cmdName string) string {
+	categories, ok := rawConfig["categories"].(map[string]any)
+	if !ok {
+		return ""
+	}
+
+	for catName, catData := range categories {
+		catMap, ok := catData.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		commands, ok := catMap["commands"].([]any)
+		if !ok {
+			continue
+		}
+
+		for _, cmd := range commands {
+			if cmdStr, ok := cmd.(string); ok && cmdStr == cmdName {
+				return catName
+			}
+		}
+	}
+	return ""
 }
