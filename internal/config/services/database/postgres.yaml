@@ -43,7 +43,7 @@ environment:
 container:
   image: postgres:15
   ports:
-    - external: "5432"
+    - external: "${POSTGRES_PORT:-5432}"
       internal: "5432"
       protocol: tcp
   environment:

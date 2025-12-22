@@ -11,7 +11,7 @@ environment:
 container:
   image: redis:7-alpine
   ports:
-    - external: "6379"
+    - external: "${REDIS_PORT:-6379}"
       internal: "6379"
       protocol: tcp
   restart: unless-stopped

@@ -32,6 +32,7 @@ var Keys = struct {
 		Root         string
 		Client       string
 		DefaultUser  string
+		DefaultPort  string
 		UserFlag     string
 		HostFlag     string
 		PortFlag     string
@@ -66,11 +67,12 @@ var Keys = struct {
 		Root         string
 		Client       string
 		DefaultUser  string
+		DefaultPort  string
 		UserFlag     string
 		HostFlag     string
 		PortFlag     string
 		DatabaseFlag string
-	}{"connection", "client", "default_user", "user_flag", "host_flag", "port_flag", "database_flag"},
+	}{"connection", "client", "default_user", "default_port", "user_flag", "host_flag", "port_flag", "database_flag"},
 	Container: struct {
 		Root        string
 		Image       string
@@ -285,7 +287,11 @@ func processBasicInfo(serviceName, path string, collectors *collectors) {
 }
 
 func processConnection(service map[string]any, serviceName string, collectors *collectors) {
-	conn, ok := service[Keys.Connection.Root].(map[string]any)
+	serviceSection, ok := service[Keys.Service.Root].(map[string]any)
+	if !ok {
+		return
+	}
+	conn, ok := serviceSection[Keys.Connection.Root].(map[string]any)
 	if !ok {
 		return
 	}
@@ -295,6 +301,13 @@ func processConnection(service map[string]any, serviceName string, collectors *c
 	}
 	if user, ok := conn[Keys.Connection.DefaultUser].(string); ok {
 		collectors.defaultUsers[Prefix.DefaultUser+toPascalCase(serviceName)] = user
+	}
+	if port, ok := conn[Keys.Connection.DefaultPort].(int); ok {
+		collectors.ports[Prefix.Port+toPascalCase(serviceName)] = port
+	} else if portStr, ok := conn[Keys.Connection.DefaultPort].(string); ok {
+		if portNum, err := strconv.Atoi(portStr); err == nil {
+			collectors.ports[Prefix.Port+toPascalCase(serviceName)] = portNum
+		}
 	}
 
 	processConnectionFlags(conn, serviceName, collectors)
