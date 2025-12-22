@@ -4,30 +4,28 @@ import (
 	"fmt"
 	"os"
 
-	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	// Import handlers to trigger registration
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/stack"
 )
 
 // ExecuteFactory executes the root command using the functional builder
 func ExecuteFactory() error {
-	rootCmd, err := cli.BuildRootCommand()
-	if err != nil {
-		return pkgerrors.NewServiceError("cli", "build root command", err)
-	}
-
+	rootCmd := cli.BuildRootCommand()
 	cobra.OnInitialize(initConfig)
 	return rootCmd.Execute()
 }
 
 // CreateRootCommand creates the root command using the simplified builder
 func CreateRootCommand() (*cobra.Command, error) {
-	return cli.BuildRootCommand()
+	return cli.BuildRootCommand(), nil
 }
 
 // initConfig reads in config file and ENV variables if set

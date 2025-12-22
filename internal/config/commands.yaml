@@ -281,80 +281,76 @@ handlers:
 
 global:
   flags:
-    verbose:
-      type: "bool"
-      description: "Enable verbose output"
-      default: false
-    help:
-      short: "h"
-      type: "bool"
-      description: "Show help information"
-      default: false
-    version:
-      type: "bool"
-      description: "Show version information"
-      default: false
-    quiet:
-      type: "bool"
-      description: "Suppress non-essential output (CI-friendly)"
-      default: false
-    json:
-      type: "bool"
-      description: "Output in JSON format (CI-friendly)"
-      default: false
-    no-color:
-      type: "bool"
-      description: "Disable colored output (CI-friendly)"
-      default: false
-    non-interactive:
-      type: "bool"
-      description: "Run in non-interactive mode (CI-friendly)"
-      default: false
-    dry-run:
-      type: "bool"
-      description: "Show what would be done without executing"
-      default: false
+    # Always inherited by ALL commands
+    persistent:
+      verbose:
+        type: "bool"
+        description: "Enable verbose output"
+        default: false
+      help:
+        short: "h"
+        type: "bool"
+        description: "Show help information"
+        default: false
+      version:
+        type: "bool"
+        description: "Show version information"
+        default: false
+      quiet:
+        type: "bool"
+        description: "Suppress non-essential output (CI-friendly)"
+        default: false
+    
+    # Applied selectively based on command categories
+    conditional:
+      json:
+        type: "bool"
+        description: "Output in JSON format (CI-friendly)"
+        default: false
+        categories: ["development", "management"]
+      no-color:
+        type: "bool"
+        description: "Disable colored output (CI-friendly)"
+        default: false
+        categories: ["development", "management", "lifecycle"]
+      non-interactive:
+        type: "bool"
+        description: "Run in non-interactive mode (CI-friendly)"
+        default: false
+        categories: ["project", "lifecycle"]
+      dry-run:
+        type: "bool"
+        description: "Show what would be done without executing"
+        default: false
+        categories: ["lifecycle", "management"]
 
 categories:
+  project:
+    name: "Project Management"
+    description: "Initialize, validate, and manage project setup"
+    icon: "📁"
+    commands: ["init", "validate", "services", "deps", "conflicts"]
+
   lifecycle:
-    name: "Lifecycle Management"
-    description: "Commands for starting, stopping, and managing service lifecycles"
+    name: "Service Lifecycle"
+    description: "Start, stop, and manage running services"
     icon: "🚀"
-    commands: ["up", "down", "restart"]
+    commands: ["up", "down", "restart", "cleanup"]
 
-  monitoring:
-    name: "Monitoring & Observability"
-    description: "Commands for monitoring services and viewing logs"
-    icon: "📊"
-    commands: ["status", "logs", "doctor"]
-
-  data:
-    name: "Data Management"
-    description: "Commands for backup, restore, and data operations"
-    icon: "💾"
-    commands: ["exec", "connect"]
-
-  maintenance:
-    name: "Maintenance & Cleanup"
-    description: "Commands for cleanup, initialization, and maintenance"
-    icon: "🧹"
-    commands: ["cleanup", "init"]
-
-  development:
-    name: "Development Tools"
-    description: "Commands for development workflow and validation"
-    icon: "🛠️"
-    commands: ["validate", "services", "deps", "conflicts", "web-interfaces"]
+  operations:
+    name: "Operations & Data"
+    description: "Monitor, connect to, and manage service data"
+    icon: "⚙️"
+    commands: ["status", "logs", "doctor", "exec", "connect"]
 
   utility:
-    name: "Utility Commands"
-    description: "General utility and information commands"
-    icon: "ℹ️"
-    commands: ["version", "help"]
+    name: "Utility"
+    description: "Information and development tools"
+    icon: "🛠️"
+    commands: ["version", "help", "web-interfaces"]
 
 commands:
   up:
-    category: "lifecycle"
     handler: "stack"
     description: "Start development stack services"
     long_description: |
@@ -404,7 +400,6 @@ commands:
       - "Use --detach to free up your terminal while services run"
 
   down:
-    category: "lifecycle"
     handler: "stack"
     description: "Stop development stack services"
     long_description: |
@@ -449,7 +444,6 @@ commands:
       - "Add --remove-orphans to clean up unused containers"
 
   restart:
-    category: "lifecycle"
     handler: "stack"
     description: "Restart development stack services"
     long_description: |
@@ -475,7 +469,6 @@ commands:
     related_commands: ["up", "down", "status"]
 
   status:
-    category: "monitoring"
     handler: "stack"
     description: "Show status of development stack services"
     long_description: |
@@ -524,7 +517,6 @@ commands:
       - "Use --filter to focus on specific service states"
 
   logs:
-    category: "monitoring"
     handler: "stack"
     description: "View logs from services"
     long_description: |
@@ -573,7 +565,6 @@ commands:
       - "Use --timestamps to correlate events across services"
 
   doctor:
-    category: "monitoring"
     handler: "project"
     description: "Diagnose and troubleshoot stack health"
     long_description: |
@@ -604,7 +595,6 @@ commands:
       - "Use --fix to attempt automatic resolution of common issues"
 
   exec:
-    category: "data"
     handler: "stack"
     description: "Execute commands in running service containers"
     long_description: |
@@ -652,7 +642,6 @@ commands:
       - "Combine with --user to run as specific user"
 
   connect:
-    category: "data"
     handler: "stack"
     description: "Quick connect to service databases and interfaces"
     long_description: |
@@ -697,7 +686,6 @@ commands:
       - "Use --read-only for safe data exploration"
 
   cleanup:
-    category: "maintenance"
     handler: "stack"
     description: "Clean up unused resources and data"
     long_description: |
@@ -735,10 +723,6 @@ commands:
         type: "bool"
         description: "Don't prompt for confirmation"
         default: false
-      dry-run:
-        type: "bool"
-        description: "Show what would be cleaned without doing it"
-        default: false
       project:
         short: "p"
         type: "string"
@@ -750,7 +734,6 @@ commands:
       - "Be careful with --volumes as it removes all data"
 
   init:
-    category: "maintenance"
     handler: "project"
     description: "Initialize a new otto-stack project interactively"
     long_description: |
@@ -783,7 +766,6 @@ commands:
     related_commands: ["validate"]
 
   web-interfaces:
-    category: "development"
     handler: "stack"
     description: "Show web interfaces for running services"
     long_description: |
@@ -806,7 +788,6 @@ commands:
     related_commands: ["status", "up"]
 
   services:
-    category: "development"
     handler: "project"
     description: "List available services by category"
     long_description: |
@@ -837,7 +818,6 @@ commands:
     related_commands: ["deps", "conflicts", "init"]
 
   deps:
-    category: "development"
     handler: "project"
     description: "Show dependency tree for a service"
     long_description: |
@@ -853,7 +833,6 @@ commands:
     related_commands: ["services", "conflicts", "up"]
 
   conflicts:
-    category: "development"
     handler: "project"
     description: "Check for conflicts between services"
     long_description: |
@@ -869,7 +848,6 @@ commands:
     related_commands: ["services", "deps", "up"]
 
   validate:
-    category: "development"
     handler: "project"
     description: "Validate configurations and manifests"
     long_description: |
@@ -901,7 +879,6 @@ commands:
     related_commands: ["doctor"]
 
   version:
-    category: "utility"
     handler: "project"
     description: "Show version information"
     long_description: |
