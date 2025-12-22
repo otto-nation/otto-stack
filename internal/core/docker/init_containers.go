@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/core"
-	"github.com/otto-nation/otto-stack/internal/scripts"
 )
 
 // InitContainerManager manages init container operations
@@ -58,11 +57,10 @@ type ServiceConfigInterface interface {
 func (m *InitContainerManager) buildBaseInitConfig(serviceName string, serviceConfig ServiceConfigInterface, projectName string) *InitContainerConfig {
 	cwd, _ := os.Getwd()
 	configPath := filepath.Join(cwd, core.OttoStackDir, core.ServiceConfigsDir)
-	processedScript := strings.ReplaceAll(scripts.GenericInitScript, "$$", "$")
 
 	return &InitContainerConfig{
 		Image:   m.getInitContainerImage(serviceConfig),
-		Command: []string{ShellSh, ShellC, processedScript},
+		Command: nil, // Set on config copy per script
 		Environment: map[string]string{
 			InitServiceName: serviceName,
 			InitConfigDir:   ContainerConfigPath,

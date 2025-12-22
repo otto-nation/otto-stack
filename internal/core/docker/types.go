@@ -14,6 +14,7 @@ type StartOptions struct {
 	ResolveDeps     bool
 	RemoveOrphans   bool
 	Characteristics []string
+	Verbose         bool
 }
 
 // StopOptions defines options for stopping services

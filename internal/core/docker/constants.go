@@ -14,6 +14,7 @@ const (
 	DockerComposeFileNameYaml        = "docker-compose.yaml"
 	DockerComposeFilePath            = pkgCore.OttoStackDir + "/" + DockerComposeFileName
 	ServiceCharacteristicsConfigPath = "internal/config/docker/service_characteristics.yaml"
+	FlagPrefix                       = "--"
 )
 
 // Docker commands
@@ -56,9 +57,9 @@ const (
 	FlagHealthRetries = "health-retries"
 	FlagRm            = "rm"
 	FlagName          = "name"
-	FlagEnv           = "e"
-	FlagVolume        = "v"
-	FlagWorkingDir    = "w"
+	FlagEnv           = "env"
+	FlagVolume        = "volume"
+	FlagWorkingDir    = "workdir"
 	FlagNetwork       = "network"
 )
 

@@ -59,7 +59,14 @@ func (c *Client) Close() error {
 
 // Compose operations using docker compose CLI
 func (c *Client) ComposeUp(ctx context.Context, project string, services []string, options StartOptions) error {
-	builder := NewComposeBuilder().Project(project).Services(services...)
+	builder := NewComposeBuilder().
+		Project(project).
+		File(DockerComposeFilePath).
+		Services(services...)
+
+	if options.Verbose {
+		slog.Info("ComposeUp called", "project", project, "services", services, "detach", options.Detach)
+	}
 
 	flags := []string{}
 	if options.Build {
@@ -85,17 +92,30 @@ func (c *Client) ComposeUp(ctx context.Context, project string, services []strin
 		builder = builder.WithFlags(flags...)
 	}
 
-	return builder.Up()
+	return builder.Detach(options.Detach).Verbose(options.Verbose).Up()
 }
 
 func (c *Client) ComposeDown(ctx context.Context, project string, options StopOptions) error {
 	charFlags := c.getCharacteristicFlags(options.Characteristics)
 
-	if options.Remove {
-		return c.composeDownWithRemove(project, options, charFlags)
+	builder := NewComposeBuilder().
+		Project(project).
+		File(DockerComposeFilePath).
+		Timeout(options.Timeout).
+		RemoveVolumes(options.RemoveVolumes)
+
+	if len(options.Services) > 0 {
+		builder = builder.Services(options.Services...)
+	}
+	if len(charFlags) > 0 {
+		builder = builder.WithFlags(charFlags...)
 	}
 
-	return c.composeStop(project, options)
+	if options.Remove {
+		return builder.Down()
+	}
+
+	return builder.Stop()
 }
 
 func (c *Client) getCharacteristicFlags(characteristics []string) []string {
@@ -109,63 +129,6 @@ func (c *Client) getCharacteristicFlags(characteristics []string) []string {
 	}
 
 	return resolver.ResolveComposeDownFlags(characteristics)
-}
-
-func (c *Client) composeDownWithRemove(project string, options StopOptions, charFlags []string) error {
-	if options.RemoveOrphans && !options.RemoveVolumes {
-		return c.composeDownCustom(project, options.Services, charFlags)
-	}
-
-	builder := NewComposeBuilder().Project(project)
-	if len(options.Services) > 0 {
-		builder = builder.Services(options.Services...)
-	}
-	if len(charFlags) > 0 {
-		builder = builder.WithFlags(charFlags...)
-	}
-	return builder.Down()
-}
-
-func (c *Client) composeDownCustom(project string, services []string, charFlags []string) error {
-	cmd := NewCommand(DockerCmd).
-		Subcommand(DockerComposeCmd).
-		Flag(FlagProjectName, project).
-		Args(ComposeDownCmd)
-
-	if len(services) > 0 {
-		cmd = cmd.Args(services...)
-	}
-
-	cmd = cmd.BoolFlag(FlagRemoveOrphans)
-
-	for _, flag := range charFlags {
-		cmd = cmd.BoolFlag(flag)
-	}
-
-	builtCmd := cmd.Build()
-	builtCmd.Stdout = os.Stdout
-	builtCmd.Stderr = os.Stderr
-	return builtCmd.Run()
-}
-
-func (c *Client) composeStop(project string, options StopOptions) error {
-	cmd := NewCommand(DockerCmd).
-		Subcommand(DockerComposeCmd).
-		Flag(FlagProjectName, project).
-		Args(ComposeStopCmd)
-
-	if len(options.Services) > 0 {
-		cmd = cmd.Args(options.Services...)
-	}
-
-	if options.Timeout > 0 {
-		cmd = cmd.Flag(FlagTimeout, fmt.Sprintf("%d", options.Timeout))
-	}
-
-	builtCmd := cmd.Build()
-	builtCmd.Stdout = os.Stdout
-	builtCmd.Stderr = os.Stderr
-	return builtCmd.Run()
 }
 
 func (c *Client) ComposeLogs(ctx context.Context, project string, services []string, options LogOptions) error {
