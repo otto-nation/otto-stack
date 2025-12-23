@@ -98,7 +98,6 @@ tasks:
       - "go.sum"
     generates:
       - "{{.BUILD_DIR}}/{{.BINARY_NAME}}"
-    silent: true
     cmds:
       - echo "🔨 Building {{.BINARY_NAME}}..."
       - mkdir -p {{.BUILD_DIR}}
@@ -314,7 +313,7 @@ tasks:
       - |
         echo "🔧 Auto-fixing formatting and modules..."
         CHANGES_MADE=false
-        
+
         # Check if fmt makes changes
         git diff --quiet && BEFORE_FMT_CLEAN=true || BEFORE_FMT_CLEAN=false
         task fmt
@@ -322,15 +321,15 @@ tasks:
           echo "❌ Code formatting changes detected"
           CHANGES_MADE=true
         fi
-        
-        # Check if docs-fmt makes changes  
+
+        # Check if docs-fmt makes changes
         git diff --quiet && BEFORE_DOCS_CLEAN=true || BEFORE_DOCS_CLEAN=false
         task docs-fmt
         if [ "$BEFORE_DOCS_CLEAN" = "true" ] && ! git diff --quiet; then
           echo "❌ Documentation formatting changes detected"
           CHANGES_MADE=true
         fi
-        
+
         # Check if go mod tidy makes changes
         git diff --quiet && BEFORE_MOD_CLEAN=true || BEFORE_MOD_CLEAN=false
         go mod tidy
@@ -338,7 +337,7 @@ tasks:
           echo "❌ Go module changes detected"
           CHANGES_MADE=true
         fi
-        
+
         if [ "$CHANGES_MADE" = "true" ]; then
           echo ""
           echo "📋 Modified files:"
@@ -370,14 +369,14 @@ tasks:
           touch .task/homebrew-validation-timestamp
           exit 0
         fi
-        
+
         echo "🍺 Validating Homebrew formula..."
         if ! command -v brew >/dev/null 2>&1; then
           echo "⚠️  Homebrew not installed, skipping formula validation"
           touch .task/homebrew-validation-timestamp
           exit 0
         fi
-        
+
         brew style Formula/otto-stack.rb
         touch .task/homebrew-validation-timestamp
         echo "✅ Homebrew formula validation passed"
@@ -505,14 +504,16 @@ tasks:
       - go test -race -short ./...
       - echo "✅ Unit tests passed"
 
-  test-integration:
-    desc: "🔗 Run integration tests"
+  test-e2e:
+    desc: "🔗 Run end-to-end integration tests only"
     deps: [deps]
     silent: true
+    preconditions:
+      - sh: docker info
+        msg: "Docker is required for E2E tests"
     cmds:
-      - echo "🔗 Running integration tests..."
-      - go test -race -tags=integration ./...
-      - echo "✅ Integration tests passed"
+      - echo "🔗 Running E2E integration tests..."
+      - go test -tags=integration -v -timeout=10m -p=1 ./test/e2e/...
 
   test-coverage:
     desc: "📊 View test coverage report in browser"
@@ -552,7 +553,7 @@ tasks:
             curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
           fi
         fi
-        
+
         $GOLANGCI_PATH config verify
         $GOLANGCI_PATH run ./cmd/otto-stack/... ./internal/...
       - task: lint:docs
@@ -589,7 +590,7 @@ tasks:
             curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
           fi
         fi
-        
+
         $GOLANGCI_PATH config verify
         $GOLANGCI_PATH run ./cmd/otto-stack/... ./internal/...
       - touch .task/go-lint-timestamp
@@ -615,19 +616,19 @@ tasks:
         LINT_PID=$!
         npm run lint:links &
         LINKS_PID=$!
-        
+
         # Wait for both to complete
         wait $LINT_PID
         LINT_EXIT=$?
         wait $LINKS_PID
         LINKS_EXIT=$?
-        
+
         # Check if either failed
         if [ $LINT_EXIT -ne 0 ] || [ $LINKS_EXIT -ne 0 ]; then
           echo "❌ Documentation linting failed"
           exit 1
         fi
-        
+
         cd ..
         touch .task/docs-lint-timestamp
 
@@ -690,7 +691,7 @@ tasks:
           echo "⚠️ Potential hardcoded secrets found"
           exit 1
         fi
-        
+
         echo "✅ Basic security checks passed"
       - echo "✅ Security scan complete"
 
@@ -800,7 +801,7 @@ tasks:
       - echo "🧪 Testing:"
       - echo "   test           - Run all tests with coverage"
       - echo "   test-unit      - Run unit tests only (fast)"
-      - echo "   test-integration - Run integration tests"
+      - echo "   test-e2e       - Run end-to-end tests only"
       - echo "   test-coverage  - View coverage in browser"
       - echo ""
       - echo "🔍 Quality:"
