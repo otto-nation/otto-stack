@@ -47,12 +47,3 @@ func (c *Client) GetContainerLabels(ctx context.Context, containerID string) (ma
 	}
 	return inspect.Config.Labels, nil
 }
-
-// RemoveContainer removes a container by ID
-func (c *Client) RemoveContainer(ctx context.Context, containerID string, force bool) error {
-	options := container.RemoveOptions{
-		Force:         force,
-		RemoveVolumes: false,
-	}
-	return c.cli.ContainerRemove(ctx, containerID, options)
-}

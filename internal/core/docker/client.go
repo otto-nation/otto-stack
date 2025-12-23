@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"slices"
+	"strings"
 
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 )
 
@@ -21,6 +22,37 @@ const (
 	ResourceNetwork   ResourceType = "network"
 	ResourceImage     ResourceType = "image"
 )
+
+// Health status constants
+const (
+	HealthStatusHealthy   = "healthy"
+	HealthStatusUnhealthy = "unhealthy"
+	HealthStatusRunning   = "running"
+	HealthStatusStopped   = "stopped"
+	HealthStatusUnknown   = "unknown"
+
+	ServiceStatusNotFound = "not found"
+)
+
+// ContainerInfo represents container information
+type ContainerInfo struct {
+	ID      string
+	Name    string
+	State   string
+	Status  string
+	Image   string
+	Service string
+}
+
+// ServiceStatus represents service health status
+type ServiceStatus struct {
+	Name    string // Service name for display
+	Service string // Service identifier
+	Status  string // Container status
+	State   string // Container state (for backward compatibility)
+	Health  string // Health status
+	Ports   []string
+}
 
 // InitContainerConfig holds configuration for init containers
 type InitContainerConfig struct {
@@ -36,6 +68,7 @@ type Client struct {
 	cli       *client.Client
 	logger    *slog.Logger
 	resources *ResourceManager
+	compose   *Manager
 }
 
 func NewClient(logger *slog.Logger) (*Client, error) {
@@ -44,9 +77,15 @@ func NewClient(logger *slog.Logger) (*Client, error) {
 		return nil, pkgerrors.NewDockerError("create Docker client", "", err)
 	}
 
+	composeManager, err := NewManager()
+	if err != nil {
+		return nil, pkgerrors.NewDockerError("create compose manager", "", err)
+	}
+
 	dc := &Client{
-		cli:    cli,
-		logger: logger,
+		cli:     cli,
+		logger:  logger,
+		compose: composeManager,
 	}
 	dc.resources = NewResourceManager(dc)
 
@@ -57,99 +96,9 @@ func (c *Client) Close() error {
 	return c.cli.Close()
 }
 
-// Compose operations using docker compose CLI
-func (c *Client) ComposeUp(ctx context.Context, project string, services []string, options StartOptions) error {
-	builder := NewComposeBuilder().
-		Project(project).
-		File(DockerComposeFilePath).
-		Services(services...)
-
-	if options.Verbose {
-		slog.Info("ComposeUp called", "project", project, "services", services, "detach", options.Detach)
-	}
-
-	flags := []string{}
-	if options.Build {
-		flags = append(flags, FlagBuild)
-	}
-	if options.ForceRecreate {
-		flags = append(flags, FlagForceRecreate)
-	}
-	if options.RemoveOrphans {
-		flags = append(flags, FlagRemoveOrphans)
-	}
-
-	// Add characteristic-based flags
-	if len(options.Characteristics) > 0 {
-		resolver, err := NewServiceCharacteristicsResolver()
-		if err == nil {
-			charFlags := resolver.ResolveComposeUpFlags(options.Characteristics)
-			flags = append(flags, charFlags...)
-		}
-	}
-
-	if len(flags) > 0 {
-		builder = builder.WithFlags(flags...)
-	}
-
-	return builder.Detach(options.Detach).Verbose(options.Verbose).Up()
-}
-
-func (c *Client) ComposeDown(ctx context.Context, project string, options StopOptions) error {
-	charFlags := c.getCharacteristicFlags(options.Characteristics)
-
-	builder := NewComposeBuilder().
-		Project(project).
-		File(DockerComposeFilePath).
-		Timeout(options.Timeout).
-		RemoveVolumes(options.RemoveVolumes)
-
-	if len(options.Services) > 0 {
-		builder = builder.Services(options.Services...)
-	}
-	if len(charFlags) > 0 {
-		builder = builder.WithFlags(charFlags...)
-	}
-
-	if options.Remove {
-		return builder.Down()
-	}
-
-	return builder.Stop()
-}
-
-func (c *Client) getCharacteristicFlags(characteristics []string) []string {
-	if len(characteristics) == 0 {
-		return nil
-	}
-
-	resolver, err := NewServiceCharacteristicsResolver()
-	if err != nil {
-		return nil
-	}
-
-	return resolver.ResolveComposeDownFlags(characteristics)
-}
-
-func (c *Client) ComposeLogs(ctx context.Context, project string, services []string, options LogOptions) error {
-	builder := NewComposeBuilder().Project(project).Services(services...)
-
-	flags := []string{}
-	if options.Follow {
-		flags = append(flags, FlagFollow)
-	}
-	if options.Timestamps {
-		flags = append(flags, "timestamps")
-	}
-	if options.Tail != "" {
-		flags = append(flags, FlagTail, options.Tail)
-	}
-
-	if len(flags) > 0 {
-		builder = builder.WithFlags(flags...)
-	}
-
-	return builder.Logs()
+// GetCli returns the underlying Docker client
+func (c *Client) GetCli() *client.Client {
+	return c.cli
 }
 
 // Resource management
@@ -164,6 +113,161 @@ func (c *Client) RemoveResources(ctx context.Context, resourceType ResourceType,
 		return err
 	}
 	return c.resources.Remove(ctx, resourceType, names)
+}
+
+// ListContainers lists containers for a project
+func (c *Client) ListContainers(ctx context.Context, project string) ([]ContainerInfo, error) {
+	filter := NewProjectFilter(project)
+	containers, err := c.cli.ContainerList(ctx, container.ListOptions{
+		All:     true,
+		Filters: filter,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list containers: %w", err)
+	}
+
+	var result []ContainerInfo
+	for _, cont := range containers {
+		service := ""
+		if serviceLabel, exists := cont.Labels[ComposeServiceLabel]; exists {
+			service = serviceLabel
+		}
+
+		result = append(result, ContainerInfo{
+			ID:      cont.ID,
+			Name:    strings.TrimPrefix(cont.Names[0], "/"),
+			State:   cont.State,
+			Status:  cont.Status,
+			Image:   cont.Image,
+			Service: service,
+		})
+	}
+
+	return result, nil
+}
+
+// RemoveContainer removes a container by ID
+func (c *Client) RemoveContainer(ctx context.Context, containerID string, force bool) error {
+	return c.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: force})
+}
+
+// RunInitContainer runs an init container
+func (c *Client) RunInitContainer(ctx context.Context, name string, config InitContainerConfig) error {
+	// Create container
+	containerConfig := &container.Config{
+		Image:      config.Image,
+		Cmd:        config.Command,
+		Env:        mapToEnvSlice(config.Environment),
+		WorkingDir: config.WorkingDir,
+	}
+
+	hostConfig := &container.HostConfig{
+		AutoRemove: true,
+	}
+
+	// Add volumes
+	if len(config.Volumes) > 0 {
+		hostConfig.Binds = config.Volumes
+	}
+
+	networkConfig := &network.NetworkingConfig{}
+	if len(config.Networks) > 0 {
+		networkConfig.EndpointsConfig = make(map[string]*network.EndpointSettings)
+		for _, net := range config.Networks {
+			networkConfig.EndpointsConfig[net] = &network.EndpointSettings{}
+		}
+	}
+
+	resp, err := c.cli.ContainerCreate(ctx, containerConfig, hostConfig, networkConfig, nil, name)
+	if err != nil {
+		return fmt.Errorf("failed to create init container: %w", err)
+	}
+
+	// Start container
+	if err := c.cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
+		return fmt.Errorf("failed to start init container: %w", err)
+	}
+
+	// Wait for completion
+	statusCh, errCh := c.cli.ContainerWait(ctx, resp.ID, container.WaitConditionNotRunning)
+	select {
+	case err := <-errCh:
+		if err != nil {
+			return fmt.Errorf("error waiting for init container: %w", err)
+		}
+	case status := <-statusCh:
+		if status.StatusCode != 0 {
+			return fmt.Errorf("init container exited with code %d", status.StatusCode)
+		}
+	}
+
+	return nil
+}
+
+// GetServiceStatus gets status of services in a project
+func (c *Client) GetServiceStatus(ctx context.Context, project string, services []string) ([]ServiceStatus, error) {
+	containers, err := c.ListContainers(ctx, project)
+	if err != nil {
+		return nil, err
+	}
+
+	statusMap := make(map[string]*ServiceStatus)
+
+	// Initialize status for requested services
+	for _, service := range services {
+		statusMap[service] = &ServiceStatus{
+			Name:    service,
+			Service: service,
+			Status:  ServiceStatusNotFound,
+			State:   ServiceStatusNotFound,
+			Health:  HealthStatusUnknown,
+			Ports:   []string{},
+		}
+	}
+
+	// Update with actual container status
+	for _, cont := range containers {
+		if cont.Service != "" {
+			if status, exists := statusMap[cont.Service]; exists {
+				status.Status = cont.State
+				status.State = cont.State
+				status.Health = getHealthStatus(cont.State, cont.Status)
+			}
+		}
+	}
+
+	var result []ServiceStatus
+	for _, status := range statusMap {
+		result = append(result, *status)
+	}
+
+	return result, nil
+}
+
+// getHealthStatus determines health status from container state and status
+func getHealthStatus(state, status string) string {
+	if strings.Contains(status, HealthStatusHealthy) {
+		return HealthStatusHealthy
+	}
+	if strings.Contains(status, HealthStatusUnhealthy) {
+		return HealthStatusUnhealthy
+	}
+	if state == "running" {
+		return HealthStatusRunning
+	}
+	if state == "exited" {
+		return HealthStatusStopped
+	}
+	return HealthStatusUnknown
+}
+
+// mapToEnvSlice converts a map to environment variable slice
+func mapToEnvSlice(env map[string]string) []string {
+	var result []string
+	for key, value := range env {
+		result = append(result, fmt.Sprintf("%s=%s", key, value))
+	}
+	return result
 }
 
 // Container status
@@ -203,49 +307,6 @@ func (c *Client) getContainerHealth(cont container.Summary) DockerHealthStatus {
 	default:
 		return DockerHealthStatusNone
 	}
-}
-
-// RunCommand executes a docker command with the given arguments
-func (c *Client) RunCommand(ctx context.Context, args ...string) error {
-	cmd := NewCommand(DockerCmd).Args(args...).Context(ctx).Build()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
-// RunInitContainer runs an init container and waits for completion
-func (c *Client) RunInitContainer(ctx context.Context, containerName string, config InitContainerConfig) error {
-	builder := NewCommand(DockerCmd).
-		Subcommand(DockerRunCmd).
-		BoolFlag(FlagRm).
-		Flag(FlagName, containerName).
-		Context(ctx)
-
-	// Add environment variables
-	for key, value := range config.Environment {
-		builder = builder.Flag(FlagEnv, fmt.Sprintf("%s=%s", key, value))
-	}
-
-	// Add volumes
-	for _, volume := range config.Volumes {
-		builder = builder.Flag(FlagVolume, volume)
-	}
-
-	// Add working directory
-	if config.WorkingDir != "" {
-		builder = builder.Flag(FlagWorkingDir, config.WorkingDir)
-	}
-
-	// Add networks
-	for _, network := range config.Networks {
-		builder = builder.Flag(FlagNetwork, network)
-	}
-
-	// Add image and command
-	cmd := builder.Args(config.Image).Args(config.Command...).Build()
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
 }
 
 func contains(slice []string, item string) bool {

@@ -6,15 +6,15 @@ import (
 
 // Docker constants
 const (
-	DockerCmd                        = "docker"
-	ComposeProjectLabel              = "com.docker.compose.project"
-	ComposeServiceLabel              = "com.docker.compose.service"
-	DockerInstallURL                 = "https://docs.docker.com/get-docker/"
-	DockerComposeFileName            = "docker-compose.yml"
-	DockerComposeFileNameYaml        = "docker-compose.yaml"
-	DockerComposeFilePath            = pkgCore.OttoStackDir + "/" + DockerComposeFileName
-	ServiceCharacteristicsConfigPath = "internal/config/docker/service_characteristics.yaml"
-	FlagPrefix                       = "--"
+	DockerCmd           = "docker"
+	ComposeProjectLabel = "com.docker.compose.project"
+	ComposeServiceLabel = "com.docker.compose.service"
+
+	DockerComposeFileName     = "docker-compose.yml"
+	DockerComposeFileNameYaml = "docker-compose.yaml"
+	DockerComposeFilePath     = pkgCore.OttoStackDir + "/" + DockerComposeFileName
+
+	FlagPrefix = "--"
 )
 
 // Docker commands
@@ -22,57 +22,19 @@ const (
 	DockerInfoCmd    = "info"
 	DockerComposeCmd = "compose"
 	DockerVersionCmd = "version"
-	DockerExecCmd    = "exec"
-	DockerPsCmd      = "ps"
 )
 
 // Docker Compose commands
 const (
 	ComposeUpCmd   = "up"
 	ComposeDownCmd = "down"
-	ComposeLogsCmd = "logs"
-	ComposeExecCmd = "exec"
-	ComposeStopCmd = "stop"
 )
 
 // Docker flags
 const (
-	FlagProjectName   = "project-name"
-	FlagFile          = "file"
-	FlagDetach        = "detach"
 	FlagBuild         = "build"
 	FlagForceRecreate = "force-recreate"
-	FlagRemoveOrphans = "remove-orphans"
-	FlagVolumes       = "volumes"
 	FlagTimeout       = "timeout"
-	FlagUser          = "user"
-	FlagWorkdir       = "workdir"
-	FlagFilter        = "filter"
-	FlagFormat        = "format"
-	FlagFollow        = "follow"
-	FlagTimestamps    = "timestamps"
-	FlagTail          = "tail"
-	FlagSince         = "since"
-	FlagHealthTimeout = "health-timeout"
-	FlagHealthRetries = "health-retries"
-	FlagRm            = "rm"
-	FlagName          = "name"
-	FlagEnv           = "env"
-	FlagVolume        = "volume"
-	FlagWorkingDir    = "workdir"
-	FlagNetwork       = "network"
-)
-
-// Shell commands
-const (
-	ShellSh = "sh"
-	ShellC  = "-c"
-)
-
-// Container paths
-const (
-	ContainerConfigPath = "/config"
-	ContainerRootPath   = "/"
 )
 
 // Docker labels
@@ -80,11 +42,10 @@ const (
 	LabelComposeService = "com.docker.compose.service"
 )
 
-// Docker commands
+// Shell commands
 const (
-	DockerRunCmd  = "run"
-	DockerStopCmd = "stop"
-	DockerRmCmd   = "rm"
+	ShellSh = "sh"
+	ShellC  = "-c"
 )
 
 // System command constants

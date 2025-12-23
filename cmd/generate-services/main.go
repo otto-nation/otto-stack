@@ -181,6 +181,11 @@ func main() {
 	}
 
 	if err := generateSchema(); err != nil {
+
+		if err := generateDockerTypes(); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to generate docker types: %v\n", err)
+			os.Exit(1)
+		}
 		fmt.Fprintf(os.Stderr, "Failed to generate schema: %v\n", err)
 		os.Exit(1)
 	}
@@ -774,4 +779,30 @@ func toPascalCase(s string) string {
 		}
 	}
 	return strings.Join(parts, "")
+}
+
+func generateDockerTypes() error {
+	const (
+		DockerTemplateFilePath  = "cmd/generate-services/templates/docker.tmpl"
+		DockerGeneratedFilePath = "internal/core/docker/types_generated.go"
+	)
+
+	tmpl, err := template.ParseFiles(DockerTemplateFilePath)
+	if err != nil {
+		return pkgerrors.NewServiceError("generator", "parse docker template", err)
+	}
+
+	file, err := os.Create(DockerGeneratedFilePath)
+	if err != nil {
+		if err := os.MkdirAll(filepath.Dir(DockerGeneratedFilePath), ReadExecutePermissions); err != nil {
+			return pkgerrors.NewServiceError("generator", "create directory", err)
+		}
+		file, err = os.Create(DockerGeneratedFilePath)
+		if err != nil {
+			return pkgerrors.NewServiceError("generator", "create docker types file", err)
+		}
+	}
+	defer func() { _ = file.Close() }()
+
+	return tmpl.Execute(file, nil)
 }

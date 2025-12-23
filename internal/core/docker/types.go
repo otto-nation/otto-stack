@@ -4,57 +4,6 @@ import (
 	"time"
 )
 
-// StartOptions defines options for starting services
-type StartOptions struct {
-	Build           bool
-	ForceRecreate   bool
-	NoDeps          bool
-	Detach          bool
-	Timeout         time.Duration
-	ResolveDeps     bool
-	RemoveOrphans   bool
-	Characteristics []string
-	Verbose         bool
-}
-
-// StopOptions defines options for stopping services
-type StopOptions struct {
-	Services        []string
-	Timeout         int
-	Remove          bool
-	RemoveVolumes   bool
-	RemoveOrphans   bool
-	RemoveImages    string
-	Characteristics []string
-}
-
-// LogOptions defines options for retrieving container logs
-type LogOptions struct {
-	Follow     bool
-	Timestamps bool
-	Tail       string
-	Since      string
-}
-
-// CleanupOptions defines options for cleaning up resources
-type CleanupOptions struct {
-	RemoveVolumes  bool
-	RemoveImages   bool
-	RemoveNetworks bool
-	All            bool
-	DryRun         bool
-}
-
-// ExecOptions defines options for executing commands in containers
-type ExecOptions struct {
-	User        string
-	WorkingDir  string
-	Env         []string
-	Interactive bool
-	TTY         bool
-	Detach      bool
-}
-
 // DockerServiceStatus represents the runtime status of a service
 type DockerServiceStatus struct {
 	Name      string             `json:"name"`
