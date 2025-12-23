@@ -49,7 +49,7 @@ func setupViper() {
 func configureLogger() {
 	config := logger.DefaultConfig()
 	if viper.GetBool("verbose") {
-		config.Level = logger.LogLevelInfo
+		config.Level = logger.LogLevelDebug
 	} else {
 		config.Level = logger.LogLevelWarn
 	}

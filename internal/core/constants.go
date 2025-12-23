@@ -80,6 +80,11 @@ const (
 	PermReadWriteExec = 0755
 )
 
+// Environment variables
+const (
+	EnvOttoNonInteractive = "OTTO_NON_INTERACTIVE"
+)
+
 // Exit codes
 const (
 	ExitSuccess = 0

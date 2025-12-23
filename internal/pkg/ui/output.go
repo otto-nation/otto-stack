@@ -27,8 +27,10 @@ func (o *Output) Success(msg string, args ...any) {
 
 // Error prints an error message
 func (o *Output) Error(msg string, args ...any) {
+	if o.Quiet {
+		return
+	}
 	formatted := formatError(fmt.Sprintf(msg, args...), o.NoColor)
-	logger.Error("UI Error", "message", formatted)
 	fmt.Fprintln(os.Stderr, formatted)
 }
 
