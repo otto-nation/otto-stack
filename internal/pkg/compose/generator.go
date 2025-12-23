@@ -3,6 +3,7 @@ package compose
 import (
 	"fmt"
 	"maps"
+	"os"
 	"strings"
 
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
@@ -151,7 +152,14 @@ func (g *Generator) resolveEnvVar(value string) string {
 	if strings.HasPrefix(value, "${") && strings.HasSuffix(value, "}") {
 		inner := value[2 : len(value)-1]
 		if parts := strings.Split(inner, ":-"); len(parts) == expectedEnvParts {
-			return parts[1] // Return default value
+			envVar := parts[0]
+			defaultValue := parts[1]
+
+			// Check if environment variable is set
+			if envValue := os.Getenv(envVar); envValue != "" {
+				return envValue
+			}
+			return defaultValue // Return default value if env var not set
 		}
 	}
 	return value

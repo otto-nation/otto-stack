@@ -78,11 +78,11 @@ func TestE2E_ServiceRestart(t *testing.T) {
 
 	// Stop services
 	err = lifecycle.StopServices()
-	require.NoError(t, err)
+	require.NoError(t, err, "Failed to stop services: %v", err)
 
 	// Restart services
 	err = lifecycle.StartServices()
-	require.NoError(t, err)
+	require.NoError(t, err, "Failed to restart services: %v", err)
 
 	// Verify still working
 	result := lifecycle.CLI.RunExpectSuccess(core.CommandStatus)

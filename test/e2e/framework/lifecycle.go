@@ -1,12 +1,15 @@
 package framework
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/test/testutil"
 	"github.com/stretchr/testify/require"
@@ -113,6 +116,9 @@ func (tl *TestLifecycle) StartServices() error {
 			BoolFlag(core.FlagForceRecreate).
 			BuildArgs()
 	})
+	if result.Error != nil {
+		tl.Environment.t.Logf("StartServices failed - stdout: %s, stderr: %s", result.Stdout, result.Stderr)
+	}
 	return result.Error
 }
 
@@ -120,6 +126,9 @@ func (tl *TestLifecycle) StopServices() error {
 	result := tl.CLI.RunWithBuilder(func() []string {
 		return NewCLIBuilder(core.CommandDown).BuildArgs()
 	})
+	if result.Error != nil {
+		tl.Environment.t.Logf("StopServices failed - stdout: %s, stderr: %s", result.Stdout, result.Stderr)
+	}
 	return result.Error
 }
 
@@ -155,6 +164,24 @@ func (tl *TestLifecycle) Cleanup() {
 			BoolFlag(core.FlagForce).
 			BuildArgs()
 	})
+
+	// Additional Docker SDK cleanup for any remaining containers/networks
+	logger := slog.Default()
+	if dockerClient, err := docker.NewClient(logger); err == nil {
+		defer dockerClient.Close()
+		ctx := context.Background()
+
+		// Clean up containers with our project name
+		if containers, err := dockerClient.ListProjectContainers(ctx, tl.ProjectName); err == nil {
+			for _, container := range containers {
+				dockerClient.RemoveContainer(ctx, container.ID, true) // force remove
+			}
+		}
+
+		// Clean up networks and volumes for this project
+		dockerClient.RemoveResources(ctx, docker.ResourceNetwork, tl.ProjectName)
+		dockerClient.RemoveResources(ctx, docker.ResourceVolume, tl.ProjectName)
+	}
 }
 
 func joinServices(services []string) string {
