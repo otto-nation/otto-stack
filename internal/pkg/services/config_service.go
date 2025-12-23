@@ -39,7 +39,7 @@ func (s *configService) ValidateConfig(cfg *config.Config) error {
 	}
 
 	if cfg.Project.Name == "" {
-		return pkgerrors.NewValidationError("project.name", "project name is required", nil)
+		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, "project name is required", nil)
 	}
 
 	if len(cfg.Stack.Enabled) == 0 {

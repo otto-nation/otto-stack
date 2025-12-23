@@ -1,121 +1,116 @@
 package services
 
 import (
-	"context"
+	"time"
 
+	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/docker/compose/v5/pkg/api"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 )
 
-// StackService defines the interface for stack operations
-type StackService interface {
-	// StartStack starts the specified services
-	StartStack(ctx context.Context, services []string, options StartOptions) error
-
-	// StopStack stops the stack services
-	StopStack(ctx context.Context, preserveVolumes bool) error
-
-	// GetStackStatus returns the current status of all services
-	GetStackStatus(ctx context.Context) (*StackStatus, error)
-
-	// RestartStack restarts the specified services
-	RestartStack(ctx context.Context, services []string) error
+// CharacteristicsResolver converts service characteristics to compose options
+type CharacteristicsResolver interface {
+	ResolveUpOptions(characteristics []string, base UpOptions) UpOptions
+	ResolveDownOptions(characteristics []string, base DownOptions) DownOptions
+	ResolveStopOptions(characteristics []string, base StopOptions) StopOptions
 }
 
-// ConfigService defines the interface for configuration operations
+// ProjectLoader loads compose projects
+type ProjectLoader interface {
+	Load(projectName string) (*types.Project, error)
+}
+
+// ConfigService provides configuration management functionality
 type ConfigService interface {
-	// LoadConfig loads the project configuration
 	LoadConfig() (*config.Config, error)
-
-	// SaveConfig saves the project configuration
 	SaveConfig(cfg *config.Config) error
-
-	// ValidateConfig validates the configuration
 	ValidateConfig(cfg *config.Config) error
-
-	// GetConfigHash returns a hash of the current configuration
 	GetConfigHash(cfg *config.Config) (string, error)
 }
 
-// DockerService defines the interface for Docker operations
-type DockerService interface {
-	// CreateContainer creates a new container
-	CreateContainer(ctx context.Context, config ContainerConfig) (string, error)
-
-	// StartContainer starts a container by ID
-	StartContainer(ctx context.Context, containerID string) error
-
-	// StopContainer stops a container by ID
-	StopContainer(ctx context.Context, containerID string) error
-
-	// GetContainerStatus returns the status of a container
-	GetContainerStatus(ctx context.Context, containerID string) (*ContainerStatus, error)
-
-	// ListContainers returns all containers for the project
-	ListContainers(ctx context.Context, projectName string) ([]ContainerStatus, error)
+// UpOptions defines options for compose up operations
+type UpOptions struct {
+	Build         bool
+	ForceRecreate bool
+	RemoveOrphans bool
+	Timeout       time.Duration
 }
 
-// StartOptions contains options for starting services
-type StartOptions struct {
-	Build          bool
-	ForceRecreate  bool
-	Detach         bool
-	NoDeps         bool
-	ResolveDeps    bool
-	CheckConflicts bool
-	RemoveOrphans  bool
+// DownOptions defines options for compose down operations
+type DownOptions struct {
+	RemoveVolumes bool
+	RemoveOrphans bool
+	Timeout       time.Duration
 }
 
-// StackStatus represents the status of the entire stack
-type StackStatus struct {
-	Services []ServiceStatus `json:"services"`
-	Overall  string          `json:"overall"`
+// StopOptions defines options for compose stop operations
+type StopOptions struct {
+	Services []string
+	Timeout  time.Duration
 }
 
-// ServiceStatus represents the status of a single service
-type ServiceStatus struct {
-	Name      string `json:"name"`
-	Status    string `json:"status"`
-	Health    string `json:"health"`
-	Ports     []Port `json:"ports"`
-	Uptime    string `json:"uptime"`
-	UpdatedAt string `json:"updated_at"`
+// LogOptions defines options for compose logs operations
+type LogOptions struct {
+	Services   []string
+	Follow     bool
+	Timestamps bool
+	Tail       string
 }
 
-// ContainerConfig represents container configuration
-type ContainerConfig struct {
-	Name          string
-	Image         string
-	Ports         []Port
-	Environment   map[string]string
-	Volumes       []string
-	Networks      []string
-	HealthCheck   *HealthCheck
-	RestartPolicy string
+// ToSDK converts our options to official SDK options
+func (o UpOptions) ToSDK() api.UpOptions {
+	upOptions := api.UpOptions{
+		Create: api.CreateOptions{
+			RemoveOrphans: o.RemoveOrphans,
+		},
+		Start: api.StartOptions{},
+	}
+
+	if o.Build {
+		upOptions.Create.Build = &api.BuildOptions{}
+	}
+
+	if o.ForceRecreate {
+		upOptions.Create.Recreate = api.RecreateForce
+	}
+
+	if o.Timeout > 0 {
+		upOptions.Create.Timeout = &o.Timeout
+	}
+
+	return upOptions
 }
 
-// ContainerStatus represents the status of a container
-type ContainerStatus struct {
-	ID      string            `json:"id"`
-	Name    string            `json:"name"`
-	Status  string            `json:"status"`
-	Health  string            `json:"health"`
-	Ports   []Port            `json:"ports"`
-	Labels  map[string]string `json:"labels"`
-	Created string            `json:"created"`
-	Started string            `json:"started"`
+func (o DownOptions) ToSDK() api.DownOptions {
+	downOptions := api.DownOptions{
+		RemoveOrphans: o.RemoveOrphans,
+		Volumes:       o.RemoveVolumes,
+	}
+
+	if o.Timeout > 0 {
+		downOptions.Timeout = &o.Timeout
+	}
+
+	return downOptions
 }
 
-// Port represents a port mapping
-type Port struct {
-	External string `json:"external"`
-	Internal string `json:"internal"`
-	Protocol string `json:"protocol"`
+func (o StopOptions) ToSDK() api.StopOptions {
+	stopOptions := api.StopOptions{
+		Services: o.Services,
+	}
+
+	if o.Timeout > 0 {
+		stopOptions.Timeout = &o.Timeout
+	}
+
+	return stopOptions
 }
 
-// HealthCheck represents a health check configuration
-type HealthCheck struct {
-	Test     []string `json:"test"`
-	Interval string   `json:"interval"`
-	Timeout  string   `json:"timeout"`
-	Retries  int      `json:"retries"`
+func (o LogOptions) ToSDK() api.LogOptions {
+	return api.LogOptions{
+		Services:   o.Services,
+		Follow:     o.Follow,
+		Timestamps: o.Timestamps,
+		Tail:       o.Tail,
+	}
 }

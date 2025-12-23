@@ -2,6 +2,7 @@ package services
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -209,7 +210,13 @@ func (m *Manager) ResolveServices(serviceNames []string) ([]string, error) {
 	var result []string
 
 	for _, serviceName := range serviceNames {
-		m.resolveDependenciesRecursive(serviceName, resolved, &result)
+		// Apply service resolution logic (localstack-* -> localstack)
+		resolvedName := serviceName
+		if strings.HasPrefix(serviceName, "localstack-") {
+			resolvedName = "localstack"
+		}
+
+		m.resolveDependenciesRecursive(resolvedName, resolved, &result)
 	}
 
 	return result, nil

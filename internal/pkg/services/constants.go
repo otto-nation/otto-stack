@@ -1,22 +1,5 @@
 package services
 
-// Service constants
-const (
-	ServiceLocalhost = "localhost"
-)
-
-// Init container constants
-const (
-	InitServiceEndpointURL = "SERVICE_ENDPOINT_URL"
-	InitServiceName        = "INIT_SERVICE_NAME"
-	InitConfigDir          = "CONFIG_DIR"
-)
-
-// Network naming constants
-const (
-	NetworkNameSuffix = "-network"
-)
-
 // Service catalog formats
 const (
 	ServiceCatalogJSONFormat  = "json"
