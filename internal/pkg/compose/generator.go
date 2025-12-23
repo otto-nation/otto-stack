@@ -3,6 +3,7 @@ package compose
 import (
 	"fmt"
 	"maps"
+	"strings"
 
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 
@@ -11,6 +12,8 @@ import (
 	dockerConstants "github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
+
+const expectedEnvParts = 2
 
 // Generator handles docker-compose file generation
 type Generator struct {
@@ -134,13 +137,24 @@ func (g *Generator) addServicePorts(service map[string]any, config *services.Ser
 
 	var ports []string
 	for _, port := range config.Container.Ports {
-		portStr := fmt.Sprintf("%s:%s", port.External, port.Internal)
+		portStr := fmt.Sprintf("%s:%s", g.resolveEnvVar(port.External), port.Internal)
 		if port.Protocol != "" && port.Protocol != services.ProtocolTcp {
 			portStr += dockerConstants.ProtocolSeparator + port.Protocol
 		}
 		ports = append(ports, portStr)
 	}
 	service[dockerConstants.ComposeFieldPorts] = ports
+}
+
+// resolveEnvVar resolves environment variables in the format ${VAR:-default}
+func (g *Generator) resolveEnvVar(value string) string {
+	if strings.HasPrefix(value, "${") && strings.HasSuffix(value, "}") {
+		inner := value[2 : len(value)-1]
+		if parts := strings.Split(inner, ":-"); len(parts) == expectedEnvParts {
+			return parts[1] // Return default value
+		}
+	}
+	return value
 }
 
 // addServiceEnvironment adds environment variables to the service
