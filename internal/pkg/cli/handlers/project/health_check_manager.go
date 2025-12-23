@@ -1,6 +1,8 @@
 package project
 
 import (
+	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -8,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	stackhandlers "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/stack"
 )
 
 // HealthCheckManager handles system health checks
@@ -36,8 +39,15 @@ func (hcm *HealthCheckManager) CheckDocker(base *base.BaseCommand) bool {
 		return false
 	}
 
-	cmd := docker.NewCommand(docker.DockerCmd).Subcommand(docker.DockerInfoCmd).Build()
-	if err := cmd.Run(); err != nil {
+	// Use StackService to run docker info command
+	stackService, err := stackhandlers.NewStackService(false)
+	if err != nil {
+		base.Output.Error("Failed to create stack service: %v", err)
+		return false
+	}
+
+	_, err = stackService.DockerClient.GetCli().Info(context.Background())
+	if err != nil {
 		base.Output.Error(core.MsgDoctor_docker_daemon_not_running)
 		base.Output.Info(core.MsgDoctor_docker_start_help)
 		return false
@@ -56,8 +66,9 @@ func (hcm *HealthCheckManager) CheckDockerCompose(base *base.BaseCommand) bool {
 		return true
 	}
 
-	cmd := docker.NewCommand(docker.DockerCmd).Subcommand(docker.DockerComposeCmd).Build()
-	if hcm.isCommandAvailable(cmd.String()) {
+	// Check if docker compose command is available
+	composeCommand := fmt.Sprintf("%s %s", docker.DockerCmd, docker.DockerComposeCmd)
+	if hcm.isCommandAvailable(composeCommand) {
 		base.Output.Success(core.MsgDoctor_docker_compose_available)
 		return true
 	}
@@ -104,6 +115,12 @@ func (hcm *HealthCheckManager) isCommandAvailable(command string) bool {
 
 // hasDockerComposePlugin checks if Docker Compose plugin is available
 func (hcm *HealthCheckManager) hasDockerComposePlugin() bool {
-	cmd := docker.NewCommand(docker.DockerCmd).Subcommand(docker.DockerComposeCmd).Args(docker.DockerVersionCmd).Build()
-	return cmd.Run() == nil
+	stackService, err := stackhandlers.NewStackService(false)
+	if err != nil {
+		return false
+	}
+
+	// Check if compose is available by trying to create a compose service
+	_, err = stackService.DockerClient.GetCli().Info(context.Background())
+	return err == nil
 }

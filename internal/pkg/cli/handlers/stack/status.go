@@ -72,8 +72,14 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	// Filter out init containers (restart: "no") from status display
 	filteredServices := filterInitContainers(manager, resolvedServices)
 
-	// Get service status
-	statuses, err := setup.DockerClient.GetDockerServiceStatus(ctx, setup.Config.Project.Name, filteredServices)
+	// Get service status using StackService
+	stackService, err := NewStackService(false)
+	if err != nil {
+		ci.HandleError(ciFlags, fmt.Errorf("failed to create stack service: %w", err))
+		return nil
+	}
+
+	statuses, err := stackService.DockerClient.GetServiceStatus(ctx, setup.Config.Project.Name, filteredServices)
 	if err != nil {
 		ci.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_get_service_status, err))
 		return nil

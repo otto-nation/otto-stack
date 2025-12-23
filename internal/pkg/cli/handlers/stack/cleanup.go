@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/docker/docker/api/types/container"
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+
 	"github.com/spf13/cobra"
 )
 
@@ -53,7 +53,8 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Show what will be cleaned up
-	if flags.DryRun {
+	dryRun, _ := cmd.Flags().GetBool(core.FlagDryRun)
+	if dryRun {
 		base.Output.Info("Dry run mode - showing what would be cleaned")
 		if flags.Volumes {
 			base.Output.Info("Would clean unused volumes")
@@ -96,7 +97,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 func (h *CleanupHandler) performCleanup(ctx context.Context, setup *CoreSetup, cmd *cobra.Command, base *base.BaseCommand) error {
 	flags, err := core.ParseCleanupFlags(cmd)
 	if err != nil {
-		return pkgerrors.NewValidationError("flags", "failed to parse cleanup flags", err)
+		return pkgerrors.NewValidationError(pkgerrors.FieldFlags, "failed to parse cleanup flags", err)
 	}
 
 	ciFlags := ci.GetFlags(cmd)
@@ -115,12 +116,19 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *CoreSetup, c
 		}
 	}
 
+	// Create stack service
+	stackService, err := NewStackService(false)
+	if err != nil {
+		return fmt.Errorf("failed to create stack service: %w", err)
+	}
+
 	// List containers to clean
-	var containers []container.Summary
+	var containers []docker.ContainerInfo
 	if projectName != "" {
-		containers, err = setup.DockerClient.ListProjectContainers(ctx, projectName)
+		containers, err = stackService.DockerClient.ListContainers(ctx, projectName)
 	} else {
-		containers, err = setup.DockerClient.ListOttoContainers(ctx)
+		// For all Otto containers, use project name pattern
+		containers, err = stackService.DockerClient.ListContainers(ctx, "")
 	}
 
 	if err != nil {
@@ -137,30 +145,30 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *CoreSetup, c
 	// Stop and remove containers
 	for _, container := range containers {
 		if !ciFlags.Quiet {
-			base.Output.Info("Removing container: %s", container.Names[0])
+			base.Output.Info("Removing container: %s", container.Name)
 		}
-		if err := setup.DockerClient.RemoveContainer(ctx, container.ID, flags.Force); err != nil {
-			base.Output.Warning("Failed to remove container %s: %v", container.Names[0], err)
+		if err := stackService.DockerClient.RemoveContainer(ctx, container.ID, flags.Force); err != nil {
+			base.Output.Warning("Failed to remove container %s: %v", container.Name, err)
 		}
 	}
 
 	// Clean up volumes if requested
 	if flags.Volumes {
-		if err := setup.DockerClient.RemoveResources(ctx, docker.ResourceVolume, projectName); err != nil && !ciFlags.Quiet {
+		if err := stackService.DockerClient.RemoveResources(ctx, docker.ResourceVolume, projectName); err != nil && !ciFlags.Quiet {
 			base.Output.Warning("Failed to clean volumes: %v", err)
 		}
 	}
 
 	// Clean up networks if requested
 	if flags.Networks {
-		if err := setup.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, projectName); err != nil && !ciFlags.Quiet {
+		if err := stackService.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, projectName); err != nil && !ciFlags.Quiet {
 			base.Output.Warning("Failed to clean networks: %v", err)
 		}
 	}
 
 	// Clean up images if requested
 	if flags.Images {
-		if err := setup.DockerClient.RemoveResources(ctx, docker.ResourceImage, projectName); err != nil && !ciFlags.Quiet {
+		if err := stackService.DockerClient.RemoveResources(ctx, docker.ResourceImage, projectName); err != nil && !ciFlags.Quiet {
 			base.Output.Warning("Failed to remove images: %v", err)
 		}
 	}

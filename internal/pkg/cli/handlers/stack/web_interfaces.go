@@ -9,6 +9,7 @@ import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
@@ -87,19 +88,24 @@ func (h *WebInterfacesHandler) collectInterfaces(setup *CoreSetup, serviceNames 
 }
 
 // getRunningServices gets the status of services if not showing all
-func (h *WebInterfacesHandler) getRunningServices(setup *CoreSetup, services []string, showAll bool) (map[string]bool, error) {
+func (h *WebInterfacesHandler) getRunningServices(setup *CoreSetup, serviceNames []string, showAll bool) (map[string]bool, error) {
 	if showAll {
 		return nil, nil
 	}
 
-	statuses, err := setup.DockerClient.GetDockerServiceStatus(context.Background(), setup.Config.Project.Name, services)
+	stackService, err := NewStackService(false)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create stack service: %w", err)
+	}
+
+	statuses, err := stackService.DockerClient.GetServiceStatus(context.Background(), setup.Config.Project.Name, serviceNames)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get service status: %w", err)
 	}
 
 	running := make(map[string]bool)
 	for _, status := range statuses {
-		running[status.Name] = status.State.IsRunning()
+		running[status.Name] = status.State == docker.HealthStatusRunning
 	}
 	return running, nil
 }

@@ -3,12 +3,13 @@ package stack
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core"
-	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
 
@@ -44,12 +45,11 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	base.Output.Header(core.MsgStopping)
 	logger.Info(logger.LogMsgServiceAction, logger.LogFieldAction, logger.ActionStop, logger.LogFieldService, "stack", logger.LogFieldServices, args)
 
-	// Parse all flags with validation - single line!
-	flags, err := core.ParseDownFlags(cmd)
-	if err != nil {
-		logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationStackDown, logger.LogFieldError, err)
-		return err
-	}
+	// Parse flags directly from command
+	timeout, _ := cmd.Flags().GetInt(core.FlagTimeout)
+	volumes, _ := cmd.Flags().GetBool(core.FlagVolumes)
+	_, _ = cmd.Flags().GetBool(core.FlagRemoveOrphans)  // Keep for future use
+	_, _ = cmd.Flags().GetString(core.FlagRemoveImages) // Keep for future use
 
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
@@ -57,17 +57,22 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 	defer cleanup()
 
-	// Determine services to stop
-	// Convert CLI options to internal options
-	internalOptions := docker.StopOptions{
-		Timeout:       flags.Timeout,
-		Remove:        flags.Remove,
-		RemoveVolumes: flags.Volumes,
-		RemoveOrphans: flags.RemoveOrphans,
+	// Use new stack service
+	stackService, err := NewStackService(false) // Not verbose for down operations
+	if err != nil {
+		logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationStackDown, logger.LogFieldError, err)
+		return err
 	}
 
-	// Stop services
-	if err := setup.DockerClient.ComposeDown(ctx, setup.Config.Project.Name, internalOptions); err != nil {
+	// Create stop request
+	stopRequest := services.StopRequest{
+		Project:       setup.Config.Project.Name,
+		Remove:        true, // Use down operation (remove containers)
+		RemoveVolumes: volumes,
+		Timeout:       time.Duration(timeout) * time.Second,
+	}
+
+	if err := stackService.Stop(ctx, stopRequest); err != nil {
 		logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationStackDown, logger.LogFieldError, err)
 		return fmt.Errorf(core.MsgStack_failed_stop_services, err)
 	}

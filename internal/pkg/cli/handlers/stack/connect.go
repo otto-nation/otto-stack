@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/otto-nation/otto-stack/internal/core"
-	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
@@ -24,7 +23,7 @@ func NewConnectHandler() *ConnectHandler {
 // ValidateArgs validates the command arguments
 func (h *ConnectHandler) ValidateArgs(args []string) error {
 	if len(args) < 1 {
-		return pkgerrors.NewValidationError("service-name", "service name is required", nil)
+		return pkgerrors.NewValidationError(pkgerrors.FieldServiceName, "service name is required", nil)
 	}
 	return nil
 }
@@ -66,11 +65,21 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return nil
 	}
 
-	return docker.NewComposeBuilder().
-		Project(setup.Config.Project.Name).
-		File(docker.DockerComposeFilePath).
-		Exec(serviceName, command...).
-		Run()
+	// Create stack service
+	stackService, err := NewStackService(false)
+	if err != nil {
+		return fmt.Errorf("failed to create stack service: %w", err)
+	}
+
+	// Create exec request
+	execRequest := services.ExecRequest{
+		Project: setup.Config.Project.Name,
+		Service: serviceName,
+		Command: command,
+		User:    flags.User,
+	}
+
+	return stackService.Exec(ctx, execRequest)
 }
 
 // getConnectionCommand returns the appropriate connection command for the service
@@ -108,7 +117,7 @@ func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host 
 	}
 
 	// Add host flag if specified and not localhost
-	if config.HostFlag != "" && host != "" && host != services.ServiceLocalhost {
+	if config.HostFlag != "" && host != "" && host != core.ServiceLocalhost {
 		cmd = append(cmd, config.HostFlag, host)
 	}
 

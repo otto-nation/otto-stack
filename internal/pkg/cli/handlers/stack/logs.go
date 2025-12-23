@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/otto-nation/otto-stack/internal/core"
-	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
@@ -46,13 +45,22 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return nil
 	}
 
-	options := docker.LogOptions{
+	// Create stack service
+	stackService, err := NewStackService(false)
+	if err != nil {
+		return fmt.Errorf("failed to create stack service: %w", err)
+	}
+
+	// Create logs request
+	logRequest := services.LogRequest{
+		Project:    setup.Config.Project.Name,
+		Services:   resolvedServices,
 		Follow:     flags.Follow,
 		Timestamps: flags.Timestamps,
 		Tail:       flags.Tail,
 	}
 
-	return setup.DockerClient.ComposeLogs(ctx, setup.Config.Project.Name, resolvedServices, options)
+	return stackService.Logs(ctx, logRequest)
 }
 
 // resolveServiceNames determines which services to get logs for

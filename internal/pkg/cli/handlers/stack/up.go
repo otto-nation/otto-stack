@@ -3,10 +3,10 @@ package stack
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
-	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
@@ -27,17 +27,15 @@ const (
 
 // UpHandler handles the up command
 type UpHandler struct {
-	dockerOpsManager *DockerOperationsManager
-	stateManager     *StateManager
-	initManager      *InitContainerManager
+	stateManager  *StateManager
+	fileGenerator *services.FileGenerator
 }
 
 // NewUpHandler creates a new up handler
 func NewUpHandler() *UpHandler {
 	return &UpHandler{
-		dockerOpsManager: NewDockerOperationsManager(),
-		stateManager:     NewStateManager(),
-		initManager:      NewInitContainerManager(),
+		stateManager:  NewStateManager(),
+		fileGenerator: services.NewFileGenerator(),
 	}
 }
 
@@ -56,10 +54,12 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	logger.Info(logger.LogMsgStartingOperation, logger.LogFieldOperation, logger.OperationStackUp, logger.LogFieldServices, args)
 
 	ciFlags := ci.GetFlags(cmd)
-
 	if ciFlags.DryRun {
 		return h.handleDryRun(args, setup, base)
 	}
+
+	// Check if verbose logging is enabled
+	verbose, _ := cmd.Flags().GetBool("verbose")
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationStackUp, logger.LogFieldError, fmt.Errorf("panic: %v", r))
@@ -79,18 +79,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 
 	// Parse timeout from string to duration
 	timeoutSecs := h.parseTimeoutSeconds(flags.Timeout)
-
-	// Clean usage with no repetitive error handling
-	options := docker.StartOptions{
-		Build:          flags.Build,
-		ForceRecreate:  flags.ForceRecreate,
-		Detach:         flags.Detach,
-		Timeout:        time.Duration(timeoutSecs) * time.Second,
-		NoDeps:         flags.NoDeps,
-		ResolveDeps:    flags.ResolveDeps,
-		CheckConflicts: flags.CheckConflicts,
-		RemoveOrphans:  flags.ForceRecreate, // Auto-remove orphans when force recreating
-	}
+	_ = timeoutSecs // Keep for potential future use
 
 	// Determine and resolve services
 	serviceNames, filteredServices, err := h.resolveServices(args, setup)
@@ -114,22 +103,101 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	h.handleConfigChange(ctx, setup, previousState.Services, filteredServices, base, configChanged)
 
 	// Generate and write compose file
+	base.Output.Info("%s", core.MsgProcess_generating_compose)
 	if err := h.generateComposeFile(serviceNames, setup); err != nil {
 		return err
 	}
 
 	// Generate .env.generated file
+	base.Output.Info("%s", core.MsgProcess_generating_env)
 	if err := h.generateEnvFile(filteredServices, setup.Config.Project.Name); err != nil {
 		base.Output.Warning("Failed to generate .env file: %v", err)
 	}
 
-	// Execute Docker operations
-	if err := h.dockerOpsManager.ExecuteOperations(ctx, setup, filteredServices, configHash, options, base); err != nil {
+	// Check for port conflicts and resolve them if skip-conflicts is enabled
+	if flags.SkipConflicts {
+		filteredServices = h.skipConflictedServices(filteredServices, base)
+	} else {
+		if err := checkPortConflicts(filteredServices, base); err != nil {
+			return err
+		}
+	}
+
+	// Check if any services remain after conflict resolution
+	if len(filteredServices) == 0 {
+		base.Output.Warning("No services available to start")
+		base.Output.Success("Stack operation completed (no services started)")
+		return nil
+	}
+
+	// Execute Docker operations using new stack service
+	base.Output.Info("Starting services: %v", filteredServices)
+
+	// Create stack service
+	stackService, err := NewStackService(verbose)
+	if err != nil {
 		return err
+	}
+
+	// Create start request (no characteristics for now)
+	startRequest := services.StartRequest{
+		Project:       setup.Config.Project.Name,
+		Services:      filteredServices,
+		Build:         flags.Build,
+		ForceRecreate: flags.ForceRecreate,
+	}
+
+	if err := stackService.Start(ctx, startRequest); err != nil {
+		return err
+	}
+	if verbose {
+		base.Output.Info("Docker Compose completed successfully")
+	}
+	base.Output.Success("Services started successfully")
+
+	// Run init containers after services are up
+	base.Output.Info("Running initialization containers...")
+	if err := h.runInitContainers(ctx, filteredServices, setup, base); err != nil {
+		base.Output.Warning("Failed to run init containers: %v", err)
 	}
 
 	base.Output.Success(core.MsgStartSuccess)
 	logger.Info(logger.LogMsgOperationCompleted, logger.LogFieldOperation, logger.OperationStackUp)
+	return nil
+}
+
+// runInitContainers handles the initialization container execution
+func (h *UpHandler) runInitContainers(ctx context.Context, filteredServices []string, setup *CoreSetup, base *base.BaseCommand) error {
+	client, err := docker.NewClient(slog.Default())
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = client.Close()
+	}()
+
+	initManager, err := NewServiceInitManager()
+	if err != nil {
+		return err
+	}
+
+	manager, err := GetServicesManager()
+	if err != nil {
+		return err
+	}
+
+	serviceConfigs := make(map[string]*services.ServiceConfig)
+	for _, serviceName := range filteredServices {
+		if config, err := manager.GetService(serviceName); err == nil {
+			serviceConfigs[serviceName] = config
+		}
+	}
+
+	if err := initManager.RunInitContainers(ctx, serviceConfigs, setup.Config.Project.Name); err != nil {
+		return err
+	}
+
+	base.Output.Success("Initialization completed")
 	return nil
 }
 
@@ -188,6 +256,12 @@ func (h *UpHandler) handleDryRun(args []string, setup *CoreSetup, base *base.Bas
 	if len(serviceNames) == 0 {
 		serviceNames = setup.Config.Stack.Enabled
 	}
+
+	// Generate compose file even in dry run mode
+	if err := h.generateComposeFile(serviceNames, setup); err != nil {
+		return err
+	}
+	base.Output.Success("Generated %s", docker.DockerComposeFileName)
 
 	base.Output.Info(core.MsgDry_run_would_start_services, fmt.Sprintf("%v", serviceNames))
 	base.Output.Info(core.MsgDry_run_would_use_config, filepath.Join(core.OttoStackDir, core.ConfigFileName))
@@ -253,8 +327,78 @@ func (h *UpHandler) handleConfigChange(ctx context.Context, setup *CoreSetup, ol
 		return
 	}
 
-	// Clean up removed services
-	if err := h.dockerOpsManager.CleanupRemovedServices(ctx, setup, oldServices, newServices, base); err != nil {
-		base.Output.Warning("Failed to clean up removed services: %v", err)
+	removedServices := findRemovedServices(oldServices, newServices)
+	if len(removedServices) == 0 {
+		return
 	}
+
+	base.Output.Info("Removing services no longer in configuration: %v", removedServices)
+
+	// Use stack service for cleanup
+	stackService, err := NewStackService(false)
+	if err != nil {
+		base.Output.Warning("Failed to create stack service: %v", err)
+		return
+	}
+
+	// Create stop request for removed services
+	stopRequest := services.StopRequest{
+		Project:  setup.Config.Project.Name,
+		Services: removedServices,
+		Remove:   true, // Remove containers for cleanup
+	}
+
+	if err := stackService.Stop(ctx, stopRequest); err != nil {
+		base.Output.Warning("Failed to remove services: %v", err)
+	}
+}
+
+// findRemovedServices identifies services that were removed from configuration
+func findRemovedServices(oldServices, newServices []string) []string {
+	newServiceSet := make(map[string]bool)
+	for _, service := range newServices {
+		newServiceSet[service] = true
+	}
+
+	var removed []string
+	for _, service := range oldServices {
+		if !newServiceSet[service] {
+			removed = append(removed, service)
+		}
+	}
+	return removed
+}
+
+// skipConflictedServices filters out services with port conflicts
+func (h *UpHandler) skipConflictedServices(services []string, base *base.BaseCommand) []string {
+	conflicts := collectPortConflicts(services)
+	if len(conflicts) == 0 {
+		return services
+	}
+
+	conflictedServices := make(map[string]bool)
+	for _, conflict := range conflicts {
+		conflictedServices[conflict.ServiceName] = true
+	}
+
+	var availableServices []string
+	for _, service := range services {
+		if !conflictedServices[service] {
+			availableServices = append(availableServices, service)
+		}
+	}
+
+	base.Output.Warning("Skipping %d services due to port conflicts: %v", len(conflictedServices), getKeys(conflictedServices))
+	base.Output.Info("Starting %d available services: %v", len(availableServices), availableServices)
+
+	return availableServices
+}
+
+// getKeys returns keys from a map[string]bool
+func getKeys(m map[string]bool) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }

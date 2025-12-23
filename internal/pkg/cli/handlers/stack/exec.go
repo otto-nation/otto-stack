@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/otto-nation/otto-stack/internal/core"
-	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
 
@@ -38,13 +38,22 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	return docker.NewComposeBuilder().
-		Project(setup.Config.Project.Name).
-		File(docker.DockerComposeFilePath).
-		User(flags.User).
-		Workdir(flags.Workdir).
-		Exec(serviceName, command...).
-		Run()
+	// Create stack service
+	stackService, err := NewStackService(false)
+	if err != nil {
+		return fmt.Errorf("failed to create stack service: %w", err)
+	}
+
+	// Create exec request
+	execRequest := services.ExecRequest{
+		Project:    setup.Config.Project.Name,
+		Service:    serviceName,
+		Command:    command,
+		User:       flags.User,
+		WorkingDir: flags.Workdir,
+	}
+
+	return stackService.Exec(ctx, execRequest)
 }
 
 // ValidateArgs validates the command arguments

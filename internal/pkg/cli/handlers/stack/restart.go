@@ -3,11 +3,12 @@ package stack
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core"
-	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
 
@@ -59,19 +60,30 @@ func (h *RestartHandler) resolveServiceNames(args, enabledServices []string) []s
 	return enabledServices
 }
 
-// restartServices performs the stop and start operations
+// restartServices performs the stop and start operations using new stack service
 func (h *RestartHandler) restartServices(ctx context.Context, setup *CoreSetup, serviceNames []string, flags *core.RestartFlags) error {
-	stopOptions := docker.StopOptions{
-		Timeout: flags.Timeout,
+	// Create stack service
+	stackService, err := NewStackService(false)
+	if err != nil {
+		return fmt.Errorf("failed to create stack service: %w", err)
 	}
-	if err := setup.DockerClient.ComposeDown(ctx, setup.Config.Project.Name, stopOptions); err != nil {
+
+	// Stop services
+	stopRequest := services.StopRequest{
+		Project: setup.Config.Project.Name,
+		Remove:  false, // Just stop, don't remove
+		Timeout: time.Duration(flags.Timeout) * time.Second,
+	}
+	if err := stackService.Stop(ctx, stopRequest); err != nil {
 		return fmt.Errorf(core.MsgStack_failed_stop_services, err)
 	}
 
-	startOptions := docker.StartOptions{
-		Detach: true,
+	// Start services
+	startRequest := services.StartRequest{
+		Project:  setup.Config.Project.Name,
+		Services: serviceNames,
 	}
-	if err := setup.DockerClient.ComposeUp(ctx, setup.Config.Project.Name, serviceNames, startOptions); err != nil {
+	if err := stackService.Start(ctx, startRequest); err != nil {
 		return fmt.Errorf(core.MsgStack_failed_start_services, err)
 	}
 

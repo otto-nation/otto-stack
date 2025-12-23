@@ -7,6 +7,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
 
@@ -24,7 +25,20 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	format, _ := cmd.Flags().GetString(core.FlagFormat)
 
-	dependencies := make(map[string][]string) // No dependencies to load since functionality was deprecated
+	// Load service dependencies
+	serviceManager, err := services.New()
+	if err != nil {
+		return pkgerrors.NewServiceError("deps", "load_services", err)
+	}
+
+	dependencies := make(map[string][]string)
+	allServices := serviceManager.GetAllServices()
+
+	for serviceName, serviceConfig := range allServices {
+		if len(serviceConfig.Service.Dependencies.Required) > 0 {
+			dependencies[serviceName] = serviceConfig.Service.Dependencies.Required
+		}
+	}
 
 	if len(dependencies) == 0 {
 		base.Output.Info("%s", core.MsgDependencies_none_found)
@@ -45,18 +59,11 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 func (h *DepsHandler) transformDependenciesToServices(dependencies map[string][]string) []display.ServiceStatus {
 	var services []display.ServiceStatus
 	for serviceName, deps := range dependencies {
-		if len(deps) == 0 {
+		for _, dep := range deps {
 			services = append(services, display.ServiceStatus{
 				Name:  serviceName,
-				State: "None",
+				State: "requires " + dep,
 			})
-		} else {
-			for _, dep := range deps {
-				services = append(services, display.ServiceStatus{
-					Name:  serviceName,
-					State: dep,
-				})
-			}
 		}
 	}
 	return services
