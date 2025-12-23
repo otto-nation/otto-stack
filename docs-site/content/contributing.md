@@ -3,7 +3,7 @@ title: Contributing
 description: Guide for contributing to otto-stack development
 lead: Learn how to contribute to otto-stack development
 date: "2025-10-01"
-lastmod: "2025-12-17"
+lastmod: "2025-12-23"
 draft: false
 weight: 60
 toc: true

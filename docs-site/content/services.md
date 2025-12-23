@@ -3,7 +3,7 @@ title: Services
 description: Available services and configuration options
 lead: Explore all the services you can use with otto-stack
 date: "2025-10-01"
-lastmod: "2025-12-17"
+lastmod: "2025-12-23"
 draft: false
 weight: 30
 toc: true
@@ -593,7 +593,7 @@ scrape_configs:
 #### Examples
 
 ```bash
-curl http://localhost:9089/metrics
+curl http://localhost:9090/metrics
 ```
 
 #### Use Cases

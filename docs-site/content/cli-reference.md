@@ -3,7 +3,7 @@ title: CLI Reference
 description: Complete command reference for otto-stack CLI
 lead: Comprehensive reference for all otto-stack CLI commands and their usage
 date: "2025-10-01"
-lastmod: "2025-12-17"
+lastmod: "2025-12-23"
 draft: false
 weight: 50
 toc: true
@@ -15,41 +15,29 @@ Development stack management tool
 
 ## Command Categories
 
-### 🚀 Lifecycle Management
+### 📁 Project Management
 
-Commands for starting, stopping, and managing service lifecycles
+Initialize, validate, and manage project setup
 
-**Commands:** `up`, `down`, `restart`
+**Commands:** `init`, `validate`, `services`, `deps`, `conflicts`
 
-### 📊 Monitoring & Observability
+### 🚀 Service Lifecycle
 
-Commands for monitoring services and viewing logs
+Start, stop, and manage running services
 
-**Commands:** `status`, `logs`, `doctor`
+**Commands:** `up`, `down`, `restart`, `cleanup`
 
-### 💾 Data Management
+### ⚙️ Operations & Data
 
-Commands for backup, restore, and data operations
+Monitor, connect to, and manage service data
 
-**Commands:** `exec`, `connect`
+**Commands:** `status`, `logs`, `doctor`, `exec`, `connect`
 
-### 🧹 Maintenance & Cleanup
+### 🛠️ Utility
 
-Commands for cleanup, initialization, and maintenance
+Information and development tools
 
-**Commands:** `cleanup`, `init`
-
-### 🛠️ Development Tools
-
-Commands for development workflow and validation
-
-**Commands:** `validate`, `services`, `deps`, `conflicts`, `web-interfaces`
-
-### ℹ️ Utility Commands
-
-General utility and information commands
-
-**Commands:** `version`, `help`
+**Commands:** `version`, `help`, `web-interfaces`
 
 ## Commands
 
@@ -92,7 +80,7 @@ Build images and start services in background
 - `--no-deps` (`bool`): Don't start linked services (default: `false`)
 - `--timeout` (`string`): Timeout for service startup (e.g., 30s, 2m) (default: `30s`)
 - `--resolve-deps` (`bool`): Show dependency resolution tree before starting (default: `false`)
-- `--check-conflicts` (`bool`): Check for service conflicts before starting (default: `false`)
+- `--skip-conflicts` (`bool`): Skip conflict detection (faster startup) (default: `false`)
 
 **Related Commands:** [`down`](#down), [`restart`](#restart), [`status`](#status)
 
@@ -472,7 +460,6 @@ Preview what would be cleaned up
 - `--images` (`bool`): Remove unused images (default: `false`)
 - `--networks` (`bool`): Remove unused networks (default: `false`)
 - `--force`, `-f` (`bool`): Don't prompt for confirmation (default: `false`)
-- `--dry-run` (`bool`): Show what would be cleaned without doing it (default: `false`)
 - `--project`, `-p` (`string`): Clean specific project (if not specified, cleans current project) (default: ``)
 
 **Related Commands:** [`down`](#down), [`doctor`](#doctor)
@@ -502,10 +489,10 @@ otto-stack init
 Interactive project initialization (recommended)
 
 ```bash
-otto-stack init --name myproject --minimal
+otto-stack init --project-name myproject --services postgres,redis
 ```
 
-Non-interactive minimal setup
+Non-interactive setup with specific project name and services
 
 ```bash
 otto-stack init --force
@@ -516,6 +503,8 @@ Overwrite existing configuration
 **Flags:**
 
 - `--force`, `-f` (`bool`): Overwrite existing files (default: `false`)
+- `--project-name` (`string`): Project name (defaults to current directory name) (default: ``)
+- `--services` (`string`): Comma-separated list of services to include (required for non-interactive mode) (default: ``)
 
 **Related Commands:** [`validate`](#validate)
 
