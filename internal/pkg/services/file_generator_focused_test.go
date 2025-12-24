@@ -1,13 +1,12 @@
 //go:build unit
 
-package unit
+package services
 
 import (
 	"strings"
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 func TestFileGenerator_NewFileGenerator_Focused(t *testing.T) {

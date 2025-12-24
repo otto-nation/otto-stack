@@ -1,6 +1,6 @@
 //go:build unit
 
-package unit
+package pkg
 
 import (
 	"testing"

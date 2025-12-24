@@ -22,6 +22,10 @@ vars:
   LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/pkg/version.AppVersion={{.VERSION}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildDate={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/version.GitCommit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildBy=taskfile"'
   GOLANGCI_LINT_VERSION: "v2.6.0"
 
+# Global environment variables
+env:
+  CGO_LDFLAGS: "-Wl,-no_warn_duplicate_libraries"
+
 # ============================================================================
 # TASKS
 # ============================================================================

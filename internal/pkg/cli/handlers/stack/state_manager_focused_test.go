@@ -1,13 +1,12 @@
 //go:build unit
 
-package unit
+package stack
 
 import (
 	"encoding/json"
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/stack"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )

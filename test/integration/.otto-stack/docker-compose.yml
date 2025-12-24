@@ -1,0 +1,40 @@
+networks:
+    default:
+        name: single-service-network
+services:
+    postgres:
+        command:
+            - postgres
+            - -c
+            - shared_preload_libraries=pg_stat_statements
+            - -c
+            - pg_stat_statements.track=all
+            - -c
+            - max_connections=200
+            - -c
+            - log_statement=all
+            - -c
+            - log_destination=stderr
+            - -c
+            - log_min_duration_statement=100ms
+        environment:
+            DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
+            PGHOST: ${POSTGRES_HOST:-localhost}
+            POSTGRES_DB: ${POSTGRES_DB:-local_dev}
+            POSTGRES_HOST: ${POSTGRES_HOST:-localhost}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+            POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+            POSTGRES_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
+            POSTGRES_USER: ${POSTGRES_USER:-postgres}
+            SERVICE_ENDPOINT_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
+        image: postgres:15
+        labels:
+            otto.managed: "true"
+            otto.project: dev
+            otto.service: postgres
+            otto.sharing-mode: isolated
+            otto.version: dev
+        mem_limit: 512m
+        ports:
+            - 5432:5432
+        restart: unless-stopped

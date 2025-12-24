@@ -1,6 +1,6 @@
-//go:build unit
+//go:build integration
 
-package unit
+package integration
 
 import (
 	"strings"
@@ -10,6 +10,15 @@ import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
+
+// MockValidator for testing
+type MockValidator struct {
+	validateErr error
+}
+
+func (m *MockValidator) ValidateProjectName(name string) error {
+	return m.validateErr
+}
 
 // Error path tests for comprehensive coverage
 
