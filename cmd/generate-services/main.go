@@ -181,12 +181,12 @@ func main() {
 	}
 
 	if err := generateSchema(); err != nil {
-
-		if err := generateDockerTypes(); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to generate docker types: %v\n", err)
-			os.Exit(1)
-		}
 		fmt.Fprintf(os.Stderr, "Failed to generate schema: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := generateDockerTypes(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to generate docker types: %v\n", err)
 		os.Exit(1)
 	}
 

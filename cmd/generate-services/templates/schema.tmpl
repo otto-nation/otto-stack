@@ -19,18 +19,21 @@ type ServiceConfig struct {
 	Service     ServiceSpec       `yaml:"service,omitempty"`
 	Documentation DocumentationSpec `yaml:"documentation,omitempty"`
 	Parameters  ParametersSpec    `yaml:"parameters,omitempty"`
-	InitContainer *docker.InitContainerSpec `yaml:"init_container,omitempty"`
+	InitService *docker.InitServiceSpec `yaml:"init_service,omitempty"`
+	
+	// Computed field - combines Environment and Container.Environment
+	AllEnvironment map[string]string `yaml:"-"`
 }
 
-// GetInitContainerSpec returns the init container specification
-func (sc *ServiceConfig) GetInitContainerSpec() *docker.InitContainerSpec {
-	return sc.InitContainer
+// GetInitServiceSpec returns the init service specification
+func (sc *ServiceConfig) GetInitServiceSpec() *docker.InitServiceSpec {
+	return sc.InitService
 }
 
-// GetInitContainerImage returns the init container image
-func (sc *ServiceConfig) GetInitContainerImage() string {
-	if sc.InitContainer != nil {
-		return sc.InitContainer.Image
+// GetInitServiceImage returns the init service image
+func (sc *ServiceConfig) GetInitServiceImage() string {
+	if sc.InitService != nil {
+		return sc.InitService.Image
 	}
 	return ""
 }
