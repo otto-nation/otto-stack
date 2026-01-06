@@ -61,8 +61,8 @@ func (pm *PromptManager) PromptForProjectDetails() (string, error) {
 	return projectName, nil
 }
 
-// PromptForServices prompts user to select services with category navigation
-func (pm *PromptManager) PromptForServices() ([]string, error) {
+// PromptForServiceConfigs prompts user to select services and returns ServiceConfigs
+func (pm *PromptManager) PromptForServiceConfigs() ([]services.ServiceConfig, error) {
 	categories, err := pm.loadServiceCategories()
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (pm *PromptManager) PromptForServices() ([]string, error) {
 	}
 
 	categoryNames, categoryServicesList := pm.prepareCategoryNavigation(categories)
-	return pm.navigateServiceCategories(categoryNames, categoryServicesList)
+	return pm.navigateServiceCategoriesForConfigs(categoryNames, categoryServicesList)
 }
 
 // PromptForAdvancedOptions prompts for validation and advanced options
@@ -178,9 +178,9 @@ func (pm *PromptManager) prepareCategoryNavigation(categories map[string][]servi
 	return categoryNames, categoryServicesList
 }
 
-// navigateServiceCategories handles the interactive category navigation
-func (pm *PromptManager) navigateServiceCategories(categoryNames []string, categoryServicesList [][]services.ServiceConfig) ([]string, error) {
-	var allSelectedServices []string
+// navigateServiceCategoriesForConfigs handles interactive category navigation and returns ServiceConfigs
+func (pm *PromptManager) navigateServiceCategoriesForConfigs(categoryNames []string, categoryServicesList [][]services.ServiceConfig) ([]services.ServiceConfig, error) {
+	var allSelectedServices []services.ServiceConfig
 
 	for {
 		// Category selection prompt
@@ -214,7 +214,7 @@ func (pm *PromptManager) navigateServiceCategories(categoryNames []string, categ
 		// Prompt for services in this category
 		categoryServices := categoryServicesList[categoryIndex]
 		serviceOptions := pm.buildServiceOptions(categoryServices, true)
-		selectedServices, goBack, err := pm.promptCategoryServices(selectedCategory, serviceOptions)
+		selectedServiceConfigs, goBack, err := pm.promptCategoryServicesForConfigs(selectedCategory, serviceOptions, categoryServices)
 
 		if err != nil {
 			return nil, err
@@ -224,7 +224,7 @@ func (pm *PromptManager) navigateServiceCategories(categoryNames []string, categ
 			continue
 		}
 
-		allSelectedServices = append(allSelectedServices, selectedServices...)
+		allSelectedServices = append(allSelectedServices, selectedServiceConfigs...)
 	}
 
 	if len(allSelectedServices) == 0 {
@@ -251,8 +251,8 @@ func (pm *PromptManager) buildServiceOptions(categoryServices []services.Service
 	return options
 }
 
-// promptCategoryServices prompts for service selection within a category
-func (pm *PromptManager) promptCategoryServices(categoryName string, serviceOptions []string) ([]string, bool, error) {
+// promptCategoryServicesForConfigs prompts for service selection and returns ServiceConfigs
+func (pm *PromptManager) promptCategoryServicesForConfigs(categoryName string, serviceOptions []string, categoryServices []services.ServiceConfig) ([]services.ServiceConfig, bool, error) {
 	prompt := &survey.MultiSelect{
 		Message: fmt.Sprintf("Select services from %s category:", categoryName),
 		Options: serviceOptions,
@@ -269,17 +269,24 @@ func (pm *PromptManager) promptCategoryServices(categoryName string, serviceOpti
 		return nil, true, nil
 	}
 
-	// Extract service names from display names
-	var serviceNames []string
+	// Map selected display names back to ServiceConfigs
+	var selectedConfigs []services.ServiceConfig
 	for _, selection := range selected {
 		if selection != "Go Back" {
 			// Extract service name (before " - ")
 			parts := strings.Split(selection, " - ")
 			if len(parts) > 0 {
-				serviceNames = append(serviceNames, parts[0])
+				serviceName := parts[0]
+				// Find the corresponding ServiceConfig
+				for _, serviceConfig := range categoryServices {
+					if serviceConfig.Name == serviceName {
+						selectedConfigs = append(selectedConfigs, serviceConfig)
+						break
+					}
+				}
 			}
 		}
 	}
 
-	return serviceNames, false, nil
+	return selectedConfigs, false, nil
 }

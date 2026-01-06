@@ -3,12 +3,12 @@ package stack
 import (
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRestartHandler_ResolveServiceNames(t *testing.T) {
-	handler := NewRestartHandler()
 
 	tests := []struct {
 		name            string
@@ -38,7 +38,15 @@ func TestRestartHandler_ResolveServiceNames(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := handler.resolveServiceNames(tt.args, tt.enabledServices)
+			// Test the shared ResolveServiceConfigs function instead
+			setup := &CoreSetup{Config: &config.Config{Stack: config.StackConfig{Enabled: tt.enabledServices}}}
+			configs, err := ResolveServiceConfigs(tt.args, setup)
+			assert.NoError(t, err)
+
+			result := make([]string, len(configs))
+			for i, config := range configs {
+				result[i] = config.Name
+			}
 			assert.Equal(t, tt.expected, result)
 		})
 	}

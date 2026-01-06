@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
@@ -48,8 +46,13 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 	}
 	defer cleanup()
 
-	serviceNames := h.getServiceNames(args, setup)
-	interfaces, err := h.collectInterfaces(setup, serviceNames, flags.All)
+	serviceConfigs, err := ResolveServiceConfigs(args, setup)
+	if err != nil {
+		ci.HandleError(ciFlags, err)
+		return nil
+	}
+
+	interfaces, err := h.collectInterfaces(setup, serviceConfigs, flags.All)
 	if err != nil {
 		ci.HandleError(ciFlags, err)
 		return nil
@@ -59,39 +62,23 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 	return nil
 }
 
-// getServiceNames determines which services to check
-func (h *WebInterfacesHandler) getServiceNames(args []string, setup *CoreSetup) []string {
-	if len(args) > 0 {
-		return args
-	}
-	return setup.Config.Stack.Enabled
-}
-
 // collectInterfaces gathers web interfaces from services
-func (h *WebInterfacesHandler) collectInterfaces(setup *CoreSetup, serviceNames []string, showAll bool) ([]WebInterface, error) {
-	manager, err := GetServicesManager()
-	if err != nil {
-		return nil, pkgerrors.NewServiceError(ComponentServiceManager, ActionCreateManager, err)
-	}
-
-	resolvedServices, err := manager.ResolveServices(serviceNames)
-	if err != nil {
-		return nil, fmt.Errorf("failed to resolve services: %w", err)
-	}
-
-	runningServices, err := h.getRunningServices(setup, resolvedServices, showAll)
+func (h *WebInterfacesHandler) collectInterfaces(setup *CoreSetup, serviceConfigs []services.ServiceConfig, showAll bool) ([]WebInterface, error) {
+	runningServices, err := h.getRunningServices(setup, serviceConfigs, showAll)
 	if err != nil {
 		return nil, err
 	}
 
-	return h.extractWebInterfaces(manager, resolvedServices, runningServices, showAll), nil
+	return h.extractWebInterfaces(serviceConfigs, runningServices, showAll), nil
 }
 
 // getRunningServices gets the status of services if not showing all
-func (h *WebInterfacesHandler) getRunningServices(setup *CoreSetup, serviceNames []string, showAll bool) (map[string]bool, error) {
+func (h *WebInterfacesHandler) getRunningServices(setup *CoreSetup, serviceConfigs []services.ServiceConfig, showAll bool) (map[string]bool, error) {
 	if showAll {
 		return nil, nil
 	}
+
+	serviceNames := services.ExtractServiceNames(serviceConfigs)
 
 	stackService, err := NewStackService(false)
 	if err != nil {
@@ -111,20 +98,16 @@ func (h *WebInterfacesHandler) getRunningServices(setup *CoreSetup, serviceNames
 }
 
 // extractWebInterfaces extracts web interfaces from service definitions
-func (h *WebInterfacesHandler) extractWebInterfaces(manager *services.Manager, serviceNames []string, runningServices map[string]bool, showAll bool) []WebInterface {
+func (h *WebInterfacesHandler) extractWebInterfaces(serviceConfigs []services.ServiceConfig, runningServices map[string]bool, showAll bool) []WebInterface {
 	var interfaces []WebInterface
 
-	for _, serviceName := range serviceNames {
-		if !h.shouldIncludeService(serviceName, runningServices, showAll) {
+	for _, config := range serviceConfigs {
+		if !h.shouldIncludeService(config.Name, runningServices, showAll) {
 			continue
 		}
 
-		service, err := manager.GetService(serviceName)
-		if err != nil {
-			continue
-		}
-
-		interfaces = append(interfaces, h.createWebInterfaces(serviceName, service.Documentation.WebInterfaces)...)
+		// Extract web interface info directly from ServiceConfig
+		interfaces = append(interfaces, h.createWebInterfaces(config.Name, config.Documentation.WebInterfaces)...)
 	}
 
 	return interfaces

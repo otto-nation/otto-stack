@@ -80,7 +80,8 @@ func TestCreateConfigFile(t *testing.T) {
 	err := handler.projectManager.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.projectManager.createConfigFile(TestProjectName, []string{services.ServicePostgres}, nil,
+	originalServiceNames := []string{services.ServicePostgres}
+	err = handler.projectManager.createConfigFile(TestProjectName, originalServiceNames, nil,
 		&base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
@@ -113,23 +114,11 @@ func TestCreateReadme(t *testing.T) {
 	err := handler.projectManager.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.projectManager.createReadme(TestProjectName, []string{services.ServicePostgres, services.ServiceRedis}, &base.BaseCommand{Output: ui.NewOutput()})
+	serviceConfigs := []services.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServiceRedis}}
+	err = handler.projectManager.createReadme(TestProjectName, serviceConfigs, &base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	readmePath := filepath.Join(core.OttoStackDir, core.ReadmeFileName)
 	_, err = os.Stat(readmePath)
 	assert.NoError(t, err)
-}
-
-func TestGenerateConfig(t *testing.T) {
-	handler := NewInitHandler()
-
-	config := handler.projectManager.generateConfig(TestProjectName, []string{services.ServicePostgres}, nil)
-
-	assert.Contains(t, config, TestProjectName)
-	assert.Contains(t, config, services.ServicePostgres)
-	assert.Contains(t, config, "validation:")
-	assert.Contains(t, config, "options:")
-	assert.Contains(t, config, core.ValidationDocker+": true")
-	assert.Contains(t, config, core.ValidationConfigSyntax+": true")
 }

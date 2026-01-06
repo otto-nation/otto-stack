@@ -18,9 +18,9 @@ type PortConflict struct {
 	PID         string
 }
 
-// checkPortConflicts checks for port conflicts before starting services
-func checkPortConflicts(serviceNames []string, base *base.BaseCommand) error {
-	conflicts := collectPortConflicts(serviceNames)
+// checkPortConflictsForConfigs checks for port conflicts using ServiceConfigs directly
+func checkPortConflictsForConfigs(serviceConfigs []services.ServiceConfig, base *base.BaseCommand) error {
+	conflicts := collectPortConflictsFromConfigs(serviceConfigs)
 	if len(conflicts) > 0 {
 		reportConflicts(conflicts, base)
 		return fmt.Errorf("port conflicts detected")
@@ -28,67 +28,35 @@ func checkPortConflicts(serviceNames []string, base *base.BaseCommand) error {
 	return nil
 }
 
-// collectPortConflicts collects all port conflicts for given services
-func collectPortConflicts(serviceNames []string) []PortConflict {
+// collectPortConflictsFromConfigs collects port conflicts using ServiceConfigs directly
+func collectPortConflictsFromConfigs(serviceConfigs []services.ServiceConfig) []PortConflict {
 	var conflicts []PortConflict
 	projectName := getProjectNameSafe()
 
-	for _, serviceName := range serviceNames {
-		serviceConflicts := checkServicePorts(serviceName, projectName)
+	for _, config := range serviceConfigs {
+		serviceConflicts := checkServicePortsFromConfig(config, projectName)
 		conflicts = append(conflicts, serviceConflicts...)
 	}
 
 	return conflicts
 }
 
-// checkServicePorts checks ports for a specific service
-func checkServicePorts(serviceName, projectName string) []PortConflict {
+// checkServicePortsFromConfig checks ports using ServiceConfig directly
+func checkServicePortsFromConfig(config services.ServiceConfig, projectName string) []PortConflict {
 	var conflicts []PortConflict
 
-	// Get ports from service configuration
-	ports := getServicePorts(serviceName)
-	if len(ports) == 0 {
+	if config.Container.Image == "" {
 		return conflicts
 	}
 
-	// Check each port mapping
-	for _, portMapping := range ports {
-		// Extract host port from mapping (format: "host:container" or "port")
-		parts := strings.Split(portMapping, ":")
-		hostPort := parts[0]
-
-		if conflict := detectPortConflict(hostPort, projectName, serviceName); conflict != nil {
+	// Check each port directly from config
+	for _, port := range config.Container.Ports {
+		if conflict := detectPortConflict(port.External, projectName, config.Name); conflict != nil {
 			conflicts = append(conflicts, *conflict)
 		}
 	}
 
 	return conflicts
-}
-
-// getServicePorts returns the port mappings for a service based on its configuration
-func getServicePorts(serviceName string) []string {
-	// Get the service configuration
-	manager, err := services.New()
-	if err != nil {
-		return []string{}
-	}
-
-	serviceConfig, err := manager.GetService(serviceName)
-	if err != nil {
-		return []string{}
-	}
-
-	var ports []string
-	for _, port := range serviceConfig.Container.Ports {
-		// Format: "external:internal" or just "port" if they're the same
-		if port.External != port.Internal {
-			ports = append(ports, port.External+":"+port.Internal)
-		} else {
-			ports = append(ports, port.External)
-		}
-	}
-
-	return ports
 }
 
 // detectPortConflict detects if a port is in use by another process

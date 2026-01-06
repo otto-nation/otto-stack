@@ -72,7 +72,8 @@ func TestCreateReadme_WithServices(t *testing.T) {
 	err := handler.projectManager.createDirectoryStructure()
 	assert.NoError(t, err)
 
-	err = handler.projectManager.createReadme(TestProjectName, []string{services.ServicePostgres, services.ServiceRedis}, &base.BaseCommand{Output: ui.NewOutput()})
+	serviceConfigs := []services.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServiceRedis}}
+	err = handler.projectManager.createReadme(TestProjectName, serviceConfigs, &base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	readmePath := filepath.Join(core.OttoStackDir, core.ReadmeFileName)

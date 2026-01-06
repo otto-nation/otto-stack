@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
@@ -46,31 +44,15 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	}
 	defer cleanup()
 
-	// Determine services to check
-	serviceNames := h.resolveServiceNames(args, setup.Config.Stack.Enabled)
-
-	// Apply same service resolution as up command
-	manager, err := GetServicesManager()
-	if err != nil {
-		ci.HandleError(ciFlags, pkgerrors.NewServiceError(ComponentServiceManager, ActionCreateManager, err))
-		return nil
-	}
-
-	// Validate services exist
-	if err := manager.ValidateServices(serviceNames); err != nil {
-		ci.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
-		return nil
-	}
-
-	// Resolve services to actual container services
-	resolvedServices, err := manager.ResolveServices(serviceNames)
+	// Resolve services to ServiceConfigs
+	serviceConfigs, err := ResolveServiceConfigs(args, setup)
 	if err != nil {
 		ci.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
 		return nil
 	}
 
 	// Filter out init containers (restart: "no") from status display
-	filteredServices := filterInitContainers(manager, resolvedServices)
+	filteredServices := filterInitContainers(serviceConfigs)
 
 	// Get service status using StackService
 	stackService, err := NewStackService(false)
@@ -120,20 +102,12 @@ func (h *StatusHandler) GetRequiredFlags() []string {
 }
 
 // filterInitContainers removes init containers (restart: "no") from status display
-func filterInitContainers(manager *services.Manager, serviceNames []string) []string {
+func filterInitContainers(serviceConfigs []services.ServiceConfig) []string {
 	var filtered []string
-	for _, serviceName := range serviceNames {
-		if service, err := manager.GetService(serviceName); err == nil && service.Container.Restart != services.RestartPolicyNo {
-			filtered = append(filtered, serviceName)
+	for _, config := range serviceConfigs {
+		if config.Container.Restart != services.RestartPolicyNo {
+			filtered = append(filtered, config.Name)
 		}
 	}
 	return filtered
-}
-
-// resolveServiceNames determines which services to check status for
-func (h *StatusHandler) resolveServiceNames(args, enabledServices []string) []string {
-	if len(args) > 0 {
-		return args
-	}
-	return enabledServices
 }

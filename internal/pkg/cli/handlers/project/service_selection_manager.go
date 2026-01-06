@@ -5,6 +5,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 // ServiceSelectionManager handles service selection workflow
@@ -22,18 +23,16 @@ func NewServiceSelectionManager(promptManager *PromptManager, validationManager 
 }
 
 // RunWorkflow executes the complete service selection workflow
-func (ssm *ServiceSelectionManager) RunWorkflow(handler *InitHandler, base *base.BaseCommand) ([]string, map[string]bool, map[string]bool, error) {
+func (ssm *ServiceSelectionManager) RunWorkflow(handler *InitHandler, base *base.BaseCommand) ([]svc.ServiceConfig, map[string]bool, map[string]bool, error) {
 	base.Output.Header("%s", core.MsgProcess_initializing)
 	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
 
 	for {
-		services, err := ssm.promptManager.PromptForServices()
+		serviceConfigs, err := ssm.promptManager.PromptForServiceConfigs()
 		if err != nil {
 			return nil, nil, nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionSelectServices, err)
 		}
-		handler.selectedServices = services
-
-		if err := handler.validateServices(services); err != nil {
+		if err := handler.validateServiceConfigs(serviceConfigs); err != nil {
 			return nil, nil, nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionValidateServices, err)
 		}
 
@@ -42,18 +41,19 @@ func (ssm *ServiceSelectionManager) RunWorkflow(handler *InitHandler, base *base
 			return nil, nil, nil, pkgerrors.NewValidationError(FieldOptions, ActionGetOptions, err)
 		}
 
-		if err := ssm.validationManager.RunValidations(validation, handler, base); err != nil {
+		if err := ssm.validationManager.RunValidations(validation, handler, serviceConfigs, base); err != nil {
 			return nil, nil, nil, pkgerrors.NewValidationError("validation-check", ActionValidation, err)
 		}
 
-		action, err := ssm.promptManager.ConfirmInitialization("", services, validation, advanced, base)
+		serviceNames := svc.ExtractServiceNames(serviceConfigs)
+		action, err := ssm.promptManager.ConfirmInitialization("", serviceNames, validation, advanced, base)
 		if err != nil {
 			return nil, nil, nil, pkgerrors.NewValidationError(FieldConfirmation, ActionGetConfirmation, err)
 		}
 
 		switch action {
 		case core.ActionProceed:
-			return services, validation, advanced, nil
+			return serviceConfigs, validation, advanced, nil
 		case core.ActionBack:
 			base.Output.Info("%s", core.MsgInit_going_back)
 			continue

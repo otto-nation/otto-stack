@@ -42,9 +42,12 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return err
 	}
 
-	serviceNames := h.resolveServiceNames(args, setup.Config.Stack.Enabled)
+	serviceConfigs, err := ResolveServiceConfigs(args, setup)
+	if err != nil {
+		return fmt.Errorf("failed to resolve services: %w", err)
+	}
 
-	if err := h.restartServices(ctx, setup, serviceNames, flags); err != nil {
+	if err := h.restartServices(ctx, setup, serviceConfigs, flags); err != nil {
 		return err
 	}
 
@@ -52,16 +55,8 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	return nil
 }
 
-// resolveServiceNames determines which services to restart
-func (h *RestartHandler) resolveServiceNames(args, enabledServices []string) []string {
-	if len(args) > 0 {
-		return args
-	}
-	return enabledServices
-}
-
 // restartServices performs the stop and start operations using new stack service
-func (h *RestartHandler) restartServices(ctx context.Context, setup *CoreSetup, serviceNames []string, flags *core.RestartFlags) error {
+func (h *RestartHandler) restartServices(ctx context.Context, setup *CoreSetup, serviceConfigs []services.ServiceConfig, flags *core.RestartFlags) error {
 	// Create stack service
 	stackService, err := NewStackService(false)
 	if err != nil {
@@ -70,9 +65,10 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *CoreSetup, 
 
 	// Stop services
 	stopRequest := services.StopRequest{
-		Project: setup.Config.Project.Name,
-		Remove:  false, // Just stop, don't remove
-		Timeout: time.Duration(flags.Timeout) * time.Second,
+		Project:        setup.Config.Project.Name,
+		ServiceConfigs: serviceConfigs,
+		Remove:         false, // Just stop, don't remove
+		Timeout:        time.Duration(flags.Timeout) * time.Second,
 	}
 	if err := stackService.Stop(ctx, stopRequest); err != nil {
 		return fmt.Errorf(core.MsgStack_failed_stop_services, err)
@@ -80,8 +76,8 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *CoreSetup, 
 
 	// Start services
 	startRequest := services.StartRequest{
-		Project:  setup.Config.Project.Name,
-		Services: serviceNames,
+		Project:        setup.Config.Project.Name,
+		ServiceConfigs: serviceConfigs,
 	}
 	if err := stackService.Start(ctx, startRequest); err != nil {
 		return fmt.Errorf(core.MsgStack_failed_start_services, err)

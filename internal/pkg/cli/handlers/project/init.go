@@ -11,12 +11,12 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
 
 // InitHandler handles the init command
 type InitHandler struct {
-	selectedServices        []string
 	forceOverwrite          bool
 	promptManager           *PromptManager
 	validationManager       *ValidationManager
@@ -75,18 +75,18 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	var projectName string
-	var services []string
+	var serviceConfigs []svc.ServiceConfig
 	var validation map[string]bool
 	var advanced map[string]bool
 	var err error
 
 	processor := NewModeProcessor(ciFlags.NonInteractive, h)
-	projectName, services, validation, advanced, err = processor.Process(initFlags, base)
+	projectName, originalServiceNames, serviceConfigs, validation, advanced, err := processor.Process(initFlags, base)
 	if err != nil {
 		return err
 	}
 
-	if err := h.projectManager.CreateProjectStructure(projectName, services, validation, advanced, base); err != nil {
+	if err := h.projectManager.CreateProjectStructure(projectName, originalServiceNames, serviceConfigs, validation, advanced, base); err != nil {
 		return err
 	}
 

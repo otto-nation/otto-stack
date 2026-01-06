@@ -7,6 +7,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,7 +32,7 @@ func TestStateManager_LoadState_FileNotExists(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, state)
-	assert.Empty(t, state.Services)
+	assert.Empty(t, state.ServiceConfigs)
 	assert.Empty(t, state.ConfigHash)
 }
 
@@ -41,7 +42,10 @@ func TestStateManager_SaveAndLoadState(t *testing.T) {
 
 		// Create test state
 		originalState := &StackState{
-			Services:   []string{"postgres", "redis"},
+			ServiceConfigs: []services.ServiceConfig{
+				{Name: services.ServicePostgres},
+				{Name: services.ServiceRedis},
+			},
 			ConfigHash: "test-hash-123",
 		}
 
@@ -57,7 +61,7 @@ func TestStateManager_SaveAndLoadState(t *testing.T) {
 		loadedState, err := sm.LoadState()
 		require.NoError(t, err)
 
-		assert.Equal(t, originalState.Services, loadedState.Services)
+		assert.Equal(t, len(originalState.ServiceConfigs), len(loadedState.ServiceConfigs))
 		assert.Equal(t, originalState.ConfigHash, loadedState.ConfigHash)
 	})
 }
@@ -98,8 +102,8 @@ func TestStateManager_SaveState_CreateDirectory(t *testing.T) {
 	os.RemoveAll(core.OttoStackDir)
 
 	state := &StackState{
-		Services:   []string{"test"},
-		ConfigHash: "hash",
+		ServiceConfigs: []services.ServiceConfig{{Name: "test"}},
+		ConfigHash:     "hash",
 	}
 
 	// Should create directory and save file

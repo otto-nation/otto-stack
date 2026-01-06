@@ -38,8 +38,7 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	serviceNames := h.resolveServiceNames(args, setup.Config.Stack.Enabled)
-	resolvedServices, err := h.resolveServices(serviceNames)
+	serviceConfigs, err := ResolveServiceConfigs(args, setup)
 	if err != nil {
 		ci.HandleError(ciFlags, fmt.Errorf("failed to resolve services: %w", err))
 		return nil
@@ -53,28 +52,14 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	// Create logs request
 	logRequest := services.LogRequest{
-		Project:    setup.Config.Project.Name,
-		Services:   resolvedServices,
-		Follow:     flags.Follow,
-		Timestamps: flags.Timestamps,
-		Tail:       flags.Tail,
+		Project:        setup.Config.Project.Name,
+		ServiceConfigs: serviceConfigs,
+		Follow:         flags.Follow,
+		Timestamps:     flags.Timestamps,
+		Tail:           flags.Tail,
 	}
 
 	return stackService.Logs(ctx, logRequest)
-}
-
-// resolveServiceNames determines which services to get logs for
-func (h *LogsHandler) resolveServiceNames(args, enabledServices []string) []string {
-	if len(args) > 0 {
-		return args
-	}
-	return enabledServices
-}
-
-// resolveServices resolves service names using service utils
-func (h *LogsHandler) resolveServices(serviceNames []string) ([]string, error) {
-	serviceUtils := services.NewServiceUtils()
-	return serviceUtils.ResolveServices(serviceNames)
 }
 
 // ValidateArgs validates the command arguments

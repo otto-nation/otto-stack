@@ -4,6 +4,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 // ValidationManager handles validation logic
@@ -15,7 +16,7 @@ func NewValidationManager() *ValidationManager {
 }
 
 // RunValidations executes selected validation functions
-func (vm *ValidationManager) RunValidations(selectedValidations map[string]bool, handler *InitHandler, base *base.BaseCommand) error {
+func (vm *ValidationManager) RunValidations(selectedValidations map[string]bool, handler *InitHandler, serviceConfigs []services.ServiceConfig, base *base.BaseCommand) error {
 	// Always run required validations
 	for validationKey := range core.ValidationOptions {
 		validationFunc, exists := ValidationRegistry[validationKey]
@@ -28,7 +29,7 @@ func (vm *ValidationManager) RunValidations(selectedValidations map[string]bool,
 		isSelected := selectedValidations[validationKey]
 
 		if isRequired || isSelected {
-			if err := validationFunc(handler, base); err != nil {
+			if err := validationFunc(handler, serviceConfigs, base); err != nil {
 				return pkgerrors.NewValidationError(validationKey, "validation failed", err)
 			}
 		}

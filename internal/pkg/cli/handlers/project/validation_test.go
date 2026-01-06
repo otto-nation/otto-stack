@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,24 +40,27 @@ func TestValidateProjectName(t *testing.T) {
 	}
 }
 
-func TestValidateServices(t *testing.T) {
+func TestValidateServiceConfigs(t *testing.T) {
 	handler := NewInitHandler()
 
 	tests := []struct {
-		name        string
-		services    []string
-		expectError bool
+		name           string
+		serviceConfigs []services.ServiceConfig
+		expectError    bool
 	}{
-		{"empty services", []string{}, true},
+		{"empty services", []services.ServiceConfig{}, true},
 		{"nil services", nil, true},
-		{"invalid service", []string{"nonexistent-service"}, true},
+		{"valid services", []services.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServiceRedis}}, false},
+		{"duplicate services", []services.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServicePostgres}}, true},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := handler.validateServices(tt.services)
+			err := handler.validateServiceConfigs(tt.serviceConfigs)
 			if tt.expectError {
 				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 		})
 	}

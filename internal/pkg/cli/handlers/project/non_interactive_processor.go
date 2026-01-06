@@ -6,6 +6,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 // NonInteractiveProcessor handles non-interactive mode processing
@@ -14,26 +15,32 @@ type NonInteractiveProcessor struct {
 }
 
 // Process validates and processes flags for non-interactive mode
-func (p *NonInteractiveProcessor) Process(flags any, base *base.BaseCommand) (string, []string, map[string]bool, map[string]bool, error) {
+func (p *NonInteractiveProcessor) Process(flags any, base *base.BaseCommand) (string, []string, []svc.ServiceConfig, map[string]bool, map[string]bool, error) {
 	initFlags := flags.(*core.InitFlags)
 
 	if initFlags.Services == "" {
-		return "", nil, nil, nil, pkgerrors.NewValidationError("services", "services flag is required in non-interactive mode", nil)
+		return "", nil, nil, nil, nil, pkgerrors.NewValidationError("services", "services flag is required in non-interactive mode", nil)
 	}
 
 	if initFlags.ProjectName == "" {
-		return "", nil, nil, nil, pkgerrors.NewValidationError("project-name", "project name is required in non-interactive mode", nil)
+		return "", nil, nil, nil, nil, pkgerrors.NewValidationError("project-name", "project name is required in non-interactive mode", nil)
 	}
 
-	services := parseServices(initFlags.Services)
-	if err := p.handler.validateServices(services); err != nil {
-		return "", nil, nil, nil, err
+	serviceNames := parseServices(initFlags.Services)
+
+	// Convert service names to ServiceConfigs at entry point
+	serviceConfigs, err := svc.ResolveUpServices(serviceNames, nil)
+	if err != nil {
+		return "", nil, nil, nil, nil, err
 	}
 
+	if err := p.handler.validateServiceConfigs(serviceConfigs); err != nil {
+		return "", nil, nil, nil, nil, err
+	}
 	validation := getDefaultValidation()
 	advanced := map[string]bool{}
 
-	return initFlags.ProjectName, services, validation, advanced, nil
+	return initFlags.ProjectName, serviceNames, serviceConfigs, validation, advanced, nil
 }
 
 func parseServices(servicesStr string) []string {

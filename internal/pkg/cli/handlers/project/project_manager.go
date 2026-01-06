@@ -11,15 +11,17 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/compose"
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	"github.com/otto-nation/otto-stack/internal/pkg/env"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 // ProjectManager handles project creation logic
 type ProjectManager struct {
-	serviceUtils  *services.ServiceUtils
-	configService services.ConfigService
-	fileGenerator *services.FileGenerator
+	serviceUtils  *svc.ServiceUtils
+	configService config.ConfigService
 }
 
 // OttoStackConfig represents the otto-stack configuration structure
@@ -45,25 +47,24 @@ type ServiceConfig struct {
 // NewProjectManager creates a new project manager
 func NewProjectManager() *ProjectManager {
 	return &ProjectManager{
-		serviceUtils:  services.NewServiceUtils(),
-		configService: services.NewConfigService(),
-		fileGenerator: services.NewFileGenerator(),
+		serviceUtils:  svc.NewServiceUtils(),
+		configService: config.NewConfigService(),
 	}
 }
 
 // CreateProjectStructure creates the complete project structure
-func (pm *ProjectManager) CreateProjectStructure(projectName string, services []string, validation, advanced map[string]bool, base *base.BaseCommand) error {
+func (pm *ProjectManager) CreateProjectStructure(projectName string, originalServiceNames []string, serviceConfigs []svc.ServiceConfig, validation, advanced map[string]bool, base *base.BaseCommand) error {
 	if err := pm.createDirectoryStructure(); err != nil {
 		return pkgerrors.NewServiceError(ComponentProject, ActionCreateDirectories, err)
 	}
 
-	if err := pm.createConfigFile(projectName, services, validation, base); err != nil {
+	if err := pm.createConfigFile(projectName, originalServiceNames, validation, base); err != nil {
 		return pkgerrors.NewConfigError("", ActionCreateConfigFile, err)
 	}
 
-	pm.generateServiceConfigs(services, base)
+	pm.generateServiceConfigs(serviceConfigs, base)
 
-	if err := pm.generateInitialComposeFiles(services, projectName, validation, advanced, base); err != nil {
+	if err := pm.generateInitialComposeFiles(serviceConfigs, projectName, validation, advanced, base); err != nil {
 		return pkgerrors.NewServiceError(ComponentCompose, ActionGenerateFiles, err)
 	}
 
@@ -71,7 +72,7 @@ func (pm *ProjectManager) CreateProjectStructure(projectName string, services []
 		base.Output.Warning("Failed to create .gitignore entries: %v", err)
 	}
 
-	if err := pm.createReadme(projectName, services, base); err != nil {
+	if err := pm.createReadme(projectName, serviceConfigs, base); err != nil {
 		base.Output.Warning("Failed to create README: %v", err)
 	}
 
@@ -95,11 +96,14 @@ func (pm *ProjectManager) createDirectoryStructure() error {
 }
 
 // createConfigFile creates the main configuration file
-func (pm *ProjectManager) createConfigFile(projectName string, services []string, validationOptions map[string]bool, base *base.BaseCommand) error {
-	configContent := pm.generateConfig(projectName, services, validationOptions)
+func (pm *ProjectManager) createConfigFile(projectName string, originalServiceNames []string, validationOptions map[string]bool, base *base.BaseCommand) error {
+	configBytes, err := config.GenerateConfig(projectName, originalServiceNames, validationOptions)
+	if err != nil {
+		return err
+	}
 
 	configPath := core.OttoStackDir + "/" + core.ConfigFileName
-	if err := os.WriteFile(configPath, []byte(configContent), core.PermReadWrite); err != nil {
+	if err := os.WriteFile(configPath, configBytes, core.PermReadWrite); err != nil {
 		return pkgerrors.NewConfigError(configPath, MsgFailedToWriteConfigFile, err)
 	}
 
@@ -107,34 +111,14 @@ func (pm *ProjectManager) createConfigFile(projectName string, services []string
 	return nil
 }
 
-// generateConfig generates the configuration content
-func (pm *ProjectManager) generateConfig(name string, services []string, validationOptions map[string]bool) string {
-	config := OttoStackConfig{}
-	config.Project.Name = name
-	config.Project.Type = "docker"
-	config.Stack.Enabled = services
-
-	config.Validation.Options = make(map[string]bool)
-	for _, key := range core.ValidationKeys {
-		if len(validationOptions) == 0 || validationOptions[key] {
-			config.Validation.Options[key] = true
-		}
-	}
-
-	data, err := yaml.Marshal(&config)
-	if err != nil {
-		// Fallback to empty config if marshal fails
-		return "# Error generating configuration\n"
-	}
-
-	return string(data)
-}
-
 // generateServiceConfigs generates service configurations
-func (pm *ProjectManager) generateServiceConfigs(services []string, base *base.BaseCommand) {
-	for _, serviceName := range services {
-		if err := pm.generateServiceConfig(serviceName); err != nil {
-			base.Output.Warning("Failed to generate config for service %s: %v", serviceName, err)
+func (pm *ProjectManager) generateServiceConfigs(serviceConfigs []svc.ServiceConfig, base *base.BaseCommand) {
+	for _, config := range serviceConfigs {
+		if config.Hidden {
+			continue
+		}
+		if err := pm.generateServiceConfig(config.Name); err != nil {
+			base.Output.Warning("Failed to generate config for service %s: %v", config.Name, err)
 		}
 	}
 }
@@ -165,12 +149,12 @@ func (pm *ProjectManager) generateServiceConfigContent(serviceName string) strin
 }
 
 // generateInitialComposeFiles generates Docker Compose files
-func (pm *ProjectManager) generateInitialComposeFiles(services []string, projectName string, _, _ map[string]bool, base *base.BaseCommand) error {
-	if err := pm.generateEnvFile(services, projectName, base); err != nil {
+func (pm *ProjectManager) generateInitialComposeFiles(serviceConfigs []svc.ServiceConfig, projectName string, _, _ map[string]bool, base *base.BaseCommand) error {
+	if err := pm.generateEnvFile(serviceConfigs, projectName, base); err != nil {
 		return err
 	}
 
-	if err := pm.generateDockerCompose(services, projectName, base); err != nil {
+	if err := pm.generateDockerCompose(serviceConfigs, projectName, base); err != nil {
 		return err
 	}
 
@@ -178,47 +162,33 @@ func (pm *ProjectManager) generateInitialComposeFiles(services []string, project
 }
 
 // generateEnvFile generates the .env file
-func (pm *ProjectManager) generateEnvFile(services []string, projectName string, base *base.BaseCommand) error {
-	resolvedServices := pm.resolveServiceDependencies(services)
-
-	if err := pm.fileGenerator.GenerateEnvFile(resolvedServices, projectName); err != nil {
+func (pm *ProjectManager) generateEnvFile(serviceConfigs []svc.ServiceConfig, projectName string, base *base.BaseCommand) error {
+	if err := env.GenerateFile(projectName, serviceConfigs, core.EnvGeneratedFileName); err != nil {
 		return err
 	}
 
-	base.Output.Success("Created environment file: %s", core.ExtENV)
+	base.Output.Success("Created environment file: %s", core.EnvGeneratedFileName)
 	return nil
 }
 
 // generateDockerCompose generates the docker-compose.yml file
-func (pm *ProjectManager) generateDockerCompose(services []string, projectName string, base *base.BaseCommand) error {
-	resolvedServices := pm.resolveServiceDependencies(services)
+func (pm *ProjectManager) generateDockerCompose(serviceConfigs []svc.ServiceConfig, projectName string, base *base.BaseCommand) error {
+	manager, err := svc.New()
+	if err != nil {
+		return err
+	}
 
-	if err := pm.fileGenerator.GenerateComposeFileWithOriginal(resolvedServices, services, projectName); err != nil {
+	generator, err := compose.NewGenerator(projectName, "", manager)
+	if err != nil {
+		return err
+	}
+	err = generator.GenerateFromServiceConfigs(serviceConfigs, projectName)
+	if err != nil {
 		return err
 	}
 
 	base.Output.Success("Created Docker Compose file: %s", docker.DockerComposeFilePath)
 	return nil
-}
-
-// resolveServiceDependencies resolves configuration services to their container dependencies
-func (pm *ProjectManager) resolveServiceDependencies(serviceList []string) []string {
-	resolved := make(map[string]bool)
-
-	for _, service := range serviceList {
-		// For localstack-* services, resolve to localstack
-		if strings.HasPrefix(service, services.ServiceLocalstack) {
-			resolved[services.ServiceLocalstack] = true
-		} else {
-			resolved[service] = true
-		}
-	}
-
-	var result []string
-	for service := range resolved {
-		result = append(result, service)
-	}
-	return result
 }
 
 // createGitignoreEntries adds entries to .gitignore
@@ -242,7 +212,7 @@ func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 }
 
 // createReadme creates README file
-func (pm *ProjectManager) createReadme(projectName string, services []string, base *base.BaseCommand) error {
+func (pm *ProjectManager) createReadme(projectName string, serviceConfigs []svc.ServiceConfig, base *base.BaseCommand) error {
 	const readmeTemplate = `# %s
 
 This project was initialized with %s.
@@ -273,7 +243,7 @@ This project was initialized with %s.
 	readmeContent := fmt.Sprintf(readmeTemplate,
 		projectName,
 		core.AppNameTitle,
-		pm.formatServicesList(services),
+		pm.formatServicesList(svc.ExtractServiceNames(serviceConfigs)),
 		core.AppName, core.AppName, core.AppName, core.AppName, core.AppName,
 		core.OttoStackDir, core.ConfigFileName,
 		core.OttoStackDir, core.ServiceConfigsDir,

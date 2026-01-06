@@ -9,12 +9,13 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 // StackState represents the current state of the stack
 type StackState struct {
-	Services   []string `json:"services"`
-	ConfigHash string   `json:"config_hash"`
+	ServiceConfigs []services.ServiceConfig `json:"service_configs"`
+	ConfigHash     string                   `json:"config_hash"`
 }
 
 // StateManager handles stack state persistence

@@ -36,28 +36,21 @@ func (h *InitHandler) validateProjectName(name string) error {
 	return nil
 }
 
-// validateServices validates the selected services
-func (h *InitHandler) validateServices(serviceNames []string) error {
-	if len(serviceNames) == 0 {
+// validateServiceConfigs validates ServiceConfig objects
+func (h *InitHandler) validateServiceConfigs(serviceConfigs []services.ServiceConfig) error {
+	if len(serviceConfigs) == 0 {
 		return pkgerrors.NewValidationError(pkgerrors.FieldServiceName, core.MsgValidation_no_services_selected, nil)
 	}
 
-	// Check for duplicates
+	// Check for duplicates by name
 	seen := make(map[string]bool)
-	for _, serviceName := range serviceNames {
-		if seen[serviceName] {
-			return pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, core.MsgValidation_duplicate_service, serviceName)
+	for _, serviceConfig := range serviceConfigs {
+		if seen[serviceConfig.Name] {
+			return pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, core.MsgValidation_duplicate_service, serviceConfig.Name)
 		}
-		seen[serviceName] = true
+		seen[serviceConfig.Name] = true
 	}
 
-	// Validate each service exists
-	serviceUtils := services.NewServiceUtils()
-	for _, serviceName := range serviceNames {
-		if _, err := serviceUtils.LoadServiceConfig(serviceName); err != nil {
-			return pkgerrors.NewValidationError(pkgerrors.FieldServiceName, "invalid service", err)
-		}
-	}
-
+	// ServiceConfigs are already validated when loaded, so no need to re-validate existence
 	return nil
 }

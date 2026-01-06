@@ -6,26 +6,29 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
+const testProjectName = "test-project"
+
 func TestStateManager_NewStateManager_Focused(t *testing.T) {
-	sm := stack.NewStateManager()
+	sm := NewStateManager()
 	if sm == nil {
 		t.Fatal("NewStateManager returned nil")
 	}
 }
 
 func TestStateManager_GetConfigHash_Focused(t *testing.T) {
-	sm := stack.NewStateManager()
+	sm := NewStateManager()
 
 	// Test with simple config
 	cfg := &config.Config{
 		Project: config.ProjectConfig{
-			Name:     project.TestProjectName,
-			Services: []string{services.ServicePostgres, services.ServiceRedis},
+			Name: testProjectName,
+		},
+		Stack: config.StackConfig{
+			Enabled: []string{services.ServicePostgres, services.ServiceRedis},
 		},
 	}
 
@@ -51,8 +54,10 @@ func TestStateManager_GetConfigHash_Focused(t *testing.T) {
 	// Test hash changes with different config
 	cfg2 := &config.Config{
 		Project: config.ProjectConfig{
-			Name:     "different-project",
-			Services: []string{services.ServiceMysql, services.ServiceRedis},
+			Name: "different-project",
+		},
+		Stack: config.StackConfig{
+			Enabled: []string{services.ServiceMysql, services.ServiceRedis},
 		},
 	}
 
@@ -67,7 +72,7 @@ func TestStateManager_GetConfigHash_Focused(t *testing.T) {
 }
 
 func TestStateManager_GetConfigHash_EmptyConfig_Focused(t *testing.T) {
-	sm := stack.NewStateManager()
+	sm := NewStateManager()
 
 	cfg := &config.Config{}
 	hash, err := sm.GetConfigHash(cfg)
@@ -82,8 +87,11 @@ func TestStateManager_GetConfigHash_EmptyConfig_Focused(t *testing.T) {
 }
 
 func TestStackState_JSONSerialization_Focused(t *testing.T) {
-	state := &stack.StackState{
-		Services:   []string{services.ServicePostgres, services.ServiceRedis},
+	state := &StackState{
+		ServiceConfigs: []services.ServiceConfig{
+			{Name: services.ServicePostgres},
+			{Name: services.ServiceRedis},
+		},
 		ConfigHash: "abc123",
 	}
 
@@ -94,15 +102,15 @@ func TestStackState_JSONSerialization_Focused(t *testing.T) {
 	}
 
 	// Test unmarshaling
-	var unmarshaled stack.StackState
+	var unmarshaled StackState
 	err = json.Unmarshal(data, &unmarshaled)
 	if err != nil {
 		t.Fatalf("JSON unmarshal failed: %v", err)
 	}
 
 	// Verify data integrity
-	if len(unmarshaled.Services) != len(state.Services) {
-		t.Error("Services length mismatch after JSON round-trip")
+	if len(unmarshaled.ServiceConfigs) != len(state.ServiceConfigs) {
+		t.Error("ServiceConfigs length mismatch after JSON round-trip")
 	}
 
 	if unmarshaled.ConfigHash != state.ConfigHash {
@@ -112,7 +120,7 @@ func TestStackState_JSONSerialization_Focused(t *testing.T) {
 
 func TestStackState_EmptyState_Focused(t *testing.T) {
 	// Test empty state behavior
-	state := &stack.StackState{}
+	state := &StackState{}
 
 	// Should be able to marshal empty state
 	data, err := json.Marshal(state)
@@ -121,15 +129,15 @@ func TestStackState_EmptyState_Focused(t *testing.T) {
 	}
 
 	// Should be able to unmarshal empty state
-	var unmarshaled stack.StackState
+	var unmarshaled StackState
 	err = json.Unmarshal(data, &unmarshaled)
 	if err != nil {
 		t.Fatalf("JSON unmarshal of empty state failed: %v", err)
 	}
 
 	// Verify empty state properties
-	if len(unmarshaled.Services) != 0 {
-		t.Error("Empty state should have no services")
+	if len(unmarshaled.ServiceConfigs) != 0 {
+		t.Error("Empty state should have no ServiceConfigs")
 	}
 
 	if unmarshaled.ConfigHash != "" {
