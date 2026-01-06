@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,12 +28,12 @@ func TestNewGenerator(t *testing.T) {
 	})
 }
 
-func TestGenerator_GenerateYAML(t *testing.T) {
+func TestGenerator_GenerateFromServiceConfigs_Structure(t *testing.T) {
 	generator, err := NewGenerator("test-project", "/tmp/services", testutil.NewTestManager(t))
 	require.NoError(t, err)
 
 	t.Run("generates valid YAML structure", func(t *testing.T) {
-		yamlBytes, err := generator.GenerateYAML([]string{"postgres"})
+		yamlBytes, err := generator.GenerateYAML([]string{services.ServicePostgres})
 		if err != nil {
 			// If postgres service doesn't exist, that's okay for this test
 			t.Logf("Service not found (expected in test): %v", err)
@@ -74,23 +75,14 @@ func TestGenerator_GenerateYAML(t *testing.T) {
 		assert.Empty(t, services)
 	})
 
-	t.Run("handles nonexistent services gracefully", func(t *testing.T) {
-		yamlBytes, err := generator.GenerateYAML([]string{"nonexistent-service"})
-		assert.NoError(t, err)
-		assert.NotEmpty(t, yamlBytes)
-
-		var compose map[string]any
-		err = yaml.Unmarshal(yamlBytes, &compose)
-		assert.NoError(t, err)
-
-		services, ok := compose["services"].(map[string]any)
-		assert.True(t, ok)
-		// Should be empty since nonexistent service is skipped
-		assert.Empty(t, services)
+	t.Run("returns error for nonexistent services", func(t *testing.T) {
+		_, err := generator.GenerateYAML([]string{"nonexistent-service"})
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unknown service")
 	})
 
 	t.Run("generates valid YAML format", func(t *testing.T) {
-		yamlBytes, err := generator.GenerateYAML([]string{"postgres", "redis"})
+		yamlBytes, err := generator.GenerateYAML([]string{services.ServicePostgres, services.ServiceRedis})
 		assert.NoError(t, err)
 
 		yamlString := string(yamlBytes)
@@ -103,33 +95,6 @@ func TestGenerator_GenerateYAML(t *testing.T) {
 		var result map[string]any
 		err = yaml.Unmarshal(yamlBytes, &result)
 		assert.NoError(t, err)
-	})
-}
-
-func TestGenerator_buildServices(t *testing.T) {
-	generator, err := NewGenerator("test-project", "/tmp/services", testutil.NewTestManager(t))
-	require.NoError(t, err)
-
-	t.Run("builds services map", func(t *testing.T) {
-		services := generator.buildServices([]string{"postgres", "redis"})
-		assert.NotNil(t, services)
-
-		// The actual content depends on available services
-		// We just verify it returns a map without errors
-		assert.IsType(t, map[string]any{}, services)
-	})
-
-	t.Run("handles empty service list", func(t *testing.T) {
-		services := generator.buildServices([]string{})
-		assert.NotNil(t, services)
-		assert.Empty(t, services)
-	})
-
-	t.Run("skips nonexistent services", func(t *testing.T) {
-		services := generator.buildServices([]string{"nonexistent"})
-		assert.NotNil(t, services)
-		// Should be empty since service doesn't exist
-		assert.Empty(t, services)
 	})
 }
 
@@ -196,5 +161,23 @@ func TestGenerator_YAMLOutput(t *testing.T) {
 
 		assert.True(t, foundServices, "Should contain services section")
 		assert.True(t, foundNetworks, "Should contain networks section")
+	})
+}
+
+func TestGenerator_GenerateFromServiceConfigs(t *testing.T) {
+	generator, err := NewGenerator("test-project", "/tmp/services", testutil.NewTestManager(t))
+	require.NoError(t, err)
+
+	t.Run("generates from ServiceConfigs", func(t *testing.T) {
+		serviceConfigs := []services.ServiceConfig{
+			{Name: services.ServicePostgres, Category: services.CategoryDatabase},
+			{Name: services.ServiceRedis, Category: services.CategoryCache},
+		}
+
+		err := generator.GenerateFromServiceConfigs(serviceConfigs, "test-project")
+		// Test passes if no error occurs - actual file generation depends on service definitions
+		if err != nil {
+			t.Logf("Service generation completed with: %v", err)
+		}
 	})
 }

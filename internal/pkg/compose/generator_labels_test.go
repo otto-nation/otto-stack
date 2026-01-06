@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -18,7 +17,7 @@ func TestLabelGeneration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate YAML for redis service
-	yamlBytes, err := gen.GenerateYAML([]string{"redis"})
+	yamlBytes, err := gen.GenerateYAML([]string{services.ServiceRedis})
 	require.NoError(t, err)
 
 	// Parse the YAML
@@ -42,19 +41,6 @@ func TestLabelGeneration(t *testing.T) {
 	assert.Equal(t, "true", labels["io.otto-stack.managed"])
 	assert.Equal(t, "test-project", labels["io.otto-stack.project"])
 	assert.Equal(t, "redis", labels["io.otto-stack.service"])
-	assert.Equal(t, "isolated", labels["io.otto-stack.sharing-mode"])
-	assert.NotEmpty(t, labels["io.otto-stack.version"])
-}
-
-func TestBuildOttoLabels(t *testing.T) {
-	gen, err := NewGenerator("my-project", "", testutil.NewTestManager(t))
-	require.NoError(t, err)
-
-	labels := gen.buildOttoLabels("postgres")
-
-	assert.Equal(t, "true", labels["io.otto-stack.managed"])
-	assert.Equal(t, "my-project", labels["io.otto-stack.project"])
-	assert.Equal(t, "postgres", labels["io.otto-stack.service"])
 	assert.Equal(t, "isolated", labels["io.otto-stack.sharing-mode"])
 	assert.NotEmpty(t, labels["io.otto-stack.version"])
 }

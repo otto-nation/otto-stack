@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"maps"
 	"os"
+	"path/filepath"
 	"strings"
 
-	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-
-	"gopkg.in/yaml.v3"
-
+	"github.com/otto-nation/otto-stack/internal/core"
 	dockerConstants "github.com/otto-nation/otto-stack/internal/core/docker"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"gopkg.in/yaml.v3"
 )
 
 const expectedEnvParts = 2
@@ -63,8 +63,14 @@ func (g *Generator) buildServices(serviceNames []string) map[string]any {
 
 // resolveServiceDependencies resolves all service dependencies
 func (g *Generator) resolveServiceDependencies(serviceNames []string) []string {
-	resolvedServices, _ := g.manager.ResolveServices(serviceNames)
-	return resolvedServices
+	// Use the existing ResolveUpServices function to get ServiceConfigs
+	serviceConfigs, err := services.ResolveUpServices(serviceNames, nil)
+	if err != nil {
+		return serviceNames // Return original names on error
+	}
+
+	// Extract service names using the existing utility function
+	return services.ExtractServiceNames(serviceConfigs)
 }
 
 // buildServiceConfigurations builds the actual service configurations
@@ -76,6 +82,7 @@ func (g *Generator) buildServiceConfigurations(serviceNames []string) map[string
 		if serviceConfig != nil {
 			serviceList[serviceName] = serviceConfig
 		}
+
 	}
 
 	return serviceList
@@ -261,5 +268,45 @@ func (g *Generator) buildOttoLabels(serviceName string) map[string]string {
 		dockerConstants.LabelOttoService:     serviceName,
 		dockerConstants.LabelOttoVersion:     "dev",
 		dockerConstants.LabelOttoSharingMode: "isolated",
+	}
+}
+
+// GenerateFromServiceConfigs creates a docker-compose file from ServiceConfigs
+func (g *Generator) GenerateFromServiceConfigs(serviceConfigs []services.ServiceConfig, projectName string) error {
+	composeData := g.buildComposeFromServiceConfigs(serviceConfigs, projectName)
+
+	composeContent, err := yaml.Marshal(composeData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal compose data: %w", err)
+	}
+
+	// Ensure the directory exists
+	if err := os.MkdirAll(filepath.Dir(dockerConstants.DockerComposeFilePath), core.PermReadWriteExec); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	return os.WriteFile(dockerConstants.DockerComposeFilePath, composeContent, core.PermReadWrite)
+}
+
+// buildComposeFromServiceConfigs creates compose structure from ServiceConfigs
+func (g *Generator) buildComposeFromServiceConfigs(serviceConfigs []services.ServiceConfig, projectName string) map[string]any {
+	composeServices := make(map[string]any)
+
+	// Add main services and their init containers
+	for _, config := range serviceConfigs {
+		// Add main service if it's a container service
+		if config.ServiceType != services.ServiceTypeConfigurationType && config.Container.Image != "" {
+			composeServices[config.Name] = g.buildService(&config)
+		}
+
+	}
+
+	return map[string]any{
+		dockerConstants.ComposeFieldServices: composeServices,
+		dockerConstants.ComposeFieldNetworks: map[string]any{
+			dockerConstants.DefaultNetworkName: map[string]any{
+				dockerConstants.ComposeFieldName: projectName + dockerConstants.NetworkNameSuffix,
+			},
+		},
 	}
 }
