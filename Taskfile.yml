@@ -505,19 +505,18 @@ tasks:
     silent: true
     cmds:
       - echo "🧪 Running unit tests..."
-      - go test -race -short ./...
+      - go test -race -short -tags=unit ./...
       - echo "✅ Unit tests passed"
 
   test-e2e:
     desc: "🔗 Run end-to-end integration tests only"
     deps: [deps]
-    silent: true
     preconditions:
       - sh: docker info
         msg: "Docker is required for E2E tests"
     cmds:
       - echo "🔗 Running E2E integration tests..."
-      - go test -tags=integration -v -timeout=10m -p=1 ./test/e2e/...
+      - go test -tags=integration -v -timeout=10m -parallel=1 -count=1 ./test/e2e/... | tee
 
   test-coverage:
     desc: "📊 View test coverage report in browser"

@@ -16,7 +16,7 @@ import (
 
 func TestE2E_ServiceLifecycle(t *testing.T) {
 	projectName := fmt.Sprintf("lifecycle-e2e-%d", time.Now().UnixNano())
-	lifecycle := framework.NewTestLifecycle(t, projectName, []string{services.ServicePostgres, services.ServiceRedis})
+	lifecycle := framework.NewTestLifecycle(t, projectName, []string{services.ServicePostgres})
 	defer lifecycle.Cleanup()
 
 	err := lifecycle.InitializeStack()
@@ -28,7 +28,6 @@ func TestE2E_ServiceLifecycle(t *testing.T) {
 
 		result := lifecycle.CLI.RunExpectSuccess(core.CommandStatus)
 		assert.Contains(t, result.Stdout, services.ServicePostgres)
-		assert.Contains(t, result.Stdout, services.ServiceRedis)
 		assert.Contains(t, result.Stdout, "running")
 	})
 

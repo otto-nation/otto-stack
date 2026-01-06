@@ -65,7 +65,7 @@ func TestE2E_MultiServiceConfig(t *testing.T) {
 }
 
 func TestE2E_ServiceConfig(t *testing.T) {
-	lifecycle := framework.NewTestLifecycle(t, "service-config", []string{services.ServiceLocalstack})
+	lifecycle := framework.NewTestLifecycle(t, "service-config", []string{services.ServiceLocalstackSqs})
 	defer lifecycle.Cleanup()
 
 	t.Run("localstack service config", func(t *testing.T) {

@@ -1,10 +1,12 @@
 package framework
 
 import (
+	"context"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -40,10 +42,47 @@ func (c *CLIRunner) WorkDir() string {
 	return c.workDir
 }
 
+func (c *CLIRunner) SetWorkDir(workDir string) {
+	c.workDir = workDir
+}
+
 func (c *CLIRunner) Run(args ...string) *CLIResult {
 	c.t.Helper()
 
-	cmd := exec.Command(c.binPath, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, c.binPath, args...)
+	cmd.Dir = c.workDir
+
+	// Inherit parent environment and add custom vars
+	cmd.Env = os.Environ()
+	for k, v := range c.envVars {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
+
+	stdout, err := cmd.Output()
+	result := &CLIResult{
+		Stdout: string(stdout),
+		Error:  err,
+	}
+
+	if exitError, ok := err.(*exec.ExitError); ok {
+		result.Stderr = string(exitError.Stderr)
+		result.ExitCode = exitError.ExitCode()
+	}
+
+	return result
+}
+
+// RunSystemCommand executes a system command (not otto-stack)
+func (c *CLIRunner) RunSystemCommand(command string, args ...string) *CLIResult {
+	c.t.Helper()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, command, args...)
 	cmd.Dir = c.workDir
 
 	// Inherit parent environment and add custom vars

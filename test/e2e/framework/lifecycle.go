@@ -7,12 +7,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/test/testutil"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 type TestLifecycle struct {
@@ -74,12 +76,19 @@ func NewTestLifecycle(t *testing.T, projectName string, serviceList []string) *T
 		}
 	}
 
-	return &TestLifecycle{
+	tl := &TestLifecycle{
 		Environment: env,
 		CLI:         cli,
 		ProjectName: projectName,
 		Services:    serviceList,
 	}
+
+	// Register emergency cleanup that runs even on panic/timeout
+	t.Cleanup(func() {
+		tl.emergencyCleanup()
+	})
+
+	return tl
 }
 
 func (e *E2EEnvironment) GetServicePort(serviceName string) int {
@@ -107,13 +116,82 @@ func (tl *TestLifecycle) InitializeStack() error {
 			Flag(core.FlagServices, joinServices(tl.Services)).
 			BuildArgs()
 	})
-	return result.Error
+	if result.Error != nil {
+		return result.Error
+	}
+
+	// After initialization, change working directory to the project directory
+	// since otto-stack init creates a project directory
+	projectDir := filepath.Join(tl.Environment.WorkDir, tl.ProjectName)
+	if _, err := os.Stat(projectDir); err == nil {
+		tl.CLI.SetWorkDir(projectDir)
+		tl.Environment.WorkDir = projectDir
+	}
+
+	return nil
+}
+
+func (tl *TestLifecycle) AddServiceConfig(serviceName string, config map[string]interface{}) error {
+	configPath := filepath.Join(tl.Environment.WorkDir, core.OttoStackDir, core.ConfigFileName)
+
+	// Read existing config
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to read config file: %w", err)
+	}
+
+	var configData map[string]interface{}
+	if err := yaml.Unmarshal(data, &configData); err != nil {
+		return fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	// Add service configuration
+	if configData[docker.ComposeFieldServices] == nil {
+		configData[docker.ComposeFieldServices] = make(map[string]interface{})
+	}
+
+	services := configData[docker.ComposeFieldServices].(map[string]interface{})
+	services[serviceName] = config
+
+	// Write back to file
+	updatedData, err := yaml.Marshal(configData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	if err := os.WriteFile(configPath, updatedData, core.PermReadWrite); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
+}
+
+// CreateServiceConfigFile creates a service config file for init containers
+func (tl *TestLifecycle) CreateServiceConfigFile(filename string, config map[string]interface{}) error {
+	serviceConfigsDir := filepath.Join(tl.Environment.WorkDir, core.OttoStackDir, core.ServiceConfigsDir)
+
+	// Create service-configs directory if it doesn't exist
+	if err := os.MkdirAll(serviceConfigsDir, core.PermReadWrite); err != nil {
+		return fmt.Errorf("failed to create service-configs directory: %w", err)
+	}
+
+	// Write service config file
+	configPath := filepath.Join(serviceConfigsDir, filename)
+	configData, err := yaml.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal service config: %w", err)
+	}
+
+	if err := os.WriteFile(configPath, configData, core.PermReadWrite); err != nil {
+		return fmt.Errorf("failed to write service config file: %w", err)
+	}
+
+	return nil
 }
 
 func (tl *TestLifecycle) StartServices() error {
 	result := tl.CLI.RunWithBuilder(func() []string {
 		return NewCLIBuilder(core.CommandUp).
-			BoolFlag(core.FlagForceRecreate).
 			BuildArgs()
 	})
 	if result.Error != nil {
@@ -133,10 +211,17 @@ func (tl *TestLifecycle) StopServices() error {
 }
 
 func (tl *TestLifecycle) WaitForServices() error {
-	result := tl.CLI.RunWithBuilder(func() []string {
-		return NewCLIBuilder(core.CommandStatus).BuildArgs()
-	})
-	return result.Error
+	// Quick health check instead of long sleep
+	for i := 0; i < 30; i++ {
+		result := tl.CLI.RunWithBuilder(func() []string {
+			return NewCLIBuilder(core.CommandStatus).BuildArgs()
+		})
+		if result.Error == nil {
+			return nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+	return fmt.Errorf("services failed to become ready within 30 seconds")
 }
 
 func (tl *TestLifecycle) Cleanup() {
@@ -151,6 +236,10 @@ func (tl *TestLifecycle) Cleanup() {
 		}
 	}()
 
+	tl.emergencyCleanup()
+}
+
+func (tl *TestLifecycle) emergencyCleanup() {
 	// Force stop all containers first
 	tl.CLI.RunWithBuilder(func() []string {
 		return NewCLIBuilder(core.CommandDown).
