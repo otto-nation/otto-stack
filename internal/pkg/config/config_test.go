@@ -61,9 +61,9 @@ func TestLoadCommandConfigStruct(t *testing.T) {
 func TestGenerateConfig(t *testing.T) {
 	t.Run("generates valid config YAML", func(t *testing.T) {
 		projectName := "test-project"
-		services := []string{"postgres", "redis"}
+		serviceNames := []string{"postgres", "redis"}
 
-		configBytes, err := GenerateConfig(projectName, services)
+		configBytes, err := GenerateConfig(projectName, serviceNames, nil)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, configBytes)
 
@@ -74,17 +74,17 @@ func TestGenerateConfig(t *testing.T) {
 
 		// Verify content
 		assert.Equal(t, projectName, config.Project.Name)
-		assert.Equal(t, services, config.Stack.Enabled)
+		assert.Equal(t, []string{"postgres", "redis"}, config.Stack.Enabled)
 	})
 
 	t.Run("handles empty project name", func(t *testing.T) {
-		_, err := GenerateConfig("", []string{"postgres"})
+		_, err := GenerateConfig("", []string{"postgres"}, nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "project name cannot be empty")
 	})
 
 	t.Run("handles empty services list", func(t *testing.T) {
-		configBytes, err := GenerateConfig("test", []string{})
+		configBytes, err := GenerateConfig("test", []string{}, nil)
 		assert.NoError(t, err)
 
 		var config Config
@@ -94,7 +94,7 @@ func TestGenerateConfig(t *testing.T) {
 	})
 
 	t.Run("sets project type", func(t *testing.T) {
-		configBytes, err := GenerateConfig("test", []string{"postgres"})
+		configBytes, err := GenerateConfig("test", []string{"postgres"}, nil)
 		require.NoError(t, err)
 
 		var config Config
@@ -112,7 +112,7 @@ func TestConfig_Structure(t *testing.T) {
 				Type: "application",
 			},
 			Stack: StackConfig{
-				Enabled: []string{"postgres"},
+				Enabled: []string{"postgres"}, // Using string literal that matches ServicePostgres constant
 			},
 		}
 

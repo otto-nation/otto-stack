@@ -111,12 +111,7 @@ func LoadCommandConfigStruct() (*CommandConfig, error) {
 }
 
 // GenerateConfig creates a new otto-stack configuration file
-func GenerateConfig(projectName string, services []string) ([]byte, error) {
-	return GenerateConfigWithValidation(projectName, services, nil)
-}
-
-// GenerateConfigWithValidation creates a new otto-stack configuration file with validation options
-func GenerateConfigWithValidation(projectName string, services []string, validationOptions map[string]bool) ([]byte, error) {
+func GenerateConfig(projectName string, serviceNames []string, validationOptions map[string]bool) ([]byte, error) {
 	if projectName == "" {
 		return nil, pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgProjectNameEmpty, nil)
 	}
@@ -127,7 +122,7 @@ func GenerateConfigWithValidation(projectName string, services []string, validat
 			Type: DefaultProjectType,
 		},
 		Stack: StackConfig{
-			Enabled: services,
+			Enabled: serviceNames,
 		},
 	}
 

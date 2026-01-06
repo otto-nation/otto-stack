@@ -13,7 +13,6 @@ type Config struct {
 type ProjectConfig struct {
 	Name      string    `yaml:"name" json:"name" validate:"required"`
 	Type      string    `yaml:"type" json:"type" validate:"required"`
-	Services  []string  `yaml:"services,omitempty" json:"services,omitempty"`
 	CreatedAt time.Time `yaml:"created_at,omitempty" json:"created_at"`
 	UpdatedAt time.Time `yaml:"updated_at,omitempty" json:"updated_at"`
 }

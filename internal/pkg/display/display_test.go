@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +18,7 @@ func TestFormatter_FormatStatus_Table(t *testing.T) {
 
 	services := []ServiceStatus{
 		{
-			Name:      "postgres",
+			Name:      services.ServicePostgres,
 			State:     "running",
 			Health:    "healthy",
 			Ports:     []string{"5432:5432"},
@@ -43,7 +44,7 @@ func TestFormatter_FormatStatus_JSON(t *testing.T) {
 
 	services := []ServiceStatus{
 		{
-			Name:   "postgres",
+			Name:   services.ServicePostgres,
 			State:  "running",
 			Health: "healthy",
 		},
@@ -64,7 +65,7 @@ func TestFormatter_FormatStatus_YAML(t *testing.T) {
 
 	services := []ServiceStatus{
 		{
-			Name:   "postgres",
+			Name:   services.ServicePostgres,
 			State:  "running",
 			Health: "healthy",
 		},
@@ -86,7 +87,7 @@ func TestFormatter_FormatServiceCatalog(t *testing.T) {
 	catalog := ServiceCatalog{
 		Categories: map[string][]ServiceInfo{
 			"database": {
-				{Name: "postgres", Description: "PostgreSQL database"},
+				{Name: services.ServicePostgres, Description: "PostgreSQL database"},
 			},
 		},
 		Total: 1,
@@ -124,10 +125,10 @@ func TestFilterCatalogByCategory(t *testing.T) {
 	catalog := ServiceCatalog{
 		Categories: map[string][]ServiceInfo{
 			"database": {
-				{Name: "postgres", Description: "PostgreSQL"},
+				{Name: services.ServicePostgres, Description: "PostgreSQL"},
 			},
 			"cache": {
-				{Name: "redis", Description: "Redis cache"},
+				{Name: services.ServiceRedis, Description: "Redis cache"},
 			},
 		},
 		Total: 2,
@@ -149,7 +150,7 @@ func TestFormatter_FormatStatus_Compact(t *testing.T) {
 	formatter := New(&buf, output)
 
 	services := []ServiceStatus{
-		{Name: "postgres", State: "running", Health: "healthy"},
+		{Name: services.ServicePostgres, State: "running", Health: "healthy"},
 	}
 
 	err := formatter.FormatStatus(services, Options{Compact: true})

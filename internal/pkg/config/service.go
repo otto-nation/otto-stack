@@ -1,11 +1,10 @@
-package services
+package config
 
 import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
 
@@ -18,8 +17,8 @@ func NewConfigService() ConfigService {
 }
 
 // LoadConfig loads the project configuration
-func (s *configService) LoadConfig() (*config.Config, error) {
-	cfg, err := config.LoadConfig()
+func (s *configService) LoadConfig() (*Config, error) {
+	cfg, err := LoadConfig()
 	if err != nil {
 		return nil, pkgerrors.NewConfigError("", "failed to load configuration", err)
 	}
@@ -27,13 +26,13 @@ func (s *configService) LoadConfig() (*config.Config, error) {
 }
 
 // SaveConfig saves the project configuration
-func (s *configService) SaveConfig(cfg *config.Config) error {
+func (s *configService) SaveConfig(cfg *Config) error {
 	// For now, return not implemented since there's no SaveConfig in the config package
 	return pkgerrors.NewConfigError("", "save configuration not implemented", nil)
 }
 
 // ValidateConfig validates the configuration
-func (s *configService) ValidateConfig(cfg *config.Config) error {
+func (s *configService) ValidateConfig(cfg *Config) error {
 	if cfg == nil {
 		return pkgerrors.NewValidationError("config", "configuration is nil", nil)
 	}
@@ -50,7 +49,7 @@ func (s *configService) ValidateConfig(cfg *config.Config) error {
 }
 
 // GetConfigHash returns a hash of the current configuration
-func (s *configService) GetConfigHash(cfg *config.Config) (string, error) {
+func (s *configService) GetConfigHash(cfg *Config) (string, error) {
 	if cfg == nil {
 		return "", pkgerrors.NewValidationError("config", "configuration is nil", nil)
 	}
