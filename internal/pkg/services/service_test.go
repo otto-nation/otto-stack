@@ -15,25 +15,28 @@ func TestStartRequest_Validation(t *testing.T) {
 		{
 			name: "valid request with postgres and redis",
 			request: StartRequest{
-				Project:  "test-project",
-				Services: []string{ServicePostgres, ServiceRedis},
-				Build:    false,
+				Project: "test-project",
+				ServiceConfigs: []ServiceConfig{
+					{Name: ServicePostgres, Category: CategoryDatabase},
+					{Name: ServiceRedis, Category: CategoryCache},
+				},
+				Build: false,
 			},
 			valid: true,
 		},
 		{
 			name: "empty project name should be invalid",
 			request: StartRequest{
-				Project:  "",
-				Services: []string{ServicePostgres},
+				Project:        "",
+				ServiceConfigs: []ServiceConfig{},
 			},
 			valid: false,
 		},
 		{
 			name: "no services should be allowed",
 			request: StartRequest{
-				Project:  "test-project",
-				Services: []string{},
+				Project:        "test-project",
+				ServiceConfigs: []ServiceConfig{},
 			},
 			valid: true,
 		},

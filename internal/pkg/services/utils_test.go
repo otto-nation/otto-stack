@@ -6,28 +6,36 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestExtractServiceNames(t *testing.T) {
+	t.Run("extracts names from ServiceConfigs", func(t *testing.T) {
+		serviceConfigs := []ServiceConfig{
+			{Name: ServicePostgres},
+			{Name: ServiceRedis},
+			{Name: ServiceMysql},
+		}
+
+		names := ExtractServiceNames(serviceConfigs)
+		expected := []string{ServicePostgres, ServiceRedis, ServiceMysql}
+
+		assert.Equal(t, expected, names)
+	})
+
+	t.Run("returns nil for empty slice", func(t *testing.T) {
+		names := ExtractServiceNames([]ServiceConfig{})
+		assert.Nil(t, names)
+	})
+
+	t.Run("returns nil for nil slice", func(t *testing.T) {
+		names := ExtractServiceNames(nil)
+		assert.Nil(t, names)
+	})
+}
+
 func TestNewServiceUtils(t *testing.T) {
 	t.Run("creates service utils successfully", func(t *testing.T) {
 		utils := NewServiceUtils()
 		assert.NotNil(t, utils)
 		assert.NotNil(t, utils.manager)
-	})
-}
-
-func TestServiceUtils_ResolveServices(t *testing.T) {
-	utils := NewServiceUtils()
-
-	t.Run("resolves services through manager", func(t *testing.T) {
-		resolved, err := utils.ResolveServices([]string{"postgres"})
-		if err == nil {
-			assert.NotEmpty(t, resolved)
-		}
-	})
-
-	t.Run("handles empty input", func(t *testing.T) {
-		resolved, err := utils.ResolveServices([]string{})
-		assert.NoError(t, err)
-		assert.Empty(t, resolved)
 	})
 }
 
@@ -55,10 +63,10 @@ func TestServiceUtils_LoadServiceConfig(t *testing.T) {
 	utils := NewServiceUtils()
 
 	t.Run("loads specific service config", func(t *testing.T) {
-		config, err := utils.LoadServiceConfig("postgres")
+		config, err := utils.LoadServiceConfig(ServicePostgres)
 		if err == nil {
 			assert.NotNil(t, config)
-			assert.Equal(t, "postgres", config.Name)
+			assert.Equal(t, ServicePostgres, config.Name)
 		}
 	})
 

@@ -29,24 +29,27 @@ func NewDefaultCharacteristicsResolver() (*DefaultCharacteristicsResolver, error
 }
 
 // ResolveUpOptions converts characteristics to up options
-func (r *DefaultCharacteristicsResolver) ResolveUpOptions(characteristics []string, base UpOptions) UpOptions {
+func (r *DefaultCharacteristicsResolver) ResolveUpOptions(characteristics []string, serviceConfigs []ServiceConfig, base docker.UpOptions) docker.UpOptions {
+	base.Services = ExtractServiceNames(serviceConfigs)
 	flags := r.resolver.ResolveComposeUpFlags(characteristics)
 	return r.applyFlagsToUpOptions(flags, base)
 }
 
 // ResolveDownOptions converts characteristics to down options
-func (r *DefaultCharacteristicsResolver) ResolveDownOptions(characteristics []string, base DownOptions) DownOptions {
+func (r *DefaultCharacteristicsResolver) ResolveDownOptions(characteristics []string, serviceConfigs []ServiceConfig, base docker.DownOptions) docker.DownOptions {
+	base.Services = ExtractServiceNames(serviceConfigs)
 	flags := r.resolver.ResolveComposeDownFlags(characteristics)
 	return r.applyFlagsToDownOptions(flags, base)
 }
 
 // ResolveStopOptions converts characteristics to stop options
-func (r *DefaultCharacteristicsResolver) ResolveStopOptions(characteristics []string, base StopOptions) StopOptions {
+func (r *DefaultCharacteristicsResolver) ResolveStopOptions(characteristics []string, serviceConfigs []ServiceConfig, base docker.StopOptions) docker.StopOptions {
+	base.Services = ExtractServiceNames(serviceConfigs)
 	flags := r.resolver.ResolveComposeDownFlags(characteristics) // Use down flags for stop
 	return r.applyFlagsToStopOptions(flags, base)
 }
 
-func (r *DefaultCharacteristicsResolver) applyFlagsToUpOptions(flags []string, base UpOptions) UpOptions {
+func (r *DefaultCharacteristicsResolver) applyFlagsToUpOptions(flags []string, base docker.UpOptions) docker.UpOptions {
 	options := base
 
 	for _, flag := range flags {
@@ -59,7 +62,7 @@ func (r *DefaultCharacteristicsResolver) applyFlagsToUpOptions(flags []string, b
 			options.ForceRecreate = true
 		case strings.HasPrefix(flag, docker.FlagPrefix+docker.FlagTimeout+"="):
 			if timeout, err := r.parseTimeout(flag); err == nil {
-				options.Timeout = timeout
+				options.Timeout = &timeout
 			}
 		}
 	}
@@ -67,7 +70,7 @@ func (r *DefaultCharacteristicsResolver) applyFlagsToUpOptions(flags []string, b
 	return options
 }
 
-func (r *DefaultCharacteristicsResolver) applyFlagsToDownOptions(flags []string, base DownOptions) DownOptions {
+func (r *DefaultCharacteristicsResolver) applyFlagsToDownOptions(flags []string, base docker.DownOptions) docker.DownOptions {
 	options := base
 
 	for _, flag := range flags {
@@ -78,7 +81,7 @@ func (r *DefaultCharacteristicsResolver) applyFlagsToDownOptions(flags []string,
 			options.RemoveVolumes = true
 		case strings.HasPrefix(flag, docker.FlagPrefix+docker.FlagTimeout+"="):
 			if timeout, err := r.parseTimeout(flag); err == nil {
-				options.Timeout = timeout
+				options.Timeout = &timeout
 			}
 		}
 	}
@@ -86,13 +89,13 @@ func (r *DefaultCharacteristicsResolver) applyFlagsToDownOptions(flags []string,
 	return options
 }
 
-func (r *DefaultCharacteristicsResolver) applyFlagsToStopOptions(flags []string, base StopOptions) StopOptions {
+func (r *DefaultCharacteristicsResolver) applyFlagsToStopOptions(flags []string, base docker.StopOptions) docker.StopOptions {
 	options := base
 
 	for _, flag := range flags {
 		if strings.HasPrefix(flag, docker.FlagPrefix+docker.FlagTimeout+"=") {
 			if timeout, err := r.parseTimeout(flag); err == nil {
-				options.Timeout = timeout
+				options.Timeout = &timeout
 			}
 		}
 	}

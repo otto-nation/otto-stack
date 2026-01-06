@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/compose/v5/pkg/api"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
 
 // Service provides high-level stack operations with automatic characteristics resolution
@@ -18,10 +19,80 @@ type Service struct {
 	DockerClient    *docker.Client // Exposed for direct access
 }
 
+// ResolveUpServices resolves service names and returns their configs with dependencies
+func ResolveUpServices(args []string, cfg *config.Config) ([]ServiceConfig, error) {
+	serviceNames := args
+	if len(serviceNames) == 0 {
+		serviceNames = cfg.Stack.Enabled
+	}
+
+	// Load the service manager directly
+	manager, err := New()
+	if err != nil {
+		return nil, err
+	}
+
+	// Validate services exist
+	if err := manager.ValidateServices(serviceNames); err != nil {
+		return nil, pkgerrors.NewServiceError("stack", "resolve_services", err)
+	}
+
+	// Resolve all dependencies recursively
+	resolvedNames := make(map[string]bool)
+	var allServiceNames []string
+
+	var resolveDependencies func(string) error
+	resolveDependencies = func(serviceName string) error {
+		if resolvedNames[serviceName] {
+			return nil
+		}
+
+		service, err := manager.GetService(serviceName)
+		if err != nil {
+			return err
+		}
+
+		// First resolve dependencies
+		for _, dep := range service.Service.Dependencies.Required {
+			if err := resolveDependencies(dep); err != nil {
+				// Skip missing dependencies (they might be virtual or init containers)
+				continue
+			}
+		}
+
+		// Add this service to output
+		if !resolvedNames[serviceName] {
+			resolvedNames[serviceName] = true
+			allServiceNames = append(allServiceNames, serviceName)
+		}
+
+		return nil
+	}
+
+	// Resolve dependencies for all requested services
+	for _, serviceName := range serviceNames {
+		if err := resolveDependencies(serviceName); err != nil {
+			return nil, err
+		}
+	}
+
+	// Load ServiceConfigs for resolved services
+	var serviceConfigs []ServiceConfig
+	for _, serviceName := range allServiceNames {
+		service, err := manager.GetService(serviceName)
+		if err != nil {
+			continue // Skip services that can't be loaded
+		}
+		serviceConfigs = append(serviceConfigs, *service)
+	}
+
+	return serviceConfigs, nil
+}
+
 // StartRequest defines parameters for starting a stack
 type StartRequest struct {
 	Project         string
-	Services        []string
+	ServiceConfigs  []ServiceConfig
 	Build           bool
 	ForceRecreate   bool
 	Characteristics []string
@@ -30,7 +101,7 @@ type StartRequest struct {
 // StopRequest defines parameters for stopping a stack
 type StopRequest struct {
 	Project         string
-	Services        []string
+	ServiceConfigs  []ServiceConfig
 	Remove          bool // true = down, false = stop
 	RemoveVolumes   bool
 	Timeout         time.Duration
@@ -48,11 +119,11 @@ type ExecRequest struct {
 	TTY         bool
 }
 type LogRequest struct {
-	Project    string
-	Services   []string
-	Follow     bool
-	Timestamps bool
-	Tail       string
+	Project        string
+	ServiceConfigs []ServiceConfig
+	Follow         bool
+	Timestamps     bool
+	Tail           string
 }
 
 // NewService creates a new stack service
@@ -78,21 +149,16 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 		return fmt.Errorf("failed to load project %s: %w", req.Project, err)
 	}
 
-	// Filter services if specified
-	if len(req.Services) > 0 {
-		project = s.filterServices(project, req.Services)
-	}
-
 	// Resolve characteristics to options and convert to SDK format
-	options := s.characteristics.ResolveUpOptions(req.Characteristics, UpOptions{
+	options := s.characteristics.ResolveUpOptions(req.Characteristics, req.ServiceConfigs, docker.UpOptions{
 		Build:         req.Build,
-		ForceRecreate: true, // Force recreate for diagnosis
+		ForceRecreate: req.ForceRecreate,
 	})
 
 	err = s.compose.Up(ctx, project, options.ToSDK())
 	if err != nil {
-		if len(req.Services) > 0 {
-			return fmt.Errorf("failed to start services %v in project %s: %w", req.Services, req.Project, err)
+		if len(req.ServiceConfigs) > 0 {
+			return fmt.Errorf("failed to start services in project %s: %w", req.Project, err)
 		}
 		return fmt.Errorf("failed to start project %s: %w", req.Project, err)
 	}
@@ -107,16 +173,11 @@ func (s *Service) Stop(ctx context.Context, req StopRequest) error {
 		return fmt.Errorf("failed to load project %s: %w", req.Project, err)
 	}
 
-	// Filter services if specified
-	if len(req.Services) > 0 {
-		project = s.filterServices(project, req.Services)
-	}
-
 	if req.Remove {
 		// Use down operation
-		options := s.characteristics.ResolveDownOptions(req.Characteristics, DownOptions{
+		options := s.characteristics.ResolveDownOptions(req.Characteristics, req.ServiceConfigs, docker.DownOptions{
 			RemoveVolumes: req.RemoveVolumes,
-			Timeout:       req.Timeout,
+			Timeout:       &req.Timeout,
 		})
 		err = s.compose.Down(ctx, project.Name, options.ToSDK())
 		if err != nil {
@@ -126,14 +187,14 @@ func (s *Service) Stop(ctx context.Context, req StopRequest) error {
 	}
 
 	// Use stop operation
-	options := s.characteristics.ResolveStopOptions(req.Characteristics, StopOptions{
-		Services: req.Services,
-		Timeout:  req.Timeout,
+	stopOptions := s.characteristics.ResolveStopOptions(req.Characteristics, req.ServiceConfigs, docker.StopOptions{
+		Timeout: &req.Timeout,
 	})
-	err = s.compose.Stop(ctx, project.Name, options.ToSDK())
+	err = s.compose.Stop(ctx, project.Name, stopOptions.ToSDK())
 	if err != nil {
-		if len(req.Services) > 0 {
-			return fmt.Errorf("failed to stop services %v in project %s: %w", req.Services, req.Project, err)
+		serviceNames := ExtractServiceNames(req.ServiceConfigs)
+		if len(serviceNames) > 0 {
+			return fmt.Errorf("failed to stop services %v in project %s: %w", serviceNames, req.Project, err)
 		}
 		return fmt.Errorf("failed to stop project %s: %w", req.Project, err)
 	}
@@ -142,8 +203,10 @@ func (s *Service) Stop(ctx context.Context, req StopRequest) error {
 
 // Logs retrieves logs from services
 func (s *Service) Logs(ctx context.Context, req LogRequest) error {
-	options := LogOptions{
-		Services:   req.Services,
+	serviceNames := ExtractServiceNames(req.ServiceConfigs)
+
+	options := docker.LogOptions{
+		Services:   serviceNames,
 		Follow:     req.Follow,
 		Timestamps: req.Timestamps,
 		Tail:       req.Tail,
@@ -151,8 +214,8 @@ func (s *Service) Logs(ctx context.Context, req LogRequest) error {
 	consumer := &docker.SimpleLogConsumer{}
 	err := s.compose.Logs(ctx, req.Project, consumer, options.ToSDK())
 	if err != nil {
-		if len(req.Services) > 0 {
-			return fmt.Errorf("failed to get logs for services %v in project %s: %w", req.Services, req.Project, err)
+		if len(serviceNames) > 0 {
+			return fmt.Errorf("failed to get logs for services %v in project %s: %w", serviceNames, req.Project, err)
 		}
 		return fmt.Errorf("failed to get logs for project %s: %w", req.Project, err)
 	}
@@ -184,15 +247,4 @@ func (s *Service) Exec(ctx context.Context, req ExecRequest) error {
 		return fmt.Errorf("failed to exec command %v in service %s (project %s): %w", req.Command, req.Service, req.Project, err)
 	}
 	return nil
-}
-
-func (s *Service) filterServices(project *types.Project, services []string) *types.Project {
-	filtered := make(types.Services)
-	for _, service := range services {
-		if serviceConfig, exists := project.Services[service]; exists {
-			filtered[service] = serviceConfig
-		}
-	}
-	project.Services = filtered
-	return project
 }

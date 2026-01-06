@@ -22,10 +22,10 @@ func TestManager_GetService(t *testing.T) {
 
 	t.Run("returns service when exists", func(t *testing.T) {
 		// Test with a service that should exist (postgres)
-		service, err := manager.GetService("postgres")
+		service, err := manager.GetService(ServicePostgres)
 		if err == nil {
 			assert.NotNil(t, service)
-			assert.Equal(t, "postgres", service.Name)
+			assert.Equal(t, ServicePostgres, service.Name)
 		}
 	})
 
@@ -52,7 +52,7 @@ func TestManager_GetAllServices(t *testing.T) {
 		}
 
 		// Should contain at least some core services
-		expectedServices := []string{"postgres", "redis", "mysql"}
+		expectedServices := []string{ServicePostgres, ServiceRedis, ServiceMysql}
 		for _, expected := range expectedServices {
 			found := false
 			for _, name := range serviceNames {
@@ -65,37 +65,6 @@ func TestManager_GetAllServices(t *testing.T) {
 				t.Logf("Expected service %s not found in: %v", expected, serviceNames)
 			}
 		}
-	})
-}
-
-func TestManager_ResolveServices(t *testing.T) {
-	manager, err := New()
-	require.NoError(t, err)
-
-	t.Run("resolves single service", func(t *testing.T) {
-		resolved, err := manager.ResolveServices([]string{"postgres"})
-		if err == nil {
-			assert.Contains(t, resolved, "postgres")
-		}
-	})
-
-	t.Run("resolves multiple services", func(t *testing.T) {
-		resolved, err := manager.ResolveServices([]string{"postgres", "redis"})
-		if err == nil {
-			assert.GreaterOrEqual(t, len(resolved), 2)
-		}
-	})
-
-	t.Run("handles empty input", func(t *testing.T) {
-		resolved, err := manager.ResolveServices([]string{})
-		assert.NoError(t, err)
-		assert.Empty(t, resolved)
-	})
-
-	t.Run("handles nonexistent service", func(t *testing.T) {
-		resolved, err := manager.ResolveServices([]string{"nonexistent"})
-		assert.NoError(t, err)
-		assert.Empty(t, resolved) // Nonexistent services are filtered out
 	})
 }
 

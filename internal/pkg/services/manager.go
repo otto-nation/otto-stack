@@ -2,7 +2,7 @@ package services
 
 import (
 	"fmt"
-	"strings"
+	"maps"
 
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -45,8 +45,12 @@ func (m *Manager) GetAllServices() map[string]ServiceConfig {
 // ValidateServices validates a list of service names
 func (m *Manager) ValidateServices(serviceNames []string) error {
 	for _, name := range serviceNames {
-		if _, exists := m.services[name]; !exists {
+		service, exists := m.services[name]
+		if !exists {
 			return pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "unknown service: %s", name)
+		}
+		if service.Hidden {
+			return pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "service not accessible: %s", name)
 		}
 	}
 	return nil
@@ -174,6 +178,11 @@ func (m *Manager) parseService(data []byte, serviceName, category string) error 
 		actualServiceName = serviceName
 	}
 
+	// Combine environment variables into AllEnvironment
+	service.AllEnvironment = make(map[string]string)
+	maps.Copy(service.AllEnvironment, service.Environment)
+	maps.Copy(service.AllEnvironment, service.Container.Environment)
+
 	m.services[actualServiceName] = service
 	return nil
 }
@@ -202,50 +211,4 @@ func (m *Manager) ExecuteCustomOperation(serviceName, operationName string) ([]s
 	}
 
 	return cmd, nil
-}
-
-// ResolveServices applies composite expansion and dependency resolution
-func (m *Manager) ResolveServices(serviceNames []string) ([]string, error) {
-	resolved := make(map[string]bool)
-	var result []string
-
-	for _, serviceName := range serviceNames {
-		// Apply service resolution logic (localstack-* -> localstack)
-		resolvedName := serviceName
-		if strings.HasPrefix(serviceName, "localstack-") {
-			resolvedName = "localstack"
-		}
-
-		m.resolveDependenciesRecursive(resolvedName, resolved, &result)
-	}
-
-	return result, nil
-}
-
-// resolveDependenciesRecursive recursively resolves dependencies for a service
-func (m *Manager) resolveDependenciesRecursive(serviceName string, resolved map[string]bool, result *[]string) {
-	if resolved[serviceName] {
-		return
-	}
-
-	serviceDef, err := m.GetService(serviceName)
-	if err != nil {
-		return
-	}
-
-	// First resolve all dependencies
-	if serviceDef.Service.Dependencies.Required != nil {
-		for _, dep := range serviceDef.Service.Dependencies.Required {
-			m.resolveDependenciesRecursive(dep, resolved, result)
-		}
-	}
-
-	// Add this service to result if it has an image and hasn't been added yet
-	if serviceDef.Container.Image != "" && !resolved[serviceName] {
-		resolved[serviceName] = true
-		*result = append(*result, serviceName)
-	}
-
-	// Mark as resolved even if no image (composite services)
-	resolved[serviceName] = true
 }

@@ -2,7 +2,20 @@ package services
 
 import (
 	"github.com/otto-nation/otto-stack/internal/core"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
+
+// ExtractServiceNames extracts service names from ServiceConfigs
+func ExtractServiceNames(serviceConfigs []ServiceConfig) []string {
+	if len(serviceConfigs) == 0 {
+		return nil
+	}
+	serviceNames := make([]string, len(serviceConfigs))
+	for i, config := range serviceConfigs {
+		serviceNames[i] = config.Name
+	}
+	return serviceNames
+}
 
 // ServiceUtils provides service operations
 type ServiceUtils struct {
@@ -13,11 +26,6 @@ type ServiceUtils struct {
 func NewServiceUtils() *ServiceUtils {
 	manager, _ := New()
 	return &ServiceUtils{manager: manager}
-}
-
-// ResolveServices applies composite expansion and dependency resolution
-func (u *ServiceUtils) ResolveServices(serviceNames []string) ([]string, error) {
-	return u.manager.ResolveServices(serviceNames)
 }
 
 // LoadServicesByCategory loads services organized by category
@@ -38,7 +46,14 @@ func (u *ServiceUtils) LoadServicesByCategory() (map[string][]ServiceConfig, err
 
 // LoadServiceConfig loads a specific service configuration
 func (u *ServiceUtils) LoadServiceConfig(serviceName string) (*ServiceConfig, error) {
-	return u.manager.GetService(serviceName)
+	service, err := u.manager.GetService(serviceName)
+	if err != nil {
+		return nil, err
+	}
+	if service.Hidden {
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "service not accessible: %s", serviceName)
+	}
+	return service, nil
 }
 
 // GetServicesByCategory loads services organized by category (alias)
