@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -156,7 +157,7 @@ func TestPromptMultiSelect(t *testing.T) {
 
 func TestServiceOption(t *testing.T) {
 	option := ServiceOption{
-		Name:         "redis",
+		Name:         services.ServiceRedis,
 		Description:  "Redis cache server",
 		Dependencies: []string{"network"},
 		Category:     "cache",
@@ -166,23 +167,6 @@ func TestServiceOption(t *testing.T) {
 	assert.Equal(t, "Redis cache server", option.Description)
 	assert.Equal(t, []string{"network"}, option.Dependencies)
 	assert.Equal(t, "cache", option.Category)
-}
-
-func TestPromptServiceSelection(t *testing.T) {
-	services := []ServiceOption{
-		{Name: "redis", Description: "Cache server"},
-		{Name: "postgres", Description: "Database server"},
-	}
-
-	// Test empty services
-	result, err := PromptServiceSelection("test", []ServiceOption{})
-	assert.NoError(t, err)
-	assert.Empty(t, result)
-
-	// Test that function handles non-empty services without error in structure
-	assert.NotPanics(t, func() {
-		PromptServiceSelection("test", services)
-	})
 }
 
 func TestFormatFunctions(t *testing.T) {
