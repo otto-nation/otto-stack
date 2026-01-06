@@ -18,14 +18,6 @@ const (
 	ServiceLocalhost = "localhost"
 )
 
-// Port constants
-const (
-	PortPostgreSQL = "5432"
-	PortLocalStack = "4566"
-	PortRedis      = "6379"
-	PortKafka      = "9092"
-)
-
 // AWS constants
 const (
 	DefaultAWSRegion = "us-east-1"
