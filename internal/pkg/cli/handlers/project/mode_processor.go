@@ -2,12 +2,12 @@ package project
 
 import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 )
 
 // ModeProcessor handles command processing for different modes (interactive/non-interactive)
 type ModeProcessor interface {
-	Process(flags any, base *base.BaseCommand) (projectName string, originalServiceNames []string, serviceConfigs []svc.ServiceConfig, validation map[string]bool, advanced map[string]bool, error error)
+	Process(flags any, base *base.BaseCommand) (clicontext.Context, error)
 }
 
 // NewModeProcessor creates the appropriate processor based on mode

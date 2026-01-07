@@ -11,6 +11,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/env"
@@ -53,18 +54,18 @@ func NewProjectManager() *ProjectManager {
 }
 
 // CreateProjectStructure creates the complete project structure
-func (pm *ProjectManager) CreateProjectStructure(projectName string, originalServiceNames []string, serviceConfigs []svc.ServiceConfig, validation, advanced map[string]bool, base *base.BaseCommand) error {
+func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, base *base.BaseCommand) error {
 	if err := pm.createDirectoryStructure(); err != nil {
 		return pkgerrors.NewServiceError(ComponentProject, ActionCreateDirectories, err)
 	}
 
-	if err := pm.createConfigFile(projectName, originalServiceNames, validation, base); err != nil {
+	if err := pm.createConfigFile(projectCtx.Project.Name, projectCtx.Services.Names, projectCtx.Options.Validation, base); err != nil {
 		return pkgerrors.NewConfigError("", ActionCreateConfigFile, err)
 	}
 
-	pm.generateServiceConfigs(serviceConfigs, base)
+	pm.generateServiceConfigs(projectCtx.Services.Configs, base)
 
-	if err := pm.generateInitialComposeFiles(serviceConfigs, projectName, validation, advanced, base); err != nil {
+	if err := pm.generateInitialComposeFiles(projectCtx.Services.Configs, projectCtx.Project.Name, projectCtx.Options.Validation, projectCtx.Options.Advanced, base); err != nil {
 		return pkgerrors.NewServiceError(ComponentCompose, ActionGenerateFiles, err)
 	}
 
@@ -72,7 +73,7 @@ func (pm *ProjectManager) CreateProjectStructure(projectName string, originalSer
 		base.Output.Warning("Failed to create .gitignore entries: %v", err)
 	}
 
-	if err := pm.createReadme(projectName, serviceConfigs, base); err != nil {
+	if err := pm.createReadme(projectCtx.Project.Name, projectCtx.Services.Configs, base); err != nil {
 		base.Output.Warning("Failed to create README: %v", err)
 	}
 

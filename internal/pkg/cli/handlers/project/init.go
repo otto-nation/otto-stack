@@ -6,13 +6,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/spf13/cobra"
+
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
-	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/spf13/cobra"
 )
 
 // InitHandler handles the init command
@@ -74,23 +74,17 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return fmt.Errorf("project already initialized. Use --%s to overwrite", core.FlagForce)
 	}
 
-	var projectName string
-	var serviceConfigs []svc.ServiceConfig
-	var validation map[string]bool
-	var advanced map[string]bool
-	var err error
-
 	processor := NewModeProcessor(ciFlags.NonInteractive, h)
-	projectName, originalServiceNames, serviceConfigs, validation, advanced, err := processor.Process(initFlags, base)
+	projectCtx, err := processor.Process(initFlags, base)
 	if err != nil {
 		return err
 	}
 
-	if err := h.projectManager.CreateProjectStructure(projectName, originalServiceNames, serviceConfigs, validation, advanced, base); err != nil {
+	if err := h.projectManager.CreateProjectStructure(projectCtx, base); err != nil {
 		return err
 	}
 
-	h.displaySuccessMessage(projectName, base)
+	h.displaySuccessMessage(projectCtx.Project.Name, base)
 	return nil
 }
 

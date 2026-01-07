@@ -5,6 +5,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
 )
@@ -15,15 +16,15 @@ type NonInteractiveProcessor struct {
 }
 
 // Process validates and processes flags for non-interactive mode
-func (p *NonInteractiveProcessor) Process(flags any, base *base.BaseCommand) (string, []string, []svc.ServiceConfig, map[string]bool, map[string]bool, error) {
+func (p *NonInteractiveProcessor) Process(flags any, base *base.BaseCommand) (clicontext.Context, error) {
 	initFlags := flags.(*core.InitFlags)
 
 	if initFlags.Services == "" {
-		return "", nil, nil, nil, nil, pkgerrors.NewValidationError("services", "services flag is required in non-interactive mode", nil)
+		return clicontext.Context{}, pkgerrors.NewValidationError("services", "services flag is required in non-interactive mode", nil)
 	}
 
 	if initFlags.ProjectName == "" {
-		return "", nil, nil, nil, nil, pkgerrors.NewValidationError("project-name", "project name is required in non-interactive mode", nil)
+		return clicontext.Context{}, pkgerrors.NewValidationError("project-name", "project name is required in non-interactive mode", nil)
 	}
 
 	serviceNames := parseServices(initFlags.Services)
@@ -31,16 +32,22 @@ func (p *NonInteractiveProcessor) Process(flags any, base *base.BaseCommand) (st
 	// Convert service names to ServiceConfigs at entry point
 	serviceConfigs, err := svc.ResolveUpServices(serviceNames, nil)
 	if err != nil {
-		return "", nil, nil, nil, nil, err
+		return clicontext.Context{}, err
 	}
 
 	if err := p.handler.validateServiceConfigs(serviceConfigs); err != nil {
-		return "", nil, nil, nil, nil, err
+		return clicontext.Context{}, err
 	}
-	validation := getDefaultValidation()
-	advanced := map[string]bool{}
 
-	return initFlags.ProjectName, serviceNames, serviceConfigs, validation, advanced, nil
+	ctx := clicontext.NewBuilder().
+		WithProject(initFlags.ProjectName, "").
+		WithServices(serviceNames, serviceConfigs).
+		WithValidation(getDefaultValidation()).
+		WithAdvanced(map[string]bool{}).
+		WithRuntime(initFlags.Force, false, false).
+		Build()
+
+	return ctx, nil
 }
 
 func parseServices(servicesStr string) []string {
