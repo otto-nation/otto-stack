@@ -11,6 +11,8 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 )
@@ -69,18 +71,21 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	// Set force flag in handler for validation functions
 	h.forceOverwrite = initFlags.Force
 
-	// Check if project is already initialized
-	if _, err := os.Stat(core.OttoStackDir); err == nil && !initFlags.Force {
-		return fmt.Errorf("project already initialized. Use --%s to overwrite", core.FlagForce)
-	}
-
 	processor := NewModeProcessor(ciFlags.NonInteractive, h)
 	projectCtx, err := processor.Process(initFlags, base)
 	if err != nil {
 		return err
 	}
 
-	if err := h.projectManager.CreateProjectStructure(projectCtx, base); err != nil {
+	// Create command and middleware chain
+	initCommand := NewInitCommand(h.projectManager)
+	validationMiddleware := middleware.NewValidationMiddleware()
+	loggingMiddleware := middleware.NewLoggingMiddleware()
+
+	handler := command.NewHandler(initCommand, loggingMiddleware, validationMiddleware)
+
+	// Execute through command pattern
+	if err := handler.Execute(ctx, projectCtx, base); err != nil {
 		return err
 	}
 
