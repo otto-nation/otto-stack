@@ -16,7 +16,7 @@ func TestLabelGeneration(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test that labels are properly generated in compose structure
-	compose, err := gen.buildComposeStructure([]string{})
+	compose, err := gen.buildComposeStructure([]services.ServiceConfig{})
 	require.NoError(t, err)
 
 	// Check network labels exist

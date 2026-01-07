@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"maps"
 	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	dockerConstants "github.com/otto-nation/otto-stack/internal/core/docker"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/filesystem"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"gopkg.in/yaml.v3"
 )
@@ -30,13 +30,13 @@ func NewGenerator(projectName string, servicesPath string, manager *services.Man
 	}, nil
 }
 
-// buildComposeStructure creates the compose structure
-func (g *Generator) buildComposeStructure(serviceNames []string) (map[string]any, error) {
+// buildComposeStructure creates the compose structure from ServiceConfigs
+func (g *Generator) buildComposeStructure(serviceConfigs []services.ServiceConfig) (map[string]any, error) {
 	if g.projectName == "" {
 		return nil, pkgerrors.NewValidationError("input", "project name cannot be empty", nil)
 	}
 
-	services, err := g.buildServices(serviceNames)
+	services, err := g.buildServicesFromConfigs(serviceConfigs)
 	if err != nil {
 		return nil, err
 	}
@@ -52,18 +52,19 @@ func (g *Generator) buildComposeStructure(serviceNames []string) (map[string]any
 	}, nil
 }
 
-// buildServices creates the services section
-func (g *Generator) buildServices(serviceNames []string) (map[string]any, error) {
-	return g.buildServiceConfigurations(serviceNames)
-}
-
-// buildServiceConfigurations builds the actual service configurations
-func (g *Generator) buildServiceConfigurations(serviceNames []string) (map[string]any, error) {
+// buildServicesFromConfigs creates the services section from ServiceConfigs
+func (g *Generator) buildServicesFromConfigs(serviceConfigs []services.ServiceConfig) (map[string]any, error) {
 	serviceList := make(map[string]any)
 	processedServices := make(map[string]bool)
 
-	for _, serviceName := range serviceNames {
-		if err := g.processServiceAndDependencies(serviceName, serviceList, processedServices); err != nil {
+	// Create a map for quick lookup of ServiceConfigs by name
+	configMap := make(map[string]*services.ServiceConfig)
+	for i := range serviceConfigs {
+		configMap[serviceConfigs[i].Name] = &serviceConfigs[i]
+	}
+
+	for _, config := range serviceConfigs {
+		if err := g.processServiceConfigAndDependencies(&config, configMap, serviceList, processedServices); err != nil {
 			return nil, err
 		}
 	}
@@ -71,36 +72,31 @@ func (g *Generator) buildServiceConfigurations(serviceNames []string) (map[strin
 	return serviceList, nil
 }
 
-// processServiceAndDependencies processes a service and its dependencies
-func (g *Generator) processServiceAndDependencies(serviceName string, serviceList map[string]any, processed map[string]bool) error {
-	if processed[serviceName] {
+// processServiceConfigAndDependencies processes a service config and its dependencies
+func (g *Generator) processServiceConfigAndDependencies(config *services.ServiceConfig, configMap map[string]*services.ServiceConfig, serviceList map[string]any, processed map[string]bool) error {
+	if processed[config.Name] {
 		return nil
 	}
-	processed[serviceName] = true
+	processed[config.Name] = true
 
-	serviceDef, err := g.manager.GetService(serviceName)
-	if err != nil {
-		return pkgerrors.NewValidationError("service", fmt.Sprintf("unknown service: %s", serviceName), err)
-	}
-
-	// Process dependencies first (skip missing dependencies in test environments)
-	for _, dep := range serviceDef.Service.Dependencies.Required {
-		if _, depErr := g.manager.GetService(dep); depErr == nil {
-			if err := g.processServiceAndDependencies(dep, serviceList, processed); err != nil {
+	// Process dependencies first (only if they exist in our configMap)
+	for _, dep := range config.Service.Dependencies.Required {
+		if depConfig, exists := configMap[dep]; exists {
+			if err := g.processServiceConfigAndDependencies(depConfig, configMap, serviceList, processed); err != nil {
 				return err
 			}
 		}
 	}
 
 	// Skip configuration services (they don't generate containers)
-	if serviceDef.ServiceType == services.ServiceTypeConfiguration {
+	if config.ServiceType == services.ServiceTypeConfiguration {
 		return nil
 	}
 
-	// Build the service configuration
-	serviceConfig := g.buildService(serviceDef)
+	// Build the service configuration using existing logic
+	serviceConfig := g.buildService(config)
 	if serviceConfig != nil {
-		serviceList[serviceName] = serviceConfig
+		serviceList[config.Name] = serviceConfig
 	}
 
 	return nil
@@ -271,8 +267,7 @@ func (g *Generator) buildOttoLabels(serviceName string) map[string]string {
 
 // GenerateFromServiceConfigs creates a docker-compose file from ServiceConfigs
 func (g *Generator) GenerateFromServiceConfigs(serviceConfigs []services.ServiceConfig, projectName string) error {
-	serviceNames := services.ExtractServiceNames(serviceConfigs)
-	composeData, err := g.buildComposeStructure(serviceNames)
+	composeData, err := g.buildComposeStructure(serviceConfigs)
 	if err != nil {
 		return err
 	}
@@ -283,9 +278,14 @@ func (g *Generator) GenerateFromServiceConfigs(serviceConfigs []services.Service
 	}
 
 	// Ensure the directory exists
-	if err := os.MkdirAll(filepath.Dir(dockerConstants.DockerComposeFilePath), core.PermReadWriteExec); err != nil {
+	if err := filesystem.EnsureDir(core.OttoStackDir); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
 
-	return os.WriteFile(dockerConstants.DockerComposeFilePath, composeContent, core.PermReadWrite)
+	// Write the compose file
+	if err := filesystem.WriteFile(dockerConstants.DockerComposeFilePath, composeContent, core.PermReadWrite); err != nil {
+		return fmt.Errorf("failed to write compose file: %w", err)
+	}
+
+	return nil
 }
