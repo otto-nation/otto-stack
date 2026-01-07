@@ -30,15 +30,6 @@ func NewGenerator(projectName string, servicesPath string, manager *services.Man
 	}, nil
 }
 
-// GenerateYAML creates a docker-compose YAML for the specified services
-func (g *Generator) GenerateYAML(serviceNames []string) ([]byte, error) {
-	compose, err := g.buildComposeStructure(serviceNames)
-	if err != nil {
-		return nil, err
-	}
-	return yaml.Marshal(compose)
-}
-
 // buildComposeStructure creates the compose structure
 func (g *Generator) buildComposeStructure(serviceNames []string) (map[string]any, error) {
 	if g.projectName == "" {
@@ -280,7 +271,11 @@ func (g *Generator) buildOttoLabels(serviceName string) map[string]string {
 
 // GenerateFromServiceConfigs creates a docker-compose file from ServiceConfigs
 func (g *Generator) GenerateFromServiceConfigs(serviceConfigs []services.ServiceConfig, projectName string) error {
-	composeData := g.buildComposeFromServiceConfigs(serviceConfigs, projectName)
+	serviceNames := services.ExtractServiceNames(serviceConfigs)
+	composeData, err := g.buildComposeStructure(serviceNames)
+	if err != nil {
+		return err
+	}
 
 	composeContent, err := yaml.Marshal(composeData)
 	if err != nil {
@@ -293,28 +288,4 @@ func (g *Generator) GenerateFromServiceConfigs(serviceConfigs []services.Service
 	}
 
 	return os.WriteFile(dockerConstants.DockerComposeFilePath, composeContent, core.PermReadWrite)
-}
-
-// buildComposeFromServiceConfigs creates compose structure from ServiceConfigs
-func (g *Generator) buildComposeFromServiceConfigs(serviceConfigs []services.ServiceConfig, projectName string) map[string]any {
-	composeServices := make(map[string]any)
-
-	// Add main services and their init containers
-	for _, config := range serviceConfigs {
-		// Add main service if it's a container service
-		if config.ServiceType != services.ServiceTypeConfigurationType && config.Container.Image != "" {
-			composeServices[config.Name] = g.buildService(&config)
-		}
-
-	}
-
-	return map[string]any{
-		dockerConstants.ComposeFieldServices: composeServices,
-		dockerConstants.ComposeFieldNetworks: map[string]any{
-			dockerConstants.DefaultNetworkName: map[string]any{
-				dockerConstants.ComposeFieldName:   projectName + dockerConstants.NetworkNameSuffix,
-				dockerConstants.ComposeFieldLabels: g.buildOttoLabels("network"),
-			},
-		},
-	}
 }

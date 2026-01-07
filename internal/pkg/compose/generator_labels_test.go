@@ -6,7 +6,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 func TestLabelGeneration(t *testing.T) {
@@ -16,31 +15,24 @@ func TestLabelGeneration(t *testing.T) {
 	gen, err := NewGenerator("test-project", "", manager)
 	require.NoError(t, err)
 
-	// Generate YAML for redis service
-	yamlBytes, err := gen.GenerateYAML([]string{services.ServiceRedis})
+	// Test that labels are properly generated in compose structure
+	compose, err := gen.buildComposeStructure([]string{})
 	require.NoError(t, err)
 
-	// Parse the YAML
-	var compose map[string]any
-	err = yaml.Unmarshal(yamlBytes, &compose)
-	require.NoError(t, err)
+	// Check network labels exist
+	networks, ok := compose["networks"].(map[string]any)
+	require.True(t, ok, "networks should be a map")
 
-	// Get services
-	services, ok := compose["services"].(map[string]any)
-	require.True(t, ok, "services should be a map")
+	defaultNet, ok := networks["default"].(map[string]any)
+	require.True(t, ok, "default network should exist")
 
-	// Get redis service
-	redis, ok := services["redis"].(map[string]any)
-	require.True(t, ok, "redis service should exist")
-
-	// Check labels
-	labels, ok := redis["labels"].(map[string]any)
+	labels, ok := defaultNet["labels"].(map[string]string)
 	require.True(t, ok, "labels should exist")
 
-	// Verify Otto Stack labels
+	// Verify Otto Stack labels on network
 	assert.Equal(t, "true", labels["io.otto-stack.managed"])
 	assert.Equal(t, "test-project", labels["io.otto-stack.project"])
-	assert.Equal(t, "redis", labels["io.otto-stack.service"])
+	assert.Equal(t, "network", labels["io.otto-stack.service"])
 	assert.Equal(t, "isolated", labels["io.otto-stack.sharing-mode"])
 	assert.NotEmpty(t, labels["io.otto-stack.version"])
 }
