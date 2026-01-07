@@ -3,12 +3,12 @@ package project
 import (
 	"context"
 
-	"github.com/otto-nation/otto-stack/internal/core"
-	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/display"
-	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 )
 
 // DepsHandler handles the deps command
@@ -21,52 +21,17 @@ func NewDepsHandler() *DepsHandler {
 
 // Handle executes the deps command
 func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	base.Output.Header("%s", core.MsgDependencies_header)
+	// Create command and middleware chain
+	depsCommand := NewDepsCommand()
+	loggingMiddleware := middleware.NewLoggingMiddleware()
 
-	format, _ := cmd.Flags().GetString(core.FlagFormat)
+	handler := command.NewHandler(depsCommand, loggingMiddleware)
 
-	// Load service dependencies
-	serviceManager, err := services.New()
-	if err != nil {
-		return pkgerrors.NewServiceError("deps", "load_services", err)
-	}
+	// For now, create empty context - will be enhanced with flag processing
+	cliCtx := clicontext.Context{}
 
-	dependencies := make(map[string][]string)
-	allServices := serviceManager.GetAllServices()
-
-	for serviceName, serviceConfig := range allServices {
-		if len(serviceConfig.Service.Dependencies.Required) > 0 {
-			dependencies[serviceName] = serviceConfig.Service.Dependencies.Required
-		}
-	}
-
-	if len(dependencies) == 0 {
-		base.Output.Info("%s", core.MsgDependencies_none_found)
-		return nil
-	}
-
-	services := h.transformDependenciesToServices(dependencies)
-	formatter := display.New(cmd.OutOrStdout(), base.Output)
-
-	if err := formatter.FormatStatus(services, display.Options{Format: format}); err != nil {
-		return pkgerrors.NewServiceError(ComponentFormatter, ActionFormatOutput, err)
-	}
-
-	return nil
-}
-
-// transformDependenciesToServices converts dependencies map to ServiceStatus slice
-func (h *DepsHandler) transformDependenciesToServices(dependencies map[string][]string) []display.ServiceStatus {
-	var services []display.ServiceStatus
-	for serviceName, deps := range dependencies {
-		for _, dep := range deps {
-			services = append(services, display.ServiceStatus{
-				Name:  serviceName,
-				State: "requires " + dep,
-			})
-		}
-	}
-	return services
+	// Execute through command pattern
+	return handler.Execute(ctx, cliCtx, base)
 }
 
 // ValidateArgs validates the command arguments

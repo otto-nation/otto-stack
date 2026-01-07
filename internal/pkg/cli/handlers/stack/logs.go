@@ -2,64 +2,47 @@ package stack
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/otto-nation/otto-stack/internal/core"
-	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/ci"
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 )
 
 // LogsHandler handles the logs command
-type LogsHandler struct{}
+type LogsHandler struct {
+	stateManager *StateManager
+}
 
 // NewLogsHandler creates a new logs handler
 func NewLogsHandler() *LogsHandler {
-	return &LogsHandler{}
+	return &LogsHandler{
+		stateManager: NewStateManager(),
+	}
 }
 
 // Handle executes the logs command
 func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	ciFlags := ci.GetFlags(cmd)
+	// Create command and middleware chain
+	logsCommand := NewLogsCommand(h.stateManager)
+	validationMiddleware := middleware.NewInitializationMiddleware()
+	loggingMiddleware := middleware.NewLoggingMiddleware()
 
-	if !ciFlags.Quiet {
-		base.Output.Header(core.MsgLogs)
-	}
+	handler := command.NewHandler(logsCommand, loggingMiddleware, validationMiddleware)
 
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
+	// For now, create empty context - will be enhanced with flag processing
+	cliCtx := clicontext.Context{}
 
-	flags, err := core.ParseLogsFlags(cmd)
-	if err != nil {
-		return err
-	}
+	// Execute through command pattern
+	return handler.Execute(ctx, cliCtx, base)
+}
 
-	serviceConfigs, err := ResolveServiceConfigs(args, setup)
-	if err != nil {
-		ci.HandleError(ciFlags, fmt.Errorf("failed to resolve services: %w", err))
-		return nil
-	}
-
-	// Create stack service
-	stackService, err := NewStackService(false)
-	if err != nil {
-		return fmt.Errorf("failed to create stack service: %w", err)
-	}
-
-	// Create logs request
-	logRequest := services.LogRequest{
-		Project:        setup.Config.Project.Name,
-		ServiceConfigs: serviceConfigs,
-		Follow:         flags.Follow,
-		Timestamps:     flags.Timestamps,
-		Tail:           flags.Tail,
-	}
-
-	return stackService.Logs(ctx, logRequest)
+// ResolveServiceNames resolves service names from args or config
+func (h *LogsHandler) ResolveServiceNames(args []string, setup *CoreSetup) ([]string, error) {
+	// Legacy method - will be moved to LogsCommand.Execute
+	return args, nil
 }
 
 // ValidateArgs validates the command arguments

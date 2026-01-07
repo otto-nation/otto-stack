@@ -4,56 +4,41 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/spf13/cobra"
+
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/spf13/cobra"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 )
 
 // ExecHandler handles the exec command
-type ExecHandler struct{}
+type ExecHandler struct {
+	stateManager *StateManager
+}
 
 // NewExecHandler creates a new exec handler
 func NewExecHandler() *ExecHandler {
-	return &ExecHandler{}
+	return &ExecHandler{
+		stateManager: NewStateManager(),
+	}
 }
 
 // Handle executes the exec command
 func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	if err := h.ValidateArgs(args); err != nil {
-		return err
-	}
+	// Create command and middleware chain
+	execCommand := NewExecCommand(h.stateManager)
+	validationMiddleware := middleware.NewInitializationMiddleware()
+	loggingMiddleware := middleware.NewLoggingMiddleware()
 
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
+	handler := command.NewHandler(execCommand, loggingMiddleware, validationMiddleware)
 
-	serviceName := args[0]
-	command := args[1:]
+	// For now, create empty context - will be enhanced with flag processing
+	cliCtx := clicontext.Context{}
 
-	flags, err := core.ParseExecFlags(cmd)
-	if err != nil {
-		return err
-	}
-
-	// Create stack service
-	stackService, err := NewStackService(false)
-	if err != nil {
-		return fmt.Errorf("failed to create stack service: %w", err)
-	}
-
-	// Create exec request
-	execRequest := services.ExecRequest{
-		Project:    setup.Config.Project.Name,
-		Service:    serviceName,
-		Command:    command,
-		User:       flags.User,
-		WorkingDir: flags.Workdir,
-	}
-
-	return stackService.Exec(ctx, execRequest)
+	// Execute through command pattern
+	return handler.Execute(ctx, cliCtx, base)
 }
 
 // ValidateArgs validates the command arguments
