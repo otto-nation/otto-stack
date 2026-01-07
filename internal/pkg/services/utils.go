@@ -17,6 +17,20 @@ func ExtractServiceNames(serviceConfigs []ServiceConfig) []string {
 	return serviceNames
 }
 
+// ExtractVisibleServiceNames returns names of non-hidden services
+func ExtractVisibleServiceNames(serviceConfigs []ServiceConfig) []string {
+	if len(serviceConfigs) == 0 {
+		return nil
+	}
+	var visibleNames []string
+	for _, config := range serviceConfigs {
+		if !config.Hidden {
+			visibleNames = append(visibleNames, config.Name)
+		}
+	}
+	return visibleNames
+}
+
 // ServiceUtils provides service operations
 type ServiceUtils struct {
 	manager *Manager

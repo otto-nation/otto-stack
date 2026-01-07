@@ -191,8 +191,8 @@ func (h *UpHandler) startServices(ctx context.Context, serviceConfigs []services
 	if err != nil {
 		return err
 	}
-	serviceNames := services.ExtractServiceNames(serviceConfigs)
-	base.Output.Info("Starting services: %v", serviceNames)
+	visibleServiceNames := services.ExtractVisibleServiceNames(serviceConfigs)
+	base.Output.Info("Starting services: %v", visibleServiceNames)
 
 	return stackService.Start(ctx, services.StartRequest{
 		Project:        setup.Config.Project.Name,
