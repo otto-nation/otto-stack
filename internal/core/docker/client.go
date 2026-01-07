@@ -44,16 +44,6 @@ type ContainerInfo struct {
 	Service string
 }
 
-// ServiceStatus represents service health status
-type ServiceStatus struct {
-	Name    string // Service name for display
-	Service string // Service identifier
-	Status  string // Container status
-	State   string // Container state (for backward compatibility)
-	Health  string // Health status
-	Ports   []string
-}
-
 // InitContainerConfig holds configuration for init containers
 type InitContainerConfig struct {
 	Image       string
@@ -204,24 +194,28 @@ func (c *Client) RunInitContainer(ctx context.Context, name string, config InitC
 	return nil
 }
 
+// ContainerStatus represents basic container status
+type ContainerStatus struct {
+	Name   string
+	State  string
+	Health string
+}
+
 // GetServiceStatus gets status of services in a project
-func (c *Client) GetServiceStatus(ctx context.Context, project string, services []string) ([]ServiceStatus, error) {
+func (c *Client) GetServiceStatus(ctx context.Context, project string, services []string) ([]ContainerStatus, error) {
 	containers, err := c.ListContainers(ctx, project)
 	if err != nil {
 		return nil, err
 	}
 
-	statusMap := make(map[string]*ServiceStatus)
+	statusMap := make(map[string]*ContainerStatus)
 
 	// Initialize status for requested services
 	for _, service := range services {
-		statusMap[service] = &ServiceStatus{
-			Name:    service,
-			Service: service,
-			Status:  ServiceStatusNotFound,
-			State:   ServiceStatusNotFound,
-			Health:  HealthStatusUnknown,
-			Ports:   []string{},
+		statusMap[service] = &ContainerStatus{
+			Name:   service,
+			State:  ServiceStatusNotFound,
+			Health: HealthStatusUnknown,
 		}
 	}
 
@@ -229,14 +223,13 @@ func (c *Client) GetServiceStatus(ctx context.Context, project string, services 
 	for _, cont := range containers {
 		if cont.Service != "" {
 			if status, exists := statusMap[cont.Service]; exists {
-				status.Status = cont.State
 				status.State = cont.State
 				status.Health = getHealthStatus(cont.State, cont.Status)
 			}
 		}
 	}
 
-	var result []ServiceStatus
+	var result []ContainerStatus
 	for _, status := range statusMap {
 		result = append(result, *status)
 	}

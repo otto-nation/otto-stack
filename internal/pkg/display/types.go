@@ -7,6 +7,7 @@ type ServiceStatus struct {
 	Name      string        `json:"name" yaml:"name"`
 	State     string        `json:"state" yaml:"state"`
 	Health    string        `json:"health" yaml:"health"`
+	Provider  string        `json:"provider,omitempty" yaml:"provider,omitempty"`
 	Ports     []string      `json:"ports" yaml:"ports"`
 	CreatedAt time.Time     `json:"created_at" yaml:"created_at"`
 	UpdatedAt time.Time     `json:"updated_at" yaml:"updated_at"`
@@ -81,4 +82,5 @@ type Options struct {
 	Full            bool
 	ShowSummary     bool
 	GroupByCategory bool
+	ShowProvider    bool
 }

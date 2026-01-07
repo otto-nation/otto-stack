@@ -18,8 +18,9 @@ const (
 	// Column widths
 	ColWidthService        = 15
 	ColWidthServiceCompact = 20
-	ColWidthState          = 10
-	ColWidthHealth         = 10
+	ColWidthProvider       = 12
+	ColWidthState          = 12
+	ColWidthHealth         = 12
 	ColWidthUptime         = 8
 	ColWidthPorts          = 12
 	ColWidthUpdated        = 10

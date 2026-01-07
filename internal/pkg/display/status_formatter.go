@@ -28,20 +28,51 @@ func (sf *StatusFormatter) FormatTable(services []ServiceStatus, options Options
 }
 
 func (sf *StatusFormatter) formatCompact(services []ServiceStatus) error {
-	headers := []string{"Service", "State", "Health"}
-	widths := []int{ColWidthServiceCompact, ColWidthState, ColWidthHealth}
+	hasProvider := sf.hasProviders(services)
 
+	headers, widths := sf.getCompactLayout(hasProvider)
 	sf.table.WriteHeader(headers, widths)
 
 	for _, service := range services {
-		values := []string{
-			service.Name,
-			sf.getStateIcon(service.State) + service.State,
-			sf.getHealthIcon(service.Health) + service.Health,
-		}
+		values := sf.getCompactValues(service, hasProvider)
 		sf.table.WriteRow(values, widths)
 	}
 	return nil
+}
+
+func (sf *StatusFormatter) hasProviders(services []ServiceStatus) bool {
+	for _, service := range services {
+		if service.Provider != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func (sf *StatusFormatter) getCompactLayout(hasProvider bool) ([]string, []int) {
+	if hasProvider {
+		return []string{"Service", "Provided By", "State", "Health"},
+			[]int{ColWidthServiceCompact, ColWidthProvider, ColWidthState, ColWidthHealth}
+	}
+	return []string{"Service", "State", "Health"},
+		[]int{ColWidthServiceCompact, ColWidthState, ColWidthHealth}
+}
+
+func (sf *StatusFormatter) getCompactValues(service ServiceStatus, hasProvider bool) []string {
+	baseValues := []string{
+		service.Name,
+		sf.getStateIcon(service.State) + service.State,
+		sf.getHealthIcon(service.Health) + service.Health,
+	}
+
+	if hasProvider {
+		provider := service.Provider
+		if provider == "" {
+			provider = "n/a"
+		}
+		return []string{service.Name, provider, baseValues[1], baseValues[2]}
+	}
+	return baseValues
 }
 
 func (sf *StatusFormatter) formatFull(services []ServiceStatus, options Options) error {

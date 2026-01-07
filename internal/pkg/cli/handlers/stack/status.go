@@ -4,14 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -83,23 +84,18 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		return nil
 	}
 
-	// Check if we need "PROVIDED BY" column (any service has different container name)
-	needsProviderColumn := false
+	// Map services to their container names
 	serviceToContainer := make(map[string]string)
-
 	for _, config := range serviceConfigs {
 		containerName := getContainerName(config)
 		serviceToContainer[config.Name] = containerName
-		if config.Name != containerName {
-			needsProviderColumn = true
-		}
 	}
 
-	// Convert statuses with inheritance
-	serviceStatuses := inheritStatusFromProviders(statuses, serviceConfigs, serviceToContainer)
+	// Convert statuses with inheritance and display
+	serviceStatuses := convertToDisplayStatuses(statuses, serviceConfigs, serviceToContainer)
 
-	// Display with clean formatting
-	displayStatusTable(serviceStatuses, serviceToContainer, needsProviderColumn)
+	formatter := display.NewStatusFormatter(os.Stdout)
+	_ = formatter.FormatTable(serviceStatuses, display.Options{Compact: true})
 
 	return nil
 }
@@ -131,57 +127,43 @@ func getContainerName(config services.ServiceConfig) string {
 	return config.Name
 }
 
-// inheritStatusFromProviders creates service statuses with health inheritance
-func inheritStatusFromProviders(containerStatuses []docker.ServiceStatus, serviceConfigs []services.ServiceConfig, serviceToContainer map[string]string) []docker.ServiceStatus {
-	containerMap := make(map[string]docker.ServiceStatus)
+// convertToDisplayStatuses creates display service statuses with health inheritance
+func convertToDisplayStatuses(containerStatuses []docker.ContainerStatus, serviceConfigs []services.ServiceConfig, serviceToContainer map[string]string) []display.ServiceStatus {
+	containerMap := make(map[string]docker.ContainerStatus)
 	for _, status := range containerStatuses {
 		containerMap[status.Name] = status
 	}
 
-	var result []docker.ServiceStatus
+	var result []display.ServiceStatus
 	for _, config := range serviceConfigs {
-		if config.Container.Restart == services.RestartPolicyNo {
-			continue // Skip init containers
+		if config.Container.Restart == services.RestartPolicyNo || config.Hidden {
+			continue // Skip init containers and hidden services
 		}
 
 		provider := serviceToContainer[config.Name]
+		providerName := ""
+		if provider != config.Name {
+			providerName = provider
+		}
+
 		if containerStatus, exists := containerMap[provider]; exists {
-			result = append(result, docker.ServiceStatus{
-				Name:   config.Name,
-				State:  containerStatus.State,
-				Health: containerStatus.Health,
+			result = append(result, display.ServiceStatus{
+				Name:     config.Name,
+				Provider: providerName,
+				State:    containerStatus.State,
+				Health:   containerStatus.Health,
 			})
 		} else {
-			result = append(result, docker.ServiceStatus{
-				Name:   config.Name,
-				State:  "not found",
-				Health: "unknown",
+			result = append(result, display.ServiceStatus{
+				Name:     config.Name,
+				Provider: providerName,
+				State:    "not found",
+				Health:   "unknown",
 			})
 		}
 	}
 
 	return result
-}
-
-// displayStatusTable shows the status table with optional provider column
-func displayStatusTable(statuses []docker.ServiceStatus, serviceToContainer map[string]string, showProvider bool) {
-	if showProvider {
-		fmt.Printf("%-20s %-12s %-12s %s\n", ui.StatusHeaderService, ui.StatusHeaderProvidedBy, ui.StatusHeaderState, ui.StatusHeaderHealth)
-		fmt.Println(ui.StatusSeparatorWithProvider)
-		for _, status := range statuses {
-			provider := serviceToContainer[status.Name]
-			if provider == "" || provider == status.Name {
-				provider = "n/a"
-			}
-			fmt.Printf("%-20s %-12s %-12s %s\n", status.Name, provider, status.State, status.Health)
-		}
-	} else {
-		fmt.Printf("%-20s %-12s %s\n", ui.StatusHeaderService, ui.StatusHeaderState, ui.StatusHeaderHealth)
-		fmt.Println(ui.StatusSeparator)
-		for _, status := range statuses {
-			fmt.Printf("%-20s %-12s %s\n", status.Name, status.State, status.Health)
-		}
-	}
 }
 
 // filterInitContainers removes init containers (restart: "no") from status display
