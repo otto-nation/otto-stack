@@ -45,8 +45,13 @@ func (g *Generator) buildComposeStructure(serviceNames []string) (map[string]any
 		return nil, pkgerrors.NewValidationError("input", "project name cannot be empty", nil)
 	}
 
+	services, err := g.buildServices(serviceNames)
+	if err != nil {
+		return nil, err
+	}
+
 	return map[string]any{
-		dockerConstants.ComposeFieldServices: g.buildServices(serviceNames),
+		dockerConstants.ComposeFieldServices: services,
 		dockerConstants.ComposeFieldNetworks: map[string]any{
 			dockerConstants.DefaultNetworkName: map[string]any{
 				dockerConstants.ComposeFieldName: g.projectName + dockerConstants.NetworkNameSuffix,
@@ -56,56 +61,57 @@ func (g *Generator) buildComposeStructure(serviceNames []string) (map[string]any
 }
 
 // buildServices creates the services section
-func (g *Generator) buildServices(serviceNames []string) map[string]any {
-	resolvedServices := g.resolveServiceDependencies(serviceNames)
-	return g.buildServiceConfigurations(resolvedServices)
-}
-
-// resolveServiceDependencies resolves all service dependencies
-func (g *Generator) resolveServiceDependencies(serviceNames []string) []string {
-	// Use the existing ResolveUpServices function to get ServiceConfigs
-	serviceConfigs, err := services.ResolveUpServices(serviceNames, nil)
-	if err != nil {
-		return serviceNames // Return original names on error
-	}
-
-	// Extract service names using the existing utility function
-	return services.ExtractServiceNames(serviceConfigs)
+func (g *Generator) buildServices(serviceNames []string) (map[string]any, error) {
+	return g.buildServiceConfigurations(serviceNames)
 }
 
 // buildServiceConfigurations builds the actual service configurations
-func (g *Generator) buildServiceConfigurations(serviceNames []string) map[string]any {
+func (g *Generator) buildServiceConfigurations(serviceNames []string) (map[string]any, error) {
 	serviceList := make(map[string]any)
+	processedServices := make(map[string]bool)
 
 	for _, serviceName := range serviceNames {
-		serviceConfig := g.buildSingleServiceConfig(serviceName)
-		if serviceConfig != nil {
-			serviceList[serviceName] = serviceConfig
+		if err := g.processServiceAndDependencies(serviceName, serviceList, processedServices); err != nil {
+			return nil, err
 		}
-
 	}
 
-	return serviceList
+	return serviceList, nil
 }
 
-// buildSingleServiceConfig builds configuration for a single service
-func (g *Generator) buildSingleServiceConfig(serviceName string) map[string]any {
-	return g.buildRegularServiceConfig(serviceName)
-}
-
-// buildRegularServiceConfig builds configuration for a regular (non-init) service
-func (g *Generator) buildRegularServiceConfig(serviceName string) map[string]any {
-	serviceDef, err := g.manager.GetService(serviceName)
-	if err != nil {
+// processServiceAndDependencies processes a service and its dependencies
+func (g *Generator) processServiceAndDependencies(serviceName string, serviceList map[string]any, processed map[string]bool) error {
+	if processed[serviceName] {
 		return nil
 	}
+	processed[serviceName] = true
 
-	// Skip configuration services (they merge into container services)
+	serviceDef, err := g.manager.GetService(serviceName)
+	if err != nil {
+		return pkgerrors.NewValidationError("service", fmt.Sprintf("unknown service: %s", serviceName), err)
+	}
+
+	// Process dependencies first (skip missing dependencies in test environments)
+	for _, dep := range serviceDef.Service.Dependencies.Required {
+		if _, depErr := g.manager.GetService(dep); depErr == nil {
+			if err := g.processServiceAndDependencies(dep, serviceList, processed); err != nil {
+				return err
+			}
+		}
+	}
+
+	// Skip configuration services (they don't generate containers)
 	if serviceDef.ServiceType == services.ServiceTypeConfiguration {
 		return nil
 	}
 
-	return g.buildService(serviceDef)
+	// Build the service configuration
+	serviceConfig := g.buildService(serviceDef)
+	if serviceConfig != nil {
+		serviceList[serviceName] = serviceConfig
+	}
+
+	return nil
 }
 
 func (g *Generator) buildService(config *services.ServiceConfig) map[string]any {

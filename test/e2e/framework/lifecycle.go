@@ -45,8 +45,9 @@ func NewTestLifecycle(t *testing.T, projectName string, serviceList []string) *T
 		t:            t,
 	}
 
-	// Allocate ports
-	ports, err := env.PortManager.AllocateServicePorts(serviceList)
+	// Resolve service dependencies and allocate ports for all services
+	allServices := resolveServiceDependencies(serviceList)
+	ports, err := env.PortManager.AllocateServicePorts(allServices)
 	require.NoError(t, err)
 	env.ServicePorts = ports
 
@@ -271,6 +272,33 @@ func (tl *TestLifecycle) emergencyCleanup() {
 		dockerClient.RemoveResources(ctx, docker.ResourceNetwork, tl.ProjectName)
 		dockerClient.RemoveResources(ctx, docker.ResourceVolume, tl.ProjectName)
 	}
+}
+
+func resolveServiceDependencies(serviceList []string) []string {
+	// For E2E tests, we need to include dependency services for port allocation
+	allServices := make(map[string]bool)
+
+	// Add requested services
+	for _, service := range serviceList {
+		allServices[service] = true
+	}
+
+	// Add known dependencies
+	for _, service := range serviceList {
+		switch service {
+		case services.ServiceLocalstackSqs, services.ServiceLocalstackSns,
+			services.ServiceLocalstackS3, services.ServiceLocalstackDynamodb:
+			allServices[services.ServiceLocalstack] = true
+		}
+	}
+
+	// Convert back to slice
+	result := make([]string, 0, len(allServices))
+	for service := range allServices {
+		result = append(result, service)
+	}
+
+	return result
 }
 
 func joinServices(services []string) string {
