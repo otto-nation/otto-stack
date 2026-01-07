@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
@@ -82,11 +83,23 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		return nil
 	}
 
-	fmt.Printf("%-20s %-12s %s\n", ui.StatusHeaderService, ui.StatusHeaderState, ui.StatusHeaderHealth)
-	fmt.Println(ui.StatusSeparator)
-	for _, status := range statuses {
-		fmt.Printf("%-20s %-12s %s\n", status.Name, status.State, status.Health)
+	// Check if we need "PROVIDED BY" column (any service has different container name)
+	needsProviderColumn := false
+	serviceToContainer := make(map[string]string)
+
+	for _, config := range serviceConfigs {
+		containerName := getContainerName(config)
+		serviceToContainer[config.Name] = containerName
+		if config.Name != containerName {
+			needsProviderColumn = true
+		}
 	}
+
+	// Convert statuses with inheritance
+	serviceStatuses := inheritStatusFromProviders(statuses, serviceConfigs, serviceToContainer)
+
+	// Display with clean formatting
+	displayStatusTable(serviceStatuses, serviceToContainer, needsProviderColumn)
 
 	return nil
 }
@@ -99,6 +112,76 @@ func (h *StatusHandler) ValidateArgs(args []string) error {
 // GetRequiredFlags returns required flags for this command
 func (h *StatusHandler) GetRequiredFlags() []string {
 	return []string{}
+}
+
+// getContainerName returns the actual container name for a service
+func getContainerName(config services.ServiceConfig) string {
+	// If service is hidden, it's the actual container
+	if config.Hidden {
+		return config.Name
+	}
+
+	// Check if service has dependencies that provide the actual container
+	if len(config.Service.Dependencies.Required) > 0 {
+		// Return the first required dependency as the container name
+		return config.Service.Dependencies.Required[0]
+	}
+
+	// If no dependencies, service name is the container name
+	return config.Name
+}
+
+// inheritStatusFromProviders creates service statuses with health inheritance
+func inheritStatusFromProviders(containerStatuses []docker.ServiceStatus, serviceConfigs []services.ServiceConfig, serviceToContainer map[string]string) []docker.ServiceStatus {
+	containerMap := make(map[string]docker.ServiceStatus)
+	for _, status := range containerStatuses {
+		containerMap[status.Name] = status
+	}
+
+	var result []docker.ServiceStatus
+	for _, config := range serviceConfigs {
+		if config.Container.Restart == services.RestartPolicyNo {
+			continue // Skip init containers
+		}
+
+		provider := serviceToContainer[config.Name]
+		if containerStatus, exists := containerMap[provider]; exists {
+			result = append(result, docker.ServiceStatus{
+				Name:   config.Name,
+				State:  containerStatus.State,
+				Health: containerStatus.Health,
+			})
+		} else {
+			result = append(result, docker.ServiceStatus{
+				Name:   config.Name,
+				State:  "not found",
+				Health: "unknown",
+			})
+		}
+	}
+
+	return result
+}
+
+// displayStatusTable shows the status table with optional provider column
+func displayStatusTable(statuses []docker.ServiceStatus, serviceToContainer map[string]string, showProvider bool) {
+	if showProvider {
+		fmt.Printf("%-20s %-12s %-12s %s\n", ui.StatusHeaderService, ui.StatusHeaderProvidedBy, ui.StatusHeaderState, ui.StatusHeaderHealth)
+		fmt.Println(ui.StatusSeparatorWithProvider)
+		for _, status := range statuses {
+			provider := serviceToContainer[status.Name]
+			if provider == "" || provider == status.Name {
+				provider = "n/a"
+			}
+			fmt.Printf("%-20s %-12s %-12s %s\n", status.Name, provider, status.State, status.Health)
+		}
+	} else {
+		fmt.Printf("%-20s %-12s %s\n", ui.StatusHeaderService, ui.StatusHeaderState, ui.StatusHeaderHealth)
+		fmt.Println(ui.StatusSeparator)
+		for _, status := range statuses {
+			fmt.Printf("%-20s %-12s %s\n", status.Name, status.State, status.Health)
+		}
+	}
 }
 
 // filterInitContainers removes init containers (restart: "no") from status display

@@ -32,8 +32,10 @@ const (
 
 // Status display constants
 const (
-	StatusHeaderService = "SERVICE"
-	StatusHeaderState   = "STATE"
-	StatusHeaderHealth  = "HEALTH"
-	StatusSeparator     = "---------------------------------------------"
+	StatusHeaderService         = "SERVICE"
+	StatusHeaderProvidedBy      = "PROVIDED BY"
+	StatusHeaderState           = "STATE"
+	StatusHeaderHealth          = "HEALTH"
+	StatusSeparator             = "---------------------------------------------"
+	StatusSeparatorWithProvider = "----------------------------------------------------------"
 )
