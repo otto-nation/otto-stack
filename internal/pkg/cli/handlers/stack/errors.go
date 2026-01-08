@@ -9,6 +9,12 @@ const (
 
 	// Actions
 	ActionStartServices     = "start services"
+	ActionStopServices      = "stop services"
+	ActionRestartServices   = "restart services"
+	ActionShowLogs          = "show logs"
+	ActionShowStatus        = "show status"
+	ActionCleanupResources  = "cleanup resources"
+	ActionCreateService     = "create service"
 	ActionGetManager        = "get services manager"
 	ActionCreateGenerator   = "create generator"
 	ActionGenerateCompose   = "generate compose"
@@ -22,5 +28,7 @@ const (
 	ActionParseFlags        = "parse command flags"
 
 	// Docker operations
-	OpListContainers = "list containers"
+	OpListContainers  = "list containers"
+	OpShowLogs        = "show logs"
+	OpRemoveResources = "remove resources"
 )

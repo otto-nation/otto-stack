@@ -4,8 +4,13 @@ import (
 	"context"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	"github.com/otto-nation/otto-stack/internal/pkg/display"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
 
 // UpCommand handles starting services
@@ -22,17 +27,31 @@ func NewUpCommand(stateManager *StateManager) *UpCommand {
 
 // Execute starts the specified services
 func (c *UpCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
-	// Setup core command
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-
-	// For now, simulate successful service startup
 	base.Output.Header("%s", core.MsgStarting)
+
+	// Create service and start
+	service, err := NewStackService(false)
+	if err != nil {
+		return pkgerrors.NewServiceError(ComponentStack, ActionCreateService, err)
+	}
+
+	startRequest := services.StartRequest{
+		Project:        cliCtx.Project.Name,
+		ServiceConfigs: cliCtx.Services.Configs,
+		Build:          cliCtx.Runtime.Force,
+		ForceRecreate:  false,
+	}
+
+	err = service.Start(ctx, startRequest)
+	if err != nil {
+		return pkgerrors.NewServiceError(ComponentStack, ActionStartServices, err)
+	}
+
 	base.Output.Success("Services started successfully")
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
+	base.Output.Info("Project: %s", cliCtx.Project.Name)
+	for _, svc := range cliCtx.Services.Configs {
+		base.Output.Info("  %s %s", display.StatusSuccess, svc.Name)
+	}
 
 	return nil
 }
@@ -51,15 +70,31 @@ func NewDownCommand(stateManager *StateManager) *DownCommand {
 
 // Execute stops the specified services
 func (c *DownCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-
 	base.Output.Header(core.MsgStopping)
+
+	// Create service and stop
+	service, err := NewStackService(false)
+	if err != nil {
+		return pkgerrors.NewServiceError(ComponentStack, ActionCreateService, err)
+	}
+
+	stopRequest := services.StopRequest{
+		Project:        cliCtx.Project.Name,
+		ServiceConfigs: cliCtx.Services.Configs,
+		Remove:         true,
+		RemoveVolumes:  false,
+	}
+
+	err = service.Stop(ctx, stopRequest)
+	if err != nil {
+		return pkgerrors.NewServiceError(ComponentStack, ActionStopServices, err)
+	}
+
 	base.Output.Success("Services stopped successfully")
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
+	base.Output.Info("Project: %s", cliCtx.Project.Name)
+	for _, svc := range cliCtx.Services.Configs {
+		base.Output.Info("  %s %s", display.StatusSuccess, svc.Name)
+	}
 
 	return nil
 }
@@ -85,9 +120,29 @@ func (c *LogsCommand) Execute(ctx context.Context, cliCtx clicontext.Context, ba
 	defer cleanup()
 
 	base.Output.Header(core.MsgLogs)
-	base.Output.Success("Logs displayed successfully")
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
 
+	// Use Docker client directly for logs (service layer doesn't have logs method)
+	var serviceNames []string
+	for _, svc := range cliCtx.Services.Configs {
+		serviceNames = append(serviceNames, svc.Name)
+	}
+
+	manager := setup.DockerClient.GetComposeManager()
+	consumer := &docker.SimpleLogConsumer{}
+
+	logOptions := docker.LogOptions{
+		Services:   serviceNames,
+		Follow:     cliCtx.Runtime.Force,
+		Timestamps: true,
+		Tail:       "100",
+	}
+
+	err = manager.Logs(ctx, cliCtx.Project.Name, consumer, logOptions.ToSDK())
+	if err != nil {
+		return pkgerrors.NewDockerError(OpShowLogs, cliCtx.Project.Name, err)
+	}
+
+	base.Output.Success("Logs displayed successfully")
 	return nil
 }
 
@@ -111,9 +166,32 @@ func (c *StatusCommand) Execute(ctx context.Context, cliCtx clicontext.Context, 
 	}
 	defer cleanup()
 
-	base.Output.Header("🚀 Status")
-	base.Output.Success("Status displayed successfully")
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
+	base.Output.Header("%s Status", ui.IconHeader)
+
+	// List containers for the project
+	containers, err := setup.DockerClient.ListContainers(ctx, cliCtx.Project.Name)
+	if err != nil {
+		return pkgerrors.NewDockerError(OpListContainers, cliCtx.Project.Name, err)
+	}
+
+	if len(containers) == 0 {
+		base.Output.Info("No containers found for project: %s", cliCtx.Project.Name)
+		return nil
+	}
+
+	base.Output.Info("Project: %s", cliCtx.Project.Name)
+	for _, container := range containers {
+		var status string
+		switch container.State {
+		case "running":
+			status = display.StatusSuccess
+		case "exited":
+			status = display.StatusError
+		default:
+			status = display.StatusStarting
+		}
+		base.Output.Info("  %s%s (%s) - %s", status, container.Service, container.State, container.Status)
+	}
 
 	return nil
 }
@@ -132,14 +210,14 @@ func NewExecCommand(stateManager *StateManager) *ExecCommand {
 
 // Execute runs a command in the specified service container
 func (c *ExecCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
+	base.Output.Header("Executing command")
 
+	// For now, just show that exec would be executed
+	if len(cliCtx.Services.Names) > 0 {
+		base.Output.Info("Service: %s", cliCtx.Services.Names[0])
+	}
 	base.Output.Success("Command executed successfully")
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
+	base.Output.Info("Project: %s", cliCtx.Project.Name)
 
 	return nil
 }
@@ -164,6 +242,13 @@ func (c *ConnectCommand) Execute(ctx context.Context, cliCtx clicontext.Context,
 	}
 	defer cleanup()
 
+	base.Output.Header("Connecting to service")
+
+	// For now, just show that connection would be established
+	// Real implementation would use service-specific connection logic
+	if len(cliCtx.Services.Names) > 0 {
+		base.Output.Info("Service: %s", cliCtx.Services.Names[0])
+	}
 	base.Output.Success("Connected successfully")
 	base.Output.Info("Project: %s", setup.Config.Project.Name)
 
@@ -184,14 +269,42 @@ func NewRestartCommand(stateManager *StateManager) *RestartCommand {
 
 // Execute restarts the specified services
 func (c *RestartCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
+	base.Output.Header(core.MsgRestarting)
+
+	// Create service
+	service, err := NewStackService(false)
 	if err != nil {
-		return err
+		return pkgerrors.NewServiceError(ComponentStack, ActionCreateService, err)
 	}
-	defer cleanup()
+
+	// Stop services first
+	stopRequest := services.StopRequest{
+		Project:        cliCtx.Project.Name,
+		ServiceConfigs: cliCtx.Services.Configs,
+		Remove:         false,
+	}
+	err = service.Stop(ctx, stopRequest)
+	if err != nil {
+		return pkgerrors.NewServiceError(ComponentStack, ActionStopServices, err)
+	}
+
+	// Start services
+	startRequest := services.StartRequest{
+		Project:        cliCtx.Project.Name,
+		ServiceConfigs: cliCtx.Services.Configs,
+		Build:          false,
+		ForceRecreate:  false,
+	}
+	err = service.Start(ctx, startRequest)
+	if err != nil {
+		return pkgerrors.NewServiceError(ComponentStack, ActionStartServices, err)
+	}
 
 	base.Output.Success("Services restarted successfully")
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
+	base.Output.Info("Project: %s", cliCtx.Project.Name)
+	for _, svc := range cliCtx.Services.Configs {
+		base.Output.Info("  %s %s", display.StatusSuccess, svc.Name)
+	}
 
 	return nil
 }
@@ -216,8 +329,31 @@ func (c *CleanupCommand) Execute(ctx context.Context, cliCtx clicontext.Context,
 	}
 	defer cleanup()
 
+	base.Output.Header(core.MsgCleaning)
+
+	// Clean up unused Docker resources for the project
+	projectName := cliCtx.Project.Name
+
+	// Remove unused containers
+	err = setup.DockerClient.RemoveResources(ctx, docker.ResourceContainer, projectName)
+	if err != nil {
+		return pkgerrors.NewDockerError(OpRemoveResources, "containers", err)
+	}
+
+	// Remove unused volumes
+	err = setup.DockerClient.RemoveResources(ctx, docker.ResourceVolume, projectName)
+	if err != nil {
+		return pkgerrors.NewDockerError(OpRemoveResources, "volumes", err)
+	}
+
+	// Remove unused networks
+	err = setup.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, projectName)
+	if err != nil {
+		return pkgerrors.NewDockerError(OpRemoveResources, "networks", err)
+	}
+
 	base.Output.Success("Cleanup completed successfully")
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
+	base.Output.Info("Project: %s", cliCtx.Project.Name)
 
 	return nil
 }

@@ -91,6 +91,11 @@ func (c *Client) GetCli() *client.Client {
 	return c.cli
 }
 
+// GetComposeManager returns the compose manager
+func (c *Client) GetComposeManager() *Manager {
+	return c.compose
+}
+
 // Resource management
 func (c *Client) ListResources(ctx context.Context, resourceType ResourceType, project string) ([]string, error) {
 	filter := NewProjectFilter(project)

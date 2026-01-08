@@ -13,6 +13,11 @@ const (
 	ComponentServiceManager = "service-manager"
 
 	// Actions
+	ActionListServices              = "list services"
+	ActionShowDependencies          = "show dependencies"
+	ActionCheckConflicts            = "check conflicts"
+	ActionValidateConfig            = "validate configuration"
+	ActionRunHealthCheck            = "run health check"
 	ActionGetCurrentDir             = "get current directory"
 	ActionGetProjectName            = "get project name from user"
 	ActionSelectServices            = "select services"
