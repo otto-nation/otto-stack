@@ -10,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
@@ -82,7 +83,7 @@ func (h *WebInterfacesHandler) getRunningServices(setup *CoreSetup, serviceConfi
 
 	stackService, err := NewStackService(false)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create stack service: %w", err)
+		return nil, pkgerrors.NewServiceError(ComponentStack, MsgFailedCreateStackService, err)
 	}
 
 	statuses, err := stackService.DockerClient.GetServiceStatus(context.Background(), setup.Config.Project.Name, serviceNames)

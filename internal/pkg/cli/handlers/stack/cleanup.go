@@ -119,7 +119,7 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *CoreSetup, c
 	// Create stack service
 	stackService, err := NewStackService(false)
 	if err != nil {
-		return fmt.Errorf("failed to create stack service: %w", err)
+		return pkgerrors.NewServiceError(ComponentStack, MsgFailedCreateStackService, err)
 	}
 
 	// List containers to clean

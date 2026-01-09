@@ -31,4 +31,8 @@ const (
 	OpListContainers  = "list containers"
 	OpShowLogs        = "show logs"
 	OpRemoveResources = "remove resources"
+
+	// Error messages
+	MsgUnsupportedService       = "unsupported service"
+	MsgFailedCreateStackService = "failed to create stack service"
 )

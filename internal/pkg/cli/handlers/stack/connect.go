@@ -2,7 +2,6 @@ package stack
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spf13/cobra"
 
@@ -72,6 +71,6 @@ func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host 
 		}
 		return cmd, nil
 	default:
-		return nil, fmt.Errorf("unsupported service: %s", serviceName)
+		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgUnsupportedService+": "+serviceName, nil)
 	}
 }
