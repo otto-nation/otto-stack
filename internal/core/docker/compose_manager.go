@@ -2,7 +2,6 @@ package docker
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/compose-spec/compose-go/v2/types"
@@ -10,6 +9,7 @@ import (
 	"github.com/docker/cli/cli/flags"
 	"github.com/docker/compose/v5/pkg/api"
 	"github.com/docker/compose/v5/pkg/compose"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
 
 // Manager wraps the official Docker Compose SDK
@@ -21,16 +21,16 @@ type Manager struct {
 func NewManager() (*Manager, error) {
 	dockerCli, err := command.NewDockerCli()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Docker CLI: %w", err)
+		return nil, pkgerrors.NewServiceError(ComponentDocker, ActionCreateCLI, err)
 	}
 
 	if err := dockerCli.Initialize(flags.NewClientOptions()); err != nil {
-		return nil, fmt.Errorf("failed to initialize Docker CLI: %w", err)
+		return nil, pkgerrors.NewServiceError(ComponentDocker, ActionInitializeCLI, err)
 	}
 
 	service, err := compose.NewComposeService(dockerCli)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create compose service: %w", err)
+		return nil, pkgerrors.NewServiceError(ComponentDocker, ActionCreateComposeService, err)
 	}
 
 	return &Manager{
@@ -85,7 +85,7 @@ func (m *Manager) LoadProject(ctx context.Context, composePath string, projectNa
 		ProjectName: projectName,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to load compose project: %w", err)
+		return nil, pkgerrors.NewServiceError(ComponentDocker, ActionLoadComposeProject, err)
 	}
 
 	return project, nil

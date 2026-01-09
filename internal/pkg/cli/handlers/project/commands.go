@@ -26,7 +26,7 @@ func (c *ServicesCommand) Execute(ctx context.Context, cliCtx clicontext.Context
 	// Get service manager and list services
 	manager, err := services.New()
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentServices, ActionCreateManager, err)
+		return pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
 	}
 	allServices := manager.GetAllServices()
 
@@ -34,7 +34,7 @@ func (c *ServicesCommand) Execute(ctx context.Context, cliCtx clicontext.Context
 	utils := services.NewServiceUtils()
 	servicesByCategory, err := utils.GetServicesByCategory()
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentServices, ActionListServices, err)
+		return pkgerrors.NewServiceError(services.ComponentServices, services.ActionLoadServices, err)
 	}
 
 	// Display services by category
@@ -70,7 +70,7 @@ func (c *DepsCommand) Execute(ctx context.Context, cliCtx clicontext.Context, ba
 	// Get service manager
 	manager, err := services.New()
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentServices, ActionCreateManager, err)
+		return pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
 	}
 	allServices := manager.GetAllServices()
 
@@ -116,7 +116,7 @@ func (c *ConflictsCommand) Execute(ctx context.Context, cliCtx clicontext.Contex
 	// Get service manager
 	manager, err := services.New()
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentServices, ActionCreateManager, err)
+		return pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
 	}
 	allServices := manager.GetAllServices()
 
@@ -175,7 +175,7 @@ func (c *ValidateCommand) Execute(ctx context.Context, cliCtx clicontext.Context
 		// Get service manager and validate each service
 		manager, err := services.New()
 		if err != nil {
-			return pkgerrors.NewServiceError(ComponentServices, ActionCreateManager, err)
+			return pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
 		}
 		allServices := manager.GetAllServices()
 

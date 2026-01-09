@@ -130,7 +130,7 @@ type LogRequest struct {
 func NewService(compose api.Compose, characteristics CharacteristicsResolver, project ProjectLoader) (*Service, error) {
 	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Docker client: %w", err)
+		return nil, pkgerrors.NewServiceError(docker.ComponentDocker, docker.ActionCreateClient, err)
 	}
 
 	return &Service{
@@ -146,7 +146,7 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 	// Load project
 	project, err := s.project.Load(req.Project)
 	if err != nil {
-		return fmt.Errorf("failed to load project %s: %w", req.Project, err)
+		return pkgerrors.NewServiceError("project", "load", err)
 	}
 
 	// Resolve characteristics to options and convert to SDK format
@@ -158,9 +158,9 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 	err = s.compose.Up(ctx, project, options.ToSDK())
 	if err != nil {
 		if len(req.ServiceConfigs) > 0 {
-			return fmt.Errorf("failed to start services in project %s: %w", req.Project, err)
+			return pkgerrors.NewServiceError("project", "start services", err)
 		}
-		return fmt.Errorf("failed to start project %s: %w", req.Project, err)
+		return pkgerrors.NewServiceError("project", "start", err)
 	}
 	return nil
 }
@@ -170,7 +170,7 @@ func (s *Service) Stop(ctx context.Context, req StopRequest) error {
 	// Load project
 	project, err := s.project.Load(req.Project)
 	if err != nil {
-		return fmt.Errorf("failed to load project %s: %w", req.Project, err)
+		return pkgerrors.NewServiceError("project", "load", err)
 	}
 
 	if req.Remove {
@@ -227,7 +227,7 @@ func (s *Service) Exec(ctx context.Context, req ExecRequest) error {
 	// Load project
 	project, err := s.project.Load(req.Project)
 	if err != nil {
-		return fmt.Errorf("failed to load project %s: %w", req.Project, err)
+		return pkgerrors.NewServiceError("project", "load", err)
 	}
 
 	// Use the compose SDK's exec functionality

@@ -3,14 +3,12 @@ package project
 // Project-specific error constants
 const (
 	// Components
-	ComponentProject        = "project"
-	ComponentFile           = "file"
-	ComponentEnv            = "env"
-	ComponentCompose        = "compose"
-	ComponentDirectory      = "directory"
-	ComponentFormatter      = "formatter"
-	ComponentServices       = "services"
-	ComponentServiceManager = "service-manager"
+	ComponentProject   = "project"
+	ComponentFile      = "file"
+	ComponentEnv       = "env"
+	ComponentCompose   = "compose"
+	ComponentDirectory = "directory"
+	ComponentFormatter = "formatter"
 
 	// Actions
 	ActionListServices              = "list services"

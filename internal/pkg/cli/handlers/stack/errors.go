@@ -3,9 +3,7 @@ package stack
 // Stack-specific error constants
 const (
 	// Components
-	ComponentStack          = "stack"
-	ComponentServiceManager = "service-manager"
-	ComponentServices       = "services"
+	ComponentStack = "stack"
 
 	// Actions
 	ActionStartServices     = "start services"
@@ -26,6 +24,18 @@ const (
 	ActionCreateManager     = "create service manager"
 	ActionResolveServices   = "resolve services"
 	ActionParseFlags        = "parse command flags"
+
+	// File operations
+	ComponentFile       = "file"
+	ActionMarshalData   = "marshal data"
+	ActionWriteFile     = "write file"
+	ActionReadFile      = "read file"
+	ActionUnmarshalData = "unmarshal data"
+
+	// Template operations
+	ComponentTemplate     = "template"
+	ActionProcessTemplate = "process template"
+	ActionExecuteTemplate = "execute template"
 
 	// Docker operations
 	OpListContainers  = "list containers"
