@@ -10,6 +10,8 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
@@ -60,4 +62,9 @@ func ResolveServiceConfigs(args []string, setup *CoreSetup) ([]services.ServiceC
 	// Use enabled services from config
 	serviceConfigs, err := services.ResolveUpServices(setup.Config.Stack.Enabled, setup.Config)
 	return serviceConfigs, err
+}
+
+// CreateStandardMiddlewareChain creates the standard middleware chain used by all stack handlers
+func CreateStandardMiddlewareChain() (validationMiddleware, loggingMiddleware command.Middleware) {
+	return middleware.NewInitializationMiddleware(), middleware.NewLoggingMiddleware()
 }

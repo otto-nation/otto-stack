@@ -8,7 +8,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
 
@@ -41,8 +40,7 @@ func (h *ConnectHandler) GetRequiredFlags() []string {
 func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Create command and middleware chain
 	connectCommand := NewConnectCommand(h.stateManager)
-	validationMiddleware := middleware.NewInitializationMiddleware()
-	loggingMiddleware := middleware.NewLoggingMiddleware()
+	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
 
 	handler := command.NewHandler(connectCommand, loggingMiddleware, validationMiddleware)
 

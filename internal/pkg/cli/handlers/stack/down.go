@@ -7,7 +7,6 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 )
 
 // DownHandler handles the down command
@@ -32,8 +31,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	// Create command and middleware chain
 	downCommand := NewDownCommand(h.stateManager)
-	validationMiddleware := middleware.NewInitializationMiddleware()
-	loggingMiddleware := middleware.NewLoggingMiddleware()
+	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
 
 	handler := command.NewHandler(downCommand, loggingMiddleware, validationMiddleware)
 

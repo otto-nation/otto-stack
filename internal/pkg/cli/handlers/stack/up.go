@@ -8,7 +8,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 )
 
@@ -39,8 +38,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 
 	// Create command and middleware chain
 	upCommand := NewUpCommand(h.stateManager)
-	validationMiddleware := middleware.NewInitializationMiddleware()
-	loggingMiddleware := middleware.NewLoggingMiddleware()
+	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
 
 	handler := command.NewHandler(upCommand, loggingMiddleware, validationMiddleware)
 

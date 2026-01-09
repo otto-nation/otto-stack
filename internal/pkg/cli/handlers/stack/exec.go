@@ -10,7 +10,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 )
 
 // ExecHandler handles the exec command
@@ -29,8 +28,7 @@ func NewExecHandler() *ExecHandler {
 func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Create command and middleware chain
 	execCommand := NewExecCommand(h.stateManager)
-	validationMiddleware := middleware.NewInitializationMiddleware()
-	loggingMiddleware := middleware.NewLoggingMiddleware()
+	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
 
 	handler := command.NewHandler(execCommand, loggingMiddleware, validationMiddleware)
 

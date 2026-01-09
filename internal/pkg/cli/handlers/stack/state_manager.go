@@ -21,9 +21,14 @@ type StackState struct {
 // StateManager handles stack state persistence
 type StateManager struct{}
 
-// NewStateManager creates a new state manager
+var stateManagerInstance *StateManager
+
+// NewStateManager creates a new state manager (singleton)
 func NewStateManager() *StateManager {
-	return &StateManager{}
+	if stateManagerInstance == nil {
+		stateManagerInstance = &StateManager{}
+	}
+	return stateManagerInstance
 }
 
 // LoadState loads the current stack state
