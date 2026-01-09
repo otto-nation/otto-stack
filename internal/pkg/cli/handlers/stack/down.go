@@ -7,7 +7,6 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
-	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 )
 
@@ -25,15 +24,18 @@ func NewDownHandler() *DownHandler {
 
 // Handle executes the down command
 func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	// Build CLI context from flags and args
+	cliCtx, err := BuildStackContext(cmd, args)
+	if err != nil {
+		return err
+	}
+
 	// Create command and middleware chain
 	downCommand := NewDownCommand(h.stateManager)
 	validationMiddleware := middleware.NewInitializationMiddleware()
 	loggingMiddleware := middleware.NewLoggingMiddleware()
 
 	handler := command.NewHandler(downCommand, loggingMiddleware, validationMiddleware)
-
-	// For now, create empty context - will be enhanced with flag processing
-	cliCtx := clicontext.Context{}
 
 	// Execute through command pattern
 	return handler.Execute(ctx, cliCtx, base)

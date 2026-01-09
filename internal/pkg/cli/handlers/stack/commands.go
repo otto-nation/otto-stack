@@ -113,13 +113,14 @@ func NewLogsCommand(stateManager *StateManager) *LogsCommand {
 
 // Execute shows logs for the specified services
 func (c *LogsCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-
 	base.Output.Header(core.MsgLogs)
+
+	// Create Docker client for logs
+	dockerClient, err := docker.NewClient(nil)
+	if err != nil {
+		return pkgerrors.NewDockerError("create client", "", err)
+	}
+	defer func() { _ = dockerClient.Close() }()
 
 	// Use Docker client directly for logs (service layer doesn't have logs method)
 	var serviceNames []string
@@ -127,7 +128,7 @@ func (c *LogsCommand) Execute(ctx context.Context, cliCtx clicontext.Context, ba
 		serviceNames = append(serviceNames, svc.Name)
 	}
 
-	manager := setup.DockerClient.GetComposeManager()
+	manager := dockerClient.GetComposeManager()
 	consumer := &docker.SimpleLogConsumer{}
 
 	logOptions := docker.LogOptions{
@@ -160,16 +161,17 @@ func NewStatusCommand(stateManager *StateManager) *StatusCommand {
 
 // Execute shows status for the specified services
 func (c *StatusCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-
 	base.Output.Header("%s Status", ui.IconHeader)
 
+	// Create Docker client for status
+	dockerClient, err := docker.NewClient(nil)
+	if err != nil {
+		return pkgerrors.NewDockerError("create client", "", err)
+	}
+	defer func() { _ = dockerClient.Close() }()
+
 	// List containers for the project
-	containers, err := setup.DockerClient.ListContainers(ctx, cliCtx.Project.Name)
+	containers, err := dockerClient.ListContainers(ctx, cliCtx.Project.Name)
 	if err != nil {
 		return pkgerrors.NewDockerError(OpListContainers, cliCtx.Project.Name, err)
 	}
@@ -323,31 +325,32 @@ func NewCleanupCommand(stateManager *StateManager) *CleanupCommand {
 
 // Execute cleans up unused resources
 func (c *CleanupCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
-	if err != nil {
-		return err
-	}
-	defer cleanup()
-
 	base.Output.Header(core.MsgCleaning)
+
+	// Create Docker client for cleanup
+	dockerClient, err := docker.NewClient(nil)
+	if err != nil {
+		return pkgerrors.NewDockerError("create client", "", err)
+	}
+	defer func() { _ = dockerClient.Close() }()
 
 	// Clean up unused Docker resources for the project
 	projectName := cliCtx.Project.Name
 
 	// Remove unused containers
-	err = setup.DockerClient.RemoveResources(ctx, docker.ResourceContainer, projectName)
+	err = dockerClient.RemoveResources(ctx, docker.ResourceContainer, projectName)
 	if err != nil {
 		return pkgerrors.NewDockerError(OpRemoveResources, "containers", err)
 	}
 
 	// Remove unused volumes
-	err = setup.DockerClient.RemoveResources(ctx, docker.ResourceVolume, projectName)
+	err = dockerClient.RemoveResources(ctx, docker.ResourceVolume, projectName)
 	if err != nil {
 		return pkgerrors.NewDockerError(OpRemoveResources, "volumes", err)
 	}
 
 	// Remove unused networks
-	err = setup.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, projectName)
+	err = dockerClient.RemoveResources(ctx, docker.ResourceNetwork, projectName)
 	if err != nil {
 		return pkgerrors.NewDockerError(OpRemoveResources, "networks", err)
 	}

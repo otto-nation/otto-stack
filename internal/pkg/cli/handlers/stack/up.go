@@ -5,7 +5,6 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
@@ -50,20 +49,8 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 }
 
 // buildContext processes flags and arguments to build CLI context
-func (h *UpHandler) buildContext(cmd *cobra.Command, _ []string) (clicontext.Context, error) {
-	// Parse flags
-	flags, err := core.ParseUpFlags(cmd)
-	if err != nil {
-		return clicontext.Context{}, err
-	}
-
-	// Build context with parsed data
-	ctx := clicontext.NewBuilder().
-		WithRuntime(flags.Build, false, false). // Build flag, not interactive, not dry-run initially
-		Build()
-
-	// TODO: Add service resolution and other context data
-	return ctx, nil
+func (h *UpHandler) buildContext(cmd *cobra.Command, args []string) (clicontext.Context, error) {
+	return BuildStackContext(cmd, args)
 }
 
 // Legacy methods - will be moved to UpCommand.Execute gradually
