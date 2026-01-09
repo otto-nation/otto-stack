@@ -133,6 +133,9 @@ const (
 	HelpValidationOptions   = "Choose which validations to run"
 	PromptActionSelect      = "What would you like to do?"
 	PromptProceedInit       = "Proceed with initialization?"
+	PromptFinishSelection   = "Finish selection"
+	PromptSelectCategory    = "Select a service category (or finish selection):"
+	PromptGoBackOption      = "Go Back"
 )
 
 // Template constants

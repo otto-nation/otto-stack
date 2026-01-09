@@ -183,48 +183,30 @@ func (pm *PromptManager) navigateServiceCategoriesForConfigs(categoryNames []str
 	var allSelectedServices []services.ServiceConfig
 
 	for {
-		// Category selection prompt
-		categoryPrompt := &survey.Select{
-			Message: "Select a service category (or finish selection):",
-			Options: append(categoryNames, "Finish selection"),
-		}
-
-		var selectedCategory string
-		if err := survey.AskOne(categoryPrompt, &selectedCategory); err != nil {
-			return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, "failed to select category", err)
-		}
-
-		if selectedCategory == "Finish selection" {
-			break
-		}
-
-		// Find category index
-		categoryIndex := -1
-		for i, name := range categoryNames {
-			if name == selectedCategory {
-				categoryIndex = i
-				break
-			}
-		}
-
-		if categoryIndex == -1 {
-			continue
-		}
-
-		// Prompt for services in this category
-		categoryServices := categoryServicesList[categoryIndex]
-		serviceOptions := pm.buildServiceOptions(categoryServices, true)
-		selectedServiceConfigs, goBack, err := pm.promptCategoryServicesForConfigs(selectedCategory, serviceOptions, categoryServices)
-
+		selectedCategory, err := pm.promptForCategory(categoryNames)
 		if err != nil {
 			return nil, err
 		}
 
-		if goBack {
+		if selectedCategory == core.PromptFinishSelection {
+			break
+		}
+
+		categoryIndex := pm.findCategoryIndex(categoryNames, selectedCategory)
+		if categoryIndex == -1 {
 			continue
 		}
 
-		allSelectedServices = append(allSelectedServices, selectedServiceConfigs...)
+		selectedServices, shouldGoBack, err := pm.selectServicesFromCategory(categoryIndex, categoryServicesList)
+		if err != nil {
+			return nil, err
+		}
+
+		if shouldGoBack {
+			continue
+		}
+
+		allSelectedServices = append(allSelectedServices, selectedServices...)
 	}
 
 	if len(allSelectedServices) == 0 {
@@ -232,6 +214,38 @@ func (pm *PromptManager) navigateServiceCategoriesForConfigs(categoryNames []str
 	}
 
 	return allSelectedServices, nil
+}
+
+// promptForCategory prompts user to select a category
+func (pm *PromptManager) promptForCategory(categoryNames []string) (string, error) {
+	categoryPrompt := &survey.Select{
+		Message: core.PromptSelectCategory,
+		Options: append(categoryNames, core.PromptFinishSelection),
+	}
+
+	var selectedCategory string
+	if err := survey.AskOne(categoryPrompt, &selectedCategory); err != nil {
+		return "", pkgerrors.NewValidationError(pkgerrors.FieldServiceName, "failed to select category", err)
+	}
+
+	return selectedCategory, nil
+}
+
+// findCategoryIndex finds the index of a category by name
+func (pm *PromptManager) findCategoryIndex(categoryNames []string, selectedCategory string) int {
+	for i, name := range categoryNames {
+		if name == selectedCategory {
+			return i
+		}
+	}
+	return -1
+}
+
+// selectServicesFromCategory handles service selection for a specific category
+func (pm *PromptManager) selectServicesFromCategory(categoryIndex int, categoryServicesList [][]services.ServiceConfig) ([]services.ServiceConfig, bool, error) {
+	categoryServices := categoryServicesList[categoryIndex]
+	serviceOptions := pm.buildServiceOptions(categoryServices, true)
+	return pm.promptCategoryServicesForConfigs(categoryServices[0].Category, serviceOptions, categoryServices)
 }
 
 // buildServiceOptions creates service options for prompts
@@ -245,7 +259,7 @@ func (pm *PromptManager) buildServiceOptions(categoryServices []services.Service
 	}
 
 	if allowGoBack {
-		options = append(options, "Go Back")
+		options = append(options, core.PromptGoBackOption)
 	}
 
 	return options
@@ -265,14 +279,14 @@ func (pm *PromptManager) promptCategoryServicesForConfigs(categoryName string, s
 	}
 
 	// Check if user selected "Go Back"
-	if slices.Contains(selected, "Go Back") {
+	if slices.Contains(selected, core.PromptGoBackOption) {
 		return nil, true, nil
 	}
 
 	// Map selected display names back to ServiceConfigs
 	var selectedConfigs []services.ServiceConfig
 	for _, selection := range selected {
-		if selection != "Go Back" {
+		if selection != core.PromptGoBackOption {
 			// Extract service name (before " - ")
 			parts := strings.Split(selection, " - ")
 			if len(parts) > 0 {
