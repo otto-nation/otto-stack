@@ -2,11 +2,11 @@ package project
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +27,7 @@ func (h *ValidateHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	// Load configuration
 	_, err := config.LoadConfig()
 	if err != nil {
-		ci.HandleError(flags, fmt.Errorf("failed to load configuration: %w", err))
+		ci.HandleError(flags, pkgerrors.NewServiceError("project", "load configuration", err))
 		return nil
 	}
 

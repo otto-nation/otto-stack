@@ -11,6 +11,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
@@ -59,7 +60,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	// Get service status using StackService
 	stackService, err := NewStackService(false)
 	if err != nil {
-		ci.HandleError(ciFlags, fmt.Errorf("failed to create stack service: %w", err))
+		ci.HandleError(ciFlags, pkgerrors.NewServiceError("stack", "create service", err))
 		return nil
 	}
 

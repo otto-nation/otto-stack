@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/docker/compose/v5/pkg/api"
@@ -181,7 +180,7 @@ func (s *Service) Stop(ctx context.Context, req StopRequest) error {
 		})
 		err = s.compose.Down(ctx, project.Name, options.ToSDK())
 		if err != nil {
-			return fmt.Errorf("failed to remove project %s: %w", req.Project, err)
+			return pkgerrors.NewServiceError("project", "remove", err)
 		}
 		return nil
 	}
@@ -194,9 +193,9 @@ func (s *Service) Stop(ctx context.Context, req StopRequest) error {
 	if err != nil {
 		serviceNames := ExtractServiceNames(req.ServiceConfigs)
 		if len(serviceNames) > 0 {
-			return fmt.Errorf("failed to stop services %v in project %s: %w", serviceNames, req.Project, err)
+			return pkgerrors.NewServiceError("project", "stop services", err)
 		}
-		return fmt.Errorf("failed to stop project %s: %w", req.Project, err)
+		return pkgerrors.NewServiceError("project", "stop", err)
 	}
 	return nil
 }
@@ -215,9 +214,9 @@ func (s *Service) Logs(ctx context.Context, req LogRequest) error {
 	err := s.compose.Logs(ctx, req.Project, consumer, options.ToSDK())
 	if err != nil {
 		if len(serviceNames) > 0 {
-			return fmt.Errorf("failed to get logs for services %v in project %s: %w", serviceNames, req.Project, err)
+			return pkgerrors.NewServiceError("project", "get logs", err)
 		}
-		return fmt.Errorf("failed to get logs for project %s: %w", req.Project, err)
+		return pkgerrors.NewServiceError("project", "get logs", err)
 	}
 	return nil
 }
@@ -244,7 +243,7 @@ func (s *Service) Exec(ctx context.Context, req ExecRequest) error {
 
 	_, err = s.compose.Exec(ctx, req.Project, options)
 	if err != nil {
-		return fmt.Errorf("failed to exec command %v in service %s (project %s): %w", req.Command, req.Service, req.Project, err)
+		return pkgerrors.NewServiceError("project", "exec command", err)
 	}
 	return nil
 }

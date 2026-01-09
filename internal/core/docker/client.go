@@ -118,7 +118,7 @@ func (c *Client) ListContainers(ctx context.Context, project string) ([]Containe
 		Filters: filter,
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to list containers: %w", err)
+		return nil, pkgerrors.NewServiceError(ComponentDocker, "list containers", err)
 	}
 
 	var result []ContainerInfo
@@ -175,12 +175,12 @@ func (c *Client) RunInitContainer(ctx context.Context, name string, config InitC
 
 	resp, err := c.cli.ContainerCreate(ctx, containerConfig, hostConfig, networkConfig, nil, name)
 	if err != nil {
-		return fmt.Errorf("failed to create init container: %w", err)
+		return pkgerrors.NewServiceError(ComponentDocker, "create init container", err)
 	}
 
 	// Start container
 	if err := c.cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return fmt.Errorf("failed to start init container: %w", err)
+		return pkgerrors.NewServiceError(ComponentDocker, "start init container", err)
 	}
 
 	// Wait for completion

@@ -8,6 +8,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
@@ -44,7 +45,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 
 	serviceConfigs, err := ResolveServiceConfigs(args, setup)
 	if err != nil {
-		return fmt.Errorf("failed to resolve services: %w", err)
+		return pkgerrors.NewServiceError("stack", "resolve services", err)
 	}
 
 	if err := h.restartServices(ctx, setup, serviceConfigs, flags); err != nil {
@@ -60,7 +61,7 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *CoreSetup, 
 	// Create stack service
 	stackService, err := NewStackService(false)
 	if err != nil {
-		return fmt.Errorf("failed to create stack service: %w", err)
+		return pkgerrors.NewServiceError("stack", "create service", err)
 	}
 
 	// Stop services

@@ -88,7 +88,7 @@ func (h *WebInterfacesHandler) getRunningServices(setup *CoreSetup, serviceConfi
 
 	statuses, err := stackService.DockerClient.GetServiceStatus(context.Background(), setup.Config.Project.Name, serviceNames)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get service status: %w", err)
+		return nil, pkgerrors.NewServiceError("stack", "get service status", err)
 	}
 
 	running := make(map[string]bool)

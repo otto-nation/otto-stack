@@ -14,6 +14,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"gopkg.in/yaml.v3"
 )
@@ -49,7 +50,7 @@ func (m *ServiceInitManager) RunInitContainers(ctx context.Context, serviceConfi
 		// Handle local mode
 		if service.InitService.Mode == "local" {
 			if err := m.executeLocalInit(serviceName, service, projectName); err != nil {
-				return fmt.Errorf("failed to execute local init for %s: %w", serviceName, err)
+				return pkgerrors.NewServiceError("stack", "execute local init", err)
 			}
 			continue
 		}
@@ -63,7 +64,7 @@ func (m *ServiceInitManager) RunInitContainers(ctx context.Context, serviceConfi
 			// Process template with service config data
 			processedScript, err := m.processTemplate(script.Content, serviceName)
 			if err != nil {
-				return fmt.Errorf("failed to process template for %s: %w", serviceName, err)
+				return pkgerrors.NewServiceError("stack", "process template", err)
 			}
 
 			// Substitute environment variables in the script
@@ -72,7 +73,7 @@ func (m *ServiceInitManager) RunInitContainers(ctx context.Context, serviceConfi
 			scriptConfig.Command = []string{docker.ShellSh, docker.ShellC, processedScript}
 
 			if err := m.stackService.DockerClient.RunInitContainer(ctx, containerName, scriptConfig); err != nil {
-				return fmt.Errorf("failed to run init container for %s: %w", serviceName, err)
+				return pkgerrors.NewServiceError("stack", "run init container", err)
 			}
 		}
 	}
@@ -90,7 +91,7 @@ func (m *ServiceInitManager) executeLocalInit(serviceName string, service *servi
 		// Process template with service config data
 		processedScript, err := m.processTemplate(script.Content, serviceName)
 		if err != nil {
-			return fmt.Errorf("failed to process template: %w", err)
+			return pkgerrors.NewServiceError("stack", "process template", err)
 		}
 
 		// Build complete environment from service config
@@ -109,7 +110,7 @@ func (m *ServiceInitManager) executeLocalInit(serviceName string, service *servi
 
 		// Execute script locally using shell
 		if err := m.executeLocalScript(service.InitService.Image, service.InitService.Environment, processedScript, projectName); err != nil {
-			return fmt.Errorf("failed to execute Docker command: %w", err)
+			return pkgerrors.NewServiceError("stack", "execute docker command", err)
 		}
 	}
 	return nil
