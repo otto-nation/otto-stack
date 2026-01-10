@@ -8,7 +8,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/shared"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 
 	"github.com/spf13/cobra"
@@ -39,7 +39,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		base.Output.Header(core.MsgCleaning)
 	}
 
-	setup, cleanup, err := shared.SetupCoreCommand(ctx, base)
+	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
 	if err != nil {
 		return ci.FormatError(ciFlags, err)
 	}
@@ -93,7 +93,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 }
 
 // performCleanup executes the actual cleanup operations
-func (h *CleanupHandler) performCleanup(ctx context.Context, setup *shared.CoreSetup, cmd *cobra.Command, base *base.BaseCommand) error {
+func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreSetup, cmd *cobra.Command, base *base.BaseCommand) error {
 	flags, err := core.ParseCleanupFlags(cmd)
 	if err != nil {
 		return pkgerrors.NewValidationError(pkgerrors.FieldFlags, "failed to parse cleanup flags", err)
@@ -116,9 +116,9 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *shared.CoreS
 	}
 
 	// Create stack service
-	stackService, err := NewServiceManager(false)
+	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentStack, MsgFailedCreateStackService, err)
+		return pkgerrors.NewServiceError(common.ComponentStack, common.MsgFailedCreateStackService, err)
 	}
 
 	// List containers to clean
@@ -131,7 +131,7 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *shared.CoreS
 	}
 
 	if err != nil {
-		return pkgerrors.NewDockerError(OpListContainers, "", err)
+		return pkgerrors.NewDockerError(common.OpListContainers, "", err)
 	}
 
 	if len(containers) == 0 {

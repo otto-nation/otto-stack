@@ -1,4 +1,4 @@
-package base
+package common
 
 // BaseHandler provides common implementations for handler interface methods
 type BaseHandler struct{}

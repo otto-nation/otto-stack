@@ -5,7 +5,7 @@ package pkg
 import (
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/lifecycle"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
@@ -14,7 +14,7 @@ import (
 // Performance benchmarks for critical operations
 
 func BenchmarkStateManager_GetConfigHash(b *testing.B) {
-	sm := lifecycle.NewStateManager()
+	sm := common.NewStateManager()
 	cfg := &config.Config{
 		Project: config.ProjectConfig{
 			Name: project.TestProjectName,
@@ -36,14 +36,14 @@ func BenchmarkStateManager_GetConfigHash(b *testing.B) {
 func BenchmarkStateManager_NewStateManager(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		sm := lifecycle.NewStateManager()
+		sm := common.NewStateManager()
 		_ = sm // Use sm to avoid unused variable
 	}
 }
 
 // Memory allocation benchmarks
 func BenchmarkStateManager_GetConfigHash_Memory(b *testing.B) {
-	sm := lifecycle.NewStateManager()
+	sm := common.NewStateManager()
 	cfg := &config.Config{
 		Project: config.ProjectConfig{
 			Name: "memory-benchmark-project",

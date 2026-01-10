@@ -8,7 +8,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/shared"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
@@ -33,7 +33,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return nil
 	}
 
-	setup, cleanup, err := shared.SetupCoreCommand(ctx, base)
+	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
 	if err != nil {
 		return err
 	}
@@ -64,9 +64,9 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 }
 
 // restartServices performs the stop and start operations using new stack service
-func (h *RestartHandler) restartServices(ctx context.Context, setup *shared.CoreSetup, serviceConfigs []services.ServiceConfig, flags *core.RestartFlags) error {
+func (h *RestartHandler) restartServices(ctx context.Context, setup *common.CoreSetup, serviceConfigs []services.ServiceConfig, flags *core.RestartFlags) error {
 	// Create stack service
-	stackService, err := NewServiceManager(false)
+	stackService, err := common.NewServiceManager(false)
 	if err != nil {
 		return pkgerrors.NewServiceError("stack", "create service", err)
 	}

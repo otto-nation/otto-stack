@@ -10,17 +10,18 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 )
 
 // ExecHandler handles the exec command
 type ExecHandler struct {
-	stateManager *StateManager
+	stateManager *common.StateManager
 }
 
 // NewExecHandler creates a new exec handler
 func NewExecHandler() *ExecHandler {
 	return &ExecHandler{
-		stateManager: NewStateManager(),
+		stateManager: common.NewStateManager(),
 	}
 }
 

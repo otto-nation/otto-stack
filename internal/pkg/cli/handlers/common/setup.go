@@ -1,4 +1,4 @@
-package shared
+package common
 
 import (
 	"context"
@@ -11,8 +11,10 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
@@ -111,4 +113,21 @@ func mergeProjectConfigs(base, local *config.Config) *config.Config {
 // CreateStandardMiddlewareChain creates the standard middleware chain used by all stack handlers
 func CreateStandardMiddlewareChain() (validationMiddleware, loggingMiddleware command.Middleware) {
 	return middleware.NewInitializationMiddleware(), middleware.NewLoggingMiddleware()
+}
+
+// BuildStackContext builds CLI context from command and args
+func BuildStackContext(cmd *cobra.Command, args []string) (clicontext.Context, error) {
+	// Load project configuration
+	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
+	cfg, err := LoadProjectConfig(configPath)
+	if err != nil {
+		return clicontext.Context{}, err
+	}
+
+	// Build context using the builder pattern
+	builder := clicontext.NewBuilder().
+		WithProject(cfg.Project.Name, core.OttoStackDir).
+		WithServices(args, nil)
+
+	return builder.Build(), nil
 }

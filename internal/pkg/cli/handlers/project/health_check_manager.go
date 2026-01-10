@@ -10,7 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	lifecyclehandlers "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/lifecycle"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 )
 
 // HealthCheckManager handles system health checks
@@ -40,7 +40,7 @@ func (hcm *HealthCheckManager) CheckDocker(base *base.BaseCommand) bool {
 	}
 
 	// Use StackService to run docker info command
-	stackService, err := lifecyclehandlers.NewServiceManager(false)
+	stackService, err := common.NewServiceManager(false)
 	if err != nil {
 		base.Output.Error("Failed to create stack service: %v", err)
 		return false
@@ -115,7 +115,7 @@ func (hcm *HealthCheckManager) isCommandAvailable(command string) bool {
 
 // hasDockerComposePlugin checks if Docker Compose plugin is available
 func (hcm *HealthCheckManager) hasDockerComposePlugin() bool {
-	stackService, err := lifecyclehandlers.NewServiceManager(false)
+	stackService, err := common.NewServiceManager(false)
 	if err != nil {
 		return false
 	}

@@ -7,7 +7,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/shared"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
@@ -17,11 +17,11 @@ import (
 // ServiceCommand handles all service operations with a generic pattern
 type ServiceCommand struct {
 	operation    string
-	stateManager *StateManager
+	stateManager *common.StateManager
 }
 
 // NewServiceCommand creates a new service command for the specified operation
-func NewServiceCommand(operation string, stateManager *StateManager) *ServiceCommand {
+func NewServiceCommand(operation string, stateManager *common.StateManager) *ServiceCommand {
 	return &ServiceCommand{
 		operation:    operation,
 		stateManager: stateManager,
@@ -56,9 +56,9 @@ func (c *ServiceCommand) Execute(ctx context.Context, cliCtx clicontext.Context,
 func (c *ServiceCommand) executeUp(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header("%s", core.MsgStarting)
 
-	service, err := NewServiceManager(false)
+	service, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentStack, ActionCreateService, err)
+		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
 	}
 
 	startRequest := services.StartRequest{
@@ -70,7 +70,7 @@ func (c *ServiceCommand) executeUp(ctx context.Context, cliCtx clicontext.Contex
 
 	err = service.Start(ctx, startRequest)
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentStack, ActionStartServices, err)
+		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStartServices, err)
 	}
 
 	base.Output.Success("Services started successfully")
@@ -86,9 +86,9 @@ func (c *ServiceCommand) executeUp(ctx context.Context, cliCtx clicontext.Contex
 func (c *ServiceCommand) executeDown(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header(core.MsgStopping)
 
-	service, err := NewServiceManager(false)
+	service, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentStack, ActionCreateService, err)
+		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
 	}
 
 	stopRequest := services.StopRequest{
@@ -100,7 +100,7 @@ func (c *ServiceCommand) executeDown(ctx context.Context, cliCtx clicontext.Cont
 
 	err = service.Stop(ctx, stopRequest)
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentStack, ActionStopServices, err)
+		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStopServices, err)
 	}
 
 	base.Output.Success("Services stopped successfully")
@@ -139,7 +139,7 @@ func (c *ServiceCommand) executeLogs(ctx context.Context, cliCtx clicontext.Cont
 
 	err = manager.Logs(ctx, cliCtx.Project.Name, consumer, logOptions.ToSDK())
 	if err != nil {
-		return pkgerrors.NewDockerError(OpShowLogs, cliCtx.Project.Name, err)
+		return pkgerrors.NewDockerError(common.OpShowLogs, cliCtx.Project.Name, err)
 	}
 
 	base.Output.Success("Logs displayed successfully")
@@ -158,7 +158,7 @@ func (c *ServiceCommand) executeStatus(ctx context.Context, cliCtx clicontext.Co
 
 	containers, err := dockerClient.ListContainers(ctx, cliCtx.Project.Name)
 	if err != nil {
-		return pkgerrors.NewDockerError(OpListContainers, cliCtx.Project.Name, err)
+		return pkgerrors.NewDockerError(common.OpListContainers, cliCtx.Project.Name, err)
 	}
 
 	if len(containers) == 0 {
@@ -198,7 +198,7 @@ func (c *ServiceCommand) executeExec(_ context.Context, cliCtx clicontext.Contex
 
 // executeConnect connects to the specified service
 func (c *ServiceCommand) executeConnect(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
-	setup, cleanup, err := shared.SetupCoreCommand(ctx, base)
+	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
 	if err != nil {
 		return err
 	}
@@ -219,9 +219,9 @@ func (c *ServiceCommand) executeConnect(ctx context.Context, cliCtx clicontext.C
 func (c *ServiceCommand) executeRestart(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header(core.MsgRestarting)
 
-	service, err := NewServiceManager(false)
+	service, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentStack, ActionCreateService, err)
+		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
 	}
 
 	stopRequest := services.StopRequest{
@@ -231,7 +231,7 @@ func (c *ServiceCommand) executeRestart(ctx context.Context, cliCtx clicontext.C
 	}
 	err = service.Stop(ctx, stopRequest)
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentStack, ActionStopServices, err)
+		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStopServices, err)
 	}
 
 	startRequest := services.StartRequest{
@@ -242,7 +242,7 @@ func (c *ServiceCommand) executeRestart(ctx context.Context, cliCtx clicontext.C
 	}
 	err = service.Start(ctx, startRequest)
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentStack, ActionStartServices, err)
+		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStartServices, err)
 	}
 
 	base.Output.Success("Services restarted successfully")
@@ -268,17 +268,17 @@ func (c *ServiceCommand) executeCleanup(ctx context.Context, cliCtx clicontext.C
 
 	err = dockerClient.RemoveResources(ctx, docker.ResourceContainer, projectName)
 	if err != nil {
-		return pkgerrors.NewDockerError(OpRemoveResources, "containers", err)
+		return pkgerrors.NewDockerError(common.OpRemoveResources, "containers", err)
 	}
 
 	err = dockerClient.RemoveResources(ctx, docker.ResourceVolume, projectName)
 	if err != nil {
-		return pkgerrors.NewDockerError(OpRemoveResources, "volumes", err)
+		return pkgerrors.NewDockerError(common.OpRemoveResources, "volumes", err)
 	}
 
 	err = dockerClient.RemoveResources(ctx, docker.ResourceNetwork, projectName)
 	if err != nil {
-		return pkgerrors.NewDockerError(OpRemoveResources, "networks", err)
+		return pkgerrors.NewDockerError(common.OpRemoveResources, "networks", err)
 	}
 
 	base.Output.Success("Cleanup completed successfully")

@@ -9,18 +9,19 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
 
 // ConnectHandler handles the connect command
 type ConnectHandler struct {
-	stateManager *StateManager
+	stateManager *common.StateManager
 }
 
 // NewConnectHandler creates a new connect handler
 func NewConnectHandler() *ConnectHandler {
 	return &ConnectHandler{
-		stateManager: NewStateManager(),
+		stateManager: common.NewStateManager(),
 	}
 }
 
@@ -70,6 +71,6 @@ func (h *ConnectHandler) getConnectionCommand(serviceName, database, user, host 
 		}
 		return cmd, nil
 	default:
-		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgUnsupportedService+": "+serviceName, nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, common.MsgUnsupportedService+": "+serviceName, nil)
 	}
 }

@@ -8,24 +8,25 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 )
 
 // LogsHandler handles the logs command
 type LogsHandler struct {
-	stateManager *StateManager
+	stateManager *common.StateManager
 }
 
 // NewLogsHandler creates a new logs handler
 func NewLogsHandler() *LogsHandler {
 	return &LogsHandler{
-		stateManager: NewStateManager(),
+		stateManager: common.NewStateManager(),
 	}
 }
 
 // Handle executes the logs command
 func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Build CLI context from flags and args
-	cliCtx, err := BuildStackContext(cmd, args)
+	cliCtx, err := common.BuildStackContext(cmd, args)
 	if err != nil {
 		return err
 	}

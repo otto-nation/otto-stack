@@ -5,7 +5,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	basehandler "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
@@ -13,7 +13,7 @@ import (
 )
 
 type DoctorHandler struct {
-	basehandler.BaseHandler
+	common.BaseHandler
 	output             *ui.Output
 	healthCheckManager *HealthCheckManager
 }

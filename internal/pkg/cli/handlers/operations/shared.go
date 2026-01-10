@@ -2,13 +2,13 @@ package operations
 
 import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/shared"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 // ResolveServiceConfigs resolves services to ServiceConfigs using consistent logic across handlers
-func ResolveServiceConfigs(args []string, setup *shared.CoreSetup) ([]services.ServiceConfig, error) {
+func ResolveServiceConfigs(args []string, setup *common.CoreSetup) ([]services.ServiceConfig, error) {
 	if len(args) > 0 {
 		// Resolve specific services from args
 		serviceConfigs, err := services.ResolveUpServices(args, setup.Config)

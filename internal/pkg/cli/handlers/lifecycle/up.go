@@ -9,19 +9,20 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/shared"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/operations"
 	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 )
 
 // UpHandler handles the up command
 type UpHandler struct {
-	stateManager *StateManager
+	stateManager *common.StateManager
 }
 
 // NewUpHandler creates a new up handler
 func NewUpHandler() *UpHandler {
 	return &UpHandler{
-		stateManager: NewStateManager(),
+		stateManager: common.NewStateManager(),
 	}
 }
 
@@ -34,8 +35,8 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	}
 
 	// Create command and middleware chain
-	upCommand := NewServiceCommand(core.CommandUp, h.stateManager)
-	validationMiddleware, loggingMiddleware := shared.CreateStandardMiddlewareChain()
+	upCommand := operations.NewServiceCommand(core.CommandUp, h.stateManager)
+	validationMiddleware, loggingMiddleware := common.CreateStandardMiddlewareChain()
 
 	handler := command.NewHandler(upCommand, loggingMiddleware, validationMiddleware)
 
@@ -45,7 +46,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 
 // buildContext processes flags and arguments to build CLI context
 func (h *UpHandler) buildContext(cmd *cobra.Command, args []string) (clicontext.Context, error) {
-	return BuildStackContext(cmd, args)
+	return common.BuildStackContext(cmd, args)
 }
 
 // Legacy methods - will be moved to UpCommand.Execute gradually

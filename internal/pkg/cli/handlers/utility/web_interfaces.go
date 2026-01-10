@@ -10,7 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/shared"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
@@ -36,7 +36,7 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 		base.Output.Header("%s %s", core.IconCategory_web, core.TitleCase(core.CommandWebInterfaces))
 	}
 
-	setup, cleanup, err := shared.SetupCoreCommand(ctx, base)
+	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
 	if err != nil {
 		return ci.FormatError(ciFlags, err)
 	}
@@ -63,7 +63,7 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 }
 
 // collectInterfaces gathers web interfaces from services
-func (h *WebInterfacesHandler) collectInterfaces(setup *shared.CoreSetup, serviceConfigs []services.ServiceConfig, showAll bool) ([]WebInterface, error) {
+func (h *WebInterfacesHandler) collectInterfaces(setup *common.CoreSetup, serviceConfigs []services.ServiceConfig, showAll bool) ([]WebInterface, error) {
 	runningServices, err := h.getRunningServices(setup, serviceConfigs, showAll)
 	if err != nil {
 		return nil, err
@@ -73,16 +73,16 @@ func (h *WebInterfacesHandler) collectInterfaces(setup *shared.CoreSetup, servic
 }
 
 // getRunningServices gets the status of services if not showing all
-func (h *WebInterfacesHandler) getRunningServices(setup *shared.CoreSetup, serviceConfigs []services.ServiceConfig, showAll bool) (map[string]bool, error) {
+func (h *WebInterfacesHandler) getRunningServices(setup *common.CoreSetup, serviceConfigs []services.ServiceConfig, showAll bool) (map[string]bool, error) {
 	if showAll {
 		return nil, nil
 	}
 
 	serviceNames := services.ExtractServiceNames(serviceConfigs)
 
-	stackService, err := NewServiceManager(false)
+	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(ComponentStack, MsgFailedCreateStackService, err)
+		return nil, pkgerrors.NewServiceError(common.ComponentStack, common.MsgFailedCreateStackService, err)
 	}
 
 	statuses, err := stackService.DockerClient.GetServiceStatus(context.Background(), setup.Config.Project.Name, serviceNames)
