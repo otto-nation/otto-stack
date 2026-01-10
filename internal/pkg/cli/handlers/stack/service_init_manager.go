@@ -152,12 +152,12 @@ func (m *ServiceInitManager) processTemplate(content string, serviceName string)
 
 	tmpl, err := template.New("init").Parse(content)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse template: %w", err)
+		return "", pkgerrors.NewServiceError("stack", "parse template", err)
 	}
 
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, configData); err != nil {
-		return "", fmt.Errorf("failed to execute template: %w", err)
+		return "", pkgerrors.NewServiceError("stack", "execute template", err)
 	}
 
 	return buf.String(), nil

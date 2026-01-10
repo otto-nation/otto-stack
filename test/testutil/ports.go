@@ -1,9 +1,10 @@
 package testutil
 
 import (
-	"fmt"
 	"net"
 	"sync"
+
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
 
 type PortManager struct {
@@ -43,7 +44,7 @@ func (pm *PortManager) AllocateServicePorts(services []string) (map[string]int, 
 	for _, service := range services {
 		port, err := pm.AllocatePort()
 		if err != nil {
-			return nil, fmt.Errorf("failed to allocate port for %s: %w", service, err)
+			return nil, pkgerrors.NewServiceError("test", "allocate port", err)
 		}
 		ports[service] = port
 	}

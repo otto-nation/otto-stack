@@ -35,25 +35,57 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Group commands by handler
-	handlerCommands := make(map[string][]string)
+	// Define command categories for target folder structure
+	commandCategories := map[string]string{
+		// Lifecycle commands (from stack)
+		"up":      "lifecycle",
+		"down":    "lifecycle",
+		"restart": "lifecycle",
+		"cleanup": "lifecycle",
+
+		// Operations commands (from stack)
+		"status":  "operations",
+		"logs":    "operations",
+		"exec":    "operations",
+		"connect": "operations",
+
+		// Utility commands (mixed)
+		"web-interfaces": "utility",
+		"doctor":         "utility",
+		"version":        "utility",
+
+		// Project commands (remaining in project)
+		"init":      "project",
+		"services":  "project",
+		"deps":      "project",
+		"conflicts": "project",
+		"validate":  "project",
+	}
+
+	// Group commands by category instead of handler
+	categoryCommands := make(map[string][]string)
 	for cmdName, cmd := range commandConfig.Commands {
 		if cmd.Handler != "" {
-			handlerCommands[cmd.Handler] = append(handlerCommands[cmd.Handler], cmdName)
+			category := commandCategories[cmdName]
+			if category == "" {
+				// Fallback to handler if no category defined
+				category = cmd.Handler
+			}
+			categoryCommands[category] = append(categoryCommands[category], cmdName)
 		}
 	}
 
-	// Generate register.go for each handler
-	for handler, commands := range handlerCommands {
+	// Generate register.go for each category
+	for category, commands := range categoryCommands {
 		sort.Strings(commands)
-		if err := generateRegisterFile(handler, commands); err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to generate %s: %v\n", handler, err)
+		if err := generateRegisterFile(category, commands); err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to generate %s: %v\n", category, err)
 			continue
 		}
-		fmt.Printf("Generated %s\n", fmt.Sprintf(GeneratedFilePath, handler))
+		fmt.Printf("Generated %s\n", fmt.Sprintf(GeneratedFilePath, category))
 	}
 
-	fmt.Printf("Generated register.go files for %d handlers\n", len(handlerCommands))
+	fmt.Printf("Generated register.go files for %d categories\n", len(categoryCommands))
 }
 
 func generateRegisterFile(handler string, commands []string) error {
