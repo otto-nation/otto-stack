@@ -27,8 +27,7 @@ func (h *ValidateHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	// Load configuration
 	_, err := config.LoadConfig()
 	if err != nil {
-		ci.HandleError(flags, pkgerrors.NewServiceError("project", "load configuration", err))
-		return nil
+		return ci.FormatError(flags, pkgerrors.NewServiceError("project", "load configuration", err))
 	}
 
 	if !flags.Quiet {

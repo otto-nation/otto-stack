@@ -7,6 +7,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/shared"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
@@ -133,7 +134,7 @@ func (c *ServiceCommand) executeLogs(ctx context.Context, cliCtx clicontext.Cont
 		Services:   serviceNames,
 		Follow:     cliCtx.Runtime.Force,
 		Timestamps: true,
-		Tail:       "100",
+		Tail:       "100", // TODO: Extract to constant - DefaultLogTailLines = "100"
 	}
 
 	err = manager.Logs(ctx, cliCtx.Project.Name, consumer, logOptions.ToSDK())
@@ -197,7 +198,7 @@ func (c *ServiceCommand) executeExec(_ context.Context, cliCtx clicontext.Contex
 
 // executeConnect connects to the specified service
 func (c *ServiceCommand) executeConnect(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
+	setup, cleanup, err := shared.SetupCoreCommand(ctx, base)
 	if err != nil {
 		return err
 	}

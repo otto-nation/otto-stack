@@ -10,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/shared"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
@@ -40,18 +41,16 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		base.Output.Header(core.MsgStatus)
 	}
 
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
+	setup, cleanup, err := shared.SetupCoreCommand(ctx, base)
 	if err != nil {
-		ci.HandleError(ciFlags, err)
-		return nil
+		return ci.FormatError(ciFlags, err)
 	}
 	defer cleanup()
 
 	// Resolve services to ServiceConfigs
 	serviceConfigs, err := ResolveServiceConfigs(args, setup)
 	if err != nil {
-		ci.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
-		return nil
+		return ci.FormatError(ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
 	}
 
 	// Filter out init containers (restart: "no") from status display
@@ -60,14 +59,12 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	// Get service status using StackService
 	stackService, err := NewServiceManager(false)
 	if err != nil {
-		ci.HandleError(ciFlags, pkgerrors.NewServiceError("stack", "create service", err))
-		return nil
+		return ci.FormatError(ciFlags, pkgerrors.NewServiceError("stack", "create service", err))
 	}
 
 	statuses, err := stackService.DockerClient.GetServiceStatus(ctx, setup.Config.Project.Name, filteredServices)
 	if err != nil {
-		ci.HandleError(ciFlags, fmt.Errorf(core.MsgStack_failed_get_service_status, err))
-		return nil
+		return ci.FormatError(ciFlags, fmt.Errorf(core.MsgStack_failed_get_service_status, err))
 	}
 
 	// Handle CI-friendly output

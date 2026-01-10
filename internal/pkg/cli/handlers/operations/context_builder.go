@@ -9,6 +9,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/shared"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
@@ -51,7 +52,7 @@ func BuildStackContext(cmd *cobra.Command, args []string) (clicontext.Context, e
 // getProjectInfo loads project name and enabled services from config
 func getProjectInfo() (string, []string) {
 	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
-	if cfg, err := LoadProjectConfig(configPath); err == nil {
+	if cfg, err := shared.LoadProjectConfig(configPath); err == nil {
 		return cfg.Project.Name, cfg.Stack.Enabled
 	}
 	return "default-project", []string{}

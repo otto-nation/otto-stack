@@ -9,12 +9,15 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/shared"
 	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 )
 
+// TODO: Remove this local constant and use core.DefaultStartTimeoutSeconds everywhere
+// DefaultTimeoutSeconds is the default timeout for operations
+// DEPRECATED: Use core.DefaultStartTimeoutSeconds instead
 const (
-	// DefaultTimeoutSeconds is the default timeout for operations
-	DefaultTimeoutSeconds = 30
+	DefaultTimeoutSeconds = core.DefaultStartTimeoutSeconds
 )
 
 // UpHandler handles the up command
@@ -39,7 +42,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 
 	// Create command and middleware chain
 	upCommand := NewServiceCommand(core.CommandUp, h.stateManager)
-	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
+	validationMiddleware, loggingMiddleware := shared.CreateStandardMiddlewareChain()
 
 	handler := command.NewHandler(upCommand, loggingMiddleware, validationMiddleware)
 

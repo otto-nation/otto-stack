@@ -5,6 +5,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	basehandler "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
@@ -12,6 +13,7 @@ import (
 )
 
 type DoctorHandler struct {
+	basehandler.BaseHandler
 	output             *ui.Output
 	healthCheckManager *HealthCheckManager
 }
@@ -21,14 +23,6 @@ func NewDoctorHandler() *DoctorHandler {
 		output:             ui.NewOutput(),
 		healthCheckManager: NewHealthCheckManager(),
 	}
-}
-
-func (h *DoctorHandler) ValidateArgs(args []string) error {
-	return nil
-}
-
-func (h *DoctorHandler) GetRequiredFlags() []string {
-	return []string{}
 }
 
 func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {

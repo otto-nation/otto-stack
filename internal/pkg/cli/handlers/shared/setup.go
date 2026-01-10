@@ -1,17 +1,58 @@
-package operations
+package shared
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
-
 	"gopkg.in/yaml.v3"
 )
 
-// LoadProjectConfig loads the otto-stack project configuration with local overrides
+// CoreSetup contains common setup data for handlers
+type CoreSetup struct {
+	Config       *config.Config
+	DockerClient *docker.Client
+}
+
+// SetupCoreCommand provides common setup for handlers that need Docker and config
+func SetupCoreCommand(ctx context.Context, base *base.BaseCommand) (*CoreSetup, func(), error) {
+	// Check if otto-stack is initialized
+	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		return nil, nil, errors.New(core.MsgErrors_not_initialized)
+	}
+
+	// Load project configuration
+	cfg, err := LoadProjectConfig(configPath)
+	if err != nil {
+		return nil, nil, fmt.Errorf(core.MsgStack_failed_load_config, err)
+	}
+
+	// Create Docker client
+	dockerClient, err := docker.NewClient(nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf(core.MsgStack_failed_create_docker_client, err)
+	}
+
+	cleanup := func() {
+		_ = dockerClient.Close()
+	}
+
+	return &CoreSetup{
+		Config:       cfg,
+		DockerClient: dockerClient,
+	}, cleanup, nil
+}
+
+// LoadProjectConfig loads the project configuration from the given path
 func LoadProjectConfig(configPath string) (*config.Config, error) {
 	// Load base config
 	baseConfig, err := loadSingleConfig(configPath)
@@ -65,4 +106,9 @@ func mergeProjectConfigs(base, local *config.Config) *config.Config {
 	}
 
 	return &merged
+}
+
+// CreateStandardMiddlewareChain creates the standard middleware chain used by all stack handlers
+func CreateStandardMiddlewareChain() (validationMiddleware, loggingMiddleware command.Middleware) {
+	return middleware.NewInitializationMiddleware(), middleware.NewLoggingMiddleware()
 }

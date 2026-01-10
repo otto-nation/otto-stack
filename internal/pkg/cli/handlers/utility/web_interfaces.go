@@ -10,13 +10,16 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/shared"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 )
 
 const (
-	httpTimeout     = 5 * time.Second
+	// TODO: Extract to core constants - DefaultHTTPTimeout = 5 * time.Second
+	httpTimeout = 5 * time.Second
+	// TODO: Extract to core constants - HTTPOKStatusThreshold = 400
 	httpOKThreshold = 400
 )
 
@@ -40,23 +43,26 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 		base.Output.Header("%s %s", core.IconCategory_web, core.TitleCase(core.CommandWebInterfaces))
 	}
 
-	setup, cleanup, err := SetupCoreCommand(ctx, base)
+	setup, cleanup, err := shared.SetupCoreCommand(ctx, base)
 	if err != nil {
-		ci.HandleError(ciFlags, err)
-		return nil
+		return ci.FormatError(ciFlags, err)
 	}
 	defer cleanup()
 
-	serviceConfigs, err := ResolveServiceConfigs(args, setup)
+	// Resolve services - for utility handlers, use all enabled services if no args provided
+	var serviceConfigs []services.ServiceConfig
+	if len(args) > 0 {
+		serviceConfigs, err = services.ResolveUpServices(args, setup.Config)
+	} else {
+		serviceConfigs, err = services.ResolveUpServices(setup.Config.Stack.Enabled, setup.Config)
+	}
 	if err != nil {
-		ci.HandleError(ciFlags, err)
-		return nil
+		return ci.FormatError(ciFlags, err)
 	}
 
 	interfaces, err := h.collectInterfaces(setup, serviceConfigs, flags.All)
 	if err != nil {
-		ci.HandleError(ciFlags, err)
-		return nil
+		return ci.FormatError(ciFlags, err)
 	}
 
 	h.outputResults(interfaces, ciFlags, base)
@@ -64,7 +70,7 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 }
 
 // collectInterfaces gathers web interfaces from services
-func (h *WebInterfacesHandler) collectInterfaces(setup *CoreSetup, serviceConfigs []services.ServiceConfig, showAll bool) ([]WebInterface, error) {
+func (h *WebInterfacesHandler) collectInterfaces(setup *shared.CoreSetup, serviceConfigs []services.ServiceConfig, showAll bool) ([]WebInterface, error) {
 	runningServices, err := h.getRunningServices(setup, serviceConfigs, showAll)
 	if err != nil {
 		return nil, err
@@ -74,7 +80,7 @@ func (h *WebInterfacesHandler) collectInterfaces(setup *CoreSetup, serviceConfig
 }
 
 // getRunningServices gets the status of services if not showing all
-func (h *WebInterfacesHandler) getRunningServices(setup *CoreSetup, serviceConfigs []services.ServiceConfig, showAll bool) (map[string]bool, error) {
+func (h *WebInterfacesHandler) getRunningServices(setup *shared.CoreSetup, serviceConfigs []services.ServiceConfig, showAll bool) (map[string]bool, error) {
 	if showAll {
 		return nil, nil
 	}
