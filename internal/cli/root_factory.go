@@ -12,8 +12,10 @@ import (
 	"github.com/spf13/viper"
 
 	// Import handlers to trigger registration
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/lifecycle"
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/operations"
 	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
-	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/stack"
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utility"
 )
 
 // ExecuteFactory executes the root command using the functional builder

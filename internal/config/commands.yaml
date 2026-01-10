@@ -270,15 +270,6 @@ messages:
   files:
     gitignore_exists: ".gitignore already contains otto-stack entries"
 
-# Handler type definitions
-handlers:
-  stack:
-    description: "Stack operational commands (lifecycle, monitoring, data)"
-    package: "stack"
-  project:
-    description: "Project management and utility commands"
-    package: "project"
-
 global:
   flags:
     # Always inherited by ALL commands
@@ -351,7 +342,7 @@ categories:
 
 commands:
   up:
-    handler: "stack"
+    handler: "lifecycle"
     description: "Start development stack services"
     long_description: |
       Start one or more services in the development stack. Services are started
@@ -400,7 +391,7 @@ commands:
       - "Use --detach to free up your terminal while services run"
 
   down:
-    handler: "stack"
+    handler: "lifecycle"
     description: "Stop development stack services"
     long_description: |
       Stop one or more services in the development stack. By default, containers
@@ -444,7 +435,7 @@ commands:
       - "Add --remove-orphans to clean up unused containers"
 
   restart:
-    handler: "stack"
+    handler: "lifecycle"
     description: "Restart development stack services"
     long_description: |
       Restart one or more services. This is equivalent to running down followed
@@ -469,7 +460,7 @@ commands:
     related_commands: ["up", "down", "status"]
 
   status:
-    handler: "stack"
+    handler: "operations"
     description: "Show status of development stack services"
     long_description: |
       Display comprehensive status information for services including running
@@ -517,7 +508,7 @@ commands:
       - "Use --filter to focus on specific service states"
 
   logs:
-    handler: "stack"
+    handler: "operations"
     description: "View logs from services"
     long_description: |
       View and follow logs from one or more services. Supports filtering,
@@ -595,7 +586,7 @@ commands:
       - "Use --fix to attempt automatic resolution of common issues"
 
   exec:
-    handler: "stack"
+    handler: "operations"
     description: "Execute commands in running service containers"
     long_description: |
       Execute commands inside running service containers. Useful for database
@@ -642,7 +633,7 @@ commands:
       - "Combine with --user to run as specific user"
 
   connect:
-    handler: "stack"
+    handler: "operations"
     description: "Quick connect to service databases and interfaces"
     long_description: |
       Quickly connect to service databases and management interfaces using
@@ -686,7 +677,7 @@ commands:
       - "Use --read-only for safe data exploration"
 
   cleanup:
-    handler: "stack"
+    handler: "lifecycle"
     description: "Clean up unused resources and data"
     long_description: |
       Clean up unused Docker resources, temporary files, and orphaned data
@@ -766,7 +757,7 @@ commands:
     related_commands: ["validate"]
 
   web-interfaces:
-    handler: "stack"
+    handler: "utility"
     description: "Show web interfaces for running services"
     long_description: |
       Display web interfaces (dashboards, UIs) for running services.

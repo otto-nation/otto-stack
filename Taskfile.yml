@@ -44,7 +44,7 @@ tasks:
   # ============================================================================
   generate:
     desc: "🔧 Generate code from YAML configs"
-    deps: [generate:cli, generate:services, generate:commands]
+    deps: [generate:cli, generate:services]
     silent: true
     cmds:
       - echo "✅ Generated code from YAML configs"
@@ -76,19 +76,6 @@ tasks:
     cmds:
       - echo "🔧 Running generate-services..."
       - go run ./cmd/generate-services
-
-  generate:commands:
-    desc: "🔧 Generate command code"
-    sources:
-      - "internal/config/commands.yaml"
-      - "cmd/generate-commands/main.go"
-      - "cmd/generate-commands/templates/*.tmpl"
-    generates:
-      - "internal/core/constants_generated.go"
-    silent: true
-    cmds:
-      - echo "🔧 Running generate-commands..."
-      - go run ./cmd/generate-commands
 
   # ============================================================================
   # BUILD

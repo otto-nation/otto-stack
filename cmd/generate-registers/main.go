@@ -49,17 +49,17 @@ func main() {
 		"exec":    "operations",
 		"connect": "operations",
 
-		// Utility commands (mixed)
+		// Utility commands
 		"web-interfaces": "utility",
-		"doctor":         "utility",
-		"version":        "utility",
 
-		// Project commands (remaining in project)
+		// Project commands
 		"init":      "project",
 		"services":  "project",
 		"deps":      "project",
 		"conflicts": "project",
 		"validate":  "project",
+		"doctor":    "project",
+		"version":   "project",
 	}
 
 	// Group commands by category instead of handler
