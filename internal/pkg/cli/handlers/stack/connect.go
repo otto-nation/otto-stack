@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
@@ -39,7 +40,7 @@ func (h *ConnectHandler) GetRequiredFlags() []string {
 // Handle executes the connect command
 func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Create command and middleware chain
-	connectCommand := NewConnectCommand(h.stateManager)
+	connectCommand := NewStackCommand(core.CommandConnect, h.stateManager)
 	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
 
 	handler := command.NewHandler(connectCommand, loggingMiddleware, validationMiddleware)

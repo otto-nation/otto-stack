@@ -27,7 +27,7 @@ func NewExecHandler() *ExecHandler {
 // Handle executes the exec command
 func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	// Create command and middleware chain
-	execCommand := NewExecCommand(h.stateManager)
+	execCommand := NewStackCommand(core.CommandExec, h.stateManager)
 	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
 
 	handler := command.NewHandler(execCommand, loggingMiddleware, validationMiddleware)

@@ -13,23 +13,48 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
 
-// UpCommand handles starting services
-type UpCommand struct {
+// StackCommand handles all stack operations with a generic pattern
+type StackCommand struct {
+	operation    string
 	stateManager *StateManager
 }
 
-// NewUpCommand creates a new up command
-func NewUpCommand(stateManager *StateManager) *UpCommand {
-	return &UpCommand{
+// NewStackCommand creates a new stack command for the specified operation
+func NewStackCommand(operation string, stateManager *StateManager) *StackCommand {
+	return &StackCommand{
+		operation:    operation,
 		stateManager: stateManager,
 	}
 }
 
-// Execute starts the specified services
-func (c *UpCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
+// Execute performs the stack operation based on the command type
+func (c *StackCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
+	switch c.operation {
+	case core.CommandUp:
+		return c.executeUp(ctx, cliCtx, base)
+	case core.CommandDown:
+		return c.executeDown(ctx, cliCtx, base)
+	case core.CommandLogs:
+		return c.executeLogs(ctx, cliCtx, base)
+	case core.CommandStatus:
+		return c.executeStatus(ctx, cliCtx, base)
+	case core.CommandExec:
+		return c.executeExec(ctx, cliCtx, base)
+	case core.CommandConnect:
+		return c.executeConnect(ctx, cliCtx, base)
+	case core.CommandRestart:
+		return c.executeRestart(ctx, cliCtx, base)
+	case core.CommandCleanup:
+		return c.executeCleanup(ctx, cliCtx, base)
+	default:
+		return pkgerrors.NewValidationError("operation", "unsupported stack operation: "+c.operation, nil)
+	}
+}
+
+// executeUp starts the specified services
+func (c *StackCommand) executeUp(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header("%s", core.MsgStarting)
 
-	// Create service and start
 	service, err := NewStackService(false)
 	if err != nil {
 		return pkgerrors.NewServiceError(ComponentStack, ActionCreateService, err)
@@ -56,23 +81,10 @@ func (c *UpCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base
 	return nil
 }
 
-// DownCommand handles stopping services
-type DownCommand struct {
-	stateManager *StateManager
-}
-
-// NewDownCommand creates a new down command
-func NewDownCommand(stateManager *StateManager) *DownCommand {
-	return &DownCommand{
-		stateManager: stateManager,
-	}
-}
-
-// Execute stops the specified services
-func (c *DownCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
+// executeDown stops the specified services
+func (c *StackCommand) executeDown(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header(core.MsgStopping)
 
-	// Create service and stop
 	service, err := NewStackService(false)
 	if err != nil {
 		return pkgerrors.NewServiceError(ComponentStack, ActionCreateService, err)
@@ -99,30 +111,16 @@ func (c *DownCommand) Execute(ctx context.Context, cliCtx clicontext.Context, ba
 	return nil
 }
 
-// LogsCommand handles viewing service logs
-type LogsCommand struct {
-	stateManager *StateManager
-}
-
-// NewLogsCommand creates a new logs command
-func NewLogsCommand(stateManager *StateManager) *LogsCommand {
-	return &LogsCommand{
-		stateManager: stateManager,
-	}
-}
-
-// Execute shows logs for the specified services
-func (c *LogsCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
+// executeLogs shows logs for the specified services
+func (c *StackCommand) executeLogs(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header(core.MsgLogs)
 
-	// Create Docker client for logs
 	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
 		return pkgerrors.NewDockerError("create client", "", err)
 	}
 	defer func() { _ = dockerClient.Close() }()
 
-	// Use Docker client directly for logs (service layer doesn't have logs method)
 	var serviceNames []string
 	for _, svc := range cliCtx.Services.Configs {
 		serviceNames = append(serviceNames, svc.Name)
@@ -147,30 +145,16 @@ func (c *LogsCommand) Execute(ctx context.Context, cliCtx clicontext.Context, ba
 	return nil
 }
 
-// StatusCommand handles showing service status
-type StatusCommand struct {
-	stateManager *StateManager
-}
-
-// NewStatusCommand creates a new status command
-func NewStatusCommand(stateManager *StateManager) *StatusCommand {
-	return &StatusCommand{
-		stateManager: stateManager,
-	}
-}
-
-// Execute shows status for the specified services
-func (c *StatusCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
+// executeStatus shows status for the specified services
+func (c *StackCommand) executeStatus(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header("%s Status", ui.IconHeader)
 
-	// Create Docker client for status
 	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
 		return pkgerrors.NewDockerError("create client", "", err)
 	}
 	defer func() { _ = dockerClient.Close() }()
 
-	// List containers for the project
 	containers, err := dockerClient.ListContainers(ctx, cliCtx.Project.Name)
 	if err != nil {
 		return pkgerrors.NewDockerError(OpListContainers, cliCtx.Project.Name, err)
@@ -198,23 +182,10 @@ func (c *StatusCommand) Execute(ctx context.Context, cliCtx clicontext.Context, 
 	return nil
 }
 
-// ExecCommand handles executing commands in service containers
-type ExecCommand struct {
-	stateManager *StateManager
-}
-
-// NewExecCommand creates a new exec command
-func NewExecCommand(stateManager *StateManager) *ExecCommand {
-	return &ExecCommand{
-		stateManager: stateManager,
-	}
-}
-
-// Execute runs a command in the specified service container
-func (c *ExecCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
+// executeExec runs a command in the specified service container
+func (c *StackCommand) executeExec(_ context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header("Executing command")
 
-	// For now, just show that exec would be executed
 	if len(cliCtx.Services.Names) > 0 {
 		base.Output.Info("Service: %s", cliCtx.Services.Names[0])
 	}
@@ -224,20 +195,8 @@ func (c *ExecCommand) Execute(ctx context.Context, cliCtx clicontext.Context, ba
 	return nil
 }
 
-// ConnectCommand handles connecting to service databases
-type ConnectCommand struct {
-	stateManager *StateManager
-}
-
-// NewConnectCommand creates a new connect command
-func NewConnectCommand(stateManager *StateManager) *ConnectCommand {
-	return &ConnectCommand{
-		stateManager: stateManager,
-	}
-}
-
-// Execute connects to the specified service
-func (c *ConnectCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
+// executeConnect connects to the specified service
+func (c *StackCommand) executeConnect(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	setup, cleanup, err := SetupCoreCommand(ctx, base)
 	if err != nil {
 		return err
@@ -246,8 +205,6 @@ func (c *ConnectCommand) Execute(ctx context.Context, cliCtx clicontext.Context,
 
 	base.Output.Header("Connecting to service")
 
-	// For now, just show that connection would be established
-	// Real implementation would use service-specific connection logic
 	if len(cliCtx.Services.Names) > 0 {
 		base.Output.Info("Service: %s", cliCtx.Services.Names[0])
 	}
@@ -257,29 +214,15 @@ func (c *ConnectCommand) Execute(ctx context.Context, cliCtx clicontext.Context,
 	return nil
 }
 
-// RestartCommand handles restarting services
-type RestartCommand struct {
-	stateManager *StateManager
-}
-
-// NewRestartCommand creates a new restart command
-func NewRestartCommand(stateManager *StateManager) *RestartCommand {
-	return &RestartCommand{
-		stateManager: stateManager,
-	}
-}
-
-// Execute restarts the specified services
-func (c *RestartCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
+// executeRestart restarts the specified services
+func (c *StackCommand) executeRestart(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header(core.MsgRestarting)
 
-	// Create service
 	service, err := NewStackService(false)
 	if err != nil {
 		return pkgerrors.NewServiceError(ComponentStack, ActionCreateService, err)
 	}
 
-	// Stop services first
 	stopRequest := services.StopRequest{
 		Project:        cliCtx.Project.Name,
 		ServiceConfigs: cliCtx.Services.Configs,
@@ -290,7 +233,6 @@ func (c *RestartCommand) Execute(ctx context.Context, cliCtx clicontext.Context,
 		return pkgerrors.NewServiceError(ComponentStack, ActionStopServices, err)
 	}
 
-	// Start services
 	startRequest := services.StartRequest{
 		Project:        cliCtx.Project.Name,
 		ServiceConfigs: cliCtx.Services.Configs,
@@ -311,45 +253,28 @@ func (c *RestartCommand) Execute(ctx context.Context, cliCtx clicontext.Context,
 	return nil
 }
 
-// CleanupCommand handles cleaning up unused resources
-type CleanupCommand struct {
-	stateManager *StateManager
-}
-
-// NewCleanupCommand creates a new cleanup command
-func NewCleanupCommand(stateManager *StateManager) *CleanupCommand {
-	return &CleanupCommand{
-		stateManager: stateManager,
-	}
-}
-
-// Execute cleans up unused resources
-func (c *CleanupCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
+// executeCleanup cleans up unused resources
+func (c *StackCommand) executeCleanup(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header(core.MsgCleaning)
 
-	// Create Docker client for cleanup
 	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
 		return pkgerrors.NewDockerError("create client", "", err)
 	}
 	defer func() { _ = dockerClient.Close() }()
 
-	// Clean up unused Docker resources for the project
 	projectName := cliCtx.Project.Name
 
-	// Remove unused containers
 	err = dockerClient.RemoveResources(ctx, docker.ResourceContainer, projectName)
 	if err != nil {
 		return pkgerrors.NewDockerError(OpRemoveResources, "containers", err)
 	}
 
-	// Remove unused volumes
 	err = dockerClient.RemoveResources(ctx, docker.ResourceVolume, projectName)
 	if err != nil {
 		return pkgerrors.NewDockerError(OpRemoveResources, "volumes", err)
 	}
 
-	// Remove unused networks
 	err = dockerClient.RemoveResources(ctx, docker.ResourceNetwork, projectName)
 	if err != nil {
 		return pkgerrors.NewDockerError(OpRemoveResources, "networks", err)
@@ -360,3 +285,5 @@ func (c *CleanupCommand) Execute(ctx context.Context, cliCtx clicontext.Context,
 
 	return nil
 }
+
+

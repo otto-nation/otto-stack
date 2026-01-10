@@ -5,6 +5,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 )
@@ -30,7 +31,7 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Create command and middleware chain
-	logsCommand := NewLogsCommand(h.stateManager)
+	logsCommand := NewStackCommand(core.CommandLogs, h.stateManager)
 	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
 
 	handler := command.NewHandler(logsCommand, loggingMiddleware, validationMiddleware)
