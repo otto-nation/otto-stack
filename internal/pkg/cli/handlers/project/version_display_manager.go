@@ -61,38 +61,26 @@ func (vdm *VersionDisplayManager) GetCurrentVersion() string {
 
 func (vdm *VersionDisplayManager) displayJSON(ver string) error {
 	output := map[string]string{"version": ver}
-	data, err := json.MarshalIndent(output, "", "  ")
-	if err != nil {
-		return err
-	}
+	data, _ := json.MarshalIndent(output, "", "  ") // Simple map marshal cannot fail
 	fmt.Println(string(data))
 	return nil
 }
 
 func (vdm *VersionDisplayManager) displayYAML(ver string) error {
 	output := map[string]string{"version": ver}
-	data, err := yaml.Marshal(output)
-	if err != nil {
-		return err
-	}
+	data, _ := yaml.Marshal(output) // Simple map marshal cannot fail
 	fmt.Print(string(data))
 	return nil
 }
 
 func (vdm *VersionDisplayManager) displayFullJSON(buildInfo BuildInfo) error {
-	data, err := json.MarshalIndent(buildInfo, "", "  ")
-	if err != nil {
-		return err
-	}
+	data, _ := json.MarshalIndent(buildInfo, "", "  ") // Simple struct marshal cannot fail
 	fmt.Println(string(data))
 	return nil
 }
 
 func (vdm *VersionDisplayManager) displayFullYAML(buildInfo BuildInfo) error {
-	data, err := yaml.Marshal(buildInfo)
-	if err != nil {
-		return err
-	}
+	data, _ := yaml.Marshal(buildInfo) // Simple struct marshal cannot fail
 	fmt.Print(string(data))
 	return nil
 }

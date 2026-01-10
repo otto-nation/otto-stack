@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
@@ -21,8 +19,10 @@ import (
 
 // ProjectManager handles project creation logic
 type ProjectManager struct {
-	serviceUtils  *svc.ServiceUtils
-	configService config.ConfigService
+	serviceUtils     *svc.ServiceUtils
+	configService    config.ConfigService
+	configManager    *ConfigManager
+	directoryManager *DirectoryManager
 }
 
 // OttoStackConfig represents the otto-stack configuration structure
@@ -48,22 +48,24 @@ type ServiceConfig struct {
 // NewProjectManager creates a new project manager
 func NewProjectManager() *ProjectManager {
 	return &ProjectManager{
-		serviceUtils:  svc.NewServiceUtils(),
-		configService: config.NewConfigService(),
+		serviceUtils:     svc.NewServiceUtils(),
+		configService:    config.NewConfigService(),
+		configManager:    NewConfigManager(),
+		directoryManager: NewDirectoryManager(),
 	}
 }
 
 // CreateProjectStructure creates the complete project structure
 func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, base *base.BaseCommand) error {
-	if err := pm.createDirectoryStructure(); err != nil {
+	if err := pm.directoryManager.CreateDirectoryStructure(); err != nil {
 		return pkgerrors.NewServiceError(ComponentProject, ActionCreateDirectories, err)
 	}
 
-	if err := pm.createConfigFile(projectCtx.Project.Name, projectCtx.Services.Names, projectCtx.Options.Validation, base); err != nil {
+	if err := pm.configManager.CreateConfigFile(projectCtx.Project.Name, projectCtx.Services.Names, projectCtx.Options.Validation, base); err != nil {
 		return pkgerrors.NewConfigError("", ActionCreateConfigFile, err)
 	}
 
-	pm.generateServiceConfigs(projectCtx.Services.Configs, base)
+	pm.configManager.GenerateServiceConfigs(projectCtx.Services.Configs, base)
 
 	if err := pm.generateInitialComposeFiles(projectCtx.Services.Configs, projectCtx.Project.Name, projectCtx.Options.Validation, projectCtx.Options.Advanced, base); err != nil {
 		return pkgerrors.NewServiceError(ComponentCompose, ActionGenerateFiles, err)
@@ -78,75 +80,6 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 	}
 
 	return nil
-}
-
-// createDirectoryStructure creates the necessary directory structure
-func (pm *ProjectManager) createDirectoryStructure() error {
-	directories := []string{
-		core.OttoStackDir,
-		filepath.Join(core.OttoStackDir, core.ServiceConfigsDir),
-	}
-
-	for _, dir := range directories {
-		if err := os.MkdirAll(dir, core.PermReadWriteExec); err != nil {
-			return pkgerrors.NewConfigError(dir, MsgFailedToCreateDirectory, err)
-		}
-	}
-
-	return nil
-}
-
-// createConfigFile creates the main configuration file
-func (pm *ProjectManager) createConfigFile(projectName string, originalServiceNames []string, validationOptions map[string]bool, base *base.BaseCommand) error {
-	configBytes, err := config.GenerateConfig(projectName, originalServiceNames, validationOptions)
-	if err != nil {
-		return err
-	}
-
-	configPath := core.OttoStackDir + "/" + core.ConfigFileName
-	if err := os.WriteFile(configPath, configBytes, core.PermReadWrite); err != nil {
-		return pkgerrors.NewConfigError(configPath, MsgFailedToWriteConfigFile, err)
-	}
-
-	base.Output.Success("Created configuration file: %s", configPath)
-	return nil
-}
-
-// generateServiceConfigs generates service configurations
-func (pm *ProjectManager) generateServiceConfigs(serviceConfigs []svc.ServiceConfig, base *base.BaseCommand) {
-	for _, config := range serviceConfigs {
-		if config.Hidden {
-			continue
-		}
-		if err := pm.generateServiceConfig(config.Name); err != nil {
-			base.Output.Warning("Failed to generate config for service %s: %v", config.Name, err)
-		}
-	}
-}
-
-// generateServiceConfig generates configuration for a single service
-func (pm *ProjectManager) generateServiceConfig(serviceName string) error {
-	content := pm.generateServiceConfigContent(serviceName)
-	configPath := filepath.Join(core.OttoStackDir, core.ServiceConfigsDir, serviceName+".yml")
-	return os.WriteFile(configPath, []byte(content), core.PermReadWrite)
-}
-
-// generateServiceConfigContent generates the content for a service configuration
-func (pm *ProjectManager) generateServiceConfigContent(serviceName string) string {
-	config := ServiceConfig{
-		Name:        serviceName,
-		Description: fmt.Sprintf("Configuration for %s service", serviceName),
-	}
-
-	data, err := yaml.Marshal(&config)
-	if err != nil {
-		// Fallback if marshal fails
-		return fmt.Sprintf("name: %s\ndescription: Configuration for %s service\n", serviceName, serviceName)
-	}
-
-	// Add comment header
-	header := fmt.Sprintf("# Documentation: %s/services/%s\n\n", core.DocsURL, serviceName)
-	return header + string(data)
 }
 
 // generateInitialComposeFiles generates Docker Compose files

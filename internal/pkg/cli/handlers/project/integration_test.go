@@ -65,7 +65,7 @@ func TestCreateDirectoryStructure(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.projectManager.createDirectoryStructure()
+	err := handler.projectManager.directoryManager.CreateDirectoryStructure()
 	assert.NoError(t, err)
 
 	_, err = os.Stat(core.OttoStackDir)
@@ -77,11 +77,11 @@ func TestCreateConfigFile(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.projectManager.createDirectoryStructure()
+	err := handler.projectManager.directoryManager.CreateDirectoryStructure()
 	assert.NoError(t, err)
 
 	originalServiceNames := []string{services.ServicePostgres}
-	err = handler.projectManager.createConfigFile(TestProjectName, originalServiceNames, nil,
+	err = handler.projectManager.configManager.CreateConfigFile(TestProjectName, originalServiceNames, nil,
 		&base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
@@ -95,7 +95,7 @@ func TestCreateGitignoreEntries(t *testing.T) {
 	defer cleanup()
 
 	// Create directory structure first
-	err := handler.projectManager.createDirectoryStructure()
+	err := handler.projectManager.directoryManager.CreateDirectoryStructure()
 	assert.NoError(t, err)
 
 	err = handler.projectManager.createGitignoreEntries(&base.BaseCommand{Output: ui.NewOutput()})
@@ -111,7 +111,7 @@ func TestCreateReadme(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.projectManager.createDirectoryStructure()
+	err := handler.projectManager.directoryManager.CreateDirectoryStructure()
 	assert.NoError(t, err)
 
 	serviceConfigs := []services.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServiceRedis}}
