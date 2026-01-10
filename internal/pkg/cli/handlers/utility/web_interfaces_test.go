@@ -18,11 +18,6 @@ const (
 	// TODO: Move these to core constants if they become widely used across packages
 	testProjectName = "test-project"
 	testServiceName = "test-service"
-
-	// TODO: Extract these magic values to core constants for HTTP operations
-	// Currently hardcoded in web_interfaces.go
-	expectedHTTPTimeout     = 5 * time.Second // Line ~15: httpTimeout = 5 * time.Second
-	expectedHTTPOKThreshold = 400             // Line ~16: httpOKThreshold = 400
 )
 
 // TestNewWebInterfacesHandler tests the web interfaces handler constructor
@@ -102,14 +97,14 @@ func TestHTTPConstants(t *testing.T) {
 	t.Run("documents HTTP timeout constant", func(t *testing.T) {
 		// This test documents the magic value found in web_interfaces.go
 		// TODO: Replace hardcoded timeout with core constant
-		assert.Equal(t, 5*time.Second, expectedHTTPTimeout,
+		assert.Equal(t, 5*time.Second, core.DefaultHTTPTimeoutSeconds*time.Second,
 			"HTTP timeout should match the hardcoded value in web_interfaces.go")
 	})
 
 	t.Run("documents HTTP OK threshold constant", func(t *testing.T) {
 		// This test documents the magic value found in web_interfaces.go
 		// TODO: Replace hardcoded threshold with core constant
-		assert.Equal(t, 400, expectedHTTPOKThreshold,
+		assert.Equal(t, 400, core.HTTPOKStatusThreshold,
 			"HTTP OK threshold should match the hardcoded value in web_interfaces.go")
 	})
 }

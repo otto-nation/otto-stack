@@ -92,6 +92,17 @@ const (
 const (
 	DefaultStartTimeoutSeconds = 30
 	DefaultStopTimeoutSeconds  = 10
+	DefaultHTTPTimeoutSeconds  = 5
+)
+
+// HTTP constants
+const (
+	HTTPOKStatusThreshold = 400
+)
+
+// Log constants
+const (
+	DefaultLogTailLines = "100"
 )
 
 // Time constants

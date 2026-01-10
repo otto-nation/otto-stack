@@ -18,9 +18,8 @@ const (
 	testProjectName = "test-project"
 	testServiceName = "test-service"
 
-	// TODO: Extract this magic value to core constants
-	// Currently hardcoded as "100" in commands.go line 136
-	defaultLogTailLines = "100"
+	// Log tail constant now defined in core package
+	defaultLogTailLines = core.DefaultLogTailLines
 )
 
 // TestNewStatusHandler tests the status handler constructor

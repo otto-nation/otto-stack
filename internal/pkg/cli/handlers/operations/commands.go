@@ -134,7 +134,7 @@ func (c *ServiceCommand) executeLogs(ctx context.Context, cliCtx clicontext.Cont
 		Services:   serviceNames,
 		Follow:     cliCtx.Runtime.Force,
 		Timestamps: true,
-		Tail:       "100", // TODO: Extract to constant - DefaultLogTailLines = "100"
+		Tail:       core.DefaultLogTailLines,
 	}
 
 	err = manager.Logs(ctx, cliCtx.Project.Name, consumer, logOptions.ToSDK())

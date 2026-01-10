@@ -99,8 +99,8 @@ func TestUpHandler_Handle(t *testing.T) {
 // TestDefaultTimeoutConstant verifies we're using the correct timeout constant
 func TestDefaultTimeoutConstant(t *testing.T) {
 	t.Run("uses correct default timeout from core constants", func(t *testing.T) {
-		assert.Equal(t, expectedDefaultTimeout, DefaultTimeoutSeconds,
-			"DefaultTimeoutSeconds should match core.DefaultStartTimeoutSeconds")
+		assert.Equal(t, expectedDefaultTimeout, core.DefaultStartTimeoutSeconds,
+			"Should use core.DefaultStartTimeoutSeconds directly")
 	})
 }
 

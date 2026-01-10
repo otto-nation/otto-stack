@@ -13,13 +13,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 )
 
-// TODO: Remove this local constant and use core.DefaultStartTimeoutSeconds everywhere
-// DefaultTimeoutSeconds is the default timeout for operations
-// DEPRECATED: Use core.DefaultStartTimeoutSeconds instead
-const (
-	DefaultTimeoutSeconds = core.DefaultStartTimeoutSeconds
-)
-
 // UpHandler handles the up command
 type UpHandler struct {
 	stateManager *StateManager

@@ -16,13 +16,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	// TODO: Extract to core constants - DefaultHTTPTimeout = 5 * time.Second
-	httpTimeout = 5 * time.Second
-	// TODO: Extract to core constants - HTTPOKStatusThreshold = 400
-	httpOKThreshold = 400
-)
-
 // WebInterfacesHandler handles the web interfaces command
 type WebInterfacesHandler struct{}
 
@@ -173,14 +166,14 @@ func (h *WebInterfacesHandler) printTable(interfaces []WebInterface) {
 
 // checkStatus checks if a web interface is accessible
 func (h *WebInterfacesHandler) checkStatus(url string) string {
-	client := &http.Client{Timeout: httpTimeout}
+	client := &http.Client{Timeout: core.DefaultHTTPTimeoutSeconds * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
 		return core.IconHealth_unhealthy + " " + core.MsgWeb_interfaces_not_available
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode < httpOKThreshold {
+	if resp.StatusCode < core.HTTPOKStatusThreshold {
 		return core.IconHealth_healthy + " " + core.MsgWeb_interfaces_available
 	}
 	return core.IconHealth_unhealthy + " " + core.MsgWeb_interfaces_not_available
