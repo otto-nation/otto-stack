@@ -11,6 +11,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/test/testutil"
 	"github.com/stretchr/testify/require"
@@ -138,12 +139,12 @@ func (tl *TestLifecycle) AddServiceConfig(serviceName string, config map[string]
 	// Read existing config
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return fmt.Errorf("failed to read config file: %w", err)
+		return pkgerrors.NewServiceError("test", "read config file", err)
 	}
 
 	var configData map[string]interface{}
 	if err := yaml.Unmarshal(data, &configData); err != nil {
-		return fmt.Errorf("failed to unmarshal config: %w", err)
+		return pkgerrors.NewServiceError("test", "unmarshal config", err)
 	}
 
 	// Add service configuration
@@ -157,11 +158,11 @@ func (tl *TestLifecycle) AddServiceConfig(serviceName string, config map[string]
 	// Write back to file
 	updatedData, err := yaml.Marshal(configData)
 	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
+		return pkgerrors.NewServiceError("test", "marshal config", err)
 	}
 
 	if err := os.WriteFile(configPath, updatedData, core.PermReadWrite); err != nil {
-		return fmt.Errorf("failed to write config file: %w", err)
+		return pkgerrors.NewServiceError("test", "write config file", err)
 	}
 
 	return nil
@@ -173,18 +174,18 @@ func (tl *TestLifecycle) CreateServiceConfigFile(filename string, config map[str
 
 	// Create service-configs directory if it doesn't exist
 	if err := os.MkdirAll(serviceConfigsDir, core.PermReadWrite); err != nil {
-		return fmt.Errorf("failed to create service-configs directory: %w", err)
+		return pkgerrors.NewServiceError("test", "create directory", err)
 	}
 
 	// Write service config file
 	configPath := filepath.Join(serviceConfigsDir, filename)
 	configData, err := yaml.Marshal(config)
 	if err != nil {
-		return fmt.Errorf("failed to marshal service config: %w", err)
+		return pkgerrors.NewServiceError("test", "marshal service config", err)
 	}
 
 	if err := os.WriteFile(configPath, configData, core.PermReadWrite); err != nil {
-		return fmt.Errorf("failed to write service config file: %w", err)
+		return pkgerrors.NewServiceError("test", "write service config file", err)
 	}
 
 	return nil
