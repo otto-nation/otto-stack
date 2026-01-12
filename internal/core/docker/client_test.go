@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,8 +33,7 @@ func TestNewClient(t *testing.T) {
 			client, err := NewClient(tt.logger)
 
 			if tt.expectError {
-				assert.Error(t, err)
-				assert.Nil(t, client)
+				testhelpers.AssertErrorPattern(t, client, err, true, "NewClient")
 			} else {
 				if err != nil {
 					// Docker might not be available in test environment

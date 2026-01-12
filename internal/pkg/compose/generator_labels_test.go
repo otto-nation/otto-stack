@@ -4,16 +4,17 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestLabelGeneration(t *testing.T) {
 	manager, err := services.New()
-	require.NoError(t, err)
+	testhelpers.AssertValidConstructor(t, manager, err, "Services Manager")
 
 	gen, err := NewGenerator("test-project", "", manager)
-	require.NoError(t, err)
+	testhelpers.AssertValidConstructor(t, gen, err, "Generator")
 
 	// Test that labels are properly generated in compose structure
 	compose, err := gen.buildComposeStructure([]services.ServiceConfig{})

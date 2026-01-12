@@ -3,6 +3,7 @@ package services
 import (
 	"testing"
 
+	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -10,8 +11,7 @@ import (
 func TestNew(t *testing.T) {
 	t.Run("creates manager successfully", func(t *testing.T) {
 		manager, err := New()
-		assert.NoError(t, err)
-		assert.NotNil(t, manager)
+		testhelpers.AssertValidConstructor(t, manager, err, "Manager")
 		assert.NotNil(t, manager.services)
 	})
 }

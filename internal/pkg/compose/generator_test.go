@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/otto-nation/otto-stack/test/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,23 +15,21 @@ import (
 func TestNewGenerator(t *testing.T) {
 	t.Run("creates generator successfully", func(t *testing.T) {
 		generator, err := NewGenerator("test-project", "/tmp/services", testutil.NewTestManager(t))
-		assert.NoError(t, err)
-		assert.NotNil(t, generator)
+		testhelpers.AssertValidConstructor(t, generator, err, "Generator")
 		assert.Equal(t, "test-project", generator.projectName)
 		assert.NotNil(t, generator.manager)
 	})
 
 	t.Run("handles empty project name", func(t *testing.T) {
 		generator, err := NewGenerator("", "/tmp/services", testutil.NewTestManager(t))
-		assert.NoError(t, err)
-		assert.NotNil(t, generator)
+		testhelpers.AssertValidConstructor(t, generator, err, "Generator with empty project name")
 		assert.Equal(t, "", generator.projectName)
 	})
 }
 
 func TestGenerator_GenerateFromServiceConfigs_Structure(t *testing.T) {
 	generator, err := NewGenerator("test-project", "/tmp/services", testutil.NewTestManager(t))
-	require.NoError(t, err)
+	testhelpers.AssertValidConstructor(t, generator, err, "Generator")
 
 	t.Run("generates valid YAML structure", func(t *testing.T) {
 		// Test the internal compose structure generation (bypasses service validation)

@@ -1,8 +1,10 @@
 package network
 
 import (
+	"runtime"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -34,6 +36,22 @@ func TestIsPortInUse(t *testing.T) {
 			assert.IsType(t, false, result)
 		}
 	})
+
+	t.Run("handles OS-specific behavior", func(t *testing.T) {
+		// Test that function works on current OS
+		currentOS := runtime.GOOS
+		result := IsPortInUse(12345)
+
+		// Should not panic regardless of OS
+		assert.IsType(t, false, result)
+
+		// Verify we're testing on a known OS
+		knownOS := currentOS == "linux" || currentOS == "darwin" || currentOS == "windows"
+		if !knownOS {
+			// For unknown OS, function should return false
+			assert.False(t, result)
+		}
+	})
 }
 
 func TestGetFreePort(t *testing.T) {
@@ -44,7 +62,7 @@ func TestGetFreePort(t *testing.T) {
 		if err == nil {
 			// If successful, port should be in expected range
 			assert.GreaterOrEqual(t, port, startPort)
-			assert.Less(t, port, startPort+1000) // Reasonable upper bound
+			assert.Less(t, port, startPort+docker.PortSearchRange)
 		} else {
 			// If no free port found, should return appropriate error
 			assert.Error(t, err)
@@ -91,5 +109,37 @@ func TestGetFreePort(t *testing.T) {
 		} else {
 			assert.GreaterOrEqual(t, port, startPort)
 		}
+	})
+
+	t.Run("respects search range constant", func(t *testing.T) {
+		// Test that search range is respected
+		startPort := 50000
+		port, err := GetFreePort(startPort)
+
+		if err == nil {
+			// Port should be within the search range
+			assert.GreaterOrEqual(t, port, startPort)
+			assert.Less(t, port, startPort+docker.PortSearchRange)
+		} else {
+			// Error should mention the range
+			assert.Contains(t, err.Error(), "no free port found")
+		}
+	})
+}
+
+func TestDockerConstants(t *testing.T) {
+	t.Run("validates Docker constants", func(t *testing.T) {
+		// Test that constants are properly defined
+		assert.Greater(t, docker.PortSearchRange, 0)
+		assert.NotEmpty(t, docker.ErrNoFreePort)
+
+		// Test OS constants
+		assert.Equal(t, "linux", docker.OSLinux)
+		assert.Equal(t, "darwin", docker.OSDarwin)
+		assert.Equal(t, "windows", docker.OSWindows)
+
+		// Test command constants
+		assert.NotEmpty(t, docker.CmdLsof)
+		assert.NotEmpty(t, docker.CmdNetstat)
 	})
 }
