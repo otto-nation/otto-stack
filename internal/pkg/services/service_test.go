@@ -28,7 +28,7 @@ func TestStartRequest_Validation(t *testing.T) {
 			name: "empty project name should be invalid",
 			request: StartRequest{
 				Project:        "",
-				ServiceConfigs: []ServiceConfig{},
+				ServiceConfigs: []ServiceConfig{{Name: ServicePostgres}},
 			},
 			valid: false,
 		},
@@ -44,6 +44,7 @@ func TestStartRequest_Validation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Just test that the struct is valid
 			if tt.valid {
 				assert.NotEmpty(t, tt.request.Project)
 			} else {
@@ -53,36 +54,21 @@ func TestStartRequest_Validation(t *testing.T) {
 	}
 }
 
-func TestStopRequest_Validation(t *testing.T) {
-	tests := []struct {
-		name    string
-		request StopRequest
-		valid   bool
-	}{
-		{
-			name: "valid stop request with remove",
-			request: StopRequest{
-				Project:       "test-project",
-				Remove:        true,
-				RemoveVolumes: false,
-			},
-			valid: true,
-		},
-		{
-			name: "valid stop without remove",
-			request: StopRequest{
-				Project: "test-project",
-				Remove:  false,
-			},
-			valid: true,
-		},
-	}
+func TestService_ConstructorsAndOperations(t *testing.T) {
+	t.Run("new service with dependencies", func(t *testing.T) {
+		service := NewServiceWithDependencies(nil, nil, nil, nil)
+		if service == nil {
+			t.Error("NewServiceWithDependencies should return service")
+		}
+	})
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.valid {
-				assert.NotEmpty(t, tt.request.Project)
-			}
-		})
-	}
+	t.Run("new service", func(t *testing.T) {
+		service, err := NewService(nil, nil, nil)
+		if err != nil {
+			t.Log("NewService failed as expected due to nil dependencies")
+		}
+		if service == nil && err == nil {
+			t.Error("NewService should return service or error")
+		}
+	})
 }

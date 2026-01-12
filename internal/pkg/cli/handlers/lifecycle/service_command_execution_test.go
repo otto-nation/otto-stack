@@ -29,11 +29,21 @@ func TestServiceCommand_Operations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cmd := NewServiceCommand(tt.operation, stateManager)
-
-			// Just verify the operation is set correctly
-			if cmd.operation != tt.operation {
-				t.Errorf("Expected operation %s, got %s", tt.operation, cmd.operation)
-			}
+			testhelpers.AssertValidConstructor(t, cmd, nil, "ServiceCommand")
 		})
 	}
+}
+
+func TestServiceCommand_ExecuteOperations(t *testing.T) {
+	stateManager := &common.StateManager{}
+
+	t.Run("service command with different operations", func(t *testing.T) {
+		operations := []string{core.CommandUp, core.CommandDown, core.CommandLogs, core.CommandStatus, core.CommandRestart, core.CommandConnect, core.CommandExec, core.CommandCleanup}
+		for _, op := range operations {
+			cmd := NewServiceCommand(op, stateManager)
+			if cmd.operation != op {
+				t.Errorf("Expected operation %s, got %s", op, cmd.operation)
+			}
+		}
+	})
 }

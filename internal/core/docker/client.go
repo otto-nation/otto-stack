@@ -9,6 +9,8 @@ import (
 
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 
+	"github.com/compose-spec/compose-go/v2/types"
+	"github.com/docker/compose/v5/pkg/api"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
@@ -54,11 +56,33 @@ type InitContainerConfig struct {
 	Networks    []string
 }
 
+// DockerClientInterface defines the interface for Docker operations
+type DockerClientInterface interface {
+	Close() error
+}
+
+// ComposeManagerInterface defines the interface for Compose operations
+type ComposeManagerInterface interface {
+	Up(ctx context.Context, project *types.Project, options api.UpOptions) error
+	Down(ctx context.Context, project *types.Project, options api.DownOptions) error
+}
+
 type Client struct {
 	cli       *client.Client
 	logger    *slog.Logger
 	resources *ResourceManager
 	compose   *Manager
+}
+
+// NewClientWithDependencies creates a client with injected dependencies (for testing)
+func NewClientWithDependencies(cli *client.Client, compose *Manager, logger *slog.Logger) *Client {
+	dc := &Client{
+		cli:     cli,
+		logger:  logger,
+		compose: compose,
+	}
+	dc.resources = NewResourceManager(dc)
+	return dc
 }
 
 func NewClient(logger *slog.Logger) (*Client, error) {

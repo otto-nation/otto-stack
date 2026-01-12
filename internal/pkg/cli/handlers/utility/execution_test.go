@@ -100,3 +100,10 @@ func TestWebInterfacesHandler_ServiceConstants(t *testing.T) {
 		}
 	})
 }
+
+func TestUtilityHandlers_SimpleConstructors(t *testing.T) {
+	t.Run("web interfaces handler constructor", func(t *testing.T) {
+		handler := NewWebInterfacesHandler()
+		assert.NotNil(t, handler)
+	})
+}

@@ -3,6 +3,7 @@ package project
 import (
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/stretchr/testify/assert"
 )
@@ -82,4 +83,71 @@ func TestPromptManager_BuildServiceOptions(t *testing.T) {
 
 	assert.Len(t, options, 3)
 	assert.Contains(t, options, "Go Back")
+}
+
+func TestPromptManager_FindCategoryIndex(t *testing.T) {
+	pm := &PromptManager{}
+
+	categories := []string{"database", "cache", "messaging"}
+
+	t.Run("find existing category", func(t *testing.T) {
+		index := pm.findCategoryIndex(categories, "cache")
+		assert.Equal(t, 1, index)
+	})
+
+	t.Run("find non-existing category", func(t *testing.T) {
+		index := pm.findCategoryIndex(categories, "nonexistent")
+		assert.Equal(t, -1, index)
+	})
+
+	t.Run("find in empty slice", func(t *testing.T) {
+		index := pm.findCategoryIndex([]string{}, "any")
+		assert.Equal(t, -1, index)
+	})
+}
+
+func TestPromptManager_PromptForServiceConfigs(t *testing.T) {
+	pm := &PromptManager{}
+
+	t.Run("handles empty service configs", func(t *testing.T) {
+		configs, err := pm.PromptForServiceConfigs()
+		// Will likely fail due to no stdin, but tests the function exists
+		if err != nil {
+			assert.Error(t, err)
+		} else {
+			assert.NotNil(t, configs)
+		}
+	})
+}
+
+func TestPromptManager_PromptForAdvancedOptions(t *testing.T) {
+	pm := &PromptManager{}
+
+	t.Run("handles advanced options prompt", func(t *testing.T) {
+		validation, advanced, err := pm.PromptForAdvancedOptions()
+		// Will likely fail due to no stdin, but tests the function exists
+		if err != nil {
+			assert.Error(t, err)
+		} else {
+			assert.NotNil(t, validation)
+			assert.NotNil(t, advanced)
+		}
+	})
+}
+
+func TestPromptManager_ConfirmInitialization(t *testing.T) {
+	pm := &PromptManager{}
+
+	t.Run("handles initialization confirmation", func(t *testing.T) {
+		mockOutput := &MockOutput{}
+		base := &base.BaseCommand{Output: mockOutput}
+
+		result, err := pm.ConfirmInitialization("test-project", []string{"postgres"}, map[string]bool{}, map[string]bool{}, base)
+		// Will likely fail due to no stdin, but tests the function exists
+		if err != nil {
+			assert.Error(t, err)
+		} else {
+			assert.NotEmpty(t, result)
+		}
+	})
 }

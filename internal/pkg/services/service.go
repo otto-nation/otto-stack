@@ -18,6 +18,24 @@ type Service struct {
 	DockerClient    *docker.Client // Exposed for direct access
 }
 
+// ServiceInterface defines the interface for service operations
+type ServiceInterface interface {
+	Start(ctx context.Context, req StartRequest) error
+	Stop(ctx context.Context, req StopRequest) error
+	Logs(ctx context.Context, req LogRequest) error
+	Exec(ctx context.Context, req ExecRequest) error
+}
+
+// NewServiceWithDependencies creates a service with injected dependencies (for testing)
+func NewServiceWithDependencies(compose api.Compose, characteristics CharacteristicsResolver, project ProjectLoader, dockerClient *docker.Client) *Service {
+	return &Service{
+		compose:         compose,
+		characteristics: characteristics,
+		project:         project,
+		DockerClient:    dockerClient,
+	}
+}
+
 // ResolveUpServices resolves service names and returns their configs with dependencies
 func ResolveUpServices(args []string, cfg *config.Config) ([]ServiceConfig, error) {
 	serviceNames := args

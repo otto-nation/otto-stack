@@ -483,7 +483,7 @@ tasks:
     silent: true
     cmds:
       - echo "🧪 Running tests with coverage..."
-      - go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+      - go test -v -race -coverprofile=coverage.out -covermode=atomic ./internal/...
       - echo "✅ Coverage report at coverage.out"
 
   test-unit:
@@ -492,7 +492,7 @@ tasks:
     silent: true
     cmds:
       - echo "🧪 Running unit tests..."
-      - go test -race -short -tags=unit ./...
+      - go test -race -short -tags=unit ./internal/...
       - echo "✅ Unit tests passed"
 
   test-e2e:

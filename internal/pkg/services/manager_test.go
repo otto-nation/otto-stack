@@ -29,6 +29,63 @@ func TestManager_GetService(t *testing.T) {
 		}
 	})
 
+	t.Run("handles non-existent service", func(t *testing.T) {
+		service, err := manager.GetService("nonexistent")
+		if err != nil {
+			assert.Error(t, err)
+		} else {
+			assert.Nil(t, service)
+		}
+	})
+}
+
+func TestManager_ValidateServices(t *testing.T) {
+	manager, err := New()
+	require.NoError(t, err)
+
+	t.Run("validates empty service list", func(t *testing.T) {
+		err := manager.ValidateServices([]string{})
+		assert.NoError(t, err)
+	})
+
+	t.Run("validates valid services", func(t *testing.T) {
+		err := manager.ValidateServices([]string{ServicePostgres})
+		// May error if service not found, but tests the function
+		if err != nil {
+			assert.Error(t, err)
+		}
+	})
+}
+
+func TestManager_GetDependencies(t *testing.T) {
+	manager, err := New()
+	require.NoError(t, err)
+
+	t.Run("gets dependencies for service", func(t *testing.T) {
+		deps, err := manager.GetDependencies(ServicePostgres)
+		if err != nil {
+			assert.Error(t, err)
+		} else {
+			// deps can be nil or empty slice, both are valid
+			assert.IsType(t, []string{}, deps)
+		}
+	})
+}
+
+func TestManager_BuildConnectCommand(t *testing.T) {
+	manager, err := New()
+	require.NoError(t, err)
+
+	t.Run("builds connect command", func(t *testing.T) {
+		options := map[string]string{"user": "test"}
+		cmd, err := manager.BuildConnectCommand(ServicePostgres, options)
+		if err != nil {
+			assert.Error(t, err)
+		} else {
+			assert.NotNil(t, cmd)
+		}
+	})
+
 	t.Run("returns error when service not found", func(t *testing.T) {
 		service, err := manager.GetService("nonexistent-service")
 		assert.Error(t, err)

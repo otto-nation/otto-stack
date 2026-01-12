@@ -10,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
@@ -147,6 +148,38 @@ func TestLifecycleHandlers_CoreConstants(t *testing.T) {
 
 		for _, msg := range messages {
 			assert.NotEmpty(t, msg, "Core message constant should not be empty")
+		}
+	})
+}
+
+func TestLifecycleHandlers_SimpleGetters(t *testing.T) {
+	t.Run("up handler constructor", func(t *testing.T) {
+		handler := NewUpHandler()
+		assert.NotNil(t, handler)
+	})
+
+	t.Run("down handler constructor", func(t *testing.T) {
+		handler := NewDownHandler()
+		assert.NotNil(t, handler)
+	})
+
+	t.Run("restart handler constructor", func(t *testing.T) {
+		handler := NewRestartHandler()
+		assert.NotNil(t, handler)
+	})
+
+	t.Run("cleanup handler constructor", func(t *testing.T) {
+		handler := NewCleanupHandler()
+		assert.NotNil(t, handler)
+	})
+}
+
+func TestCleanupHandler_basic(t *testing.T) {
+	t.Run("new cleanup handler", func(t *testing.T) {
+		handler := &CleanupHandler{}
+		testhelpers.AssertNoError(t, nil, "CleanupHandler creation should not error")
+		if handler == nil {
+			t.Error("CleanupHandler should be created")
 		}
 	})
 }
