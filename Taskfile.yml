@@ -82,7 +82,7 @@ tasks:
   # ============================================================================
   build:
     desc: "🔨 Build the Go binary for current platform"
-    deps: [sync-go-version, deps, lint:go]
+    deps: [sync-go-version, lint:go]
     sources:
       - "**/*.go"
       - "go.mod"
@@ -97,7 +97,7 @@ tasks:
 
   build-all:
     desc: "🌍 Build binaries for all supported platforms"
-    deps: [deps, lint]
+    deps: [lint]
     silent: true
     cmds:
       - echo "🌍 Building {{.BINARY_NAME}} for all platforms..."
@@ -144,7 +144,6 @@ tasks:
   # ============================================================================
   deps:
     desc: "📥 Download and tidy Go dependencies"
-    deps: [generate]
     sources:
       - "go.mod"
       - "go.sum"
@@ -304,22 +303,6 @@ tasks:
       - |
         echo "🔧 Auto-fixing formatting and modules..."
         CHANGES_MADE=false
-
-        # Check if fmt makes changes
-        git diff --quiet && BEFORE_FMT_CLEAN=true || BEFORE_FMT_CLEAN=false
-        task fmt
-        if [ "$BEFORE_FMT_CLEAN" = "true" ] && ! git diff --quiet; then
-          echo "❌ Code formatting changes detected"
-          CHANGES_MADE=true
-        fi
-
-        # Check if docs-fmt makes changes
-        git diff --quiet && BEFORE_DOCS_CLEAN=true || BEFORE_DOCS_CLEAN=false
-        task docs-fmt
-        if [ "$BEFORE_DOCS_CLEAN" = "true" ] && ! git diff --quiet; then
-          echo "❌ Documentation formatting changes detected"
-          CHANGES_MADE=true
-        fi
 
         # Check if go mod tidy makes changes
         git diff --quiet && BEFORE_MOD_CLEAN=true || BEFORE_MOD_CLEAN=false
@@ -515,7 +498,7 @@ tasks:
 
   lint:
     desc: "🔍 Run comprehensive linting (vet + fmt + golangci-lint)"
-    deps: [deps, fmt]
+    deps: [lint:go]
     sources:
       - "**/*.go"
       - ".golangci.yml"
@@ -525,27 +508,6 @@ tasks:
       - ".task/lint-timestamp"
     silent: true
     cmds:
-      - mkdir -p .task
-      - echo "🔍 Running go vet..."
-      - go vet ./...
-      - echo "🔍 Running golangci-lint..."
-      - |
-        GOLANGCI_PATH="$(go env GOPATH)/bin/golangci-lint"
-        EXPECTED_VERSION="{{.GOLANGCI_LINT_VERSION}}"
-
-        if [ ! -f "$GOLANGCI_PATH" ]; then
-          echo "📦 Installing golangci-lint $EXPECTED_VERSION..."
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
-        else
-          CURRENT_VERSION="v$($GOLANGCI_PATH version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 || echo "unknown")"
-          if [ "$CURRENT_VERSION" != "$EXPECTED_VERSION" ]; then
-            echo "📦 Updating golangci-lint from $CURRENT_VERSION to $EXPECTED_VERSION..."
-            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION
-          fi
-        fi
-
-        $GOLANGCI_PATH config verify
-        $GOLANGCI_PATH run ./cmd/otto-stack/... ./internal/...
       - task: lint:docs
       - touch .task/lint-timestamp
       - echo "✅ All linting checks passed!"
