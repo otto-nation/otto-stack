@@ -9,6 +9,7 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/otto-nation/otto-stack/cmd/codegen"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -21,7 +22,6 @@ const (
 	TypesGeneratedFilePath  = "internal/pkg/services/types_generated.go"
 	SchemaGeneratedFilePath = "internal/pkg/services/schema_generated.go"
 	ServicesDir             = "internal/config/services"
-	ReadExecutePermissions  = 0755
 	YAMLExtension           = ".yaml"
 	DefaultProtocol         = "tcp"
 )
@@ -686,7 +686,7 @@ func generateConstants(serviceConstants *ServiceConstants) error {
 	file, err := os.Create(GeneratedFilePath)
 	if err != nil {
 		// Try creating the directory and retry
-		if err := os.MkdirAll(filepath.Dir(GeneratedFilePath), ReadExecutePermissions); err != nil {
+		if err := codegen.EnsureDir(filepath.Dir(GeneratedFilePath)); err != nil {
 			return pkgerrors.NewServiceError("generator", "create directory", err)
 		}
 		file, err = os.Create(GeneratedFilePath)
@@ -708,7 +708,7 @@ func generateTypes() error {
 	file, err := os.Create(TypesGeneratedFilePath)
 	if err != nil {
 		// Try creating the directory and retry
-		if err := os.MkdirAll(filepath.Dir(TypesGeneratedFilePath), ReadExecutePermissions); err != nil {
+		if err := codegen.EnsureDir(filepath.Dir(TypesGeneratedFilePath)); err != nil {
 			return pkgerrors.NewServiceError("generator", "create directory", err)
 		}
 		file, err = os.Create(TypesGeneratedFilePath)
@@ -730,7 +730,7 @@ func generateSchema() error {
 	file, err := os.Create(SchemaGeneratedFilePath)
 	if err != nil {
 		// Try creating the directory and retry
-		if err := os.MkdirAll(filepath.Dir(SchemaGeneratedFilePath), ReadExecutePermissions); err != nil {
+		if err := codegen.EnsureDir(filepath.Dir(SchemaGeneratedFilePath)); err != nil {
 			return pkgerrors.NewServiceError("generator", "create directory", err)
 		}
 		file, err = os.Create(SchemaGeneratedFilePath)
@@ -794,7 +794,7 @@ func generateDockerTypes() error {
 
 	file, err := os.Create(DockerGeneratedFilePath)
 	if err != nil {
-		if err := os.MkdirAll(filepath.Dir(DockerGeneratedFilePath), ReadExecutePermissions); err != nil {
+		if err := codegen.EnsureDir(filepath.Dir(DockerGeneratedFilePath)); err != nil {
 			return pkgerrors.NewServiceError("generator", "create directory", err)
 		}
 		file, err = os.Create(DockerGeneratedFilePath)

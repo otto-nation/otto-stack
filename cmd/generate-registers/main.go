@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"os"
 	"sort"
-	"strings"
-	"text/template"
 
-	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-
+	"github.com/otto-nation/otto-stack/cmd/codegen"
 	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
 
 const (
@@ -89,9 +87,9 @@ func main() {
 }
 
 func generateRegisterFile(handler string, commands []string) error {
-	tmpl, err := template.ParseFiles(TemplateFilePath)
+	tmpl, err := codegen.ParseTemplate(TemplateFilePath, "register")
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "parse template", err)
+		return err
 	}
 
 	outputPath := fmt.Sprintf(GeneratedFilePath, handler)
@@ -104,8 +102,8 @@ func generateRegisterFile(handler string, commands []string) error {
 	var commandsData []commandData
 	for _, cmd := range commands {
 		commandsData = append(commandsData, commandData{
-			Constant:    "Command" + toPascalCase(cmd),
-			HandlerFunc: "New" + toPascalCase(cmd) + "Handler",
+			Constant:    "Command" + codegen.ToPascalCase(cmd),
+			HandlerFunc: "New" + codegen.ToPascalCase(cmd) + "Handler",
 		})
 	}
 
@@ -115,15 +113,4 @@ func generateRegisterFile(handler string, commands []string) error {
 	}
 
 	return tmpl.Execute(file, data)
-}
-
-// toPascalCase converts kebab-case to PascalCase
-func toPascalCase(s string) string {
-	parts := strings.Split(s, "-")
-	for i, part := range parts {
-		if len(part) > 0 {
-			parts[i] = strings.ToUpper(part[:1]) + strings.ToLower(part[1:])
-		}
-	}
-	return strings.Join(parts, "")
 }

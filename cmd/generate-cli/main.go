@@ -8,9 +8,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/otto-nation/otto-stack/cmd/codegen"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-
-	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -119,19 +118,8 @@ func main() {
 }
 
 func loadCommandConfig() (map[string]any, error) {
-	data, err := os.ReadFile(CommandsYAMLPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var config map[string]any
-	err = yaml.Unmarshal(data, &config)
-	return config, err
+	return codegen.LoadYAMLConfig(CommandsYAMLPath)
 }
-
-const (
-	dirPermissions = 0750
-)
 
 func generateCoreConstants() error {
 	rawConfig, err := loadCommandConfig()
@@ -139,19 +127,15 @@ func generateCoreConstants() error {
 		return pkgerrors.NewServiceError("generator", "load raw config", err)
 	}
 
-	tmpl, err := template.New(CoreTemplateName).Funcs(template.FuncMap{
-		"toPascalCase": toPascalCase,
-	}).ParseFiles(CoreTemplateFilePath)
+	tmpl, err := codegen.ParseTemplate(CoreTemplateFilePath, CoreTemplateName)
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "parse constants template", err)
+		return err
 	}
-
-	tmpl = tmpl.Lookup(filepath.Base(CoreTemplateFilePath))
 
 	file, err := os.Create(CoreGeneratedPath)
 	if err != nil {
 		// Try creating the directory and retry
-		if err := os.MkdirAll(filepath.Dir(CoreGeneratedPath), dirPermissions); err != nil {
+		if err := codegen.EnsureDir(filepath.Dir(CoreGeneratedPath)); err != nil {
 			return pkgerrors.NewServiceError("generator", "create directory", err)
 		}
 		file, err = os.Create(CoreGeneratedPath)
@@ -550,7 +534,7 @@ func generateCLICommands(rawConfig map[string]any) error {
 
 	file, err := os.Create(CLICommandsPath)
 	if err != nil {
-		if err := os.MkdirAll(filepath.Dir(CLICommandsPath), dirPermissions); err != nil {
+		if err := codegen.EnsureDir(filepath.Dir(CLICommandsPath)); err != nil {
 			return pkgerrors.NewServiceError("generator", "create directory", err)
 		}
 		file, err = os.Create(CLICommandsPath)
