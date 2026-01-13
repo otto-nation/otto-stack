@@ -10,14 +10,11 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
+	"github.com/otto-nation/otto-stack/test/testhelpers"
 )
 
 // Test constants following DRY principles
 const (
-	// TODO: Move these to core constants if they become widely used
-	testProjectName = "test-project"
-	testServiceName = "test-service"
-
 	// Log tail constant now defined in core package
 	defaultLogTailLines = core.DefaultLogTailLines
 )
@@ -43,7 +40,7 @@ func TestStatusHandler_ValidateArgs(t *testing.T) {
 	})
 
 	t.Run("accepts service names as arguments", func(t *testing.T) {
-		err := handler.ValidateArgs([]string{testServiceName})
+		err := handler.ValidateArgs([]string{testhelpers.TestServiceName})
 		assert.NoError(t, err, "Status command should accept service names")
 	})
 }
@@ -118,7 +115,7 @@ func TestLogsHandler_ValidateArgs(t *testing.T) {
 	})
 
 	t.Run("accepts service names", func(t *testing.T) {
-		err := handler.ValidateArgs([]string{testServiceName})
+		err := handler.ValidateArgs([]string{testhelpers.TestServiceName})
 		assert.NoError(t, err, "Logs command should accept service names")
 	})
 }

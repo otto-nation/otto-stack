@@ -7,6 +7,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// Common test constants used across multiple test files
+const (
+	TestProjectName = "test-project"
+	TestServiceName = "test-service"
+)
+
 // AssertValidConstructor validates common constructor patterns
 func AssertValidConstructor(t *testing.T, result interface{}, err error, name string) {
 	t.Helper()

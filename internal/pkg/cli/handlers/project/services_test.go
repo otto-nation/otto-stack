@@ -10,13 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
-)
-
-// Test constants following DRY principles
-const (
-	// TODO: Move these to core constants if they become widely used
-	testProjectName = "test-project"
-	testServiceName = "test-service"
+	"github.com/otto-nation/otto-stack/test/testhelpers"
 )
 
 // TestNewServicesHandler tests the services handler constructor
@@ -39,7 +33,7 @@ func TestServicesHandler_ValidateArgs(t *testing.T) {
 	})
 
 	t.Run("accepts service names as arguments", func(t *testing.T) {
-		err := handler.ValidateArgs([]string{testServiceName})
+		err := handler.ValidateArgs([]string{testhelpers.TestServiceName})
 		assert.NoError(t, err, "Services command should accept service names")
 	})
 }

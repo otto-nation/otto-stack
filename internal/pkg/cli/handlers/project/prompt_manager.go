@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -12,6 +11,8 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // ErrGoBack is returned when user wants to go back
@@ -72,8 +73,8 @@ func (pm *PromptManager) PromptForServiceConfigs() ([]services.ServiceConfig, er
 		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgNoServicesAvailable, nil)
 	}
 
-	categoryNames, categoryServicesList := pm.prepareCategoryNavigation(categories)
-	return pm.navigateServiceCategoriesForConfigs(categoryNames, categoryServicesList)
+	// New approach: Show all services in one list with category labels
+	return pm.selectServicesFromAllCategories(categories)
 }
 
 // PromptForAdvancedOptions prompts for validation and advanced options
@@ -165,142 +166,72 @@ func (pm *PromptManager) loadServiceCategories() (map[string][]services.ServiceC
 	return utils.GetServicesByCategory()
 }
 
-// prepareCategoryNavigation prepares data structures for category navigation
-func (pm *PromptManager) prepareCategoryNavigation(categories map[string][]services.ServiceConfig) ([]string, [][]services.ServiceConfig) {
-	categoryNames := make([]string, 0, len(categories))
-	categoryServicesList := make([][]services.ServiceConfig, 0, len(categories))
+// selectServicesFromAllCategories shows all services in one list with category labels
+func (pm *PromptManager) selectServicesFromAllCategories(categories map[string][]services.ServiceConfig) ([]services.ServiceConfig, error) {
+	// Build flat list of all services with category labels
+	var allServices []services.ServiceConfig
+	var serviceOptions []string
 
 	for categoryName, categoryServices := range categories {
-		categoryNames = append(categoryNames, categoryName)
-		categoryServicesList = append(categoryServicesList, categoryServices)
-	}
-
-	return categoryNames, categoryServicesList
-}
-
-// navigateServiceCategoriesForConfigs handles interactive category navigation and returns ServiceConfigs
-func (pm *PromptManager) navigateServiceCategoriesForConfigs(categoryNames []string, categoryServicesList [][]services.ServiceConfig) ([]services.ServiceConfig, error) {
-	var allSelectedServices []services.ServiceConfig
-
-	for {
-		selectedCategory, err := pm.promptForCategory(categoryNames)
-		if err != nil {
-			return nil, err
-		}
-
-		if selectedCategory == core.PromptFinishSelection {
-			break
-		}
-
-		categoryIndex := pm.findCategoryIndex(categoryNames, selectedCategory)
-		if categoryIndex == -1 {
-			continue
-		}
-
-		selectedServices, shouldGoBack, err := pm.selectServicesFromCategory(categoryIndex, categoryServicesList)
-		if err != nil {
-			return nil, err
-		}
-
-		if shouldGoBack {
-			continue
-		}
-
-		allSelectedServices = append(allSelectedServices, selectedServices...)
-	}
-
-	if len(allSelectedServices) == 0 {
-		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgNoServicesSelected, nil)
-	}
-
-	return allSelectedServices, nil
-}
-
-// promptForCategory prompts user to select a category
-func (pm *PromptManager) promptForCategory(categoryNames []string) (string, error) {
-	categoryPrompt := &survey.Select{
-		Message: core.PromptSelectCategory,
-		Options: append(categoryNames, core.PromptFinishSelection),
-	}
-
-	var selectedCategory string
-	if err := survey.AskOne(categoryPrompt, &selectedCategory); err != nil {
-		return "", pkgerrors.NewValidationError(pkgerrors.FieldServiceName, "failed to select category", err)
-	}
-
-	return selectedCategory, nil
-}
-
-// findCategoryIndex finds the index of a category by name
-func (pm *PromptManager) findCategoryIndex(categoryNames []string, selectedCategory string) int {
-	for i, name := range categoryNames {
-		if name == selectedCategory {
-			return i
+		for _, service := range categoryServices {
+			// Format: [Category] ServiceName - Description
+			caser := cases.Title(language.English)
+			displayName := fmt.Sprintf("[%s] %s - %s",
+				caser.String(categoryName), service.Name, service.Description)
+			serviceOptions = append(serviceOptions, displayName)
+			allServices = append(allServices, service)
 		}
 	}
-	return -1
-}
 
-// selectServicesFromCategory handles service selection for a specific category
-func (pm *PromptManager) selectServicesFromCategory(categoryIndex int, categoryServicesList [][]services.ServiceConfig) ([]services.ServiceConfig, bool, error) {
-	categoryServices := categoryServicesList[categoryIndex]
-	serviceOptions := pm.buildServiceOptions(categoryServices, true)
-	return pm.promptCategoryServicesForConfigs(categoryServices[0].Category, serviceOptions, categoryServices)
-}
+	// Sort options for better UX
+	// (Could add sorting by category then name if needed)
 
-// buildServiceOptions creates service options for prompts
-func (pm *PromptManager) buildServiceOptions(categoryServices []services.ServiceConfig, allowGoBack bool) []string {
-	const extraOptions = 2 // Space for "Go Back" and potential future options
-	options := make([]string, 0, len(categoryServices)+extraOptions)
-
-	for _, service := range categoryServices {
-		displayName := fmt.Sprintf("%s - %s", service.Name, service.Description)
-		options = append(options, displayName)
-	}
-
-	if allowGoBack {
-		options = append(options, core.PromptGoBackOption)
-	}
-
-	return options
-}
-
-// promptCategoryServicesForConfigs prompts for service selection and returns ServiceConfigs
-func (pm *PromptManager) promptCategoryServicesForConfigs(categoryName string, serviceOptions []string, categoryServices []services.ServiceConfig) ([]services.ServiceConfig, bool, error) {
 	prompt := &survey.MultiSelect{
-		Message: fmt.Sprintf("Select services from %s category:", categoryName),
+		Message: "Select services for your project:",
 		Options: serviceOptions,
-		Help:    "Use space to select, enter to confirm",
+		Help:    "Use space to select, enter to confirm. Services are grouped by category.",
 	}
 
 	var selected []string
 	if err := survey.AskOne(prompt, &selected); err != nil {
-		return nil, false, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, "failed to select services", err)
+		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, "failed to select services", err)
 	}
 
-	// Check if user selected "Go Back"
-	if slices.Contains(selected, core.PromptGoBackOption) {
-		return nil, true, nil
+	if len(selected) == 0 {
+		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgNoServicesSelected, nil)
 	}
 
 	// Map selected display names back to ServiceConfigs
 	var selectedConfigs []services.ServiceConfig
+	selectedMap := make(map[string]bool)
+
+	const minParts = 2
 	for _, selection := range selected {
-		if selection != core.PromptGoBackOption {
-			// Extract service name (before " - ")
-			parts := strings.Split(selection, " - ")
-			if len(parts) > 0 {
-				serviceName := parts[0]
-				// Find the corresponding ServiceConfig
-				for _, serviceConfig := range categoryServices {
-					if serviceConfig.Name == serviceName {
-						selectedConfigs = append(selectedConfigs, serviceConfig)
-						break
-					}
-				}
+		// Extract service name from "[Category] ServiceName - Description"
+		parts := strings.Split(selection, "] ")
+		if len(parts) < minParts {
+			continue
+		}
+		serviceNamePart := strings.Split(parts[1], " - ")
+		if len(serviceNamePart) < 1 {
+			continue
+		}
+		serviceName := serviceNamePart[0]
+
+		// Prevent duplicates
+		if selectedMap[serviceName] {
+			continue
+		}
+		selectedMap[serviceName] = true
+
+		// Find the corresponding ServiceConfig
+		for _, service := range allServices {
+			if service.Name == serviceName {
+				selectedConfigs = append(selectedConfigs, service)
+				break
 			}
 		}
 	}
 
-	return selectedConfigs, false, nil
+	return selectedConfigs, nil
 }

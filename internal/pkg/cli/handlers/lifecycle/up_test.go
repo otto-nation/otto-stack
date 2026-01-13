@@ -10,14 +10,11 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
+	"github.com/otto-nation/otto-stack/test/testhelpers"
 )
 
 // Test constants - following DRY principles
 const (
-	// TODO: Move these to core constants if they become widely used
-	testProjectName = "test-project"
-	testServiceName = "test-service"
-
 	// Using existing core constants
 	expectedDefaultTimeout = core.DefaultStartTimeoutSeconds
 )
@@ -43,12 +40,12 @@ func TestUpHandler_ValidateArgs(t *testing.T) {
 	})
 
 	t.Run("accepts service names as arguments", func(t *testing.T) {
-		err := handler.ValidateArgs([]string{testServiceName})
+		err := handler.ValidateArgs([]string{testhelpers.TestServiceName})
 		assert.NoError(t, err, "Up command should accept service names")
 	})
 
 	t.Run("accepts multiple service names", func(t *testing.T) {
-		err := handler.ValidateArgs([]string{testServiceName, "service2", "service3"})
+		err := handler.ValidateArgs([]string{testhelpers.TestServiceName, "service2", "service3"})
 		assert.NoError(t, err, "Up command should accept multiple service names")
 	})
 }
@@ -85,14 +82,13 @@ func TestUpHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 		args := []string{}
 
-		// TODO: This test currently fails because it tries to load actual project config
-		// We need to add dependency injection or mocking to make this testable
-		// For now, we expect an error but verify the handler doesn't panic
+		// Test that handler executes without panicking
+		// We expect an error due to missing project config in test environment
 		err := handler.Handle(ctx, cmd, args, base)
 
-		// We expect an error since we don't have a real project setup
-		// but the handler should not panic
+		// Should get a config-related error but not panic
 		assert.Error(t, err, "Expected error due to missing project config in test environment")
+		assert.Contains(t, err.Error(), "config", "Error should be related to missing config")
 	})
 }
 
@@ -125,12 +121,12 @@ func TestDownHandler_ValidateArgs(t *testing.T) {
 	})
 
 	t.Run("accepts service names as arguments", func(t *testing.T) {
-		err := handler.ValidateArgs([]string{testServiceName})
+		err := handler.ValidateArgs([]string{testhelpers.TestServiceName})
 		assert.NoError(t, err, "Down command should accept service names")
 	})
 
 	t.Run("accepts multiple service names", func(t *testing.T) {
-		err := handler.ValidateArgs([]string{testServiceName, "service2"})
+		err := handler.ValidateArgs([]string{testhelpers.TestServiceName, "service2"})
 		assert.NoError(t, err, "Down command should accept multiple service names")
 	})
 }

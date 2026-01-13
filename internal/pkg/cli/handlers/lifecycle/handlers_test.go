@@ -26,13 +26,12 @@ func (m *MockOutput) Header(msg string, args ...any)  {}
 func (m *MockOutput) Muted(msg string, args ...any)   {}
 
 func TestUpHandler_ExecutionFlow(t *testing.T) {
-	handler := NewUpHandler()
 	cmd := &cobra.Command{}
 	args := []string{services.ServicePostgres} // Use service constant
 
 	t.Run("handles execution flow with proper context building", func(t *testing.T) {
-		// Test the buildContext method directly
-		cliCtx, err := handler.buildContext(cmd, args)
+		// Test the common BuildStackContext method directly
+		cliCtx, err := common.BuildStackContext(cmd, args)
 
 		// Should fail due to missing config, but tests the flow
 		if err != nil {
