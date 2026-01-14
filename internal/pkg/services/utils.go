@@ -3,10 +3,11 @@ package services
 import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // ExtractServiceNames extracts service names from ServiceConfigs
-func ExtractServiceNames(serviceConfigs []ServiceConfig) []string {
+func ExtractServiceNames(serviceConfigs []servicetypes.ServiceConfig) []string {
 	if len(serviceConfigs) == 0 {
 		return nil
 	}
@@ -18,7 +19,7 @@ func ExtractServiceNames(serviceConfigs []ServiceConfig) []string {
 }
 
 // ExtractVisibleServiceNames returns names of non-hidden services
-func ExtractVisibleServiceNames(serviceConfigs []ServiceConfig) []string {
+func ExtractVisibleServiceNames(serviceConfigs []servicetypes.ServiceConfig) []string {
 	if len(serviceConfigs) == 0 {
 		return nil
 	}
@@ -43,9 +44,9 @@ func NewServiceUtils() *ServiceUtils {
 }
 
 // LoadServicesByCategory loads services organized by category
-func (u *ServiceUtils) LoadServicesByCategory() (map[string][]ServiceConfig, error) {
+func (u *ServiceUtils) LoadServicesByCategory() (map[string][]servicetypes.ServiceConfig, error) {
 	allServices := u.manager.GetAllServices()
-	categories := make(map[string][]ServiceConfig)
+	categories := make(map[string][]servicetypes.ServiceConfig)
 
 	for _, service := range allServices {
 		// Skip hidden services
@@ -59,7 +60,7 @@ func (u *ServiceUtils) LoadServicesByCategory() (map[string][]ServiceConfig, err
 }
 
 // LoadServiceConfig loads a specific service configuration
-func (u *ServiceUtils) LoadServiceConfig(serviceName string) (*ServiceConfig, error) {
+func (u *ServiceUtils) LoadServiceConfig(serviceName string) (*servicetypes.ServiceConfig, error) {
 	service, err := u.manager.GetService(serviceName)
 	if err != nil {
 		return nil, err
@@ -71,7 +72,7 @@ func (u *ServiceUtils) LoadServiceConfig(serviceName string) (*ServiceConfig, er
 }
 
 // GetServicesByCategory loads services organized by category (alias)
-func (u *ServiceUtils) GetServicesByCategory() (map[string][]ServiceConfig, error) {
+func (u *ServiceUtils) GetServicesByCategory() (map[string][]servicetypes.ServiceConfig, error) {
 	return u.LoadServicesByCategory()
 }
 

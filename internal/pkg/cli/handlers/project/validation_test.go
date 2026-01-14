@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,13 +46,13 @@ func TestValidateServiceConfigs(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		serviceConfigs []services.ServiceConfig
+		serviceConfigs []types.ServiceConfig
 		expectError    bool
 	}{
-		{"empty services", []services.ServiceConfig{}, true},
+		{"empty services", []types.ServiceConfig{}, true},
 		{"nil services", nil, true},
-		{"valid services", []services.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServiceRedis}}, false},
-		{"duplicate services", []services.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServicePostgres}}, true},
+		{"valid services", []types.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServiceRedis}}, false},
+		{"duplicate services", []types.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServicePostgres}}, true},
 	}
 
 	for _, tt := range tests {

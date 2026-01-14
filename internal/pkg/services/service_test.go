@@ -3,6 +3,7 @@ package services
 import (
 	"testing"
 
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,7 +17,7 @@ func TestStartRequest_Validation(t *testing.T) {
 			name: "valid request with postgres and redis",
 			request: StartRequest{
 				Project: "test-project",
-				ServiceConfigs: []ServiceConfig{
+				ServiceConfigs: []servicetypes.ServiceConfig{
 					{Name: ServicePostgres, Category: CategoryDatabase},
 					{Name: ServiceRedis, Category: CategoryCache},
 				},
@@ -28,7 +29,7 @@ func TestStartRequest_Validation(t *testing.T) {
 			name: "empty project name should be invalid",
 			request: StartRequest{
 				Project:        "",
-				ServiceConfigs: []ServiceConfig{{Name: ServicePostgres}},
+				ServiceConfigs: []servicetypes.ServiceConfig{{Name: ServicePostgres}},
 			},
 			valid: false,
 		},
@@ -36,7 +37,7 @@ func TestStartRequest_Validation(t *testing.T) {
 			name: "no services should be allowed",
 			request: StartRequest{
 				Project:        "test-project",
-				ServiceConfigs: []ServiceConfig{},
+				ServiceConfigs: []servicetypes.ServiceConfig{},
 			},
 			valid: true,
 		},

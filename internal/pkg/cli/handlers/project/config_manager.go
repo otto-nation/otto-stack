@@ -11,7 +11,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // ConfigManager handles configuration file operations
@@ -39,7 +39,7 @@ func (cm *ConfigManager) CreateConfigFile(projectName string, originalServiceNam
 }
 
 // GenerateServiceConfigs generates individual service configuration files
-func (cm *ConfigManager) GenerateServiceConfigs(serviceConfigs []svc.ServiceConfig, base *base.BaseCommand) {
+func (cm *ConfigManager) GenerateServiceConfigs(serviceConfigs []types.ServiceConfig, base *base.BaseCommand) {
 	for _, config := range serviceConfigs {
 		if config.Hidden {
 			continue

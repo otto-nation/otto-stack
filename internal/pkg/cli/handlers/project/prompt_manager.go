@@ -11,6 +11,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -63,7 +64,7 @@ func (pm *PromptManager) PromptForProjectDetails() (string, error) {
 }
 
 // PromptForServiceConfigs prompts user to select services and returns ServiceConfigs
-func (pm *PromptManager) PromptForServiceConfigs() ([]services.ServiceConfig, error) {
+func (pm *PromptManager) PromptForServiceConfigs() ([]types.ServiceConfig, error) {
 	categories, err := pm.loadServiceCategories()
 	if err != nil {
 		return nil, err
@@ -161,15 +162,15 @@ func (pm *PromptManager) ConfirmInitialization(projectName string, services []st
 }
 
 // loadServiceCategories loads available service categories
-func (pm *PromptManager) loadServiceCategories() (map[string][]services.ServiceConfig, error) {
+func (pm *PromptManager) loadServiceCategories() (map[string][]types.ServiceConfig, error) {
 	utils := services.NewServiceUtils()
 	return utils.GetServicesByCategory()
 }
 
 // selectServicesFromAllCategories shows all services in one list with category labels
-func (pm *PromptManager) selectServicesFromAllCategories(categories map[string][]services.ServiceConfig) ([]services.ServiceConfig, error) {
+func (pm *PromptManager) selectServicesFromAllCategories(categories map[string][]types.ServiceConfig) ([]types.ServiceConfig, error) {
 	// Build flat list of all services with category labels
-	var allServices []services.ServiceConfig
+	var allServices []types.ServiceConfig
 	var serviceOptions []string
 
 	for categoryName, categoryServices := range categories {
@@ -202,7 +203,7 @@ func (pm *PromptManager) selectServicesFromAllCategories(categories map[string][
 	}
 
 	// Map selected display names back to ServiceConfigs
-	var selectedConfigs []services.ServiceConfig
+	var selectedConfigs []types.ServiceConfig
 	selectedMap := make(map[string]bool)
 
 	const minParts = 2

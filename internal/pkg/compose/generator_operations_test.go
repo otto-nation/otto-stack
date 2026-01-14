@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/stretchr/testify/assert"
 )
@@ -43,7 +44,7 @@ func TestGenerator_UncoveredMethods(t *testing.T) {
 		}
 
 		service := map[string]any{}
-		config := &services.ServiceConfig{Name: "postgres"}
+		config := &types.ServiceConfig{Name: "postgres"}
 
 		generator.addServiceVolumes(service, config)
 
@@ -63,7 +64,7 @@ func TestGenerator_UncoveredMethods(t *testing.T) {
 		}
 
 		service := map[string]any{}
-		config := &services.ServiceConfig{Name: "postgres"}
+		config := &types.ServiceConfig{Name: "postgres"}
 
 		generator.addServiceConfiguration(service, config)
 
@@ -83,7 +84,7 @@ func TestGenerator_UncoveredMethods(t *testing.T) {
 		}
 
 		service := map[string]any{}
-		config := &services.ServiceConfig{Name: "postgres"}
+		config := &types.ServiceConfig{Name: "postgres"}
 
 		generator.addServiceHealthCheck(service, config)
 
@@ -104,7 +105,7 @@ func TestGenerator_EdgeCases(t *testing.T) {
 			t.Skip("Generator not available")
 		}
 
-		result, err := generator.buildComposeStructure([]services.ServiceConfig{})
+		result, err := generator.buildComposeStructure([]types.ServiceConfig{})
 		if err != nil {
 			assert.Error(t, err)
 		} else {
@@ -123,7 +124,7 @@ func TestGenerator_EdgeCases(t *testing.T) {
 			t.Skip("Generator not available")
 		}
 
-		configs := []services.ServiceConfig{
+		configs := []types.ServiceConfig{
 			{Name: services.ServicePostgres},
 		}
 
@@ -145,7 +146,7 @@ func TestGenerator_EdgeCases(t *testing.T) {
 			t.Skip("Generator not available")
 		}
 
-		config := &services.ServiceConfig{Name: "postgres"}
+		config := &types.ServiceConfig{Name: "postgres"}
 		service := generator.createBaseService(config)
 
 		assert.IsType(t, map[string]any{}, service)

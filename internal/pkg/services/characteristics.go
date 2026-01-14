@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
+
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 )
@@ -29,21 +31,21 @@ func NewDefaultCharacteristicsResolver() (*DefaultCharacteristicsResolver, error
 }
 
 // ResolveUpOptions converts characteristics to up options
-func (r *DefaultCharacteristicsResolver) ResolveUpOptions(characteristics []string, serviceConfigs []ServiceConfig, base docker.UpOptions) docker.UpOptions {
+func (r *DefaultCharacteristicsResolver) ResolveUpOptions(characteristics []string, serviceConfigs []servicetypes.ServiceConfig, base docker.UpOptions) docker.UpOptions {
 	base.Services = ExtractServiceNames(serviceConfigs)
 	flags := r.resolver.ResolveComposeUpFlags(characteristics)
 	return r.applyFlagsToUpOptions(flags, base)
 }
 
 // ResolveDownOptions converts characteristics to down options
-func (r *DefaultCharacteristicsResolver) ResolveDownOptions(characteristics []string, serviceConfigs []ServiceConfig, base docker.DownOptions) docker.DownOptions {
+func (r *DefaultCharacteristicsResolver) ResolveDownOptions(characteristics []string, serviceConfigs []servicetypes.ServiceConfig, base docker.DownOptions) docker.DownOptions {
 	base.Services = ExtractServiceNames(serviceConfigs)
 	flags := r.resolver.ResolveComposeDownFlags(characteristics)
 	return r.applyFlagsToDownOptions(flags, base)
 }
 
 // ResolveStopOptions converts characteristics to stop options
-func (r *DefaultCharacteristicsResolver) ResolveStopOptions(characteristics []string, serviceConfigs []ServiceConfig, base docker.StopOptions) docker.StopOptions {
+func (r *DefaultCharacteristicsResolver) ResolveStopOptions(characteristics []string, serviceConfigs []servicetypes.ServiceConfig, base docker.StopOptions) docker.StopOptions {
 	base.Services = ExtractServiceNames(serviceConfigs)
 	flags := r.resolver.ResolveComposeDownFlags(characteristics) // Use down flags for stop
 	return r.applyFlagsToStopOptions(flags, base)

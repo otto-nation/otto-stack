@@ -3,12 +3,13 @@ package services
 import (
 	"testing"
 
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestExtractServiceNames(t *testing.T) {
 	t.Run("extracts names from ServiceConfigs", func(t *testing.T) {
-		serviceConfigs := []ServiceConfig{
+		serviceConfigs := []servicetypes.ServiceConfig{
 			{Name: ServicePostgres},
 			{Name: ServiceRedis},
 			{Name: ServiceMysql},
@@ -21,7 +22,7 @@ func TestExtractServiceNames(t *testing.T) {
 	})
 
 	t.Run("returns nil for empty slice", func(t *testing.T) {
-		names := ExtractServiceNames([]ServiceConfig{})
+		names := ExtractServiceNames([]servicetypes.ServiceConfig{})
 		assert.Nil(t, names)
 	})
 

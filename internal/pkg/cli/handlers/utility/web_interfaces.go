@@ -13,6 +13,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -43,7 +44,7 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 	defer cleanup()
 
 	// Resolve services - for utility handlers, use all enabled services if no args provided
-	var serviceConfigs []services.ServiceConfig
+	var serviceConfigs []types.ServiceConfig
 	if len(args) > 0 {
 		serviceConfigs, err = services.ResolveUpServices(args, setup.Config)
 	} else {
@@ -63,7 +64,7 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 }
 
 // collectInterfaces gathers web interfaces from services
-func (h *WebInterfacesHandler) collectInterfaces(setup *common.CoreSetup, serviceConfigs []services.ServiceConfig, showAll bool) ([]WebInterface, error) {
+func (h *WebInterfacesHandler) collectInterfaces(setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, showAll bool) ([]WebInterface, error) {
 	runningServices, err := h.getRunningServices(setup, serviceConfigs, showAll)
 	if err != nil {
 		return nil, err
@@ -73,7 +74,7 @@ func (h *WebInterfacesHandler) collectInterfaces(setup *common.CoreSetup, servic
 }
 
 // getRunningServices gets the status of services if not showing all
-func (h *WebInterfacesHandler) getRunningServices(setup *common.CoreSetup, serviceConfigs []services.ServiceConfig, showAll bool) (map[string]bool, error) {
+func (h *WebInterfacesHandler) getRunningServices(setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, showAll bool) (map[string]bool, error) {
 	if showAll {
 		return nil, nil
 	}
@@ -98,7 +99,7 @@ func (h *WebInterfacesHandler) getRunningServices(setup *common.CoreSetup, servi
 }
 
 // extractWebInterfaces extracts web interfaces from service definitions
-func (h *WebInterfacesHandler) extractWebInterfaces(serviceConfigs []services.ServiceConfig, runningServices map[string]bool, showAll bool) []WebInterface {
+func (h *WebInterfacesHandler) extractWebInterfaces(serviceConfigs []types.ServiceConfig, runningServices map[string]bool, showAll bool) []WebInterface {
 	var interfaces []WebInterface
 
 	for _, config := range serviceConfigs {
@@ -114,7 +115,7 @@ func (h *WebInterfacesHandler) extractWebInterfaces(serviceConfigs []services.Se
 }
 
 // createWebInterfaces creates WebInterface structs for a service
-func (h *WebInterfacesHandler) createWebInterfaces(serviceName string, webInterfaces []services.WebInterface) []WebInterface {
+func (h *WebInterfacesHandler) createWebInterfaces(serviceName string, webInterfaces []types.WebInterface) []WebInterface {
 	interfaces := make([]WebInterface, len(webInterfaces))
 	for i, webIface := range webInterfaces {
 		interfaces[i] = WebInterface{

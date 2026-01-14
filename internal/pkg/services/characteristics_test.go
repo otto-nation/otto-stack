@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,7 +20,7 @@ func TestNewDefaultCharacteristicsResolver(t *testing.T) {
 func TestDefaultCharacteristicsResolver_ResolveUpOptions(t *testing.T) {
 	resolver := &DefaultCharacteristicsResolver{}
 
-	serviceConfigs := []ServiceConfig{
+	serviceConfigs := []servicetypes.ServiceConfig{
 		{Name: ServicePostgres},
 		{Name: ServiceRedis},
 	}
@@ -38,7 +39,7 @@ func TestDefaultCharacteristicsResolver_ResolveUpOptions(t *testing.T) {
 func TestDefaultCharacteristicsResolver_ResolveDownOptions(t *testing.T) {
 	resolver := &DefaultCharacteristicsResolver{}
 
-	serviceConfigs := []ServiceConfig{
+	serviceConfigs := []servicetypes.ServiceConfig{
 		{Name: ServicePostgres},
 	}
 
@@ -55,7 +56,7 @@ func TestDefaultCharacteristicsResolver_ResolveDownOptions(t *testing.T) {
 func TestDefaultCharacteristicsResolver_ResolveStopOptions(t *testing.T) {
 	resolver := &DefaultCharacteristicsResolver{}
 
-	serviceConfigs := []ServiceConfig{
+	serviceConfigs := []servicetypes.ServiceConfig{
 		{Name: ServiceRedis},
 	}
 
@@ -71,7 +72,7 @@ func TestDefaultCharacteristicsResolver_ResolveStopOptions(t *testing.T) {
 
 func TestServiceConstantsValidation(t *testing.T) {
 	t.Run("extracts names from service configs using constants", func(t *testing.T) {
-		serviceConfigs := []ServiceConfig{
+		serviceConfigs := []servicetypes.ServiceConfig{
 			{Name: ServicePostgres},
 			{Name: ServiceRedis},
 			{Name: ServiceMysql},
@@ -84,7 +85,7 @@ func TestServiceConstantsValidation(t *testing.T) {
 	})
 
 	t.Run("handles empty service configs", func(t *testing.T) {
-		names := ExtractServiceNames([]ServiceConfig{})
+		names := ExtractServiceNames([]servicetypes.ServiceConfig{})
 		assert.Empty(t, names)
 	})
 

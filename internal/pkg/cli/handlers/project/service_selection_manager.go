@@ -6,6 +6,7 @@ import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // ServiceSelectionManager handles service selection workflow
@@ -23,7 +24,7 @@ func NewServiceSelectionManager(promptManager *PromptManager, validationManager 
 }
 
 // RunWorkflow executes the complete service selection workflow
-func (ssm *ServiceSelectionManager) RunWorkflow(handler *InitHandler, base *base.BaseCommand) ([]svc.ServiceConfig, map[string]bool, map[string]bool, error) {
+func (ssm *ServiceSelectionManager) RunWorkflow(handler *InitHandler, base *base.BaseCommand) ([]types.ServiceConfig, map[string]bool, map[string]bool, error) {
 	base.Output.Header("%s", core.MsgProcess_initializing)
 	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
 

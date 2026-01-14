@@ -3,6 +3,7 @@ package services
 import (
 	"testing"
 
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -128,7 +129,7 @@ func TestManager_GetAllServices(t *testing.T) {
 func TestManager_loadServices(t *testing.T) {
 	t.Run("loads services from config directory", func(t *testing.T) {
 		manager := &Manager{
-			services: make(map[string]ServiceConfig),
+			services: make(map[string]servicetypes.ServiceConfig),
 		}
 
 		err := manager.loadServices()

@@ -7,18 +7,19 @@ import (
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/core"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"gopkg.in/yaml.v3"
 )
 
 // Manager handles all service operations
 type Manager struct {
-	services map[string]ServiceConfig
+	services map[string]servicetypes.ServiceConfig
 }
 
 // New creates a new service manager
 func New() (*Manager, error) {
 	manager := &Manager{
-		services: make(map[string]ServiceConfig),
+		services: make(map[string]servicetypes.ServiceConfig),
 	}
 
 	if err := manager.loadServices(); err != nil {
@@ -29,7 +30,7 @@ func New() (*Manager, error) {
 }
 
 // GetService returns a service by name
-func (m *Manager) GetService(name string) (*ServiceConfig, error) {
+func (m *Manager) GetService(name string) (*servicetypes.ServiceConfig, error) {
 	service, exists := m.services[name]
 	if !exists {
 		return nil, pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "service not found: %s", name)
@@ -38,7 +39,7 @@ func (m *Manager) GetService(name string) (*ServiceConfig, error) {
 }
 
 // GetAllServices returns all services
-func (m *Manager) GetAllServices() map[string]ServiceConfig {
+func (m *Manager) GetAllServices() map[string]servicetypes.ServiceConfig {
 	return m.services
 }
 
@@ -76,7 +77,7 @@ func (m *Manager) BuildConnectCommand(serviceName string, options map[string]str
 }
 
 // buildConnectCommand builds connection command from management spec
-func (m *Manager) buildConnectCommand(service *ServiceConfig, options map[string]string) ([]string, error) {
+func (m *Manager) buildConnectCommand(service *servicetypes.ServiceConfig, options map[string]string) ([]string, error) {
 	if service.Service.Management == nil || service.Service.Management.Connect == nil {
 		return nil, pkgerrors.NewConfigErrorf(pkgerrors.FieldServiceName, "no connect operation configured for service: %s", service.Name)
 	}
@@ -162,7 +163,7 @@ func (m *Manager) loadService(category, serviceName string) error {
 }
 
 func (m *Manager) parseService(data []byte, serviceName, category string) error {
-	var service ServiceConfig
+	var service servicetypes.ServiceConfig
 	if err := yaml.Unmarshal(data, &service); err != nil {
 		return pkgerrors.NewConfigError("", ActionParseServiceYAML, err)
 	}

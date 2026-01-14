@@ -11,6 +11,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +46,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Resolve services - inline logic since lifecycle uses different pattern than operations
-	var serviceConfigs []services.ServiceConfig
+	var serviceConfigs []types.ServiceConfig
 	if len(args) > 0 {
 		serviceConfigs, err = services.ResolveUpServices(args, setup.Config)
 	} else {
@@ -64,7 +65,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 }
 
 // restartServices performs the stop and start operations using new stack service
-func (h *RestartHandler) restartServices(ctx context.Context, setup *common.CoreSetup, serviceConfigs []services.ServiceConfig, flags *core.RestartFlags) error {
+func (h *RestartHandler) restartServices(ctx context.Context, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, flags *core.RestartFlags) error {
 	// Create stack service
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {

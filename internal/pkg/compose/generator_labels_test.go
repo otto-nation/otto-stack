@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,7 +18,7 @@ func TestLabelGeneration(t *testing.T) {
 	testhelpers.AssertValidConstructor(t, gen, err, "Generator")
 
 	// Test that labels are properly generated in compose structure
-	compose, err := gen.buildComposeStructure([]services.ServiceConfig{})
+	compose, err := gen.buildComposeStructure([]types.ServiceConfig{})
 	require.NoError(t, err)
 
 	// Check network labels exist

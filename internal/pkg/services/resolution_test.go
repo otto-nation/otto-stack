@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -65,7 +66,7 @@ func TestResolveUpServices(t *testing.T) {
 
 func TestServiceConfigValidation(t *testing.T) {
 	t.Run("validates service config structure", func(t *testing.T) {
-		config := ServiceConfig{
+		config := servicetypes.ServiceConfig{
 			Name:        ServicePostgres,
 			Description: "PostgreSQL database",
 			Category:    CategoryDatabase,
@@ -77,7 +78,7 @@ func TestServiceConfigValidation(t *testing.T) {
 	})
 
 	t.Run("validates service config with environment", func(t *testing.T) {
-		config := ServiceConfig{
+		config := servicetypes.ServiceConfig{
 			Name: ServiceRedis,
 			Environment: map[string]string{
 				"REDIS_PASSWORD": "secret",
@@ -92,7 +93,7 @@ func TestServiceConfigValidation(t *testing.T) {
 	})
 
 	t.Run("handles empty environment gracefully", func(t *testing.T) {
-		config := ServiceConfig{
+		config := servicetypes.ServiceConfig{
 			Name: ServiceMysql,
 		}
 

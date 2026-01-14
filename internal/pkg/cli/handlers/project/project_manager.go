@@ -15,6 +15,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/env"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // ProjectManager handles project creation logic
@@ -83,7 +84,7 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 }
 
 // generateInitialComposeFiles generates Docker Compose files
-func (pm *ProjectManager) generateInitialComposeFiles(serviceConfigs []svc.ServiceConfig, projectName string, _, _ map[string]bool, base *base.BaseCommand) error {
+func (pm *ProjectManager) generateInitialComposeFiles(serviceConfigs []types.ServiceConfig, projectName string, _, _ map[string]bool, base *base.BaseCommand) error {
 	if err := pm.generateEnvFile(serviceConfigs, projectName, base); err != nil {
 		return err
 	}
@@ -96,7 +97,7 @@ func (pm *ProjectManager) generateInitialComposeFiles(serviceConfigs []svc.Servi
 }
 
 // generateEnvFile generates the .env file
-func (pm *ProjectManager) generateEnvFile(serviceConfigs []svc.ServiceConfig, projectName string, base *base.BaseCommand) error {
+func (pm *ProjectManager) generateEnvFile(serviceConfigs []types.ServiceConfig, projectName string, base *base.BaseCommand) error {
 	if err := env.GenerateFile(projectName, serviceConfigs, core.EnvGeneratedFileName); err != nil {
 		return err
 	}
@@ -106,7 +107,7 @@ func (pm *ProjectManager) generateEnvFile(serviceConfigs []svc.ServiceConfig, pr
 }
 
 // generateDockerCompose generates the docker-compose.yml file
-func (pm *ProjectManager) generateDockerCompose(serviceConfigs []svc.ServiceConfig, projectName string, base *base.BaseCommand) error {
+func (pm *ProjectManager) generateDockerCompose(serviceConfigs []types.ServiceConfig, projectName string, base *base.BaseCommand) error {
 	manager, err := svc.New()
 	if err != nil {
 		return err
@@ -146,7 +147,7 @@ func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 }
 
 // createReadme creates README file
-func (pm *ProjectManager) createReadme(projectName string, serviceConfigs []svc.ServiceConfig, base *base.BaseCommand) error {
+func (pm *ProjectManager) createReadme(projectName string, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
 	const readmeTemplate = `# %s
 
 This project was initialized with %s.

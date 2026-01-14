@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 func TestGenerator_addServiceVolumes_EmptyVolumes(t *testing.T) {
@@ -14,7 +15,7 @@ func TestGenerator_addServiceVolumes_EmptyVolumes(t *testing.T) {
 	}
 
 	// Test with service config with no volumes
-	config := &services.ServiceConfig{
+	config := &types.ServiceConfig{
 		Name: "test-service",
 	}
 
@@ -37,7 +38,7 @@ func TestGenerator_addServiceConfiguration_EmptyConfig(t *testing.T) {
 	}
 
 	// Test with service config with no additional configuration
-	config := &services.ServiceConfig{
+	config := &types.ServiceConfig{
 		Name: "test-service",
 	}
 
@@ -60,7 +61,7 @@ func TestGenerator_addServiceHealthCheck_NoHealthCheck(t *testing.T) {
 	}
 
 	// Test with service config with no health check
-	config := &services.ServiceConfig{
+	config := &types.ServiceConfig{
 		Name: "test-service",
 	}
 

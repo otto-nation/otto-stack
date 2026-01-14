@@ -14,6 +14,7 @@ import (
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -124,10 +125,19 @@ func BuildStackContext(cmd *cobra.Command, args []string) (clicontext.Context, e
 		return clicontext.Context{}, err
 	}
 
+	// Resolve service configs from enabled services
+	serviceConfigs, err := services.ResolveUpServices(args, cfg)
+	if err != nil {
+		return clicontext.Context{}, err
+	}
+
+	// Extract service names
+	serviceNames := services.ExtractServiceNames(serviceConfigs)
+
 	// Build context using the builder pattern
 	builder := clicontext.NewBuilder().
 		WithProject(cfg.Project.Name, core.OttoStackDir).
-		WithServices(args, nil)
+		WithServices(serviceNames, serviceConfigs)
 
 	return builder.Build(), nil
 }

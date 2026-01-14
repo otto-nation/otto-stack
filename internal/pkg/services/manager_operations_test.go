@@ -5,6 +5,7 @@ package services
 import (
 	"testing"
 
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/stretchr/testify/assert"
 )
@@ -50,7 +51,7 @@ func TestManager_UncoveredMethods(t *testing.T) {
 
 func TestSchemaGenerated_UncoveredMethods(t *testing.T) {
 	t.Run("tests GetInitServiceSpec", func(t *testing.T) {
-		config := ServiceConfig{Name: "test"}
+		config := servicetypes.ServiceConfig{Name: "test"}
 		spec := config.GetInitServiceSpec()
 		// Just check it doesn't panic and returns something
 		_ = spec
@@ -58,19 +59,19 @@ func TestSchemaGenerated_UncoveredMethods(t *testing.T) {
 	})
 
 	t.Run("tests GetInitServiceImage", func(t *testing.T) {
-		config := ServiceConfig{Name: "test"}
+		config := servicetypes.ServiceConfig{Name: "test"}
 		image := config.GetInitServiceImage()
 		assert.IsType(t, "", image)
 	})
 
 	t.Run("tests GetConnectionPort", func(t *testing.T) {
-		config := ServiceConfig{Name: "test"}
+		config := servicetypes.ServiceConfig{Name: "test"}
 		port := config.GetConnectionPort()
 		assert.GreaterOrEqual(t, port, 0)
 	})
 
 	t.Run("tests HasConnection", func(t *testing.T) {
-		config := ServiceConfig{Name: "test"}
+		config := servicetypes.ServiceConfig{Name: "test"}
 		hasConn := config.HasConnection()
 		assert.IsType(t, false, hasConn)
 	})
@@ -78,7 +79,7 @@ func TestSchemaGenerated_UncoveredMethods(t *testing.T) {
 
 func TestUtils_UncoveredMethods(t *testing.T) {
 	t.Run("tests ExtractVisibleServiceNames", func(t *testing.T) {
-		configs := []ServiceConfig{
+		configs := []servicetypes.ServiceConfig{
 			{Name: "service1"},
 			{Name: "service2"},
 		}
