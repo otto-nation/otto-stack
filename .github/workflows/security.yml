@@ -18,6 +18,7 @@ permissions:
 
 env:
   GOTOOLCHAIN: local
+  CGO_ENABLED: 0
 
 jobs:
   security:
