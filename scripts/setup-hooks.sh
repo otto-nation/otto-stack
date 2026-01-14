@@ -21,8 +21,12 @@ EOF
 cat > .git/hooks/pre-push << 'EOF'
 #!/bin/bash
 set -e
+
+# Ensure task is in PATH for GitKraken
+export PATH="/usr/local/bin:/opt/homebrew/bin:$HOME/.local/bin:$HOME/go/bin:$PATH"
+
 if [ "$NO_VERIFY" ]; then
-    echo 'pre-commit hook skipped' 1>&2
+    echo 'pre-push hook skipped' 1>&2
     exit 0
 fi
 task pre-push
