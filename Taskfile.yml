@@ -443,6 +443,7 @@ tasks:
     silent: true
     cmds:
       - ./scripts/sync-go-version.sh --fix
+      - GOTOOLCHAIN=local go mod tidy
 
   check-go-version:
     desc: "✅ Check if Go versions are consistent across files"
