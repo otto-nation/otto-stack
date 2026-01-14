@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,7 +19,7 @@ func TestNewBuilder(t *testing.T) {
 func TestBuilder_FluentAPI(t *testing.T) {
 	ctx := NewBuilder().
 		WithProject("test-project", "/test/path").
-		WithServices([]string{services.ServicePostgres, services.ServiceRedis}, []generated.ServiceConfig{
+		WithServices([]string{services.ServicePostgres, services.ServiceRedis}, []types.ServiceConfig{
 			{Name: services.ServicePostgres},
 			{Name: services.ServiceRedis},
 		}).

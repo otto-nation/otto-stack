@@ -9,14 +9,14 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGenerateFile(t *testing.T) {
 	t.Run("generates basic environment file", func(t *testing.T) {
 		projectName := "test-project"
-		serviceConfigs := []generated.ServiceConfig{
+		serviceConfigs := []types.ServiceConfig{
 			{
 				Name: services.ServiceRedis,
 				AllEnvironment: map[string]string{
@@ -54,7 +54,7 @@ func TestGenerateFile(t *testing.T) {
 
 	t.Run("handles empty services list", func(t *testing.T) {
 		projectName := "empty-project"
-		serviceConfigs := []generated.ServiceConfig{}
+		serviceConfigs := []types.ServiceConfig{}
 
 		tempFile := filepath.Join(t.TempDir(), core.ExtENV)
 		err := GenerateFile(projectName, serviceConfigs, tempFile)
@@ -70,7 +70,7 @@ func TestGenerateFile(t *testing.T) {
 
 	t.Run("generates valid environment format", func(t *testing.T) {
 		projectName := "format-test"
-		serviceConfigs := []generated.ServiceConfig{
+		serviceConfigs := []types.ServiceConfig{
 			{
 				Name: services.ServicePostgres,
 				AllEnvironment: map[string]string{

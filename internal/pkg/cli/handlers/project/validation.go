@@ -3,7 +3,7 @@ package project
 import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // validateProjectName validates the project name
@@ -37,7 +37,7 @@ func (h *InitHandler) validateProjectName(name string) error {
 }
 
 // validateServiceConfigs validates ServiceConfig objects
-func (h *InitHandler) validateServiceConfigs(serviceConfigs []generated.ServiceConfig) error {
+func (h *InitHandler) validateServiceConfigs(serviceConfigs []types.ServiceConfig) error {
 	if len(serviceConfigs) == 0 {
 		return pkgerrors.NewValidationError(pkgerrors.FieldServiceName, core.MsgValidation_no_services_selected, nil)
 	}

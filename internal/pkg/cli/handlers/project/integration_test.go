@@ -10,7 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
@@ -115,7 +115,7 @@ func TestCreateReadme(t *testing.T) {
 	err := handler.projectManager.directoryManager.CreateDirectoryStructure()
 	assert.NoError(t, err)
 
-	serviceConfigs := []generated.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServiceRedis}}
+	serviceConfigs := []types.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServiceRedis}}
 	err = handler.projectManager.createReadme(TestProjectName, serviceConfigs, &base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 

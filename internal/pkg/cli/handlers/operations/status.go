@@ -15,7 +15,6 @@ import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"github.com/spf13/cobra"
 )
 
@@ -116,7 +115,7 @@ func (h *StatusHandler) GetRequiredFlags() []string {
 }
 
 // getContainerName returns the actual container name for a service
-func getContainerName(config generated.ServiceConfig) string {
+func getContainerName(config types.ServiceConfig) string {
 	// If service is hidden, it's the actual container
 	if config.Hidden {
 		return config.Name
@@ -133,7 +132,7 @@ func getContainerName(config generated.ServiceConfig) string {
 }
 
 // convertToDisplayStatuses creates display service statuses with health inheritance
-func convertToDisplayStatuses(containerStatuses []docker.ContainerStatus, serviceConfigs []generated.ServiceConfig, serviceToContainer map[string]string) []display.ServiceStatus {
+func convertToDisplayStatuses(containerStatuses []docker.ContainerStatus, serviceConfigs []types.ServiceConfig, serviceToContainer map[string]string) []display.ServiceStatus {
 	containerMap := make(map[string]docker.ContainerStatus)
 	for _, status := range containerStatuses {
 		containerMap[status.Name] = status
@@ -172,7 +171,7 @@ func convertToDisplayStatuses(containerStatuses []docker.ContainerStatus, servic
 }
 
 // filterInitContainers removes init containers (restart: "no") from status display
-func filterInitContainers(serviceConfigs []generated.ServiceConfig) []string {
+func filterInitContainers(serviceConfigs []types.ServiceConfig) []string {
 	var filtered []string
 	for _, config := range serviceConfigs {
 		if config.Container.Restart != types.RestartPolicyNo {

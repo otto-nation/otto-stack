@@ -3,7 +3,7 @@ package services
 import (
 	"testing"
 
-	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types/generated"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

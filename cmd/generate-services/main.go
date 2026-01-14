@@ -19,8 +19,8 @@ const (
 	ServiceConfigTemplateFilePath = "cmd/generate-services/templates/service_config.tmpl"
 	MainConfigTemplateFilePath    = "cmd/generate-services/templates/main_config.tmpl"
 	GeneratedFilePath             = "internal/pkg/services/services_generated.go"
-	GeneratedConfigsDir           = "internal/pkg/types/generated"
-	MainConfigGeneratedFilePath   = GeneratedConfigsDir + "/service_config.go"
+	GeneratedConfigsDir           = "internal/pkg/types"
+	MainConfigGeneratedFilePath   = GeneratedConfigsDir + "/service_config_generated.go"
 	ServicesDir                   = "internal/config/services"
 	YAMLExtension                 = ".yaml"
 	DefaultProtocol               = "tcp"
@@ -705,7 +705,7 @@ func generateMultiFileSchema(configSchemas []ServiceConfigSchema) error {
 		}
 
 		structName := codegen.ToPascalCase(schema.ServiceName) + "Config"
-		fileName := codegen.ToPascalCase(schema.ServiceName) + "_config.go"
+		fileName := codegen.ToPascalCase(schema.ServiceName) + "_config_generated.go"
 
 		serviceFiles = append(serviceFiles, codegen.ServiceFileData{
 			ServiceName: schema.ServiceName,

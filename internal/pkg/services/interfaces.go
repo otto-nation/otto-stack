@@ -3,7 +3,7 @@ package services
 import (
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
-	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types/generated"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // CharacteristicsResolver converts service characteristics to compose options

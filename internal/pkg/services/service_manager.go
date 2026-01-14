@@ -23,7 +23,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
-	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types/generated"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // Service provides high-level stack operations with automatic characteristics resolution

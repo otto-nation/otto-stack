@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // Operations defines the core stack operations
@@ -19,7 +19,7 @@ type Operations interface {
 // UpRequest represents a stack up operation
 type UpRequest struct {
 	Project        string
-	ServiceConfigs []generated.ServiceConfig
+	ServiceConfigs []types.ServiceConfig
 	Build          bool
 	SkipConflicts  bool
 }
@@ -27,7 +27,7 @@ type UpRequest struct {
 // DownRequest represents a stack down operation
 type DownRequest struct {
 	Project        string
-	ServiceConfigs []generated.ServiceConfig
+	ServiceConfigs []types.ServiceConfig
 	RemoveVolumes  bool
 	Timeout        time.Duration
 }
@@ -35,20 +35,20 @@ type DownRequest struct {
 // RestartRequest represents a stack restart operation
 type RestartRequest struct {
 	Project        string
-	ServiceConfigs []generated.ServiceConfig
+	ServiceConfigs []types.ServiceConfig
 	Timeout        time.Duration
 }
 
 // StatusRequest represents a stack status query
 type StatusRequest struct {
 	Project        string
-	ServiceConfigs []generated.ServiceConfig
+	ServiceConfigs []types.ServiceConfig
 }
 
 // LogsRequest represents a stack logs operation
 type LogsRequest struct {
 	Project        string
-	ServiceConfigs []generated.ServiceConfig
+	ServiceConfigs []types.ServiceConfig
 	Follow         bool
 	Timestamps     bool
 	Tail           string

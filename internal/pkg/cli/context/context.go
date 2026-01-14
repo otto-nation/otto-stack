@@ -1,7 +1,7 @@
 package context
 
 import (
-	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // Context encapsulates all data needed for CLI operations
@@ -21,7 +21,7 @@ type ProjectSpec struct {
 // ServiceSpec contains service-related information
 type ServiceSpec struct {
 	Names   []string
-	Configs []generated.ServiceConfig
+	Configs []types.ServiceConfig
 }
 
 // OptionSet contains configuration options
@@ -64,7 +64,7 @@ func (b *Builder) WithProject(name, path string) *Builder {
 }
 
 // WithServices sets service information
-func (b *Builder) WithServices(names []string, configs []generated.ServiceConfig) *Builder {
+func (b *Builder) WithServices(names []string, configs []types.ServiceConfig) *Builder {
 	b.ctx.Services = ServiceSpec{
 		Names:   names,
 		Configs: configs,

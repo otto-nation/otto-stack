@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
-	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types/generated"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
 
