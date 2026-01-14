@@ -28,6 +28,9 @@ func NewDoctorHandler() *DoctorHandler {
 func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandDoctor, logger.LogFieldProject, "health_check")
 
+	verbose, _ := cmd.Flags().GetBool("verbose")
+	logger.Debug("Running doctor command", "verbose", verbose)
+
 	base.Output.Header(core.MsgDoctor_health_check_header, core.AppName)
 	logger.Info("Starting health checks")
 

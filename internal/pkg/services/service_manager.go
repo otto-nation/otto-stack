@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 	"maps"
 	"os"
 	"os/exec"
@@ -21,6 +22,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 )
 
@@ -30,7 +32,8 @@ type Service struct {
 	characteristics CharacteristicsResolver
 	project         ProjectLoader
 	DockerClient    *docker.Client // Exposed for direct access
-	verbose         bool           // Enable verbose logging
+	logger          *slog.Logger
+	verbose         bool // Enable verbose logging
 }
 
 // ServiceInterface defines the interface for service operations
@@ -48,6 +51,7 @@ func NewServiceWithDependencies(compose api.Compose, characteristics Characteris
 		characteristics: characteristics,
 		project:         project,
 		DockerClient:    dockerClient,
+		logger:          logger.GetLogger(),
 		verbose:         false,
 	}
 }
@@ -182,6 +186,14 @@ func NewService(compose api.Compose, characteristics CharacteristicsResolver, pr
 
 // Start starts services with automatic characteristics resolution
 func (s *Service) Start(ctx context.Context, req StartRequest) error {
+	if s.verbose {
+		s.logger.Debug("Starting services",
+			"project", req.Project,
+			"serviceCount", len(req.ServiceConfigs),
+			"build", req.Build,
+			"forceRecreate", req.ForceRecreate)
+	}
+
 	// Load and validate service configs from .otto-stack/service-configs/
 	req.ServiceConfigs = s.loadAndValidateServiceConfigs(req.ServiceConfigs)
 
@@ -189,6 +201,10 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 	project, err := s.project.Load(req.Project)
 	if err != nil {
 		return pkgerrors.NewServiceError("project", "load", err)
+	}
+
+	if s.verbose {
+		s.logger.Debug("Project loaded successfully", "project", req.Project)
 	}
 
 	// Resolve characteristics to options and convert to SDK format
@@ -203,6 +219,10 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 			return pkgerrors.NewServiceError("project", "start services", err)
 		}
 		return pkgerrors.NewServiceError("project", "start", err)
+	}
+
+	if s.verbose {
+		s.logger.Debug("Services started successfully")
 	}
 
 	// Execute local init scripts for services that have them
@@ -229,13 +249,16 @@ func (s *Service) executeLocalInitScripts(ctx context.Context, serviceConfigs []
 func (s *Service) hasLocalInitScripts(config servicetypes.ServiceConfig) bool {
 	hasInit := config.InitService != nil && config.InitService.Enabled && config.InitService.Mode == "local"
 
-	// Add verbose logging
+	// Log verbose information about init service configuration
 	if s.verbose {
 		if config.InitService == nil {
-			fmt.Printf("🔍 [VERBOSE] Service '%s': No InitService configuration\n", config.Name)
+			s.logger.Debug("Service has no InitService configuration", "service", config.Name)
 		} else {
-			fmt.Printf("🔍 [VERBOSE] Service '%s': InitService enabled=%v, mode=%s, hasScripts=%v\n",
-				config.Name, config.InitService.Enabled, config.InitService.Mode, len(config.InitService.Scripts) > 0)
+			s.logger.Debug("Service InitService configuration",
+				"service", config.Name,
+				"enabled", config.InitService.Enabled,
+				"mode", config.InitService.Mode,
+				"hasScripts", len(config.InitService.Scripts) > 0)
 		}
 	}
 
@@ -458,6 +481,13 @@ func (s *Service) executeScript(ctx context.Context, scriptContent string, env m
 
 // Stop stops services with automatic characteristics resolution
 func (s *Service) Stop(ctx context.Context, req StopRequest) error {
+	if s.verbose {
+		s.logger.Debug("Stopping services",
+			"project", req.Project,
+			"remove", req.Remove,
+			"serviceCount", len(req.ServiceConfigs))
+	}
+
 	// Load project
 	project, err := s.project.Load(req.Project)
 	if err != nil {

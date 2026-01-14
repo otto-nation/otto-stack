@@ -21,8 +21,12 @@ func ExecuteLifecycleCommand(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
+	// Get verbose flag from command
+	verbose := base.GetVerbose(cmd)
+
 	// Create command and middleware chain
 	serviceCommand := operations.NewServiceCommand(commandType, stateManager)
+	serviceCommand.SetVerbose(verbose)
 	validationMiddleware, loggingMiddleware := common.CreateStandardMiddlewareChain()
 	handler := command.NewHandler(serviceCommand, loggingMiddleware, validationMiddleware)
 

@@ -58,6 +58,11 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	ciFlags := ci.GetFlags(cmd)
 	initFlags, _ := core.ParseInitFlags(cmd)
+	verbose := base.GetVerbose(cmd)
+
+	if verbose {
+		logger.Debug("Initializing project", "projectName", initFlags.ProjectName, "force", initFlags.Force)
+	}
 
 	// Default project name to current directory if not provided
 	if initFlags.ProjectName == "" {
@@ -66,6 +71,9 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 			return pkgerrors.NewValidationError(core.FlagProjectName, "failed to get current directory", err)
 		}
 		initFlags.ProjectName = filepath.Base(cwd)
+		if verbose {
+			logger.Debug("Using current directory as project name", "projectName", initFlags.ProjectName)
+		}
 	}
 
 	// Set force flag in handler for validation functions
@@ -75,6 +83,10 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	projectCtx, err := processor.Process(initFlags, base)
 	if err != nil {
 		return err
+	}
+
+	if verbose {
+		logger.Debug("Project context created", "services", len(projectCtx.Services.Names))
 	}
 
 	// Create command and middleware chain

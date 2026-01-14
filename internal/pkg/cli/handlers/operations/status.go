@@ -93,8 +93,14 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	// Convert statuses with inheritance and display
 	serviceStatuses := convertToDisplayStatuses(statuses, serviceConfigs, serviceToContainer)
 
+	// Get verbose flag
+	verbose := base.GetVerbose(cmd)
+
 	formatter := display.NewStatusFormatter(os.Stdout)
-	_ = formatter.FormatTable(serviceStatuses, display.Options{Compact: true})
+	_ = formatter.FormatTable(serviceStatuses, display.Options{
+		Compact: !verbose,
+		Verbose: verbose,
+	})
 
 	return nil
 }

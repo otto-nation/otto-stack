@@ -18,6 +18,7 @@ import (
 type ServiceCommand struct {
 	operation    string
 	stateManager *common.StateManager
+	verbose      bool
 }
 
 // NewServiceCommand creates a new stack command for the specified operation
@@ -25,7 +26,13 @@ func NewServiceCommand(operation string, stateManager *common.StateManager) *Ser
 	return &ServiceCommand{
 		operation:    operation,
 		stateManager: stateManager,
+		verbose:      false,
 	}
+}
+
+// SetVerbose enables or disables verbose logging
+func (c *ServiceCommand) SetVerbose(verbose bool) {
+	c.verbose = verbose
 }
 
 // Execute performs the stack operation based on the command type
@@ -60,6 +67,8 @@ func (c *ServiceCommand) executeUp(ctx context.Context, cliCtx clicontext.Contex
 	if err != nil {
 		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
 	}
+
+	service.SetVerbose(c.verbose)
 
 	startRequest := services.StartRequest{
 		Project:        cliCtx.Project.Name,
