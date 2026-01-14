@@ -7,7 +7,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/core"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"gopkg.in/yaml.v3"
 )
 

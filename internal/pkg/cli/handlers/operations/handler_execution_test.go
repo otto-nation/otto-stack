@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
@@ -100,7 +100,7 @@ func TestStatusHandler_Methods(t *testing.T) {
 
 func TestStatusPackageFunctions(t *testing.T) {
 	t.Run("tests getContainerName", func(t *testing.T) {
-		config := types.ServiceConfig{Name: "postgres"}
+		config := generated.ServiceConfig{Name: "postgres"}
 
 		name := getContainerName(config)
 		assert.IsType(t, "", name)
@@ -108,7 +108,7 @@ func TestStatusPackageFunctions(t *testing.T) {
 	})
 
 	t.Run("tests filterInitContainers", func(t *testing.T) {
-		configs := []types.ServiceConfig{
+		configs := []generated.ServiceConfig{
 			{Name: "postgres"},
 			{Name: "postgres-init"},
 		}

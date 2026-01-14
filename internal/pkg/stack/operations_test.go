@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,7 +15,7 @@ func TestUpRequest_Fields(t *testing.T) {
 	t.Run("validates UpRequest structure", func(t *testing.T) {
 		req := UpRequest{
 			Project:        "test-project",
-			ServiceConfigs: []types.ServiceConfig{},
+			ServiceConfigs: []generated.ServiceConfig{},
 			Build:          true,
 			SkipConflicts:  false,
 		}
@@ -31,7 +31,7 @@ func TestDownRequest_Fields(t *testing.T) {
 	t.Run("validates DownRequest structure", func(t *testing.T) {
 		req := DownRequest{
 			Project:        "test-project",
-			ServiceConfigs: []types.ServiceConfig{},
+			ServiceConfigs: []generated.ServiceConfig{},
 			RemoveVolumes:  true,
 			Timeout:        30 * time.Second,
 		}
@@ -47,7 +47,7 @@ func TestRestartRequest_Fields(t *testing.T) {
 	t.Run("validates RestartRequest structure", func(t *testing.T) {
 		req := RestartRequest{
 			Project:        "test-project",
-			ServiceConfigs: []types.ServiceConfig{},
+			ServiceConfigs: []generated.ServiceConfig{},
 			Timeout:        60 * time.Second,
 		}
 
@@ -61,7 +61,7 @@ func TestStatusRequest_Fields(t *testing.T) {
 	t.Run("validates StatusRequest structure", func(t *testing.T) {
 		req := StatusRequest{
 			Project:        "test-project",
-			ServiceConfigs: []types.ServiceConfig{},
+			ServiceConfigs: []generated.ServiceConfig{},
 		}
 
 		assert.Equal(t, "test-project", req.Project)
@@ -73,7 +73,7 @@ func TestLogsRequest_Fields(t *testing.T) {
 	t.Run("validates LogsRequest structure", func(t *testing.T) {
 		req := LogsRequest{
 			Project:        "test-project",
-			ServiceConfigs: []types.ServiceConfig{},
+			ServiceConfigs: []generated.ServiceConfig{},
 			Follow:         true,
 			Timestamps:     false,
 			Tail:           "100",

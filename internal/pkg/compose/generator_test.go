@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/otto-nation/otto-stack/test/testutil"
 	"github.com/stretchr/testify/assert"
@@ -34,7 +34,7 @@ func TestGenerator_GenerateFromServiceConfigs_Structure(t *testing.T) {
 
 	t.Run("generates valid YAML structure", func(t *testing.T) {
 		// Test the internal compose structure generation (bypasses service validation)
-		compose, err := generator.buildComposeStructure([]types.ServiceConfig{})
+		compose, err := generator.buildComposeStructure([]generated.ServiceConfig{})
 		assert.NoError(t, err)
 
 		// Check required top-level fields
@@ -48,7 +48,7 @@ func TestGenerator_GenerateFromServiceConfigs_Structure(t *testing.T) {
 	})
 
 	t.Run("handles empty service list", func(t *testing.T) {
-		compose, err := generator.buildComposeStructure([]types.ServiceConfig{})
+		compose, err := generator.buildComposeStructure([]generated.ServiceConfig{})
 		assert.NoError(t, err)
 		assert.NotNil(t, compose)
 
@@ -60,20 +60,20 @@ func TestGenerator_GenerateFromServiceConfigs_Structure(t *testing.T) {
 	t.Run("returns error for nonexistent services", func(t *testing.T) {
 		// This test is no longer relevant since we're working with ServiceConfigs directly
 		// Instead, test that we can handle ServiceConfigs with container data
-		invalidConfig := types.ServiceConfig{
+		invalidConfig := generated.ServiceConfig{
 			Name: "test-service",
-			Container: types.ContainerSpec{
+			Container: generated.ContainerSpec{
 				Image: "test:latest",
 			},
 		}
-		compose, err := generator.buildComposeStructure([]types.ServiceConfig{invalidConfig})
+		compose, err := generator.buildComposeStructure([]generated.ServiceConfig{invalidConfig})
 		assert.NoError(t, err)
 		assert.Contains(t, compose, "services")
 	})
 
 	t.Run("generates valid YAML format", func(t *testing.T) {
 		// Test that compose structure can be marshaled to valid YAML
-		compose, err := generator.buildComposeStructure([]types.ServiceConfig{})
+		compose, err := generator.buildComposeStructure([]generated.ServiceConfig{})
 		assert.NoError(t, err)
 
 		yamlBytes, err := yaml.Marshal(compose)
@@ -92,7 +92,7 @@ func TestGenerator_NetworkConfiguration(t *testing.T) {
 		generator, err := NewGenerator("my-awesome-project", "/tmp/services", nil)
 		require.NoError(t, err)
 
-		compose, err := generator.buildComposeStructure([]types.ServiceConfig{})
+		compose, err := generator.buildComposeStructure([]generated.ServiceConfig{})
 		assert.NoError(t, err)
 
 		networks := compose["networks"].(map[string]any)
@@ -104,7 +104,7 @@ func TestGenerator_NetworkConfiguration(t *testing.T) {
 		generator, err := NewGenerator("test_project-123", "/tmp/services", nil)
 		require.NoError(t, err)
 
-		compose, err := generator.buildComposeStructure([]types.ServiceConfig{})
+		compose, err := generator.buildComposeStructure([]generated.ServiceConfig{})
 		assert.NoError(t, err)
 
 		networks := compose["networks"].(map[string]any)
@@ -118,7 +118,7 @@ func TestGenerator_YAMLOutput(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("produces valid YAML syntax", func(t *testing.T) {
-		compose, err := generator.buildComposeStructure([]types.ServiceConfig{})
+		compose, err := generator.buildComposeStructure([]generated.ServiceConfig{})
 		assert.NoError(t, err)
 
 		yamlBytes, err := yaml.Marshal(compose)
@@ -152,7 +152,7 @@ func TestGenerator_GenerateFromServiceConfigs(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("generates from ServiceConfigs", func(t *testing.T) {
-		serviceConfigs := []types.ServiceConfig{
+		serviceConfigs := []generated.ServiceConfig{
 			{Name: services.ServicePostgres, Category: services.CategoryDatabase},
 			{Name: services.ServiceRedis, Category: services.CategoryCache},
 		}

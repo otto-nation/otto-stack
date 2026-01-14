@@ -1,6 +1,7 @@
 # Generated files
 internal/**/*_generated.go
 internal/pkg/ci/generated.go
+**/generated/**
 
 # Task timestamp files
 .task/

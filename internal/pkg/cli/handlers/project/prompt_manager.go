@@ -11,7 +11,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -64,7 +64,7 @@ func (pm *PromptManager) PromptForProjectDetails() (string, error) {
 }
 
 // PromptForServiceConfigs prompts user to select services and returns ServiceConfigs
-func (pm *PromptManager) PromptForServiceConfigs() ([]types.ServiceConfig, error) {
+func (pm *PromptManager) PromptForServiceConfigs() ([]generated.ServiceConfig, error) {
 	categories, err := pm.loadServiceCategories()
 	if err != nil {
 		return nil, err
@@ -162,15 +162,15 @@ func (pm *PromptManager) ConfirmInitialization(projectName string, services []st
 }
 
 // loadServiceCategories loads available service categories
-func (pm *PromptManager) loadServiceCategories() (map[string][]types.ServiceConfig, error) {
+func (pm *PromptManager) loadServiceCategories() (map[string][]generated.ServiceConfig, error) {
 	utils := services.NewServiceUtils()
 	return utils.GetServicesByCategory()
 }
 
 // selectServicesFromAllCategories shows all services in one list with category labels
-func (pm *PromptManager) selectServicesFromAllCategories(categories map[string][]types.ServiceConfig) ([]types.ServiceConfig, error) {
+func (pm *PromptManager) selectServicesFromAllCategories(categories map[string][]generated.ServiceConfig) ([]generated.ServiceConfig, error) {
 	// Build flat list of all services with category labels
-	var allServices []types.ServiceConfig
+	var allServices []generated.ServiceConfig
 	var serviceOptions []string
 
 	for categoryName, categoryServices := range categories {
@@ -203,7 +203,7 @@ func (pm *PromptManager) selectServicesFromAllCategories(categories map[string][
 	}
 
 	// Map selected display names back to ServiceConfigs
-	var selectedConfigs []types.ServiceConfig
+	var selectedConfigs []generated.ServiceConfig
 	selectedMap := make(map[string]bool)
 
 	const minParts = 2

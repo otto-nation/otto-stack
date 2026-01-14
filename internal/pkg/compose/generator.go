@@ -11,6 +11,7 @@ import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/filesystem"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,7 +32,7 @@ func NewGenerator(projectName string, servicesPath string, manager *services.Man
 }
 
 // buildComposeStructure creates the compose structure from ServiceConfigs
-func (g *Generator) buildComposeStructure(serviceConfigs []services.ServiceConfig) (map[string]any, error) {
+func (g *Generator) buildComposeStructure(serviceConfigs []generated.ServiceConfig) (map[string]any, error) {
 	if g.projectName == "" {
 		return nil, pkgerrors.NewValidationError("input", "project name cannot be empty", nil)
 	}
@@ -53,12 +54,12 @@ func (g *Generator) buildComposeStructure(serviceConfigs []services.ServiceConfi
 }
 
 // buildServicesFromConfigs creates the services section from ServiceConfigs
-func (g *Generator) buildServicesFromConfigs(serviceConfigs []services.ServiceConfig) (map[string]any, error) {
+func (g *Generator) buildServicesFromConfigs(serviceConfigs []generated.ServiceConfig) (map[string]any, error) {
 	serviceList := make(map[string]any)
 	processedServices := make(map[string]bool)
 
 	// Create a map for quick lookup of ServiceConfigs by name
-	configMap := make(map[string]*services.ServiceConfig)
+	configMap := make(map[string]*generated.ServiceConfig)
 	for i := range serviceConfigs {
 		configMap[serviceConfigs[i].Name] = &serviceConfigs[i]
 	}
@@ -73,7 +74,7 @@ func (g *Generator) buildServicesFromConfigs(serviceConfigs []services.ServiceCo
 }
 
 // processServiceConfigAndDependencies processes a service config and its dependencies
-func (g *Generator) processServiceConfigAndDependencies(config *services.ServiceConfig, configMap map[string]*services.ServiceConfig, serviceList map[string]any, processed map[string]bool) error {
+func (g *Generator) processServiceConfigAndDependencies(config *generated.ServiceConfig, configMap map[string]*generated.ServiceConfig, serviceList map[string]any, processed map[string]bool) error {
 	if processed[config.Name] {
 		return nil
 	}
@@ -89,7 +90,7 @@ func (g *Generator) processServiceConfigAndDependencies(config *services.Service
 	}
 
 	// Skip configuration services (they don't generate containers)
-	if config.ServiceType == services.ServiceTypeConfiguration {
+	if config.ServiceType == generated.ServiceTypeConfiguration {
 		return nil
 	}
 
@@ -102,7 +103,7 @@ func (g *Generator) processServiceConfigAndDependencies(config *services.Service
 	return nil
 }
 
-func (g *Generator) buildService(config *services.ServiceConfig) map[string]any {
+func (g *Generator) buildService(config *generated.ServiceConfig) map[string]any {
 	if config.Container.Image == "" {
 		return nil
 	}
@@ -119,7 +120,7 @@ func (g *Generator) buildService(config *services.ServiceConfig) map[string]any 
 }
 
 // createBaseService creates the base service configuration
-func (g *Generator) createBaseService(config *services.ServiceConfig) map[string]any {
+func (g *Generator) createBaseService(config *generated.ServiceConfig) map[string]any {
 	service := map[string]any{
 		dockerConstants.ComposeFieldImage: config.Container.Image,
 	}
@@ -132,7 +133,7 @@ func (g *Generator) createBaseService(config *services.ServiceConfig) map[string
 }
 
 // addServicePorts adds port configuration to the service
-func (g *Generator) addServicePorts(service map[string]any, config *services.ServiceConfig) {
+func (g *Generator) addServicePorts(service map[string]any, config *generated.ServiceConfig) {
 	if len(config.Container.Ports) == 0 {
 		return
 	}
@@ -140,7 +141,7 @@ func (g *Generator) addServicePorts(service map[string]any, config *services.Ser
 	var ports []string
 	for _, port := range config.Container.Ports {
 		portStr := fmt.Sprintf("%s:%s", g.resolveEnvVar(port.External), port.Internal)
-		if port.Protocol != "" && port.Protocol != services.ProtocolTcp {
+		if port.Protocol != "" && port.Protocol != "tcp" {
 			portStr += dockerConstants.ProtocolSeparator + port.Protocol
 		}
 		ports = append(ports, portStr)
@@ -167,7 +168,7 @@ func (g *Generator) resolveEnvVar(value string) string {
 }
 
 // addServiceEnvironment adds environment variables to the service
-func (g *Generator) addServiceEnvironment(service map[string]any, config *services.ServiceConfig) {
+func (g *Generator) addServiceEnvironment(service map[string]any, config *generated.ServiceConfig) {
 	envVars := g.mergeEnvironmentVariables(config)
 	if len(envVars) > 0 {
 		service[dockerConstants.ComposeFieldEnvironment] = envVars
@@ -175,7 +176,7 @@ func (g *Generator) addServiceEnvironment(service map[string]any, config *servic
 }
 
 // mergeEnvironmentVariables merges top-level and container-level environment variables
-func (g *Generator) mergeEnvironmentVariables(config *services.ServiceConfig) map[string]string {
+func (g *Generator) mergeEnvironmentVariables(config *generated.ServiceConfig) map[string]string {
 	envVars := make(map[string]string)
 
 	// Add top-level environment variables first
@@ -188,7 +189,7 @@ func (g *Generator) mergeEnvironmentVariables(config *services.ServiceConfig) ma
 }
 
 // addServiceVolumes adds volume configuration to the service
-func (g *Generator) addServiceVolumes(service map[string]any, config *services.ServiceConfig) {
+func (g *Generator) addServiceVolumes(service map[string]any, config *generated.ServiceConfig) {
 	if len(config.Container.Volumes) == 0 {
 		return
 	}
@@ -205,7 +206,7 @@ func (g *Generator) addServiceVolumes(service map[string]any, config *services.S
 }
 
 // addServiceConfiguration adds basic service configuration options
-func (g *Generator) addServiceConfiguration(service map[string]any, config *services.ServiceConfig) {
+func (g *Generator) addServiceConfiguration(service map[string]any, config *generated.ServiceConfig) {
 	if config.Container.Restart != "" {
 		service[dockerConstants.ComposeFieldRestart] = string(config.Container.Restart)
 	}
@@ -220,7 +221,7 @@ func (g *Generator) addServiceConfiguration(service map[string]any, config *serv
 }
 
 // addServiceHealthCheck adds health check configuration to the service
-func (g *Generator) addServiceHealthCheck(service map[string]any, config *services.ServiceConfig) {
+func (g *Generator) addServiceHealthCheck(service map[string]any, config *generated.ServiceConfig) {
 	if config.Container.HealthCheck == nil {
 		return
 	}
@@ -234,7 +235,7 @@ func (g *Generator) addServiceHealthCheck(service map[string]any, config *servic
 }
 
 // addHealthCheckTiming adds timing configuration to health check
-func (g *Generator) addHealthCheckTiming(healthCheck map[string]any, hc *services.HealthCheckSpec) {
+func (g *Generator) addHealthCheckTiming(healthCheck map[string]any, hc *generated.HealthCheckSpec) {
 	if hc.Interval > 0 {
 		healthCheck[dockerConstants.HealthCheckFieldInterval] = hc.Interval.String()
 	}
@@ -250,7 +251,7 @@ func (g *Generator) addHealthCheckTiming(healthCheck map[string]any, hc *service
 }
 
 // addServiceLabels adds Otto Stack labels to the service
-func (g *Generator) addServiceLabels(service map[string]any, config *services.ServiceConfig) {
+func (g *Generator) addServiceLabels(service map[string]any, config *generated.ServiceConfig) {
 	service[dockerConstants.ComposeFieldLabels] = g.buildOttoLabels(config.Name)
 }
 
@@ -266,7 +267,7 @@ func (g *Generator) buildOttoLabels(serviceName string) map[string]string {
 }
 
 // GenerateFromServiceConfigs creates a docker-compose file from ServiceConfigs
-func (g *Generator) GenerateFromServiceConfigs(serviceConfigs []services.ServiceConfig, projectName string) error {
+func (g *Generator) GenerateFromServiceConfigs(serviceConfigs []generated.ServiceConfig, projectName string) error {
 	composeData, err := g.buildComposeStructure(serviceConfigs)
 	if err != nil {
 		return err

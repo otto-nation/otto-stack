@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"

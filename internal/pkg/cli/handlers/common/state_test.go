@@ -9,7 +9,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
-	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -64,7 +64,7 @@ func TestStateManager_SaveAndLoadState(t *testing.T) {
 	sm := NewStateManager()
 
 	// Test data
-	serviceConfigs := []types.ServiceConfig{
+	serviceConfigs := []generated.ServiceConfig{
 		{Name: "postgres", Description: "PostgreSQL database"},
 		{Name: "redis", Description: "Redis cache"},
 	}
