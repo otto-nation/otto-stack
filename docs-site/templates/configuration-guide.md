@@ -5,7 +5,7 @@ Otto-stack uses a single configuration file `otto-stack-config.yaml` to define y
 ## Configuration File Structure
 
 ```yaml
-{ { { structureExample } } }
+{{{structureExample}}}
 ```
 
 ## Configuration Sections
@@ -44,7 +44,7 @@ For complete service configuration details, examples, and available options, ref
 Here's a complete configuration example with multiple services:
 
 ```yaml
-{ { { completeExample } } }
+{{{completeExample}}}
 ```
 
 For more configuration examples and service-specific options, see the [Services Guide](services.md).

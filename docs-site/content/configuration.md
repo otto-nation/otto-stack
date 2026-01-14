@@ -16,7 +16,22 @@ Otto-stack uses a single configuration file `otto-stack-config.yaml` to define y
 ## Configuration File Structure
 
 ```yaml
-{ { { structureExample } } }
+project:
+  name: "my-app"
+
+stack:
+  enabled:
+    - postgres
+    - redis
+    - kafka
+
+service_configuration:
+  postgres:
+    database: "my_app_db"
+    password: "secure_password"
+  redis:
+    password: "redis_password"
+    max_memory: "512m"
 ```
 
 ## Configuration Sections
@@ -76,7 +91,26 @@ For complete service configuration details, examples, and available options, ref
 Here's a complete configuration example with multiple services:
 
 ```yaml
-{ { { completeExample } } }
+project:
+  name: my-fullstack-app
+  type: web
+stack:
+  enabled:
+    - postgres
+    - redis
+    - kafka
+service_configuration:
+  postgres:
+    database: my_app_db
+    password: secure_password
+    port: 5432
+  redis:
+    password: redis_password
+    max_memory: 512m
+  kafka:
+    topics:
+      - events
+      - notifications
 ```
 
 For more configuration examples and service-specific options, see the [Services Guide](services.md).

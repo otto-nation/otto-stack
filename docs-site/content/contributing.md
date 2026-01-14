@@ -84,7 +84,7 @@ Documentation for CLI commands (`docs-site/content/cli-reference.md`) and servic
 
 ### Prerequisites
 
-- **Go**: 1.21+ (managed via `.go-version` file)
+- **Go**: 1.24+ (managed via `.go-version` file)
 - **Task**: [Task runner](https://taskfile.dev/) for build automation
 - **Docker & Docker Compose**: For service management
 - **Git**: For version control
