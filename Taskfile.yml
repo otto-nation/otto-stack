@@ -512,7 +512,12 @@ tasks:
     silent: true
     cmds:
       - echo "🧪 Running unit tests..."
-      - go test -race -short -tags=unit ./internal/...
+      - |
+        if [ "${CGO_ENABLED:-1}" = "0" ]; then
+          go test -short -tags=unit ./internal/...
+        else
+          go test -race -short -tags=unit ./internal/...
+        fi
       - echo "✅ Unit tests passed"
 
   test-e2e:
@@ -578,6 +583,9 @@ tasks:
 
         $GOLANGCI_PATH config verify > /dev/null 2>&1
         $GOLANGCI_PATH run ./cmd/otto-stack/... ./internal/... > /dev/null 2>&1
+      - |
+        # Verify code compiles (catches unused imports in generated code)
+        go build -o /dev/null ./cmd/otto-stack > /dev/null 2>&1
       - touch .task/go-lint-timestamp
 
   lint:docs:
