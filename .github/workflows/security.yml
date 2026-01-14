@@ -16,6 +16,9 @@ permissions:
   contents: read
   security-events: write
 
+env:
+  GOTOOLCHAIN: local
+
 jobs:
   security:
     name: Security
