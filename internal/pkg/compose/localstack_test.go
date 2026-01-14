@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"github.com/otto-nation/otto-stack/test/testutil"
 	"github.com/stretchr/testify/assert"
@@ -26,9 +27,9 @@ func TestLocalStackDependencyResolution(t *testing.T) {
 		// that we can handle LocalStack service configs properly
 		localstackConfig := generated.ServiceConfig{
 			Name: services.ServiceLocalstack,
-			Container: generated.ContainerSpec{
+			Container: types.ContainerSpec{
 				Image: "localstack/localstack:latest",
-				Ports: []generated.PortSpec{
+				Ports: []types.PortSpec{
 					{External: "4566", Internal: "4566"},
 				},
 			},

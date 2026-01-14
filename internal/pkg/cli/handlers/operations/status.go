@@ -14,6 +14,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"github.com/spf13/cobra"
 )
@@ -134,7 +135,7 @@ func convertToDisplayStatuses(containerStatuses []docker.ContainerStatus, servic
 
 	var result []display.ServiceStatus
 	for _, config := range serviceConfigs {
-		if config.Container.Restart == generated.RestartPolicyNo || config.Hidden {
+		if config.Container.Restart == types.RestartPolicyNo || config.Hidden {
 			continue // Skip init containers and hidden services
 		}
 
@@ -168,7 +169,7 @@ func convertToDisplayStatuses(containerStatuses []docker.ContainerStatus, servic
 func filterInitContainers(serviceConfigs []generated.ServiceConfig) []string {
 	var filtered []string
 	for _, config := range serviceConfigs {
-		if config.Container.Restart != generated.RestartPolicyNo {
+		if config.Container.Restart != types.RestartPolicyNo {
 			filtered = append(filtered, config.Name)
 		}
 	}

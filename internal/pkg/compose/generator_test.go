@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/otto-nation/otto-stack/test/testutil"
@@ -62,7 +63,7 @@ func TestGenerator_GenerateFromServiceConfigs_Structure(t *testing.T) {
 		// Instead, test that we can handle ServiceConfigs with container data
 		invalidConfig := generated.ServiceConfig{
 			Name: "test-service",
-			Container: generated.ContainerSpec{
+			Container: types.ContainerSpec{
 				Image: "test:latest",
 			},
 		}

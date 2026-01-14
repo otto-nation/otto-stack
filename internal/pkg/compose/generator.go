@@ -11,6 +11,7 @@ import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/filesystem"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"gopkg.in/yaml.v3"
 )
@@ -90,7 +91,7 @@ func (g *Generator) processServiceConfigAndDependencies(config *generated.Servic
 	}
 
 	// Skip configuration services (they don't generate containers)
-	if config.ServiceType == generated.ServiceTypeConfiguration {
+	if config.ServiceType == types.ServiceTypeConfiguration {
 		return nil
 	}
 
@@ -235,7 +236,7 @@ func (g *Generator) addServiceHealthCheck(service map[string]any, config *genera
 }
 
 // addHealthCheckTiming adds timing configuration to health check
-func (g *Generator) addHealthCheckTiming(healthCheck map[string]any, hc *generated.HealthCheckSpec) {
+func (g *Generator) addHealthCheckTiming(healthCheck map[string]any, hc *types.HealthCheckSpec) {
 	if hc.Interval > 0 {
 		healthCheck[dockerConstants.HealthCheckFieldInterval] = hc.Interval.String()
 	}

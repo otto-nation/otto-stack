@@ -13,6 +13,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/types/generated"
 	"github.com/spf13/cobra"
 )
@@ -115,7 +116,7 @@ func (h *WebInterfacesHandler) extractWebInterfaces(serviceConfigs []generated.S
 }
 
 // createWebInterfaces creates WebInterface structs for a service
-func (h *WebInterfacesHandler) createWebInterfaces(serviceName string, webInterfaces []generated.WebInterface) []WebInterface {
+func (h *WebInterfacesHandler) createWebInterfaces(serviceName string, webInterfaces []types.WebInterface) []WebInterface {
 	interfaces := make([]WebInterface, len(webInterfaces))
 	for i, webIface := range webInterfaces {
 		interfaces[i] = WebInterface{
