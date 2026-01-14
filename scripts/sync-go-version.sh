@@ -125,34 +125,27 @@ update_golangci_config() {
             return 0
         fi
 
-        # Extract current version from go.mod
-        local current_version=$(grep -E '^go [0-9]+\.[0-9]+' "$go_mod" | sed -E 's/^go ([0-9]+\.[0-9]+).*/\1/' || echo "")
+        # Extract current version from go.mod (full version including patch)
+        local current_version=$(grep -E '^go [0-9]+\.[0-9]+' "$go_mod" | awk '{print $2}' || echo "")
 
         if [[ -z "$current_version" ]]; then
             print_status "$YELLOW" "Warning: No go directive found in go.mod"
             return 0
         fi
 
-        # Convert go_version to major.minor format for comparison (go.mod typically uses major.minor)
-        local version_major_minor=$(echo "$go_version" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')
-
-        if [[ "$current_version" == "$version_major_minor" ]]; then
+        if [[ "$current_version" == "$go_version" ]]; then
             print_status "$GREEN" "✓ go.mod already has correct Go version: $current_version"
             return 0
         fi
 
         if [[ "$check_only" == "true" ]]; then
-            print_status "$RED" "✗ go.mod has wrong Go version: $current_version (expected: $version_major_minor)"
+            print_status "$RED" "✗ go.mod has wrong Go version: $current_version (expected: $go_version)"
             return 1
         fi
 
-        # Update the version
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            sed -i '' -E "s/^go [0-9]+\.[0-9]+.*/go $version_major_minor/" "$go_mod"
-        else
-            sed -i -E "s/^go [0-9]+\.[0-9]+.*/go $version_major_minor/" "$go_mod"
-        fi
-        print_status "$GREEN" "✓ Updated go.mod Go version to: $version_major_minor"
+        # Update using go mod edit
+        go mod edit -go="$go_version" "$go_mod"
+        print_status "$GREEN" "✓ Updated go.mod Go version to: $go_version"
     }
 
 # Function to update Dockerfile if it exists
@@ -233,12 +226,7 @@ fix_all_versions() {
     if [[ -f "$PROJECT_ROOT/go.mod" ]]; then
         local current_go_version
         current_go_version=$(grep "^go " "$PROJECT_ROOT/go.mod" | awk '{print $2}' || echo "")
-        # Normalize current version to major.minor
-        local current_major_minor
-        current_major_minor=$(echo "$current_go_version" | sed 's/\([0-9]*\.[0-9]*\).*/\1/')
-        local expected_version
-        expected_version=$(echo "$go_version" | sed 's/\([0-9]*\.[0-9]*\).*/\1/')
-        if [[ "$current_major_minor" != "$expected_version" ]]; then
+        if [[ "$current_go_version" != "$go_version" ]]; then
             go_mod_needs_update=true
         fi
     fi
