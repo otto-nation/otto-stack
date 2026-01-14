@@ -48,7 +48,7 @@ func NewYAMLLoader() *YAMLLoader {
 }
 
 // LoadYAMLFile loads and parses a YAML file into the provided structure
-func (yl *YAMLLoader) LoadYAMLFile(filePath string, target interface{}) error {
+func (yl *YAMLLoader) LoadYAMLFile(filePath string, target any) error {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return pkgerrors.NewConfigError("file", "failed to read YAML file", err)

@@ -42,7 +42,7 @@ func NewTemplateExecutor(templatePath, outputPath string) *TemplateExecutor {
 }
 
 // ExecuteTemplate parses and executes a template with data
-func (te *TemplateExecutor) ExecuteTemplate(data interface{}) error {
+func (te *TemplateExecutor) ExecuteTemplate(data any) error {
 	tmpl, err := template.ParseFiles(te.templatePath)
 	if err != nil {
 		return pkgerrors.NewConfigError("template", "failed to parse template", err)
@@ -52,7 +52,7 @@ func (te *TemplateExecutor) ExecuteTemplate(data interface{}) error {
 	if err != nil {
 		return pkgerrors.NewConfigError("output", "failed to create output file", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	if err := tmpl.Execute(file, data); err != nil {
 		return pkgerrors.NewConfigError("execution", "failed to execute template", err)
@@ -62,7 +62,7 @@ func (te *TemplateExecutor) ExecuteTemplate(data interface{}) error {
 }
 
 // ExecuteTemplateWithFuncs parses and executes a template with custom functions
-func (te *TemplateExecutor) ExecuteTemplateWithFuncs(data interface{}, funcMap template.FuncMap) error {
+func (te *TemplateExecutor) ExecuteTemplateWithFuncs(data any, funcMap template.FuncMap) error {
 	tmpl, err := template.New(filepath.Base(te.templatePath)).Funcs(funcMap).ParseFiles(te.templatePath)
 	if err != nil {
 		return pkgerrors.NewConfigError("template", "failed to parse template with functions", err)
@@ -72,11 +72,51 @@ func (te *TemplateExecutor) ExecuteTemplateWithFuncs(data interface{}, funcMap t
 	if err != nil {
 		return pkgerrors.NewConfigError("output", "failed to create output file", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	if err := tmpl.Execute(file, data); err != nil {
 		return pkgerrors.NewConfigError("execution", "failed to execute template", err)
 	}
 
 	return nil
+}
+
+// MultiFileGenerator handles generation of multiple files from templates
+type MultiFileGenerator struct {
+	baseDir string
+}
+
+// NewMultiFileGenerator creates a new multi-file generator
+func NewMultiFileGenerator(baseDir string) *MultiFileGenerator {
+	return &MultiFileGenerator{baseDir: baseDir}
+}
+
+// GenerateServiceFiles generates individual service config files
+func (mfg *MultiFileGenerator) GenerateServiceFiles(templatePath string, services []ServiceFileData) error {
+	if err := EnsureDir(mfg.baseDir); err != nil {
+		return err
+	}
+
+	for _, service := range services {
+		outputPath := filepath.Join(mfg.baseDir, service.FileName)
+		executor := NewTemplateExecutor(templatePath, outputPath)
+
+		funcMap := template.FuncMap{
+			"toPascalCase": ToPascalCase,
+		}
+
+		if err := executor.ExecuteTemplateWithFuncs(service, funcMap); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ServiceFileData represents data for generating a service-specific file
+type ServiceFileData struct {
+	ServiceName string
+	StructName  string
+	FileName    string
+	Schema      map[string]any
 }

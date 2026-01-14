@@ -15,15 +15,15 @@ import (
 )
 
 const (
-	TemplateFilePath        = "cmd/generate-services/templates/services.tmpl"
-	TypesTemplateFilePath   = "cmd/generate-services/templates/types.tmpl"
-	SchemaTemplateFilePath  = "cmd/generate-services/templates/schema.tmpl"
-	GeneratedFilePath       = "internal/pkg/services/services_generated.go"
-	TypesGeneratedFilePath  = "internal/pkg/services/types_generated.go"
-	SchemaGeneratedFilePath = "internal/pkg/services/schema_generated.go"
-	ServicesDir             = "internal/config/services"
-	YAMLExtension           = ".yaml"
-	DefaultProtocol         = "tcp"
+	TemplateFilePath              = "cmd/generate-services/templates/services.tmpl"
+	ServiceConfigTemplateFilePath = "cmd/generate-services/templates/service_config.tmpl"
+	MainConfigTemplateFilePath    = "cmd/generate-services/templates/main_config.tmpl"
+	GeneratedFilePath             = "internal/pkg/services/services_generated.go"
+	MainConfigGeneratedFilePath   = "internal/pkg/types/service_config.go"
+	GeneratedConfigsDir           = "internal/pkg/types/generated"
+	ServicesDir                   = "internal/config/services"
+	YAMLExtension                 = ".yaml"
+	DefaultProtocol               = "tcp"
 )
 
 // Keys defines all YAML structure keys
@@ -164,7 +164,7 @@ type collectors struct {
 }
 
 func main() {
-	serviceConstants, err := extractServiceConstants()
+	serviceConstants, configSchemas, err := extractServiceConstants()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to extract service constants: %v\n", err)
 		os.Exit(1)
@@ -175,13 +175,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := generateTypes(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to generate types: %v\n", err)
-		os.Exit(1)
-	}
-
-	if err := generateSchema(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to generate schema: %v\n", err)
+	if err := generateMultiFileSchema(configSchemas); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to generate multi-file schema: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -193,7 +188,7 @@ func main() {
 	printSummary(serviceConstants)
 }
 
-func extractServiceConstants() (*ServiceConstants, error) {
+func extractServiceConstants() (*ServiceConstants, []ServiceConfigSchema, error) {
 	collectors := initCollectors()
 	var configSchemas []ServiceConfigSchema
 
@@ -205,10 +200,10 @@ func extractServiceConstants() (*ServiceConstants, error) {
 	})
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return buildServiceConstants(collectors, configSchemas), nil
+	return buildServiceConstants(collectors, configSchemas), configSchemas, nil
 }
 
 func initCollectors() *collectors {
@@ -284,8 +279,9 @@ func processService(service map[string]any, serviceName, path string, collectors
 func processBasicInfo(serviceName, path string, collectors *collectors) {
 	collectors.names[Prefix.Service+toPascalCase(serviceName)] = serviceName
 
+	const minPartsForCategory = 3
 	parts := strings.Split(path, "/")
-	if len(parts) >= 3 {
+	if len(parts) >= minPartsForCategory {
 		cat := parts[len(parts)-2]
 		collectors.categories[Prefix.Category+toPascalCase(cat)] = cat
 	}
@@ -699,48 +695,45 @@ func generateConstants(serviceConstants *ServiceConstants) error {
 	return tmpl.Execute(file, serviceConstants)
 }
 
-func generateTypes() error {
-	tmpl, err := template.ParseFiles(TypesTemplateFilePath)
-	if err != nil {
-		return pkgerrors.NewServiceError("generator", "parse types template", err)
+func generateMultiFileSchema(configSchemas []ServiceConfigSchema) error {
+	// Generate individual service config files
+	var serviceFiles []codegen.ServiceFileData
+
+	for _, schema := range configSchemas {
+		if len(schema.Schema) == 0 {
+			continue
+		}
+
+		structName := codegen.ToPascalCase(schema.ServiceName) + "Config"
+		fileName := codegen.ToPascalCase(schema.ServiceName) + "_config.go"
+
+		serviceFiles = append(serviceFiles, codegen.ServiceFileData{
+			ServiceName: schema.ServiceName,
+			StructName:  structName,
+			FileName:    fileName,
+			Schema:      schema.Schema,
+		})
 	}
 
-	file, err := os.Create(TypesGeneratedFilePath)
-	if err != nil {
-		// Try creating the directory and retry
-		if err := codegen.EnsureDir(filepath.Dir(TypesGeneratedFilePath)); err != nil {
-			return pkgerrors.NewServiceError("generator", "create directory", err)
-		}
-		file, err = os.Create(TypesGeneratedFilePath)
-		if err != nil {
-			return pkgerrors.NewServiceError("generator", "create types file", err)
-		}
-	}
-	defer func() { _ = file.Close() }()
-
-	return tmpl.Execute(file, nil)
-}
-
-func generateSchema() error {
-	tmpl, err := template.ParseFiles(SchemaTemplateFilePath)
-	if err != nil {
-		return pkgerrors.NewServiceError("generator", "parse schema template", err)
+	// Generate individual service files
+	generator := codegen.NewMultiFileGenerator(GeneratedConfigsDir)
+	if err := generator.GenerateServiceFiles(ServiceConfigTemplateFilePath, serviceFiles); err != nil {
+		return pkgerrors.NewServiceError("generator", "generate service files", err)
 	}
 
-	file, err := os.Create(SchemaGeneratedFilePath)
-	if err != nil {
-		// Try creating the directory and retry
-		if err := codegen.EnsureDir(filepath.Dir(SchemaGeneratedFilePath)); err != nil {
-			return pkgerrors.NewServiceError("generator", "create directory", err)
-		}
-		file, err = os.Create(SchemaGeneratedFilePath)
-		if err != nil {
-			return pkgerrors.NewServiceError("generator", "create schema file", err)
-		}
+	// Generate main ServiceConfig with embedded structs
+	mainConfigData := struct {
+		Services []codegen.ServiceFileData
+	}{
+		Services: serviceFiles,
 	}
-	defer func() { _ = file.Close() }()
 
-	return tmpl.Execute(file, nil)
+	executor := codegen.NewTemplateExecutor(MainConfigTemplateFilePath, MainConfigGeneratedFilePath)
+	funcMap := template.FuncMap{
+		"toPascalCase": codegen.ToPascalCase,
+	}
+
+	return executor.ExecuteTemplateWithFuncs(mainConfigData, funcMap)
 }
 
 func printSummary(sc *ServiceConstants) {
