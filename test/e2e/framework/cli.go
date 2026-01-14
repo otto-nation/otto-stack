@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const cliTimeout = 2 * time.Minute
+
 type CLIRunner struct {
 	t       *testing.T
 	binPath string
@@ -49,7 +51,7 @@ func (c *CLIRunner) SetWorkDir(workDir string) {
 func (c *CLIRunner) Run(args ...string) *CLIResult {
 	c.t.Helper()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), cliTimeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, c.binPath, args...)
@@ -79,7 +81,7 @@ func (c *CLIRunner) Run(args ...string) *CLIResult {
 func (c *CLIRunner) RunSystemCommand(command string, args ...string) *CLIResult {
 	c.t.Helper()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), cliTimeout)
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, command, args...)

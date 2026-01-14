@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -133,7 +134,7 @@ func (tl *TestLifecycle) InitializeStack() error {
 	return nil
 }
 
-func (tl *TestLifecycle) AddServiceConfig(serviceName string, config map[string]interface{}) error {
+func (tl *TestLifecycle) AddServiceConfig(serviceName string, config map[string]any) error {
 	configPath := filepath.Join(tl.Environment.WorkDir, core.OttoStackDir, core.ConfigFileName)
 
 	// Read existing config
@@ -142,17 +143,17 @@ func (tl *TestLifecycle) AddServiceConfig(serviceName string, config map[string]
 		return pkgerrors.NewServiceError("test", "read config file", err)
 	}
 
-	var configData map[string]interface{}
+	var configData map[string]any
 	if err := yaml.Unmarshal(data, &configData); err != nil {
 		return pkgerrors.NewServiceError("test", "unmarshal config", err)
 	}
 
 	// Add service configuration
 	if configData[docker.ComposeFieldServices] == nil {
-		configData[docker.ComposeFieldServices] = make(map[string]interface{})
+		configData[docker.ComposeFieldServices] = make(map[string]any)
 	}
 
-	services := configData[docker.ComposeFieldServices].(map[string]interface{})
+	services := configData[docker.ComposeFieldServices].(map[string]any)
 	services[serviceName] = config
 
 	// Write back to file
@@ -169,7 +170,7 @@ func (tl *TestLifecycle) AddServiceConfig(serviceName string, config map[string]
 }
 
 // CreateServiceConfigFile creates a service config file for init containers
-func (tl *TestLifecycle) CreateServiceConfigFile(filename string, config map[string]interface{}) error {
+func (tl *TestLifecycle) CreateServiceConfigFile(filename string, config map[string]any) error {
 	serviceConfigsDir := filepath.Join(tl.Environment.WorkDir, core.OttoStackDir, core.ServiceConfigsDir)
 
 	// Create service-configs directory if it doesn't exist
@@ -214,7 +215,8 @@ func (tl *TestLifecycle) StopServices() error {
 
 func (tl *TestLifecycle) WaitForServices() error {
 	// Quick health check instead of long sleep
-	for i := 0; i < 30; i++ {
+	const maxRetries = 30
+	for range maxRetries {
 		result := tl.CLI.RunWithBuilder(func() []string {
 			return NewCLIBuilder(core.CommandStatus).BuildArgs()
 		})
@@ -259,19 +261,19 @@ func (tl *TestLifecycle) emergencyCleanup() {
 	// Additional Docker SDK cleanup for any remaining containers/networks
 	logger := slog.Default()
 	if dockerClient, err := docker.NewClient(logger); err == nil {
-		defer dockerClient.Close()
+		defer func() { _ = dockerClient.Close() }()
 		ctx := context.Background()
 
 		// Clean up containers with our project name
 		if containers, err := dockerClient.ListProjectContainers(ctx, tl.ProjectName); err == nil {
 			for _, container := range containers {
-				dockerClient.RemoveContainer(ctx, container.ID, true) // force remove
+				_ = dockerClient.RemoveContainer(ctx, container.ID, true) // force remove
 			}
 		}
 
 		// Clean up networks and volumes for this project
-		dockerClient.RemoveResources(ctx, docker.ResourceNetwork, tl.ProjectName)
-		dockerClient.RemoveResources(ctx, docker.ResourceVolume, tl.ProjectName)
+		_ = dockerClient.RemoveResources(ctx, docker.ResourceNetwork, tl.ProjectName)
+		_ = dockerClient.RemoveResources(ctx, docker.ResourceVolume, tl.ProjectName)
 	}
 }
 
@@ -303,12 +305,5 @@ func resolveServiceDependencies(serviceList []string) []string {
 }
 
 func joinServices(services []string) string {
-	if len(services) == 0 {
-		return ""
-	}
-	result := services[0]
-	for i := 1; i < len(services); i++ {
-		result += "," + services[i]
-	}
-	return result
+	return strings.Join(services, ",")
 }

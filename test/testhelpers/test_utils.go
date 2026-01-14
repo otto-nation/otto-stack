@@ -26,7 +26,7 @@ func CreateTempDir(t *testing.T) string {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
 	t.Cleanup(func() {
-		os.RemoveAll(dir)
+		_ = os.RemoveAll(dir)
 	})
 	return dir
 }
@@ -35,7 +35,8 @@ func CreateTempDir(t *testing.T) string {
 func CreateTempFile(t *testing.T, dir, name, content string) string {
 	t.Helper()
 	path := filepath.Join(dir, name)
-	err := os.WriteFile(path, []byte(content), 0644)
+	const fileMode = 0o644
+	err := os.WriteFile(path, []byte(content), fileMode)
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}

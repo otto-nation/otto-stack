@@ -180,17 +180,10 @@ func TestE2E_LocalstackIntegration(t *testing.T) {
 		}
 	}
 
-	if awsResult.ExitCode == 0 {
-		t.Logf("AWS CLI output: '%s'", awsResult.Stdout)
-		if awsResult.Stdout != "" {
-			assert.Contains(t, awsResult.Stdout, testQueueName, "SQS queue should be created and accessible")
-			t.Logf("✅ SQS queue '%s' verified successfully via AWS CLI", testQueueName)
-		} else {
-			t.Logf("⚠️ AWS CLI returned empty output - no queues found (init container may not have run)")
-		}
-	} else {
-		t.Logf("AWS CLI check failed after retries (may not be available): %s", awsResult.Stderr)
-	}
+	require.Equal(t, 0, awsResult.ExitCode, "AWS CLI should succeed: %s", awsResult.Stderr)
+	require.NotEmpty(t, awsResult.Stdout, "AWS CLI should return queue list")
+	assert.Contains(t, awsResult.Stdout, testQueueName, "SQS queue should be created and accessible")
+	t.Logf("✅ SQS queue '%s' verified successfully via AWS CLI", testQueueName)
 }
 
 func TestE2E_AllServicesIntegration(t *testing.T) {
