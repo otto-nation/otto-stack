@@ -44,6 +44,10 @@ func IsCommandAvailable(name string) bool {
 
 // GetProcessPID gets the PID of a running process by name
 func GetProcessPID(name string) (int, error) {
+	if name == "" {
+		return 0, fmt.Errorf("process name cannot be empty")
+	}
+
 	var cmd *exec.Cmd
 
 	switch runtime.GOOS {

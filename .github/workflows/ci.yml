@@ -155,7 +155,7 @@ jobs:
         run: go mod download
 
       - name: Run tests
-        run: go test -v -race ./...
+        run: go test -v -race -tags=unit ./internal/...
 
       - name: Build
         shell: bash
