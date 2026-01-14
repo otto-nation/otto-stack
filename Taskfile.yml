@@ -493,6 +493,13 @@ tasks:
   # ============================================================================
   test:
     desc: "🧪 Run all tests with coverage"
+    deps: [test-unit]
+    silent: true
+    cmds:
+      - echo "✅ Coverage report at coverage.out"
+
+  test-unit:
+    desc: "🧪 Run unit tests only (fast)"
     deps: [deps]
     sources:
       - "**/*.go"
@@ -502,21 +509,12 @@ tasks:
       - "coverage.out"
     silent: true
     cmds:
-      - echo "🧪 Running tests with coverage..."
-      - go test -v -race -coverprofile=coverage.out -covermode=atomic ./internal/...
-      - echo "✅ Coverage report at coverage.out"
-
-  test-unit:
-    desc: "🧪 Run unit tests only (fast)"
-    deps: [deps]
-    silent: true
-    cmds:
       - echo "🧪 Running unit tests..."
       - |
         if [ "${CGO_ENABLED:-1}" = "0" ]; then
-          go test -short -tags=unit ./internal/...
+          go test -v -tags=unit -coverprofile=coverage.out -covermode=atomic ./internal/...
         else
-          go test -race -short -tags=unit ./internal/...
+          go test -v -race -tags=unit -coverprofile=coverage.out -covermode=atomic ./internal/...
         fi
       - echo "✅ Unit tests passed"
 
