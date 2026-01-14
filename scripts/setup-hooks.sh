@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 echo "🪝 Setting up Git hooks for otto-stack..."
 

@@ -41,6 +41,7 @@ Files synchronized:
     - go.mod
     - .golangci.yml
     - Dockerfile (if exists)
+    - CONTRIBUTING.md (if exists)
     - Any other Go version references
 
 The script reads the version from .go-version and updates all configuration files
@@ -188,6 +189,46 @@ update_dockerfile() {
     print_status "$GREEN" "✓ Updated Dockerfile Go version to: $version_major_minor"
 }
 
+# Function to update CONTRIBUTING.md
+update_contributing() {
+    local go_version=$1
+    local check_only=${2:-false}
+    local contributing="$PROJECT_ROOT/CONTRIBUTING.md"
+
+    if [[ ! -f "$contributing" ]]; then
+        return 0
+    fi
+
+    # Look for Go version in prerequisites section (handles **Go**: format)
+    local current_version=$(grep -E '\*\*Go\*\*:.*[0-9]+\.[0-9]+' "$contributing" | sed -E 's/.*([0-9]+\.[0-9]+)\+.*/\1/' || echo "")
+
+    if [[ -z "$current_version" ]]; then
+        print_status "$BLUE" "ℹ CONTRIBUTING.md found but no Go version detected"
+        return 0
+    fi
+
+    # Extract major.minor version for comparison
+    local version_major_minor=$(echo "$go_version" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')
+
+    if [[ "$current_version" == "$version_major_minor" ]]; then
+        print_status "$GREEN" "✓ CONTRIBUTING.md already has correct Go version: $current_version+"
+        return 0
+    fi
+
+    if [[ "$check_only" == "true" ]]; then
+        print_status "$RED" "✗ CONTRIBUTING.md has wrong Go version: $current_version+ (expected: $version_major_minor+)"
+        return 1
+    fi
+
+    # Update the version (handles **Go**: format)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' -E "s/(\*\*Go\*\*:.*)[0-9]+\.[0-9]+\+/\1$version_major_minor+/" "$contributing"
+    else
+        sed -i -E "s/(\*\*Go\*\*:.*)[0-9]+\.[0-9]+\+/\1$version_major_minor+/" "$contributing"
+    fi
+    print_status "$GREEN" "✓ Updated CONTRIBUTING.md Go version to: $version_major_minor+"
+}
+
 # Function to check all files
 check_all_versions() {
     local go_version=$1
@@ -200,6 +241,7 @@ check_all_versions() {
     update_go_mod "$go_version" true || ((errors++))
     update_golangci_config "$go_version" true || ((errors++))
     update_dockerfile "$go_version" true || ((errors++))
+    update_contributing "$go_version" true || ((errors++))
 
     echo
     if [[ $errors -eq 0 ]]; then
@@ -221,6 +263,7 @@ fix_all_versions() {
     local go_mod_needs_update=false
     local golangci_needs_update=false
     local dockerfile_needs_update=false
+    local contributing_needs_update=false
 
     # Check go.mod
     if [[ -f "$PROJECT_ROOT/go.mod" ]]; then
@@ -256,8 +299,20 @@ fix_all_versions() {
         fi
     fi
 
+    # Check CONTRIBUTING.md
+    if [[ -f "$PROJECT_ROOT/CONTRIBUTING.md" ]]; then
+        local current_contributing_version
+        current_contributing_version=$(grep -E '\*\*Go\*\*:.*[0-9]+\.[0-9]+' "$PROJECT_ROOT/CONTRIBUTING.md" | sed -E 's/.*([0-9]+\.[0-9]+)\+.*/\1/' || echo "")
+        local expected_contributing_version
+        expected_contributing_version=$(echo "$go_version" | sed 's/\([0-9]*\.[0-9]*\).*/\1/')
+        if [[ -n "$current_contributing_version" && "$current_contributing_version" != "$expected_contributing_version" ]]; then
+            contributing_needs_update=true
+            changes_made=true
+        fi
+    fi
+
     # Only show messages and make changes if needed
-    if [[ "$go_mod_needs_update" == true || "$golangci_needs_update" == true || "$dockerfile_needs_update" == true ]]; then
+    if [[ "$go_mod_needs_update" == true || "$golangci_needs_update" == true || "$dockerfile_needs_update" == true || "$contributing_needs_update" == true ]]; then
         print_status "$BLUE" "Fixing Go version inconsistencies..."
         print_status "$BLUE" "Target version: $go_version"
         echo
@@ -270,6 +325,9 @@ fix_all_versions() {
         fi
         if [[ "$dockerfile_needs_update" == true ]]; then
             update_dockerfile "$go_version" false
+        fi
+        if [[ "$contributing_needs_update" == true ]]; then
+            update_contributing "$go_version" false
         fi
 
         echo

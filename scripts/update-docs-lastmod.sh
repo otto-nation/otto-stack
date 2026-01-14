@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 echo "🗓️ Updating lastmod dates for changed documentation files..."
 

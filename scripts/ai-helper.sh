@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 get_ai_command() {
   if [ -f .env ] && grep -q "^AI_COMMAND=" .env; then
