@@ -210,7 +210,7 @@ tasks:
 
         echo "🤖 Generating commit message..."
         COMMIT_MSG=$(echo "$AI_PROMPT" | $AI_COMMAND | tr -d '\033' | sed 's/\[[0-9;]*m//g' | sed 's/^[> ]*//g')
-        
+
         # Validate commit message header length
         HEADER=$(echo "$COMMIT_MSG" | head -n1)
         HEADER_LENGTH=${#HEADER}
@@ -222,7 +222,7 @@ tasks:
           echo "  git commit"
           exit 1
         fi
-        
+
         echo "✨ AI Analysis Complete"
         echo ""
         echo "📝 Generated: $COMMIT_MSG"
@@ -230,8 +230,9 @@ tasks:
         git commit -m "$COMMIT_MSG"
         echo "✅ Committed successfully!"
 
-  create-pr:
-    desc: "🤖 Create AI-powered pull request with smart title and description"
+  pr-content:
+    desc: "🤖 Generate AI-powered PR content"
+    internal: true
     silent: true
     cmds:
       - |
@@ -241,17 +242,11 @@ tasks:
           exit 1
         fi
 
-        echo "🤖 Analyzing branch changes with AI: $BRANCH"
-
-        # Get comprehensive change analysis
-
-        # commits that are in the current branch but not in main
         COMMITS=$(git log --oneline origin/main..HEAD)
         COMMIT_COUNT=$(git rev-list --count origin/main..$BRANCH)
         CHANGED_FILES=$(git diff --name-only origin/main..$BRANCH)
-        PR_TEMPLATE=$(cat .github/PULL_REQUEST_TEMPLATE.md)
+        PR_TEMPLATE=$(cat .github/pull_request_template.md)
 
-        # Create AI prompt with PR template
         AI_PROMPT="Generate a professional PR title and fill out this template based on the changes:
 
         Template:
@@ -269,7 +264,6 @@ tasks:
         Return: TITLE: <title>
         DESCRIPTION: <filled template>"
 
-        # Use AI to generate PR content
         source ./scripts/ai-helper.sh
 
         if ! AI_COMMAND=$(check_ai_available 2>&1); then
@@ -277,36 +271,106 @@ tasks:
           exit 1
         fi
 
-        echo "🤖 Generating PR title and description..."
-          RAW_RESPONSE=$(echo "$AI_PROMPT" | $AI_COMMAND)
-          # Strip all ANSI escape sequences and control characters
-          AI_RESPONSE=$(echo "$RAW_RESPONSE" | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;]*R//g' | tr -d '\033\007\015' | sed 's/^[> ]*//g')
+        RAW_RESPONSE=$(echo "$AI_PROMPT" | $AI_COMMAND)
+        AI_RESPONSE=$(echo "$RAW_RESPONSE" | sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' | sed 's/\x1b\[[0-9;]*R//g' | tr -d '\033\007\015' | sed 's/^[> ]*//g')
 
-          TITLE=$(echo "$AI_RESPONSE" | grep "^TITLE:" | sed 's/^TITLE: //' | head -1 | tr -d '\n\r')
-          DESCRIPTION=$(echo "$AI_RESPONSE" | sed -n '/^DESCRIPTION:/,$ p' | sed '1d')
+        PR_TITLE=$(echo "$AI_RESPONSE" | grep "^TITLE:" | sed 's/^TITLE: //' | head -1 | tr -d '\n\r')
+        PR_DESCRIPTION=$(echo "$AI_RESPONSE" | sed -n '/^DESCRIPTION:/,$ p' | sed '1d' | sed 's/^```$//' | sed 's/^```$//')
 
-          if [ -z "$TITLE" ]; then TITLE="feat: improve codebase"; fi
-          if [ -z "$DESCRIPTION" ]; then DESCRIPTION="## Summary\n\nBranch: $BRANCH\nCommits: $COMMIT_COUNT"; fi
+        if [ -z "$PR_TITLE" ]; then PR_TITLE="feat: improve codebase"; fi
+        if [ -z "$PR_DESCRIPTION" ]; then PR_DESCRIPTION="## Summary\n\nBranch: $BRANCH\nCommits: $COMMIT_COUNT"; fi
 
-          echo "✨ AI Analysis Complete"
-          echo ""
-          echo "📝 Title: $TITLE"
-          echo "🚀 Creating PR..."
+        mkdir -p /tmp/task-pr
+        echo "$PR_TITLE" > /tmp/task-pr/title
+        echo "$PR_DESCRIPTION" > /tmp/task-pr/description
 
-          PR_URL=$(gh pr create --title "$TITLE" --body "$DESCRIPTION" --assignee @me 2>&1 | grep -o 'https://github.com[^[:space:]]*' || echo "")
+        echo "📝 Title: $PR_TITLE"
+        echo "📄 Description:"
+        echo "$PR_DESCRIPTION"
 
-          echo "✅ Pull request created!"
-          if [ -n "$PR_URL" ]; then echo "🔗 View: $PR_URL"; fi
-
-  push-and-pr:
-    desc: "🚀 Push current branch and create PR in one command"
+  create-pr:
+    desc: "🤖 Create AI-powered pull request with smart title and description"
     silent: true
     cmds:
       - |
         BRANCH=$(git branch --show-current)
-        echo "🚀 Pushing branch: $BRANCH"
-        git push -u origin $BRANCH
-      - task: create-pr
+
+        # Check if remote branch exists
+        if git ls-remote --heads origin $BRANCH | grep -q $BRANCH; then
+          # Remote exists, check for divergence
+          git fetch origin $BRANCH --quiet
+
+          LOCAL=$(git rev-parse @)
+          REMOTE=$(git rev-parse @{u})
+          BASE=$(git merge-base @ @{u})
+
+          if [ "$LOCAL" = "$REMOTE" ]; then
+            echo "✅ Branch is up to date with remote"
+          elif [ "$LOCAL" = "$BASE" ]; then
+            echo "⚠️  Remote has commits not in local branch"
+            echo "❌ Cannot create PR - please pull first: git pull"
+            exit 1
+          elif [ "$REMOTE" = "$BASE" ]; then
+            echo "📤 Local has unpushed commits, pushing..."
+            git push origin $BRANCH
+          else
+            echo "❌ Branch has diverged from remote"
+            echo "💡 Fix with: git pull --rebase or git reset"
+            exit 1
+          fi
+        else
+          # Remote doesn't exist, push it
+          echo "📤 Pushing new branch to remote..."
+          git push -u origin $BRANCH
+        fi
+
+        echo "🤖 Analyzing branch changes with AI: $BRANCH"
+      - task: pr-content
+      - |
+        PR_TITLE=$(cat /tmp/task-pr/title)
+        PR_DESCRIPTION=$(cat /tmp/task-pr/description)
+
+        echo "✨ AI Analysis Complete"
+        echo "🚀 Creating PR..."
+
+        PR_URL=$(gh pr create --title "$PR_TITLE" --body "$PR_DESCRIPTION" --assignee @me 2>&1 | grep -o 'https://github.com[^[:space:]]*' || echo "")
+
+        echo "✅ Pull request created!"
+        if [ -n "$PR_URL" ]; then echo "🔗 View: $PR_URL"; fi
+
+  update-pr:
+    desc: "🔄 Update current PR description with AI-generated content"
+    silent: true
+    cmds:
+      - |
+        BRANCH=$(git branch --show-current)
+        if [ "$BRANCH" = "main" ]; then
+          echo "❌ Cannot update PR from main branch"
+          exit 1
+        fi
+
+        echo "🔍 Checking for existing PR..."
+        PR_NUMBER=$(gh pr view --json number -q .number 2>/dev/null)
+
+        if [ -z "$PR_NUMBER" ]; then
+          echo "❌ No PR found for branch: $BRANCH"
+          echo "💡 Use 'task create-pr' to create a new PR"
+          exit 1
+        fi
+
+        echo "🤖 Analyzing branch changes with AI: $BRANCH"
+      - task: pr-content
+      - |
+        PR_DESCRIPTION=$(cat /tmp/task-pr/description)
+        PR_NUMBER=$(gh pr view --json number -q .number 2>/dev/null)
+
+        echo "✨ AI Analysis Complete"
+        echo "🔄 Updating PR #$PR_NUMBER..."
+
+        gh pr edit $PR_NUMBER --body "$PR_DESCRIPTION"
+
+        echo "✅ PR description updated!"
+        echo "🔗 View: $(gh pr view --json url -q .url)"
 
   pre-commit:
     desc: "🔒 Run all pre-commit checks"
@@ -384,7 +448,7 @@ tasks:
             echo "$sha: $msg (${#msg} chars)"
           fi
         done)
-        
+
         if [ -n "$INVALID_COMMITS" ]; then
           echo ""
           echo "❌ Pre-push failed: Commit headers exceed 72 characters"

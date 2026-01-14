@@ -1,24 +1,20 @@
-## Summary
+## What
 
-<!-- Briefly describe what this PR changes -->
+<!-- What does this PR do? -->
 
-## Type of Change
+## Why
 
-- [ ] 🐛 Bug fix
-- [ ] ✨ New feature  
-- [ ] 💥 Breaking change
-- [ ] 📚 Documentation
-- [ ] ♻️ Refactoring
+<!-- Why is this change needed? -->
 
-## Testing
+## Type
 
-- [ ] I tested the changes locally
-- [ ] All tests pass (`task test`)
-- [ ] Build works (`task build`)
+- [ ] 🐛 Fix
+- [ ] ✨ Feature
+- [ ] 💥 Breaking
+- [ ] 📚 Docs
+- [ ] ♻️ Refactor
 
 ## Checklist
 
-- [ ] Code follows Go conventions
-- [ ] Documentation updated if needed
-- [ ] No new security vulnerabilities
-- [ ] Backward compatible (or breaking changes documented)
+- [ ] Tests pass (`task test`)
+- [ ] Docs updated (if needed)
