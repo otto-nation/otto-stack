@@ -154,8 +154,8 @@ tasks:
     silent: true
     cmds:
       - mkdir -p .task
-      - go mod download > /dev/null 2>&1
-      - go mod tidy > /dev/null 2>&1
+      - go mod download
+      - go mod tidy
       - touch .task/deps-timestamp
 
   # ============================================================================
@@ -184,11 +184,12 @@ tasks:
         COMMITLINT_CONFIG=$(cat .github/.commitlintrc.json)
 
         AI_PROMPT="Generate a conventional commit message following these rules:
-        - Header (first line) must be ≤72 characters (no exceptions). Use ';' to separate multiple changes.
+        - Header (first line) MUST be ≤72 characters. Count carefully. If over, shorten it.
         - Body lines must be ≤100 characters each
         - Use conventional commit format: type(scope): description
         - Separate header and body with blank line
         - Use bullet points for multiple changes
+        - Prefer shorter scopes and descriptions
 
         Config: $COMMITLINT_CONFIG
 
@@ -208,6 +209,19 @@ tasks:
 
         echo "🤖 Generating commit message..."
         COMMIT_MSG=$(echo "$AI_PROMPT" | $AI_COMMAND | tr -d '\033' | sed 's/\[[0-9;]*m//g' | sed 's/^[> ]*//g')
+        
+        # Validate commit message header length
+        HEADER=$(echo "$COMMIT_MSG" | head -n1)
+        HEADER_LENGTH=${#HEADER}
+        if [ $HEADER_LENGTH -gt 72 ]; then
+          echo "❌ Generated header is too long: $HEADER_LENGTH characters (max 72)"
+          echo "Header: $HEADER"
+          echo ""
+          echo "Please manually commit with a shorter message:"
+          echo "  git commit"
+          exit 1
+        fi
+        
         echo "✨ AI Analysis Complete"
         echo ""
         echo "📝 Generated: $COMMIT_MSG"
@@ -360,6 +374,27 @@ tasks:
     silent: true
     cmds:
       - echo "🚀 Running pre-push checks..."
+      - |
+        # Validate commit message lengths
+        echo "📝 Validating commit messages..."
+        INVALID_COMMITS=$(git log --oneline origin/main..HEAD --format="%H %s" | while read sha msg; do
+          if [ ${#msg} -gt 72 ]; then
+            echo "$sha: $msg (${#msg} chars)"
+          fi
+        done)
+        
+        if [ -n "$INVALID_COMMITS" ]; then
+          echo ""
+          echo "❌ Pre-push failed: Commit headers exceed 72 characters"
+          echo ""
+          echo "Invalid commits:"
+          echo "$INVALID_COMMITS"
+          echo ""
+          echo "🔧 Fix with: git rebase -i origin/main"
+          echo "   Then reword the commit messages to be ≤72 characters"
+          exit 1
+        fi
+        echo "✅ All commit messages valid"
       - task: docs
       - |
         # Check if docs generation made any changes
