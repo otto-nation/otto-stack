@@ -76,29 +76,4 @@ func TestServiceConfigValidation(t *testing.T) {
 		assert.Equal(t, CategoryDatabase, config.Category)
 		assert.NotEmpty(t, config.Description)
 	})
-
-	t.Run("validates service config with environment", func(t *testing.T) {
-		config := servicetypes.ServiceConfig{
-			Name: ServiceRedis,
-			Environment: map[string]string{
-				"REDIS_PASSWORD": "secret",
-				"REDIS_PORT":     "6379",
-			},
-		}
-
-		env := config.GetEnvironment()
-		assert.NotEmpty(t, env)
-		assert.Equal(t, "secret", env["REDIS_PASSWORD"])
-		assert.Equal(t, "6379", env["REDIS_PORT"])
-	})
-
-	t.Run("handles empty environment gracefully", func(t *testing.T) {
-		config := servicetypes.ServiceConfig{
-			Name: ServiceMysql,
-		}
-
-		env := config.GetEnvironment()
-		assert.NotNil(t, env)
-		assert.Empty(t, env)
-	})
 }

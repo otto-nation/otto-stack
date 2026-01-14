@@ -507,7 +507,6 @@ tasks:
       - "go.sum"
     generates:
       - "coverage.out"
-    silent: true
     cmds:
       - echo "🧪 Running unit tests..."
       - |
