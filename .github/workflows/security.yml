@@ -33,6 +33,9 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-environment
 
+      - name: Generate code
+        run: task generate
+
       - name: Run security scan
         run: task security
 

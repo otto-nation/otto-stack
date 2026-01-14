@@ -377,7 +377,7 @@ tasks:
       - |
         # Validate commit message lengths
         echo "📝 Validating commit messages..."
-        INVALID_COMMITS=$(git log --oneline origin/main..HEAD --format="%H %s" | while read sha msg; do
+        INVALID_COMMITS=$(git log --oneline origin/main..HEAD --format="%h %s" | while read sha msg; do
           if [ ${#msg} -gt 72 ]; then
             echo "$sha: $msg (${#msg} chars)"
           fi
