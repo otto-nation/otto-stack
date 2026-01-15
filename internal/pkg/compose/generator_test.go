@@ -1,3 +1,5 @@
+//go:build unit
+
 package compose
 
 import (
@@ -157,10 +159,12 @@ func TestGenerator_GenerateFromServiceConfigs(t *testing.T) {
 			{Name: services.ServiceRedis, Category: services.CategoryCache},
 		}
 
-		err := generator.GenerateFromServiceConfigs(serviceConfigs, "test-project")
-		// Test passes if no error occurs - actual file generation depends on service definitions
+		// Test BuildComposeData (no file I/O)
+		data, err := generator.BuildComposeData(serviceConfigs)
 		if err != nil {
 			t.Logf("Service generation completed with: %v", err)
+		} else {
+			assert.NotEmpty(t, data)
 		}
 	})
 }

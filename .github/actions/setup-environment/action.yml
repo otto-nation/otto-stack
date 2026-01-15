@@ -50,10 +50,9 @@ runs:
           echo "installed=true" >> $GITHUB_OUTPUT
         else
           echo "Installing Task runner..."
-          curl -sL https://taskfile.dev/install.sh | sh -s -- -d -b ~/.local/bin
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          go install github.com/go-task/task/v3/cmd/task@latest
           echo "installed=true" >> $GITHUB_OUTPUT
-          echo "Task installed: $(~/.local/bin/task --version)"
+          echo "Task installed: $(task --version)"
         fi
 
     - name: Install additional tools
@@ -74,6 +73,13 @@ runs:
 
         # jq is pre-installed on GitHub runners
         echo "jq version: $(jq --version)"
+
+    - name: Run code generation
+      if: inputs.install-task == 'true'
+      shell: bash
+      run: |
+        echo "Running code generation..."
+        task generate
 
     - name: Download Go dependencies
       shell: bash

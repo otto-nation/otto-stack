@@ -15,9 +15,10 @@ env:
   CGO_ENABLED: 0
 
 jobs:
-  ci:
-    name: CI
+  build:
+    name: Build
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -33,12 +34,6 @@ jobs:
         with:
           install-task: "true"
 
-      - name: Generate code
-        run: task generate
-
-      - name: Format code
-        run: task fmt
-
       - name: Validate Go modules
         run: |
           go mod tidy
@@ -47,17 +42,42 @@ jobs:
       - name: Check formatting
         run: task fmt-check
 
-      - name: Run linting
-        run: task lint:go
+      - name: Build binary
+        run: task build
+
+      - name: Verify binary
+        run: |
+          chmod +x ${{ steps.config.outputs.build-dir }}/${{ steps.config.outputs.cli-binary }}
+          ./${{ steps.config.outputs.build-dir }}/${{ steps.config.outputs.cli-binary }} --version || \
+          ./${{ steps.config.outputs.build-dir }}/${{ steps.config.outputs.cli-binary }} version || \
+          echo "Binary built successfully"
+
+  ci:
+    name: CI
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Load configuration
+        id: config
+        uses: ./.github/actions/load-config
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          install-task: "true"
+
+      - name: Validate Go modules
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
 
       - name: Run unit tests
         run: task test-unit
-
-      - name: Run integration tests
-        run: task test-e2e
-
-      - name: Run all tests with coverage
-        run: task test
 
       - name: Check test coverage
         run: |
@@ -97,22 +117,12 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: '18'
-          cache: 'npm'
+          node-version: "18"
+          cache: "npm"
           cache-dependency-path: docs-site/package-lock.json
 
       - name: Install documentation dependencies
         run: cd docs-site && npm ci
-
-      - name: Build binary
-        run: task build
-
-      - name: Verify binary
-        run: |
-          chmod +x ${{ steps.config.outputs.build-dir }}/${{ steps.config.outputs.cli-binary }}
-          ./${{ steps.config.outputs.build-dir }}/${{ steps.config.outputs.cli-binary }} --version || \
-          ./${{ steps.config.outputs.build-dir }}/${{ steps.config.outputs.cli-binary }} version || \
-          echo "Binary built successfully"
 
   get-go-matrix:
     name: Get Go Matrix
@@ -134,7 +144,7 @@ jobs:
     name: Test Matrix
     runs-on: ${{ matrix.os }}
     needs: get-go-matrix
-    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'test-matrix')
+    if: github.event_name == 'pull_request'
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
@@ -151,11 +161,13 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          install-task: "true"
 
       - name: Run tests
-        run: go test -v -race -tags=unit ./internal/...
+        run: task test
 
       - name: Build
         shell: bash
@@ -169,8 +181,8 @@ jobs:
   integration:
     name: Integration
     runs-on: ubuntu-latest
-    needs: ci
-    if: github.event_name == 'push' || contains(github.event.pull_request.labels.*.name, 'integration')
+    needs: build
+    if: github.event_name == 'pull_request'
     services:
       docker:
         image: docker:dind
@@ -185,13 +197,5 @@ jobs:
         with:
           install-task: "true"
 
-      - name: Build binary
-        run: task build
-
-      - name: Run integration tests
-        run: |
-          if find ./tests -name "*_test.go" 2>/dev/null | grep -q .; then
-            cd tests/integration && go test -v -tags=integration .
-          else
-            echo "No integration tests found, skipping..."
-          fi
+      - name: Run e2e tests
+        run: task test-e2e

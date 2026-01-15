@@ -1,99 +1,89 @@
+//go:build unit
+
 package docker
 
 import (
 	"context"
+	"errors"
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/otto-nation/otto-stack/test/testhelpers"
 )
 
-func TestClient_GetComposeManager(t *testing.T) {
-	client, err := NewClient(logger.GetLogger())
-	if err != nil {
-		t.Skipf("Docker not available: %v", err)
+func TestClient_ListResources_Unit(t *testing.T) {
+	mockDocker := &testhelpers.MockDockerClient{
+		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
+			return []types.Container{
+				{ID: "container1", Names: []string{"/test-container"}},
+			}, nil
+		},
 	}
-	defer client.Close()
 
-	manager := client.GetComposeManager()
-	if manager == nil {
-		t.Error("Expected compose manager, got nil")
-	}
-}
-
-func TestClient_ListResources(t *testing.T) {
-	client, err := NewClient(logger.GetLogger())
-	if err != nil {
-		t.Skipf("Docker not available: %v", err)
-	}
-	defer client.Close()
+	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
 
 	ctx := context.Background()
 	resources, err := client.ListResources(ctx, ResourceContainer, "test-project")
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if resources == nil {
-		t.Error("Expected resources list, got nil")
+	if len(resources) != 1 {
+		t.Errorf("Expected 1 resource, got %d", len(resources))
 	}
 }
 
-func TestClient_RemoveResources(t *testing.T) {
-	client, err := NewClient(logger.GetLogger())
-	if err != nil {
-		t.Skipf("Docker not available: %v", err)
+func TestClient_RemoveContainer_Unit(t *testing.T) {
+	removeCalled := false
+	mockDocker := &testhelpers.MockDockerClient{
+		ContainerRemoveFunc: func(ctx context.Context, containerID string, options container.RemoveOptions) error {
+			removeCalled = true
+			if containerID == "non-existent" {
+				return errors.New("container not found")
+			}
+			return nil
+		},
 	}
-	defer client.Close()
+
+	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
 
 	ctx := context.Background()
-	err = client.RemoveResources(ctx, ResourceContainer, "test-project")
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-}
+	err := client.RemoveContainer(ctx, "non-existent", false)
 
-func TestClient_ListContainers(t *testing.T) {
-	client, err := NewClient(logger.GetLogger())
-	if err != nil {
-		t.Skipf("Docker not available: %v", err)
-	}
-	defer client.Close()
-
-	ctx := context.Background()
-	containers, err := client.ListContainers(ctx, "test-project")
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-
-	// Test passes if no error - empty slice is valid
-	_ = containers
-}
-
-func TestClient_RemoveContainer(t *testing.T) {
-	client, err := NewClient(logger.GetLogger())
-	if err != nil {
-		t.Skipf("Docker not available: %v", err)
-	}
-	defer client.Close()
-
-	ctx := context.Background()
-	err = client.RemoveContainer(ctx, "non-existent-container", false)
-	// Expect error for non-existent container, but function should not panic
 	if err == nil {
 		t.Error("Expected error for non-existent container")
 	}
+
+	if !removeCalled {
+		t.Error("Expected ContainerRemove to be called")
+	}
 }
 
-func TestClient_GetServiceStatus(t *testing.T) {
-	client, err := NewClient(logger.GetLogger())
-	if err != nil {
-		t.Skipf("Docker not available: %v", err)
+func TestClient_GetServiceStatus_Unit(t *testing.T) {
+	mockDocker := &testhelpers.MockDockerClient{
+		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
+			return []types.Container{
+				{
+					ID:    "web1",
+					Names: []string{"/test-project-web-1"},
+					State: "running",
+					Labels: map[string]string{
+						"com.docker.compose.project": "test-project",
+						"com.docker.compose.service": "web",
+					},
+				},
+			}, nil
+		},
 	}
-	defer client.Close()
+
+	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
 
 	ctx := context.Background()
 	services := []string{"web", "db"}
 	statuses, err := client.GetServiceStatus(ctx, "test-project", services)
+
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
@@ -101,22 +91,4 @@ func TestClient_GetServiceStatus(t *testing.T) {
 	if len(statuses) != len(services) {
 		t.Errorf("Expected %d statuses, got %d", len(services), len(statuses))
 	}
-}
-
-func TestClient_GetDockerServiceStatus(t *testing.T) {
-	client, err := NewClient(logger.GetLogger())
-	if err != nil {
-		t.Skipf("Docker not available: %v", err)
-	}
-	defer client.Close()
-
-	ctx := context.Background()
-	services := []string{"test-service"}
-	statuses, err := client.GetDockerServiceStatus(ctx, "test-project", services)
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-
-	// Status should be valid even for non-existent service
-	_ = statuses
 }

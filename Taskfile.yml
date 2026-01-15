@@ -47,6 +47,7 @@ tasks:
     deps: [generate:cli, generate:services]
     silent: true
     cmds:
+      - gofmt -w internal/core/constants_generated.go internal/core/docker/types_generated.go internal/pkg/cli/cli_generated.go internal/pkg/services/services_generated.go internal/pkg/types/*_generated.go
       - echo "✅ Generated code from YAML configs"
 
   generate:cli:

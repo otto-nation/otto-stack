@@ -279,10 +279,10 @@ func processService(service map[string]any, serviceName, path string, collectors
 func processBasicInfo(serviceName, path string, collectors *collectors) {
 	collectors.names[Prefix.Service+toPascalCase(serviceName)] = serviceName
 
-	const minPartsForCategory = 3
-	parts := strings.Split(path, "/")
-	if len(parts) >= minPartsForCategory {
-		cat := parts[len(parts)-2]
+	// Extract category from directory name (parent of the service file)
+	dir := filepath.Dir(path)
+	cat := filepath.Base(dir)
+	if cat != "." && cat != "" {
 		collectors.categories[Prefix.Category+toPascalCase(cat)] = cat
 	}
 }
