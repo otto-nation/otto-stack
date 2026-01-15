@@ -1,85 +1,85 @@
 name: jaeger
-description: Jaeger distributed tracing system for monitoring and troubleshooting
-  microservices
-category: observability
-dependencies:
-  required: []
-  soft: []
-  conflicts: []
-  provides:
-  - tracing
-  - observability
-docker:
+description: Jaeger distributed tracing system for monitoring and troubleshooting microservices
+service_type: container
+
+environment:
+  JAEGER_COLLECTOR_PORT: ${JAEGER_COLLECTOR_PORT:-13133}
+  JAEGER_HOST: ${JAEGER_HOST:-localhost}
+  JAEGER_PORT: ${JAEGER_PORT:-16686}
+  JAEGER_URL: http://${JAEGER_HOST:-localhost}:${JAEGER_PORT:-16686}/status
+
+container:
+  image: jaegertracing/jaeger:2.13.0
+  ports:
+    - external: "16686"
+      internal: "16686"
+      protocol: tcp
+    - external: "13133"
+      internal: "13133"
+      protocol: tcp
   restart: unless-stopped
-  networks:
-  - otto-stack
   memory_limit: 512m
-  environment:
-  - COLLECTOR_OTLP_ENABLED=true
-  - COLLECTOR_ZIPKIN_HOST_PORT=9411
-  - SPAN_STORAGE_TYPE=memory
-  - JAEGER_DISABLED=false
   health_check:
     test:
-    - CMD
-    - curl
-    - -f
-    - http://localhost:16686/
+      [
+        "CMD",
+        "wget",
+        "--no-verbose",
+        "--tries=1",
+        "--spider",
+        "http://localhost:16686/",
+      ]
     interval: 30s
     timeout: 10s
     retries: 3
-    start_period: 30s
-  image: jaegertracing/all-in-one:latest
+
+service:
+  connection:
+    type: web
+    default_port: 16686
+    url_pattern: "http://localhost:16686"
+  dependencies:
+    provides:
+      - tracing
+      - observability
+
+configuration_schema:
+  type: object
+  properties:
+    sampling:
+      type: object
+      description: Jaeger sampling configuration
+      properties:
+        default_strategy:
+          type: string
+          default: "probabilistic"
+          description: Default sampling strategy
+        max_traces_per_second:
+          type: integer
+          default: 100
+          description: Maximum traces per second
+    storage:
+      type: object
+      description: Storage configuration
+      properties:
+        type:
+          type: string
+          default: "memory"
+          description: Storage backend type
+
 documentation:
   examples:
-  - curl -f http://localhost:16686/
-  usage_notes: Distributed tracing for microservices. Supports OpenTelemetry and Zipkin
-    protocols.
+    - curl -f http://localhost:16686/
+  usage_notes: Distributed tracing for microservices. Supports OpenTelemetry and Zipkin protocols.
   links:
-  - https://www.jaegertracing.io/docs/
-  - https://opentelemetry.io/docs/
+    - https://www.jaegertracing.io/docs/
+    - https://opentelemetry.io/docs/
   use_cases:
-  - Distributed tracing
-  - Performance monitoring
-  - Service dependency analysis
-  - Request flow visualization
+    - Distributed tracing
+    - Performance monitoring
+    - Service dependency analysis
+    - Request flow visualization
   web_interfaces:
-  - name: Jaeger UI
-    url: http://localhost:${JAEGER_UI_PORT:-16686}
-    description: Distributed tracing UI
-  docs:
-  - name: Jaeger Documentation
-    url: https://www.jaegertracing.io/docs/
-  - name: OpenTelemetry
-    url: https://opentelemetry.io/docs/
-service_configuration:
-- name: docker_image
-  type: string
-  description: Docker image to use for Jaeger container
-  default: jaegertracing/all-in-one:1.51
-  example: jaegertracing/all-in-one:1.50
-  required: false
-- name: ui_port
-  type: integer
-  description: Port number for Jaeger UI web interface
-  default: '16686'
-  example: '16687'
-  required: false
-- name: otlp_http_port
-  type: integer
-  description: Port number for OpenTelemetry HTTP endpoint
-  default: '4318'
-  example: '4319'
-  required: false
-- name: otlp_grpc_port
-  type: integer
-  description: Port number for OpenTelemetry gRPC endpoint
-  default: '4317'
-  example: '4320'
-  required: false
-- name: memory_limit
-  type: string
-  description: Memory limit for Jaeger container
-  default: 256m
-  example: 512m
-  required: false
+    - name: Jaeger UI
+      url: http://localhost:16686
+      description: Jaeger web interface for viewing traces

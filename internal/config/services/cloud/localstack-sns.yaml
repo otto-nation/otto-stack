@@ -1,38 +1,54 @@
 name: localstack-sns
 description: LocalStack SNS (Simple Notification Service) emulation
-category: cloud
-type: configuration
-target_service: localstack-core
-dependencies:
-  required:
-  - localstack
-  soft:
-  - localstack-sqs
-  conflicts: []
-  provides:
-  - sns
-  - notifications
-environment_additions:
-  SERVICES: sns
+service_type: configuration
+
+container:
+  restart: unless-stopped
+
+service:
+  dependencies:
+    required:
+      - localstack
+    provides:
+      - sns
+      - messaging-topic
+      - notifications
+
+configuration_schema:
+  type: object
+  properties:
+    topics:
+      type: array
+      description: SNS topics to create
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            description: Topic name
+          subscriptions:
+            type: array
+            description: Topic subscriptions
+            items:
+              type: object
+              properties:
+                protocol:
+                  type: string
+                  description: Subscription protocol (sqs, http, etc.)
+                endpoint:
+                  type: string
+                  description: Subscription endpoint
+              required: ["protocol", "endpoint"]
+        required: ["name"]
+
 documentation:
   examples:
-  - aws --endpoint-url=http://localhost:4566 sns list-topics
-  usage_notes: SNS pub/sub notification service emulation. Can integrate with SQS
-    for subscriptions.
+    - aws --endpoint-url=http://localhost:4566 sns list-topics
+  usage_notes: SNS pub/sub notification service emulation. Can integrate with SQS for subscriptions.
   links:
-  - https://docs.localstack.cloud/user-guide/aws/sns/
+    - https://docs.localstack.cloud/user-guide/aws/sns/
   use_cases:
-  - Pub/sub messaging patterns
-  - Event notifications
-  - Fan-out message distribution
-  - Integration with SQS subscriptions
-  docs:
-  - name: LocalStack SNS Documentation
-    url: https://docs.localstack.cloud/user-guide/aws/sns/
-service_configuration:
-- name: topics
-  type: string[]
-  description: List of SNS topic names to create automatically
-  default: '[]'
-  example: '["notifications", "events", "alerts"]'
-  required: false
+    - Pub/sub messaging patterns
+    - Event notifications
+    - Fan-out message distribution
+    - Integration with SQS subscriptions

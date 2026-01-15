@@ -51,7 +51,7 @@ class OttoStack < Formula
       For more information:
         otto-stack --help
 
-      Documentation: https://github.com/otto-nation/otto-stack/tree/main/docs-site
+      Documentation: https://otto-nation.github.io/otto-stack/
     EOS
   end
 

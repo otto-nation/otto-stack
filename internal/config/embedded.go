@@ -13,5 +13,8 @@ var EmbeddedSchemaYAML []byte
 //go:embed init-settings.yaml
 var EmbeddedInitSettingsYAML []byte
 
+//go:embed docker/service_characteristics.yaml
+var EmbeddedServiceCharacteristicsYAML []byte
+
 //go:embed services
 var EmbeddedServicesFS embed.FS

@@ -1,50 +1,23 @@
 package version
 
-import "time"
-
-// Version change types (used for both drift and updates)
+// Version constants
 const (
-	ChangeTypeNone       = "none"
-	ChangeTypeMajor      = "major"
-	ChangeTypeMinor      = "minor"
-	ChangeTypePatch      = "patch"
-	ChangeTypePrerelease = "prerelease"
+	DevelVersion        = "dev"
+	MaxVersionNumber    = 999999
+	GitCommitHashLength = 7
 )
 
-// Severity levels with their numeric values for comparison
-var SeverityLevels = map[string]int{
-	"low":    1, // Optional updates, minor drift
-	"medium": 2, // Recommended updates, moderate drift
-	"high":   3, // Critical updates, major drift
-}
-
-// Enforcement actions
+// Version comparison results
 const (
-	EnforcementActionNone    = "none"
-	EnforcementActionWarn    = "warn"
-	EnforcementActionSwitch  = "switch"
-	EnforcementActionInstall = "install"
+	VersionOlder = -1
+	VersionEqual = 0
+	VersionNewer = 1
 )
 
-// Default durations
+// Version defaults
 const (
-	DefaultMaxDriftDuration = 7 * 24 * time.Hour // 1 week
-	DefaultCheckInterval    = 24 * time.Hour     // 1 day
-)
-
-// Default enforcement policy
-const (
-	DefaultStrictMode     = false
-	DefaultAllowDrift     = true
-	DefaultAutoSync       = false
-	DefaultNotifyUpdates  = true
-	DefaultShowPrerelease = false
-	DefaultAutoCheck      = true
-)
-
-// Version source types
-const (
-	VersionSourceGitHub = "github"
-	VersionSourceLocal  = "local"
-	VersionSourceBinary = "binary"
+	DefaultVersion   = "dev"
+	DefaultCommit    = "unknown"
+	DefaultBuildDate = "unknown"
+	DefaultBuildBy   = "unknown"
 )

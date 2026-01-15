@@ -16,6 +16,10 @@ permissions:
   contents: read
   security-events: write
 
+env:
+  GOTOOLCHAIN: local
+  CGO_ENABLED: 0
+
 jobs:
   security:
     name: Security
@@ -33,29 +37,11 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-environment
 
-      - name: Install security tools
-        run: |
-          go install github.com/securego/gosec/v2/cmd/gosec@latest
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          echo "$(go env GOPATH)/bin" >> $GITHUB_PATH
+      - name: Generate code
+        run: task generate
 
-      - name: Run Gosec security scanner
-        run: |
-          echo "🔍 Running Gosec security scan..."
-          GOSEC_CONFIG=".gosec.conf"
-          
-          if [ -f "$GOSEC_CONFIG" ]; then
-            gosec -conf "$GOSEC_CONFIG" -fmt json -out gosec-results.json ./... || true
-            gosec -conf "$GOSEC_CONFIG" -fmt text ./... | tee gosec-output.txt || true
-          else
-            gosec -fmt json -out gosec-results.json ./... || true
-            gosec -fmt text ./... | tee gosec-output.txt || true
-          fi
-
-      - name: Run vulnerability scanner
-        run: |
-          echo "🔍 Running vulnerability scan..."
-          govulncheck ./... | tee vuln-output.txt || echo "Vulnerability scan completed"
+      - name: Run security scan
+        run: task security
 
       - name: Determine scan strategy
         id: scan-strategy
@@ -93,59 +79,15 @@ jobs:
           extra_args: --only-verified --fail
         continue-on-error: true
 
-      - name: Basic security checks
-        run: |
-          echo "🔍 Running basic security checks..."
-
-          # Check for hardcoded secrets patterns
-          if grep -r -E "(password|pwd|secret|key|token)\s*[:=]\s*['\"][^'\"]{8,}" --include="*.go" . ; then
-            echo "⚠️ Potential hardcoded secrets found"
-            exit 1
-          fi
-
-          # Check for unsafe functions
-          if grep -r "unsafe\." --include="*.go" . ; then
-            echo "⚠️ Unsafe package usage found - review carefully"
-          fi
-
-          # Check for dangerous imports
-          go list -json ./... | jq -r '.Imports[]?' | sort | uniq | grep -E "(os/exec)" && echo "⚠️ Found potentially dangerous imports" || echo "✅ Standard imports look safe"
-
       - name: Security summary
         if: always()
         run: |
           echo "## 🔒 Security Scan Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-
-          if [ -f gosec-output.txt ]; then
-            if grep -q "Issues : 0" gosec-output.txt; then
-              echo "✅ **Gosec**: No security issues found" >> $GITHUB_STEP_SUMMARY
-            else
-              issues=$(grep -c "^\[.*\] - G" gosec-output.txt || echo "0")
-              echo "⚠️ **Gosec**: Found $issues security issue(s)" >> $GITHUB_STEP_SUMMARY
-            fi
-          fi
-
-          if [ -f vuln-output.txt ]; then
-            if grep -q "No vulnerabilities found" vuln-output.txt; then
-              echo "✅ **Vulnerabilities**: No vulnerabilities found" >> $GITHUB_STEP_SUMMARY
-            else
-              echo "⚠️ **Vulnerabilities**: Issues detected" >> $GITHUB_STEP_SUMMARY
-            fi
-          fi
-
+          echo "✅ **Security scan**: Completed using Taskfile" >> $GITHUB_STEP_SUMMARY
           echo "🔍 **TruffleHog**: Secrets scan completed using ${{ steps.scan-strategy.outputs.strategy }} strategy" >> $GITHUB_STEP_SUMMARY
 
-      - name: Upload security results
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: security-results
-          path: |
-            gosec-results.json
-            gosec-output.txt
-            vuln-output.txt
-          retention-days: 30
+
 
   advanced-security:
     name: Advanced Security

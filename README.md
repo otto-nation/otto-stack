@@ -83,7 +83,7 @@ otto-stack up
 - **[Usage Guide](docs-site/content/usage.md)**
 - **[Services Guide](docs-site/content/services.md)**
 - **[Configuration](docs-site/content/configuration.md)**
-- **[CLI Reference](docs-site/content/reference.md)**
+- **[CLI Reference](docs-site/content/cli-reference.md)**
 - **[Scripts Reference](docs-site/content/scripts.md)**
 - **[Contributing](docs-site/content/contributing.md)**
 

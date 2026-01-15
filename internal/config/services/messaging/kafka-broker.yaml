@@ -1,125 +1,50 @@
 name: kafka-broker
 description: Apache Kafka broker for event streaming and messaging
-category: messaging
-dependencies:
-  required:
-  - zookeeper
-  soft:
-  - kafka-ui
-  conflicts: []
-  provides:
-  - messaging
-  - streaming
-docker:
+service_type: container
+
+environment:
+  KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092}
+  KAFKA_HOST: ${KAFKA_HOST:-localhost}
+  KAFKA_PORT: ${KAFKA_PORT:-9092}
+  KAFKA_URL: kafka://${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092}
+
+container:
+  image: confluentinc/cp-kafka:latest
+  ports:
+    - external: "9099"
+      internal: "9099"
+      protocol: tcp
   restart: unless-stopped
-  networks:
-  - otto-stack
   memory_limit: 1024m
-  environment:
-  - KAFKA_BROKER_ID=1
-  - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-  - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-  - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka-broker:29092,PLAINTEXT_HOST://localhost:${KAFKA_PORT:-9092}
-  - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
-  - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
-  - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
-  - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
-  - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
-  - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
-  - KAFKA_NUM_PARTITIONS=3
-  - KAFKA_DEFAULT_REPLICATION_FACTOR=1
-  - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
-  - KAFKA_LOG_RETENTION_HOURS=168
-  - KAFKA_LOG_RETENTION_BYTES=1073741824
-  - KAFKA_LOG_SEGMENT_BYTES=1073741824
-  - KAFKA_LOG_CLEANUP_POLICY=delete
-  - KAFKA_HEAP_OPTS=-Xmx512M -Xms256M
   health_check:
     test:
-    - CMD
-    - kafka-broker-api-versions
-    - --bootstrap-server
-    - localhost:9092
+      [
+        "CMD",
+        "kafka-broker-api-versions",
+        "--bootstrap-server",
+        "localhost:9099",
+      ]
     interval: 30s
     timeout: 10s
-    retries: 5
-    start_period: 60s
-  image: confluentinc/cp-kafka:latest
+    retries: 3
+
+service:
+  dependencies:
+    required:
+      - zookeeper
+    provides:
+      - messaging
+      - streaming
+
 documentation:
   examples:
-  - kafka-broker-api-versions --bootstrap-server localhost:9092
-  usage_notes: Kafka broker handles message storage and delivery. Requires Zookeeper
-    for coordination.
+    - kafka-broker-api-versions --bootstrap-server localhost:9099
+  usage_notes: Kafka broker handles message storage and delivery. Requires Zookeeper for coordination.
   links:
-  - https://kafka.apache.org/documentation/
-  - https://docs.spring.io/spring-kafka/docs/current/reference/html/
+    - https://kafka.apache.org/documentation/
+    - https://docs.spring.io/spring-kafka/docs/current/reference/html/
   use_cases:
-  - Event-driven microservices architecture
-  - Real-time data streaming and processing
-  - Message queuing between services
-  - Data pipeline and ETL processes
-  docs:
-  - name: Apache Kafka Documentation
-    url: https://kafka.apache.org/documentation/
-  - name: Spring for Apache Kafka
-    url: https://docs.spring.io/spring-kafka/docs/current/reference/html/
-service_configuration:
-- name: docker_image
-  type: string
-  description: Docker image to use for Kafka broker container
-  default: confluentinc/cp-kafka:latest
-  example: confluentinc/cp-kafka:7.4.0
-  required: false
-- name: port
-  type: integer
-  description: Port number for Kafka broker
-  default: '9092'
-  example: '9093'
-  required: false
-- name: memory_limit
-  type: string
-  description: Memory limit for Kafka container
-  default: 512m
-  example: 1g
-  required: false
-- name: auto_create_topics
-  type: boolean
-  description: Enable automatic topic creation
-  default: 'true'
-  example: 'false'
-  required: false
-- name: num_partitions
-  type: integer
-  description: Default number of partitions for new topics
-  default: '3'
-  example: '6'
-  required: false
-- name: replication_factor
-  type: integer
-  description: Default replication factor for new topics
-  default: '1'
-  example: '3'
-  required: false
-management:
-  operations:
-    list_topics:
-      command:
-      - docker
-      - exec
-      - ${PROJECT_NAME:-otto-stack}-kafka-broker
-      - kafka-topics
-      - --list
-      - --bootstrap-server
-      - localhost:9092
-      type: cli
-    describe_topic:
-      command:
-      - docker
-      - exec
-      - ${PROJECT_NAME:-otto-stack}-kafka-broker
-      - kafka-topics
-      - --describe
-      - --bootstrap-server
-      - localhost:9092
-      - --topic
-      type: cli
+    - Event-driven microservices architecture
+    - Real-time data streaming and processing
+    - Message queuing between services
+    - Data pipeline and ETL processes

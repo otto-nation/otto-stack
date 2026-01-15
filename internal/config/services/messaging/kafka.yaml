@@ -1,33 +1,50 @@
 name: kafka
 description: Complete Apache Kafka messaging platform with UI and topic management
-category: messaging
-type: composite
-visibility: visible
+service_type: container
 
-components:
-  - zookeeper
-  - kafka-broker
-  - kafka-topics
-  - kafka-ui
+container:
+  restart: unless-stopped
 
-dependencies:
-  required: []
-  soft: []
-  conflicts: []
-  provides: [messaging, streaming, event-processing]
+init_container:
+  image: alpine:latest
+
+service:
+  dependencies:
+    provides:
+      - messaging
+      - streaming
+      - event-processing
+
+configuration_schema:
+  type: object
+  properties:
+    topics:
+      type: array
+      description: Kafka topics to create
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            description: Topic name
+          partitions:
+            type: integer
+            default: 3
+            description: Number of partitions
+          replication_factor:
+            type: integer
+            default: 1
+            description: Replication factor
+        required: ["name"]
 
 documentation:
   examples:
-    - "kafka-console-producer --bootstrap-server localhost:9092 --topic test-topic"
-    - "kafka-console-consumer --bootstrap-server localhost:9092 --topic test-topic --from-beginning"
-  usage_notes: "Complete Kafka setup with Zookeeper coordination, broker, automatic topic creation, and web UI for management"
+    - kafka-console-producer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --topic test-topic
+    - kafka-console-consumer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --topic test-topic --from-beginning
+  usage_notes: Complete Kafka setup with Zookeeper coordination, broker, automatic topic creation, and web UI for management
   links:
-    - "https://kafka.apache.org/documentation/"
-    - "https://github.com/provectus/kafka-ui"
-  web_interfaces:
-    - name: Kafka UI
-      url: "http://localhost:8080"
-      description: Kafka cluster management and topic browser
+    - https://kafka.apache.org/documentation/
+    - https://github.com/provectus/kafka-ui
   use_cases:
     - Event streaming and processing
     - Message queuing and pub/sub

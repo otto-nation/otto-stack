@@ -1,63 +1,39 @@
 name: zookeeper
 description: Apache Zookeeper coordination service for distributed systems
-category: messaging
-dependencies:
-  required: []
-  soft: []
-  conflicts: []
-  provides:
-  - coordination
-docker:
-  restart: unless-stopped
-  networks:
-  - otto-stack
-  memory_limit: 256m
-  environment:
-  - ZOOKEEPER_CLIENT_PORT=2181
-  - ZOOKEEPER_TICK_TIME=2000
-  - ZOOKEEPER_SYNC_LIMIT=2
-  health_check:
-    test:
-    - CMD
-    - bash
-    - -c
-    - echo 'ruok' | nc localhost 2181
-    interval: 10s
-    timeout: 5s
-    retries: 5
-    start_period: 30s
+service_type: container
+
+environment:
+  ZOOKEEPER_HOST: ${ZOOKEEPER_HOST:-localhost}
+  ZOOKEEPER_PORT: ${ZOOKEEPER_PORT:-2181}
+  ZOOKEEPER_URL: ${ZOOKEEPER_HOST:-localhost}:${ZOOKEEPER_PORT:-2181}
+
+container:
   image: confluentinc/cp-zookeeper:latest
+  ports:
+    - external: "2181"
+      internal: "2181"
+      protocol: tcp
+  restart: unless-stopped
+  memory_limit: 256m
+  health_check:
+    test: ["CMD", "sh", "-c", "echo 'ruok' | nc localhost 2181"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+service:
+  dependencies:
+    provides:
+      - coordination
+
 documentation:
   examples:
-  - echo 'ruok' | nc localhost 2181
-  usage_notes: Zookeeper provides coordination services for Kafka and other distributed
-    systems
+    - echo 'ruok' | nc localhost 2181
+  usage_notes: Zookeeper provides coordination services for Kafka and other distributed systems
   links:
-  - https://zookeeper.apache.org/doc/current/
+    - https://zookeeper.apache.org/doc/current/
   use_cases:
-  - Kafka cluster coordination
-  - Distributed configuration management
-  - Service discovery
-  - Leader election
-  docs:
-  - name: Apache Zookeeper Documentation
-    url: https://zookeeper.apache.org/doc/current/
-service_configuration:
-- name: docker_image
-  type: string
-  description: Docker image to use for Zookeeper container
-  default: confluentinc/cp-zookeeper:latest
-  example: confluentinc/cp-zookeeper:7.4.0
-  required: false
-- name: port
-  type: integer
-  description: Port number for Zookeeper client connections
-  default: '2181'
-  example: '2182'
-  required: false
-- name: memory_limit
-  type: string
-  description: Memory limit for Zookeeper container
-  default: 256m
-  example: 512m
-  required: false
+    - Kafka cluster coordination
+    - Distributed configuration management
+    - Service discovery
+    - Leader election

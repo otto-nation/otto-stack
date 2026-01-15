@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Project validation script
 # This script consolidates validation logic to reduce workflow complexity

@@ -1,0 +1,13 @@
+# Docker behaviors for service characteristics
+service_characteristics:
+  stateful:
+    compose_down_flags: ["volumes"]
+    
+  slow_start:
+    compose_up_flags: ["health-timeout=60s", "health-retries=5"]
+    
+  graceful_stop:
+    compose_down_flags: ["timeout=30s"]
+    
+  network_service:
+    compose_up_flags: ["health-timeout=30s"]

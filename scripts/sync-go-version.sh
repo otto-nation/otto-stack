@@ -41,6 +41,7 @@ Files synchronized:
     - go.mod
     - .golangci.yml
     - Dockerfile (if exists)
+    - CONTRIBUTING.md (if exists)
     - Any other Go version references
 
 The script reads the version from .go-version and updates all configuration files
@@ -77,6 +78,12 @@ update_golangci_config() {
 
     if [[ ! -f "$GOLANGCI_CONFIG" ]]; then
         print_status "$YELLOW" "Warning: .golangci.yml not found, skipping"
+        return 0
+    fi
+
+    # Check if the file has a go: field at all
+    if ! grep -q -E '^\s*go:\s*"' "$GOLANGCI_CONFIG"; then
+        # No go: field exists, skip this check as golangci-lint will use go.mod version
         return 0
     fi
 
@@ -119,34 +126,27 @@ update_golangci_config() {
             return 0
         fi
 
-        # Extract current version from go.mod
-        local current_version=$(grep -E '^go [0-9]+\.[0-9]+' "$go_mod" | sed -E 's/^go ([0-9]+\.[0-9]+).*/\1/' || echo "")
+        # Extract current version from go.mod (full version including patch)
+        local current_version=$(grep -E '^go [0-9]+\.[0-9]+' "$go_mod" | awk '{print $2}' || echo "")
 
         if [[ -z "$current_version" ]]; then
             print_status "$YELLOW" "Warning: No go directive found in go.mod"
             return 0
         fi
 
-        # Convert go_version to major.minor format for comparison (go.mod typically uses major.minor)
-        local version_major_minor=$(echo "$go_version" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')
-
-        if [[ "$current_version" == "$version_major_minor" ]]; then
+        if [[ "$current_version" == "$go_version" ]]; then
             print_status "$GREEN" "✓ go.mod already has correct Go version: $current_version"
             return 0
         fi
 
         if [[ "$check_only" == "true" ]]; then
-            print_status "$RED" "✗ go.mod has wrong Go version: $current_version (expected: $version_major_minor)"
+            print_status "$RED" "✗ go.mod has wrong Go version: $current_version (expected: $go_version)"
             return 1
         fi
 
-        # Update the version
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            sed -i '' -E "s/^go [0-9]+\.[0-9]+.*/go $version_major_minor/" "$go_mod"
-        else
-            sed -i -E "s/^go [0-9]+\.[0-9]+.*/go $version_major_minor/" "$go_mod"
-        fi
-        print_status "$GREEN" "✓ Updated go.mod Go version to: $version_major_minor"
+        # Update using go mod edit
+        go mod edit -go="$go_version" "$go_mod"
+        print_status "$GREEN" "✓ Updated go.mod Go version to: $go_version"
     }
 
 # Function to update Dockerfile if it exists
@@ -189,6 +189,46 @@ update_dockerfile() {
     print_status "$GREEN" "✓ Updated Dockerfile Go version to: $version_major_minor"
 }
 
+# Function to update CONTRIBUTING.md
+update_contributing() {
+    local go_version=$1
+    local check_only=${2:-false}
+    local contributing="$PROJECT_ROOT/CONTRIBUTING.md"
+
+    if [[ ! -f "$contributing" ]]; then
+        return 0
+    fi
+
+    # Look for Go version in prerequisites section (handles **Go**: format)
+    local current_version=$(grep -E '\*\*Go\*\*:.*[0-9]+\.[0-9]+' "$contributing" | sed -E 's/.*([0-9]+\.[0-9]+)\+.*/\1/' || echo "")
+
+    if [[ -z "$current_version" ]]; then
+        print_status "$BLUE" "ℹ CONTRIBUTING.md found but no Go version detected"
+        return 0
+    fi
+
+    # Extract major.minor version for comparison
+    local version_major_minor=$(echo "$go_version" | sed -E 's/^([0-9]+\.[0-9]+).*/\1/')
+
+    if [[ "$current_version" == "$version_major_minor" ]]; then
+        print_status "$GREEN" "✓ CONTRIBUTING.md already has correct Go version: $current_version+"
+        return 0
+    fi
+
+    if [[ "$check_only" == "true" ]]; then
+        print_status "$RED" "✗ CONTRIBUTING.md has wrong Go version: $current_version+ (expected: $version_major_minor+)"
+        return 1
+    fi
+
+    # Update the version (handles **Go**: format)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' -E "s/(\*\*Go\*\*:.*)[0-9]+\.[0-9]+\+/\1$version_major_minor+/" "$contributing"
+    else
+        sed -i -E "s/(\*\*Go\*\*:.*)[0-9]+\.[0-9]+\+/\1$version_major_minor+/" "$contributing"
+    fi
+    print_status "$GREEN" "✓ Updated CONTRIBUTING.md Go version to: $version_major_minor+"
+}
+
 # Function to check all files
 check_all_versions() {
     local go_version=$1
@@ -201,6 +241,7 @@ check_all_versions() {
     update_go_mod "$go_version" true || ((errors++))
     update_golangci_config "$go_version" true || ((errors++))
     update_dockerfile "$go_version" true || ((errors++))
+    update_contributing "$go_version" true || ((errors++))
 
     echo
     if [[ $errors -eq 0 ]]; then
@@ -216,17 +257,84 @@ check_all_versions() {
 # Function to fix all versions
 fix_all_versions() {
     local go_version=$1
+    local changes_made=false
 
-    print_status "$BLUE" "Fixing Go version inconsistencies..."
-    print_status "$BLUE" "Target version: $go_version"
-    echo
+    # Check if any changes are needed first
+    local go_mod_needs_update=false
+    local golangci_needs_update=false
+    local dockerfile_needs_update=false
+    local contributing_needs_update=false
 
-    update_go_mod "$go_version" false
-    update_golangci_config "$go_version" false
-    update_dockerfile "$go_version" false
+    # Check go.mod
+    if [[ -f "$PROJECT_ROOT/go.mod" ]]; then
+        local current_go_version
+        current_go_version=$(grep "^go " "$PROJECT_ROOT/go.mod" | awk '{print $2}' || echo "")
+        if [[ "$current_go_version" != "$go_version" ]]; then
+            go_mod_needs_update=true
+        fi
+    fi
 
-    echo
-    print_status "$GREEN" "✅ All files synchronized to Go version: $go_version"
+    # Check .golangci.yml
+    if [[ -f "$GOLANGCI_CONFIG" ]]; then
+        # Only check if the file has a go: field
+        if grep -q -E '^\s*go:\s*"' "$GOLANGCI_CONFIG"; then
+            local current_golangci_version
+            current_golangci_version=$(grep -E '^\s*go:\s*"' "$GOLANGCI_CONFIG" | sed 's/.*"\([^"]*\)".*/\1/' || echo "")
+            if [[ "$current_golangci_version" != "$go_version" ]]; then
+                golangci_needs_update=true
+                changes_made=true
+            fi
+        fi
+    fi
+
+    # Check Dockerfile
+    if [[ -f "$PROJECT_ROOT/Dockerfile" ]]; then
+        local current_dockerfile_version
+        current_dockerfile_version=$(grep "FROM golang:" "$PROJECT_ROOT/Dockerfile" | head -1 | sed 's/.*golang:\([0-9.]*\).*/\1/' || echo "")
+        local expected_dockerfile_version
+        expected_dockerfile_version=$(echo "$go_version" | sed 's/\([0-9]*\.[0-9]*\).*/\1/')
+        if [[ "$current_dockerfile_version" != "$expected_dockerfile_version" ]]; then
+            dockerfile_needs_update=true
+            changes_made=true
+        fi
+    fi
+
+    # Check CONTRIBUTING.md
+    if [[ -f "$PROJECT_ROOT/CONTRIBUTING.md" ]]; then
+        local current_contributing_version
+        current_contributing_version=$(grep -E '\*\*Go\*\*:.*[0-9]+\.[0-9]+' "$PROJECT_ROOT/CONTRIBUTING.md" | sed -E 's/.*([0-9]+\.[0-9]+)\+.*/\1/' || echo "")
+        local expected_contributing_version
+        expected_contributing_version=$(echo "$go_version" | sed 's/\([0-9]*\.[0-9]*\).*/\1/')
+        if [[ -n "$current_contributing_version" && "$current_contributing_version" != "$expected_contributing_version" ]]; then
+            contributing_needs_update=true
+            changes_made=true
+        fi
+    fi
+
+    # Only show messages and make changes if needed
+    if [[ "$go_mod_needs_update" == true || "$golangci_needs_update" == true || "$dockerfile_needs_update" == true || "$contributing_needs_update" == true ]]; then
+        print_status "$BLUE" "Fixing Go version inconsistencies..."
+        print_status "$BLUE" "Target version: $go_version"
+        echo
+
+        if [[ "$go_mod_needs_update" == true ]]; then
+            update_go_mod "$go_version" false
+        fi
+        if [[ "$golangci_needs_update" == true ]]; then
+            update_golangci_config "$go_version" false
+        fi
+        if [[ "$dockerfile_needs_update" == true ]]; then
+            update_dockerfile "$go_version" false
+        fi
+        if [[ "$contributing_needs_update" == true ]]; then
+            update_contributing "$go_version" false
+        fi
+
+        echo
+        print_status "$GREEN" "✅ All files synchronized to Go version: $go_version"
+    else
+        print_status "$GREEN" "✅ All files already synchronized to Go version: $go_version"
+    fi
 }
 
 # Main function

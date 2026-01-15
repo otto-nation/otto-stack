@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	pkgTypes "github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/spf13/cobra"
 )
 
@@ -19,14 +19,14 @@ func NewCompletionHandler() *CompletionHandler {
 
 func (h *CompletionHandler) ValidateArgs(args []string) error {
 	if len(args) != 1 {
-		return fmt.Errorf(constants.MsgCompletionRequiresOneArg.Content,
-			fmt.Sprintf("%v", pkgTypes.AllShellTypeStrings()))
+		return fmt.Errorf(core.MsgCompletion_requires_one_arg,
+			fmt.Sprintf("%v", ci.AllShellTypeStrings()))
 	}
 
-	shell := pkgTypes.ShellType(args[0])
+	shell := ci.ShellType(args[0])
 	if !shell.IsValid() {
-		return fmt.Errorf(constants.MsgUnsupportedShell.Content,
-			args[0], pkgTypes.AllShellTypeStrings())
+		return fmt.Errorf(core.MsgCompletion_unsupported_shell,
+			args[0])
 	}
 
 	return nil
@@ -36,22 +36,24 @@ func (h *CompletionHandler) GetRequiredFlags() []string {
 	return []string{}
 }
 
-func (h *CompletionHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	shell := pkgTypes.ShellType(args[0])
+func (h *CompletionHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	if err := h.ValidateArgs(args); err != nil {
+		return err
+	}
 
-	// Get the root command to generate completion for
+	shell := ci.ShellType(args[0])
 	rootCmd := cmd.Root()
 
 	switch shell {
-	case pkgTypes.ShellTypeBash:
+	case ci.ShellTypeBash:
 		return rootCmd.GenBashCompletion(os.Stdout)
-	case pkgTypes.ShellTypeZsh:
+	case ci.ShellTypeZsh:
 		return rootCmd.GenZshCompletion(os.Stdout)
-	case pkgTypes.ShellTypeFish:
+	case ci.ShellTypeFish:
 		return rootCmd.GenFishCompletion(os.Stdout, true)
-	case pkgTypes.ShellTypePowerShell:
+	case ci.ShellTypePowerShell:
 		return rootCmd.GenPowerShellCompletion(os.Stdout)
 	default:
-		return fmt.Errorf("unsupported shell: %s", shell)
+		return fmt.Errorf(core.MsgCompletion_unsupported_shell, shell)
 	}
 }

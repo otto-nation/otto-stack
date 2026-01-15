@@ -21,7 +21,7 @@
 
 [[main]]
   name = "CLI Reference"
-  url = "/reference/"
+  url = "/cli-reference/"
   weight = 50
 
 [[main]]

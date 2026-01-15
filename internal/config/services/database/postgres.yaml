@@ -1,189 +1,131 @@
 name: postgres
 description: PostgreSQL relational database for persistent data storage
-category: database
-connection:
-  client: psql
-  default_user: postgres
-  default_port: 5432
-  user_flag: "-U"
-  host_flag: "-h"
-  port_flag: "-p"
-  database_flag: "-d"
-dependencies:
-  required: []
-  soft: []
-  conflicts:
-  - mysql
-  provides:
-  - database
-  - sql
+service_type: container
+
+service:
+  characteristics:
+    - stateful
+    - slow_start
+    - graceful_stop
+  connection:
+    type: cli
+    default_port: 5432
+    default_user: postgres
+    client: psql
+    host_flag: -h
+    port_flag: -p
+    user_flag: -U
+    database_flag: -d
+  dependencies:
+    conflicts:
+      - mysql
+    provides:
+      - database
+      - sql
+  management:
+    connect:
+      type: command
+      command: ["psql"]
+      args:
+        default: ["-h", "localhost", "-p", "5432", "-U", "postgres"]
+
 environment:
-  POSTGRES_HOST: localhost
-  POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+  DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
+  PGHOST: ${POSTGRES_HOST:-localhost}
   POSTGRES_DB: ${POSTGRES_DB:-local_dev}
-  POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  POSTGRES_HOST: ${POSTGRES_HOST:-localhost}
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-  POSTGRES_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@localhost:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
-  DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@localhost:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
-docker:
-  restart: unless-stopped
-  command:
-  - postgres
-  - -c
-  - shared_preload_libraries=pg_stat_statements
-  - -c
-  - pg_stat_statements.track=all
-  - -c
-  - max_connections=200
-  - -c
-  - log_statement=all
-  - -c
-  - log_destination=stderr
-  - -c
-  - log_min_duration_statement=100ms
-  networks:
-  - otto-stack
-  memory_limit: 512m
-  environment:
-  - POSTGRES_DB=${POSTGRES_DB:-local_dev}
-  - POSTGRES_USER=${POSTGRES_USER:-postgres}
-  - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-  - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
-  - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
-  health_check:
-    test:
-    - CMD-SHELL
-    - pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-local_dev}
-    interval: 10s
-    timeout: 5s
-    retries: 5
-    start_period: 30s
+  POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+  POSTGRES_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
+  POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  SERVICE_ENDPOINT_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
+
+container:
   image: postgres:15
-management:
-  operations: null
-  connect:
-    command:
-    - psql
-    args:
-      user:
-      - -U
-      - '{{.User}}'
-      database:
-      - -d
-      - '{{.Database}}'
-      host:
-      - -h
-      - '{{.Host}}'
-    defaults:
-      user: postgres
-      host: localhost
-  backup:
-    type: command
-    command:
-    - pg_dump
-    - -U
-    - '{{.User}}'
-    - -h
-    - '{{.Host}}'
-    args:
-      database:
-      - '{{.Database}}'
-    defaults:
-      user: postgres
-      host: localhost
-    extension: sql
-  restore:
-    type: command
-    pre_commands:
-      clean:
-      - - dropdb
-        - -U
-        - '{{.User}}'
-        - --if-exists
-        - '{{.Database}}'
-      - - createdb
-        - -U
-        - '{{.User}}'
-        - '{{.Database}}'
-    command:
-    - psql
-    - -U
-    - '{{.User}}'
-    args:
-      database:
-      - -d
-      - '{{.Database}}'
-    defaults:
-      user: postgres
+  ports:
+    - external: "${POSTGRES_PORT:-5432}"
+      internal: "5432"
+      protocol: tcp
+  environment:
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    POSTGRES_DB: ${POSTGRES_DB:-local_dev}
+    POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  restart: unless-stopped
+  memory_limit: 512m
+  command:
+    - postgres
+    - -c
+    - shared_preload_libraries=pg_stat_statements
+    - -c
+    - pg_stat_statements.track=all
+    - -c
+    - max_connections=200
+    - -c
+    - log_statement=all
+    - -c
+    - log_destination=stderr
+    - -c
+    - log_min_duration_statement=100ms
+  health_check:
+    test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+init_container:
+  enabled: true
+  image: postgres:15-alpine
+  scripts:
+    - type: shell
+      content: |
+        echo "Waiting for PostgreSQL to be ready..."
+        until pg_isready -h ${SERVICE_NAME} -p 5432 -U postgres; do
+          echo "PostgreSQL is unavailable - sleeping"
+          sleep 2
+        done
+        echo "PostgreSQL is ready!"
+    - type: sql
+      content: |
+        -- Create additional databases if specified
+        {{range .databases}}
+        CREATE DATABASE IF NOT EXISTS {{.name}};
+        {{end}}
+        
+        -- Create schemas if specified  
+        {{range .schemas}}
+        CREATE SCHEMA IF NOT EXISTS {{.name}};
+        {{end}}
+  environment:
+    PGPASSWORD: "${POSTGRES_PASSWORD:-password}"
+  wait_for_service: true
+  timeout: "60s"
+
+configuration_schema:
+  type: object
+  properties:
+    database:
+      type: string
+      default: "local_dev"
+      description: Default database name
+    password:
+      type: string
+      default: "password"
+      description: Database password
+    user:
+      type: string
+      default: "postgres"
+      description: Database user
+
 documentation:
   examples:
-  - psql -h localhost -U postgres -c "SELECT version();"
-  - spring.datasource.url=jdbc:postgresql://localhost:5432/my_app_dev
-  usage_notes: Ideal for structured data and transactional workloads. Use overrides
-    to set custom database/user.
+    - psql -h localhost -U postgres -c "SELECT version();"
+    - spring.datasource.url=jdbc:postgresql://localhost:5432/my_app_dev
+  usage_notes: Ideal for structured data and transactional workloads. Use overrides to set custom database/user.
   links:
-  - https://www.postgresql.org/docs/
-  - https://spring.io/projects/spring-data-jpa
+    - https://www.postgresql.org/docs/
+    - https://spring.io/projects/spring-data-jpa
   use_cases:
-  - Primary application database
-  - Transactional data storage
-  - Relational data modeling
-  - ACID compliance requirements
-  docs:
-  - name: PostgreSQL Documentation
-    url: https://www.postgresql.org/docs/
-  - name: Spring Data JPA
-    url: https://docs.spring.io/spring-data/jpa/docs/current/reference/html/
-  spring_config:
-    properties:
-    - spring.datasource.url=jdbc:postgresql://localhost:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
-    - spring.datasource.username=${POSTGRES_USER:-postgres}
-    - spring.datasource.password=${POSTGRES_PASSWORD:-password}
-    - spring.datasource.driver-class-name=org.postgresql.Driver
-    - spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
-    - spring.jpa.hibernate.ddl-auto=validate
-    - spring.jpa.show-sql=true
-    - spring.jpa.properties.hibernate.format_sql=true
-service_configuration:
-- name: docker_image
-  type: string
-  description: Docker image to use for PostgreSQL container
-  default: postgres:15-alpine
-  example: postgres:14-alpine
-  required: false
-- name: port
-  type: integer
-  description: Port number for PostgreSQL server
-  default: '5432'
-  example: '5433'
-  required: false
-- name: database
-  type: string
-  description: Default database name to create
-  default: local_dev
-  example: myapp_dev
-  required: false
-- name: username
-  type: string
-  description: PostgreSQL username
-  default: postgres
-  example: myuser
-  required: false
-- name: password
-  type: string
-  description: PostgreSQL password
-  default: password
-  example: mySecurePassword123
-  required: false
-- name: memory_limit
-  type: string
-  description: Memory limit for PostgreSQL container
-  default: 512m
-  example: 1g
-  required: false
-- name: shared_preload_libraries
-  type: string
-  description: PostgreSQL shared preload libraries
-  default: ''
-  example: pg_stat_statements
-  required: false
+    - Primary application database
+    - Transactional data storage
+    - Relational data modeling
+    - ACID compliance requirements

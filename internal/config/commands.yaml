@@ -18,100 +18,335 @@ metadata:
   cli_version: "0.1.0"
   description: "Development stack management tool"
 
-# Handler type definitions
-handlers:
+validation:
+  docker:
+    name: "Docker availability"
+    description: "Validate Docker installation and daemon status"
+    commands: ["up", "down", "validate", "doctor"]
+    required: true
+  config-syntax:
+    name: "Configuration syntax"
+    description: "Validate YAML/JSON configuration syntax"
+    commands: ["validate", "init"]
+    required: true
+  service-definitions:
+    name: "Service definitions"
+    description: "Validate service definitions and dependencies"
+    commands: ["up", "validate"]
+    required: true
+  file-permissions:
+    name: "File permissions"
+    description: "Check file and directory permissions"
+    commands: ["init", "validate"]
+    required: false
+
+# Centralized messages for consistency and i18n
+messages:
+  help:
+    app_description: "A powerful development stack management tool for streamlined local development automation"
+
+  process:
+    initializing: "Initializing Otto Stack"
+    starting: "Starting Otto Stack"
+    stopping: "Stopping Otto Stack"
+    generating_env: "Generating environment file..."
+    generating_compose: "Generating docker-compose.yml..."
+
+  dry_run:
+    showing_what_would_happen: "Dry run mode - showing what would happen without executing"
+    would_start_services: "Would start services: %s"
+    would_stop_services: "Would stop services: %s"
+    would_restart_services: "Would restart services: %s"
+    would_use_config: "Would use config: %s"
+    would_clean: "Would clean: %s"
+
+  non_interactive:
+    mode_requires_config: "Non-interactive mode requires explicit configuration - interactive setup required"
+    skipping_confirmation: "Skipping confirmation in non-interactive mode"
+
+  web_interfaces:
+    available: "Available"
+    not_available: "Not Available"
+    no_interfaces_found: "No web interfaces found for the specified services"
+
+  success:
+    init: "otto stack initialized successfully!"
+    start: "otto stack started successfully"
+    latest_version: "✅ You are running the latest version"
+    all_checks_passed: "All checks passed! Your %s is healthy."
+    config_valid: "✅ Configuration is valid"
+    created_file: "Created %s"
+    updated_gitignore: "Updated .gitignore with otto-stack entries"
+    version_compliance_enforced: "✅ Version compliance enforced"
+    no_updates_available: "✅ No updates available"
+    notification_config_updated: "✅ Notification config updated"
+    notifications_suppressed: "✅ Notifications suppressed for %v"
+    version_compliance_satisfied: "✅ Version compliance satisfied"
+    no_version_drift: "✅ No version drift detected"
+    generated_files: "Generated %s and %s"
+
+  validation:
+    failed: "validation failed: %w"
+    directory_failed: "directory validation failed: %w"
+    config_failed: "❌ Configuration validation failed with %d errors:"
+    warnings: "⚠️  %d warnings:"
+    required_tool_unavailable: "required tool '%s' is not available"
+    project_name_empty: "project name cannot be empty"
+    project_name_too_short: "project name must be at least 2 characters long"
+    project_name_too_long: "project name must be less than 50 characters"
+    project_name_invalid_chars: "project name can only contain letters, numbers, hyphens, and underscores"
+    project_name_invalid_start: "project name cannot start with a hyphen or underscore"
+    no_services_selected: "at least one service must be selected"
+    duplicate_service: "duplicate service '%s' found"
+    invalid_service: "invalid service '%s': %w"
+    conflicting_file_exists: "conflicting file '%s' already exists. Please remove or rename it before initializing"
+
+  conflicts:
+    header: "Service Conflicts"
+    not_implemented: "Conflict detection not yet implemented"
+
+  dependencies:
+    header: "Service Dependencies"
+    none_found: "No service dependencies found"
+
+  version:
+    checking_updates: "🔍 Checking for Updates"
+    current_info: "Current version: %s"
+    update_info: "To update:"
+    install_script: "  • Using install script: curl -fsSL https://raw.githubusercontent.com/%s/%s/main/scripts/install.sh | bash"
+    manual_download: "  • Manual download: https://github.com/%s/%s/releases/latest"
+    release_info: "Release: %s"
+    version_label: "Version: %s"
+    build_date: "Build Date: %s"
+    git_commit: "Git Commit: %s"
+    go_version: "Go Version: %s"
+    platform: "Platform: %s/%s"
+    update_available: "⚠️  Update available: %s → %s"
+    invalid_version: "invalid version format"
+
+  doctor:
+    some_issues: "Some issues found. Please address them above."
+    health_check_failed: "health check failed"
+    health_check_header: "🩺 %s Health Check"
+    checking_docker: "Checking Docker installation..."
+    docker_not_found: "Docker not found"
+    docker_install_help: "Install Docker: %s"
+    docker_daemon_not_running: "Docker daemon not running"
+    docker_start_help: "Start Docker daemon"
+    docker_available: "Docker is available and running"
+    checking_docker_compose: "Checking Docker Compose..."
+    docker_compose_not_found: "Docker Compose not found"
+    docker_compose_integrated: "Docker Compose is now integrated into Docker CLI"
+    docker_compose_update: "Update Docker to get 'docker compose' command"
+    docker_compose_available: "Docker Compose is available"
+    checking_project_init: "Checking project initialization..."
+    project_not_initialized: "Project not initialized"
+    run_init_help: "Run '%s' to initialize"
+    project_initialized: "Project is initialized"
+    checking_config: "Checking configuration validity..."
+    config_dir_missing: "Configuration directory missing"
+    docker_compose_missing: "Docker compose file missing"
+    config_incomplete: "Configuration is incomplete"
+    config_valid: "Configuration is valid"
+
+  services:
+    select: "Select %s services:"
+    no_description: "No description available"
+
+  init:
+    summary: "Initialization Summary:"
+    project_summary: "  Project: %s"
+    services_summary: "  Services: %s"
+    validation_summary: "  Validation: %s"
+    advanced_summary: "  Advanced: %s"
+    going_back: "Going back to service selection..."
+    cancelled: "Initialization cancelled."
+    next_steps: "Next steps:"
+    step_review_config: "1. Review configuration in %s/%s"
+    step_start_stack: "2. Start your stack: %s up"
+    step_check_status: "3. Check status: %s status"
+
+  warnings:
+    update_available: "🔔 Update available: %s → %s (%s)"
+    not_git_repository: "Not in a git repository. Consider running 'git init' first."
+    failed_gitignore: "Failed to update .gitignore: %v"
+    failed_readme: "Failed to create README: %v"
+
+  notifications:
+    config_header: "Notification Configuration:"
+    enabled: "  Enabled:         %t"
+    frequency: "  Frequency:       %s"
+    min_severity: "  Min Severity:    %s"
+    auto_check: "  Auto Check:      %t"
+    show_prerelease: "  Show Prerelease: %t"
+    last_check: "  Last Check:      %s"
+    suppressed_until: "  Suppressed Until: %s"
+
+  commands:
+    check: "check"
+    config: "config"
+    suppress: "suppress"
+
+  config_keys:
+    enabled: "enabled"
+    frequency: "frequency"
+    min_severity: "min-severity"
+    auto_check: "auto-check"
+    show_prerelease: "show-prerelease"
+
+  duration_units:
+    days: "d"
+    weeks: "w"
+    hours: "h"
+    minutes: "m"
+
   stack:
-    description: "Stack operational commands (lifecycle, monitoring, data)"
-    package: "stack"
-  project:
-    description: "Project management and utility commands"
-    package: "project"
+    connecting_to: "Connecting to %s"
+    removing_services: "Removing services: %v"
+    failed_resolve_services: "failed to resolve services: %w"
+    failed_calculate_hash: "failed to calculate config hash: %w"
+    failed_cleanup_services: "Failed to clean up removed services: %v"
+    failed_create_generator: "failed to create compose generator: %w"
+    failed_generate_compose: "failed to generate compose file: %w"
+    failed_create_directory: "failed to create otto-stack directory: %w"
+    failed_marshal_compose: "failed to marshal compose file: %w"
+    failed_write_compose: "failed to write compose file: %w"
+    failed_start_services: "failed to start services: %w"
+    failed_save_state: "Failed to save state: %v"
+    failed_load_config: "failed to load configuration: %w"
+    failed_create_docker_client: "failed to create Docker client: %w"
+    failed_stop_services: "failed to stop services: %w"
+    failed_load_base_config: "failed to load base config: %w"
+    failed_load_local_config: "failed to load local config: %w"
+    failed_parse_config: "failed to parse config: %w"
+    failed_get_service_status: "failed to get service status: %w"
+
+  drift:
+    project_path: "📁 %s"
+    required_version: "   Required: %s"
+    active_version: "   Active:   %s"
+    drift_type: "   Drift:    %s (%s)"
+    duration: "   Duration: %v"
+    action: "   Action:   %s"
+
+  completion:
+    requires_one_arg: "completion requires exactly one argument: %s"
+    unsupported_shell: "unsupported shell: %s"
+
+  utils:
+    service_not_found: "service %s not found"
+    circular_dependency: "circular dependency detected: %s"
+
+  base:
+    handler_not_found: "handler not found for command: %s"
+
+  cli:
+    failed_read_services: "failed to read services.yaml: %w"
+    failed_parse_services: "failed to parse services.yaml: %w"
+    unknown_service: "unknown service '%s'. Available services: %v"
+    failed_add_global_flags: "failed to add global flags: %w"
+
+  errors:
+    failed_load_services: "failed to load services: %w"
+    version_compliance_failed: "❌ Version compliance failed"
+    version_drift_detected: "⚠️  Version drift detected in %d projects:"
+    compliance_check_failed: "compliance check failed: %w"
+    enforcement_failed: "enforcement failed: %w"
+    drift_detection_failed: "drift detection failed: %w"
+    unknown_notify_command: "unknown notify command: %s"
+    update_check_failed: "update check failed: %w"
+    invalid_config_format: "invalid config format: %s (expected key=value)"
+    unknown_config_key: "unknown config key: %s"
+    failed_save_config: "failed to save config: %w"
+    suppress_duration_required: "suppress duration required (e.g., 1d, 1w, 1h)"
+    invalid_duration: "invalid duration: %w"
+    failed_suppress_notifications: "failed to suppress notifications: %w"
+    invalid_duration_format: "invalid duration format"
+    failed_check_updates: "failed to check for updates: %w"
+    requires_service_name: "service name is required"
+    requires_service_and_command: "service name and command are required"
+    not_initialized: "otto-stack not initialized. Run 'otto-stack init' first"
+
+  files:
+    gitignore_exists: ".gitignore already contains otto-stack entries"
 
 global:
   flags:
-    config:
-      short: "c"
-      type: "string"
-      description: "Config file (default: $HOME/.otto-stack.yaml)"
-      default: ""
-    verbose:
-      short: "v"
-      type: "bool"
-      description: "Enable verbose output"
-      default: false
-    help:
-      short: "h"
-      type: "bool"
-      description: "Show help information"
-      default: false
-    version:
-      type: "bool"
-      description: "Show version information"
-      default: false
-    quiet:
-      short: "q"
-      type: "bool"
-      description: "Suppress non-essential output (CI-friendly)"
-      default: false
-    json:
-      type: "bool"
-      description: "Output in JSON format (CI-friendly)"
-      default: false
-    no-color:
-      type: "bool"
-      description: "Disable colored output (CI-friendly)"
-      default: false
-    non-interactive:
-      type: "bool"
-      description: "Run in non-interactive mode (CI-friendly)"
-      default: false
+    # Always inherited by ALL commands
+    persistent:
+      verbose:
+        type: "bool"
+        description: "Enable verbose output"
+        default: false
+      help:
+        short: "h"
+        type: "bool"
+        description: "Show help information"
+        default: false
+      version:
+        type: "bool"
+        description: "Show version information"
+        default: false
+      quiet:
+        type: "bool"
+        description: "Suppress non-essential output (CI-friendly)"
+        default: false
+    
+    # Applied selectively based on command categories
+    conditional:
+      json:
+        type: "bool"
+        description: "Output in JSON format (CI-friendly)"
+        default: false
+        categories: ["development", "management"]
+      no-color:
+        type: "bool"
+        description: "Disable colored output (CI-friendly)"
+        default: false
+        categories: ["development", "management", "lifecycle"]
+      non-interactive:
+        type: "bool"
+        description: "Run in non-interactive mode (CI-friendly)"
+        default: false
+        categories: ["project", "lifecycle"]
+      dry-run:
+        type: "bool"
+        description: "Show what would be done without executing"
+        default: false
+        categories: ["lifecycle", "management"]
 
 categories:
+  project:
+    name: "Project Management"
+    description: "Initialize, validate, and manage project setup"
+    icon: "📁"
+    commands: ["init", "validate", "services", "deps", "conflicts"]
+
   lifecycle:
-    name: "Lifecycle Management"
-    description: "Commands for starting, stopping, and managing service lifecycles"
+    name: "Service Lifecycle"
+    description: "Start, stop, and manage running services"
     icon: "🚀"
-    commands: ["up", "down", "restart"]
+    commands: ["up", "down", "restart", "cleanup"]
 
-  monitoring:
-    name: "Monitoring & Observability"
-    description: "Commands for monitoring services and viewing logs"
-    icon: "📊"
-    commands: ["status", "logs", "doctor"]
-
-  data:
-    name: "Data Management"
-    description: "Commands for backup, restore, and data operations"
-    icon: "💾"
-    commands: ["exec", "connect"]
-
-  maintenance:
-    name: "Maintenance & Cleanup"
-    description: "Commands for cleanup, initialization, and maintenance"
-    icon: "🧹"
-    commands: ["cleanup", "init"]
-
-  development:
-    name: "Development Tools"
-    description: "Commands for development workflow and validation"
-    icon: "🛠️"
-    commands: ["validate", "services", "deps", "conflicts"]
+  operations:
+    name: "Operations & Data"
+    description: "Monitor, connect to, and manage service data"
+    icon: "⚙️"
+    commands: ["status", "logs", "doctor", "exec", "connect"]
 
   utility:
-    name: "Utility Commands"
-    description: "General utility and information commands"
-    icon: "ℹ️"
-    commands: ["version", "help"]
+    name: "Utility"
+    description: "Information and development tools"
+    icon: "🛠️"
+    commands: ["version", "help", "web-interfaces"]
 
 commands:
   up:
-    category: "lifecycle"
-    handler: "stack"
+    handler: "lifecycle"
     description: "Start development stack services"
     long_description: |
       Start one or more services in the development stack. Services are started
-      with their configured dependencies and health checks. Use profiles to start
-      predefined service combinations.
+      with their configured dependencies and health checks.
     usage: "up [service...]"
     aliases: ["start", "run"]
     examples:
@@ -119,27 +354,17 @@ commands:
         description: "Start all configured services"
       - command: "otto-stack up postgres redis"
         description: "Start specific services"
-      - command: "otto-stack up --profile web"
-        description: "Start services using the 'web' profile"
       - command: "otto-stack up --detach --build"
         description: "Build images and start services in background"
     flags:
       detach:
-        short: "d"
         type: "bool"
         description: "Run services in background (detached mode)"
         default: false
       build:
-        short: "b"
         type: "bool"
         description: "Build images before starting services"
         default: false
-      profile:
-        short: "p"
-        type: "string"
-        description: "Use a specific service profile"
-        default: ""
-        completion: "profiles"
       force-recreate:
         type: "bool"
         description: "Recreate containers even if config hasn't changed"
@@ -149,7 +374,6 @@ commands:
         description: "Don't start linked services"
         default: false
       timeout:
-        short: "t"
         type: "string"
         description: "Timeout for service startup (e.g., 30s, 2m)"
         default: "30s"
@@ -157,19 +381,17 @@ commands:
         type: "bool"
         description: "Show dependency resolution tree before starting"
         default: false
-      check-conflicts:
+      skip-conflicts:
         type: "bool"
-        description: "Check for service conflicts before starting"
+        description: "Skip conflict detection (faster startup)"
         default: false
     related_commands: ["down", "restart", "status"]
     tips:
-      - "Use --profile to quickly start predefined service combinations"
       - "Add --build if you've made changes to Dockerfiles"
       - "Use --detach to free up your terminal while services run"
 
   down:
-    category: "lifecycle"
-    handler: "stack"
+    handler: "lifecycle"
     description: "Stop development stack services"
     long_description: |
       Stop one or more services in the development stack. By default, containers
@@ -186,8 +408,11 @@ commands:
       - command: "otto-stack down --timeout 5"
         description: "Stop services with custom timeout"
     flags:
+      remove:
+        type: "bool"
+        description: "Remove containers (default: false, just stops them)"
+        default: false
       volumes:
-        short: "v"
         type: "bool"
         description: "Remove named volumes and anonymous volumes"
         default: false
@@ -196,7 +421,6 @@ commands:
         description: "Remove containers for services not in compose file"
         default: false
       timeout:
-        short: "t"
         type: "int"
         description: "Shutdown timeout in seconds"
         default: 10
@@ -211,8 +435,7 @@ commands:
       - "Add --remove-orphans to clean up unused containers"
 
   restart:
-    category: "lifecycle"
-    handler: "stack"
+    handler: "lifecycle"
     description: "Restart development stack services"
     long_description: |
       Restart one or more services. This is equivalent to running down followed
@@ -227,7 +450,6 @@ commands:
         description: "Restart with custom timeout"
     flags:
       timeout:
-        short: "t"
         type: "int"
         description: "Restart timeout in seconds"
         default: 10
@@ -238,8 +460,7 @@ commands:
     related_commands: ["up", "down", "status"]
 
   status:
-    category: "monitoring"
-    handler: "stack"
+    handler: "operations"
     description: "Show status of development stack services"
     long_description: |
       Display comprehensive status information for services including running
@@ -260,18 +481,15 @@ commands:
         description: "Show only running services"
     flags:
       format:
-        short: "f"
         type: "string"
         description: "Output format (table|json|yaml)"
         default: "table"
         options: ["table", "json", "yaml"]
       watch:
-        short: "w"
         type: "bool"
         description: "Watch for status changes"
         default: false
       quiet:
-        short: "q"
         type: "bool"
         description: "Only show service names and basic status"
         default: false
@@ -290,8 +508,7 @@ commands:
       - "Use --filter to focus on specific service states"
 
   logs:
-    category: "monitoring"
-    handler: "stack"
+    handler: "operations"
     description: "View logs from services"
     long_description: |
       View and follow logs from one or more services. Supports filtering,
@@ -309,12 +526,10 @@ commands:
         description: "Show last 100 lines from the past hour"
     flags:
       follow:
-        short: "f"
         type: "bool"
         description: "Follow log output in real-time"
         default: false
       tail:
-        short: "t"
         type: "string"
         description: "Number of lines to show from end of logs"
         default: "all"
@@ -341,7 +556,6 @@ commands:
       - "Use --timestamps to correlate events across services"
 
   doctor:
-    category: "monitoring"
     handler: "project"
     description: "Diagnose and troubleshoot stack health"
     long_description: |
@@ -361,13 +575,7 @@ commands:
         type: "bool"
         description: "Attempt to automatically fix issues"
         default: false
-      verbose:
-        short: "v"
-        type: "bool"
-        description: "Show detailed diagnostic information"
-        default: false
       format:
-        short: "f"
         type: "string"
         description: "Output format (table|json)"
         default: "table"
@@ -378,8 +586,7 @@ commands:
       - "Use --fix to attempt automatic resolution of common issues"
 
   exec:
-    category: "data"
-    handler: "stack"
+    handler: "operations"
     description: "Execute commands in running service containers"
     long_description: |
       Execute commands inside running service containers. Useful for database
@@ -400,7 +607,6 @@ commands:
         description: "Username to execute command as"
         default: ""
       workdir:
-        short: "w"
         type: "string"
         description: "Working directory for command"
         default: ""
@@ -410,17 +616,14 @@ commands:
         description: "Keep STDIN open (interactive mode)"
         default: true
       tty:
-        short: "t"
         type: "bool"
         description: "Allocate a pseudo-TTY"
         default: true
       detach:
-        short: "d"
         type: "bool"
         description: "Run command in background"
         default: false
       env:
-        short: "e"
         type: "string"
         description: "Set environment variables (comma-separated key=value pairs)"
         default: ""
@@ -430,8 +633,7 @@ commands:
       - "Combine with --user to run as specific user"
 
   connect:
-    category: "data"
-    handler: "stack"
+    handler: "operations"
     description: "Quick connect to service databases and interfaces"
     long_description: |
       Quickly connect to service databases and management interfaces using
@@ -447,7 +649,6 @@ commands:
         description: "Connect to MySQL database"
     flags:
       database:
-        short: "d"
         type: "string"
         description: "Database name to connect to"
         default: ""
@@ -476,8 +677,7 @@ commands:
       - "Use --read-only for safe data exploration"
 
   cleanup:
-    category: "maintenance"
-    handler: "stack"
+    handler: "lifecycle"
     description: "Clean up unused resources and data"
     long_description: |
       Clean up unused Docker resources, temporary files, and orphaned data
@@ -498,17 +698,14 @@ commands:
         description: "Clean up all resources (containers, volumes, images)"
         default: false
       volumes:
-        short: "v"
         type: "bool"
         description: "Remove unused volumes"
         default: false
       images:
-        short: "i"
         type: "bool"
         description: "Remove unused images"
         default: false
       networks:
-        short: "n"
         type: "bool"
         description: "Remove unused networks"
         default: false
@@ -517,17 +714,17 @@ commands:
         type: "bool"
         description: "Don't prompt for confirmation"
         default: false
-      dry-run:
-        type: "bool"
-        description: "Show what would be cleaned without doing it"
-        default: false
+      project:
+        short: "p"
+        type: "string"
+        description: "Clean specific project (if not specified, cleans current project)"
+        default: ""
     related_commands: ["down", "doctor"]
     tips:
       - "Use --dry-run first to see what will be removed"
       - "Be careful with --volumes as it removes all data"
 
   init:
-    category: "maintenance"
     handler: "project"
     description: "Initialize a new otto-stack project interactively"
     long_description: |
@@ -539,8 +736,8 @@ commands:
     examples:
       - command: "otto-stack init"
         description: "Interactive project initialization (recommended)"
-      - command: "otto-stack init --name myproject --minimal"
-        description: "Non-interactive minimal setup"
+      - command: "otto-stack init --project-name myproject --services postgres,redis"
+        description: "Non-interactive setup with specific project name and services"
       - command: "otto-stack init --force"
         description: "Overwrite existing configuration"
     flags:
@@ -549,10 +746,39 @@ commands:
         type: "bool"
         description: "Overwrite existing files"
         default: false
+      project-name:
+        type: "string"
+        description: "Project name (defaults to current directory name)"
+        default: ""
+      services:
+        type: "string"
+        description: "Comma-separated list of services to include (required for non-interactive mode)"
+        default: ""
     related_commands: ["validate"]
 
+  web-interfaces:
+    handler: "utility"
+    description: "Show web interfaces for running services"
+    long_description: |
+      Display web interfaces (dashboards, UIs) for running services.
+      Shows URLs and availability status for easy access to service
+      management interfaces.
+    usage: "web-interfaces [service-name] [flags]"
+    examples:
+      - command: "otto-stack web-interfaces"
+        description: "Show all web interfaces for running services"
+      - command: "otto-stack web-interfaces localstack"
+        description: "Show interfaces for specific service"
+      - command: "otto-stack web-interfaces --all"
+        description: "Show interfaces for all enabled services"
+    flags:
+      all:
+        type: "bool"
+        description: "Show interfaces for all enabled services, even if not running"
+        default: false
+    related_commands: ["status", "up"]
+
   services:
-    category: "development"
     handler: "project"
     description: "List available services by category"
     long_description: |
@@ -571,13 +797,11 @@ commands:
         description: "List services in table format"
     flags:
       category:
-        short: "c"
         type: "string"
         description: "Show services in specific category"
         default: ""
         options: ["database", "cache", "messaging", "observability", "cloud"]
       format:
-        short: "f"
         type: "string"
         description: "Output format (group|table|json|yaml)"
         default: "group"
@@ -585,7 +809,6 @@ commands:
     related_commands: ["deps", "conflicts", "init"]
 
   deps:
-    category: "development"
     handler: "project"
     description: "Show dependency tree for a service"
     long_description: |
@@ -601,7 +824,6 @@ commands:
     related_commands: ["services", "conflicts", "up"]
 
   conflicts:
-    category: "development"
     handler: "project"
     description: "Check for conflicts between services"
     long_description: |
@@ -617,7 +839,6 @@ commands:
     related_commands: ["services", "deps", "up"]
 
   validate:
-    category: "development"
     handler: "project"
     description: "Validate configurations and manifests"
     long_description: |
@@ -634,12 +855,10 @@ commands:
         description: "Use strict validation rules"
     flags:
       strict:
-        short: "s"
         type: "bool"
         description: "Use strict validation rules"
         default: false
       format:
-        short: "f"
         type: "string"
         description: "Output format (table|json)"
         default: "table"
@@ -651,7 +870,6 @@ commands:
     related_commands: ["doctor"]
 
   version:
-    category: "utility"
     handler: "project"
     description: "Show version information"
     long_description: |
@@ -679,81 +897,6 @@ commands:
       - command: "otto-stack version --check-updates"
         description: "Check for available updates"
 
-  help:
-    category: "utility"
-    handler: "project"
-    description: "Show help information"
-    long_description: |
-      Display help information for otto-stack commands and usage.
-    usage: "help [command]"
-    examples:
-      - command: "otto-stack help"
-        description: "Show general help"
-      - command: "otto-stack help up"
-        description: "Show help for up command"
-
-# Workflow definitions for common task sequences
-workflows:
-  quick-start:
-    name: "Quick Start"
-    description: "Get started with a basic development stack"
-    steps:
-      - command: "init"
-        description: "Initialize project"
-      - command: "up postgres redis"
-        description: "Start database services"
-      - command: "status"
-        description: "Check service status"
-
-  full-stack:
-    name: "Full Stack Development"
-    description: "Complete development environment setup"
-    steps:
-      - command: "init web"
-        description: "Initialize web project"
-      - command: "up --profile web"
-        description: "Start web development services"
-      - command: "status"
-        description: "Check service status"
-
-  cleanup-reset:
-    name: "Clean Reset"
-    description: "Complete cleanup and fresh start"
-    steps:
-      - command: "down --volumes"
-        description: "Stop services and remove data"
-      - command: "cleanup --all"
-        description: "Clean up all resources"
-      - command: "up"
-        description: "Start fresh services"
-
-# Service profiles for common combinations
-profiles:
-  web:
-    name: "Web Development"
-    description: "Services for web application development"
-    services: ["postgres", "redis", "jaeger"]
-
-  api:
-    name: "API Development"
-    description: "Services for API development and testing"
-    services: ["postgres", "redis", "prometheus"]
-
-  microservices:
-    name: "Microservices"
-    description: "Full microservices development stack"
-    services: ["postgres", "redis", "kafka", "jaeger", "prometheus"]
-
-  data:
-    name: "Data Engineering"
-    description: "Services for data processing and analytics"
-    services: ["postgres", "redis", "kafka", "localstack"]
-
-  minimal:
-    name: "Minimal Stack"
-    description: "Minimal services for basic development"
-    services: ["postgres"]
-
 # Help and documentation sections
 help:
   getting_started: |
@@ -777,7 +920,7 @@ help:
     ## Common Tasks
 
     **Start services for web development:**
-    otto-stack up --profile web
+    otto-stack up postgres redis
 
     **Connect to database:**
     otto-stack connect postgres
@@ -806,3 +949,28 @@ help:
     **Performance issues:**
     - Check: otto-stack status
     - Review logs: otto-stack logs --follow
+
+# Centralized icons for consistent display
+icons:
+  state:
+    running: "🟢"
+    stopped: "🔴"
+    created: "🟡"
+    starting: "🟡"
+    paused: "⏸️"
+    default: "⚪"
+  health:
+    healthy: "✅"
+    unhealthy: "❌"
+    starting: "🟡"
+    none: "❓"
+    default: "❓"
+  category:
+    lifecycle: "🚀"
+    monitoring: "📊"
+    data: "💾"
+    maintenance: "🧹"
+    development: "🛠️"
+    utility: "ℹ️"
+    web: "🌐"
+    default: "📦"

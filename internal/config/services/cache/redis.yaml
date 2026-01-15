@@ -1,152 +1,78 @@
 name: redis
 description: Redis in-memory data store for caching and session storage
-category: cache
-connection:
-  client: redis-cli
-  default_port: 6379
-  host_flag: "-h"
-  port_flag: "-p"
-  database_flag: "-n"
+service_type: container
+
 environment:
-  REDIS_HOST: localhost
-  REDIS_PORT: ${REDIS_PORT:-6379}
+  REDIS_HOST: ${REDIS_HOST:-localhost}
   REDIS_PASSWORD: ${REDIS_PASSWORD:-password}
-  REDIS_URL: redis://:${REDIS_PASSWORD:-password}@localhost:${REDIS_PORT:-6379}
-dependencies:
-  required: []
-  soft: []
-  conflicts: []
-  provides:
-  - cache
-docker:
-  restart: unless-stopped
-  command:
-  - redis-server
-  - --requirepass
-  - ${REDIS_PASSWORD:-password}
-  - --appendonly
-  - 'yes'
-  networks:
-  - otto-stack
-  memory_limit: 256m
-  environment:
-  - REDIS_HOST=localhost
-  - REDIS_PORT=${REDIS_PORT:-6379}
-  - REDIS_PASSWORD=${REDIS_PASSWORD:-password}
-  - REDIS_URL=redis://:${REDIS_PASSWORD:-password}@localhost:${REDIS_PORT:-6379}
-  health_check:
-    test:
-    - CMD
-    - redis-cli
-    - -a
-    - ${REDIS_PASSWORD:-password}
-    - ping
-    interval: 10s
-    timeout: 5s
-    retries: 5
-    start_period: 30s
-  volumes:
-  - name: redis-data
-    mount: /data
-    description: Redis persistence data
+  REDIS_PORT: ${REDIS_PORT:-6379}
+  REDIS_URL: redis://:${REDIS_PASSWORD:-password}@${REDIS_HOST:-localhost}:${REDIS_PORT:-6379}
+
+container:
   image: redis:7-alpine
-management:
-  operations:
+  ports:
+    - external: "${REDIS_PORT:-6379}"
+      internal: "6379"
+      protocol: tcp
+  restart: unless-stopped
+  memory_limit: 256m
+  command:
+    - redis-server
+    - --requirepass
+    - ${REDIS_PASSWORD:-password}
+    - --appendonly
+    - "yes"
+  health_check:
+    test: ["CMD", "redis-cli", "ping"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+service:
+  connection:
+    type: cli
+    default_port: 6379
+    client: redis-cli
+    host_flag: -h
+    port_flag: -p
+    database_flag: -n
+  dependencies:
+    provides:
+      - cache
+  management:
     connect:
-      command:
-      - redis-cli
+      type: command
+      command: ["redis-cli"]
       args:
-        host:
-        - -h
-        - '{{.Host}}'
-        port:
-        - -p
-        - '{{.Port}}'
-        password:
-        - -a
-        - '{{.Password}}'
-      defaults:
-        host: localhost
-        port: '6379'
-    backup:
-      type: custom
-      commands:
-      - - redis-cli
-        - BGSAVE
-      - - cp
-        - /data/dump.rdb
-        - /data/backup_{{.Timestamp}}.rdb
-      extension: rdb
-    restore:
-      type: custom
-      pre_commands:
-      - - rm
-        - -f
-        - /data/dump.rdb
-      commands:
-      - - cp
-        - '{{.BackupFile}}'
-        - /data/dump.rdb
-      requires_restart: true
+        default: ["-h", "localhost", "-p", "6379"]
+
+configuration_schema:
+  type: object
+  properties:
+    password:
+      type: string
+      default: "password"
+      description: Redis password
+    max_memory:
+      type: string
+      default: "256m"
+      description: Maximum memory limit
+    databases:
+      type: integer
+      default: 16
+      description: Number of databases
+
 documentation:
   examples:
-  - redis-cli -h localhost -p 6379 ping
-  - spring.data.redis.host=localhost
-  usage_notes: Use Redis for caching, session storage, and pub/sub. Set a password
-    for production-like security.
+    - redis-cli -h localhost -p 6379 ping
+    - spring.data.redis.host=localhost
+  usage_notes: Use Redis for caching, session storage, and pub/sub. Set a password for production-like security.
   links:
-  - https://redis.io/documentation
-  - https://spring.io/projects/spring-data-redis
+    - https://redis.io/documentation
+    - https://spring.io/projects/spring-data-redis
   use_cases:
-  - Session storage
-  - Application caching
-  - Rate limiting
-  - Pub/Sub messaging
-  - Temporary data storage
-  docs:
-  - name: Redis Documentation
-    url: https://redis.io/documentation
-  - name: Spring Data Redis
-    url: https://docs.spring.io/spring-data/redis/docs/current/reference/html/
-  spring_config:
-    properties:
-    - spring.data.redis.host=${REDIS_HOST}
-    - spring.data.redis.port=${REDIS_PORT}
-    - spring.data.redis.password=${REDIS_PASSWORD}
-service_configuration:
-- name: docker_image
-  type: string
-  description: Docker image to use for Redis container
-  default: redis:7-alpine
-  example: redis:6-alpine
-  required: false
-- name: port
-  type: integer
-  description: Port number for Redis server
-  default: '6379'
-  example: '6380'
-  required: false
-- name: password
-  type: string
-  description: Password for Redis authentication
-  default: password
-  example: mySecurePassword123
-  required: false
-- name: memory_limit
-  type: string
-  description: Memory limit for Redis container
-  default: 256m
-  example: 512m
-  required: false
-- name: persistence
-  type: boolean
-  description: Enable Redis persistence (AOF)
-  default: 'true'
-  example: 'false'
-  required: false
-- name: config
-  type: string
-  description: Custom Redis configuration file path
-  default: ''
-  example: /etc/redis/redis.conf
-  required: false
+    - Session storage
+    - Application caching
+    - Rate limiting
+    - Pub/Sub messaging
+    - Temporary data storage

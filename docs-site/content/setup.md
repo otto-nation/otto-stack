@@ -1,561 +1,153 @@
 ---
-title: "Setup & Installation"
-description: "Complete setup guide for otto-stack with Docker, dependencies, and initial configuration"
-lead: "Get otto-stack up and running on your system with this comprehensive installation guide"
+title: "Setup"
+description: "Installation guide for otto-stack"
+lead: "Get otto-stack installed and running on your system"
 date: "2025-10-01"
-lastmod: "2025-10-11"
+lastmod: "2025-11-10"
 draft: false
 weight: 10
 toc: true
 ---
 
-# Setup & Installation Guide (otto-stack)
+# Setup & Installation
 
-> **Quick Checklist**
->
-> - Docker installed and running
-> - Sufficient RAM, disk, and CPU
-> - Framework copied or linked to your project
-> - Initial configuration created and edited
-> - Setup script run and services verified
-> - See troubleshooting below for common issues
+## 📦 Installation
 
-This guide covers everything you need to get **otto-stack** up and running on your system.
-
-> For a quick start, main configuration example, and command reference, see the [README](../README.md).
-> For troubleshooting and advanced help, see [Troubleshooting Guide](troubleshooting.md).
-
-## 📦 otto-stack CLI Installation
-
-Choose your preferred installation method:
-
-### Method 1: Download Binary (Recommended)
-
-**macOS and Linux:**
+### Quick Install (Recommended)
 
 ```bash
-# Download the latest release for your platform
+# Install latest version
+curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts/install.sh | bash
+```
+
+### Custom Installation
+
+```bash
+# Install to custom directory
+curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts/install.sh | bash -s -- --dir ~/.local/bin
+```
+
+### Manual Installation
+
+**macOS/Linux:**
+
+```bash
+# Download the latest release
 curl -L -o otto-stack "https://github.com/otto-nation/otto-stack/releases/latest/download/otto-stack-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
 chmod +x otto-stack
 sudo mv otto-stack /usr/local/bin/
 ```
 
-**Windows (PowerShell):**
+**Windows:**
+Download from [releases page](https://github.com/otto-nation/otto-stack/releases/latest)
 
-```powershell
-# Download and install otto-stack for Windows
-Invoke-WebRequest -Uri "https://github.com/otto-nation/otto-stack/releases/latest/download/otto-stack-windows-amd64.exe" -OutFile "otto-stack.exe"
-# Move to a directory in your PATH
-```
+### Package Managers
 
-### Method 2: Build from Source
+**Homebrew (macOS):**
 
 ```bash
-# Clone the repository
-git clone https://github.com/otto-nation/otto-stack.git
-cd otto-stack
-
-# Build using Task (recommended)
-task build
-sudo cp build/otto-stack /usr/local/bin/
-
-# Or build with Go directly
-go build -o otto-stack ./cmd/otto-stack
-sudo mv otto-stack /usr/local/bin/
+# Coming soon
+brew install otto-nation/tap/otto-stack
 ```
 
-### Method 3: Go Install
+## 🐳 Prerequisites
+
+### Docker
+
+**macOS:**
 
 ```bash
-# Install directly with Go (requires Go 1.21+)
-go install github.com/otto-nation/otto-stack/cmd/otto-stack@latest
+# Option 1: Docker Desktop
+# Download from https://docker.com
+
+# Option 2: Colima (lightweight)
+brew install colima docker
+colima start
 ```
 
-### Verify Installation
+**Linux:**
 
 ```bash
-# Check version and basic functionality
-otto-stack --version
-otto-stack --help
-
-# Run system health check
-otto-stack doctor
+# Install Docker Engine
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
 ```
 
-### CLI Requirements
+**Windows:**
 
-- **Go**: 1.21+ (only for building from source)
-- **Docker**: Required for most otto-stack operations
-- **Git**: For cloning repositories and version management
-
-## 📋 Prerequisites
-
-Before using this framework, you need Docker installed and running. Here are the recommended setups for different environments.
+- Install [Docker Desktop](https://docker.com)
+- Enable WSL2 integration
 
 ### System Requirements
 
-- **Docker**: 20.0+ with Docker Compose 2.0+
-- **RAM**: 8GB+ recommended (6GB minimum)
-- **Disk**: 50GB+ available space
-- **CPU**: 4+ cores recommended for multiple services
+- **RAM**: 4GB minimum, 8GB recommended
+- **Disk**: 2GB free space
+- **CPU**: Any modern processor
 
-## 🐳 Docker Setup
-
-### macOS Setup with Colima (Recommended)
-
-[Colima](https://github.com/abiosoft/colima) is a lightweight Docker Desktop alternative for macOS that uses fewer resources and provides better performance.
+## 🚀 Quick Start
 
 ```bash
-# Install Colima and Docker CLI via Homebrew
-brew install colima docker
+# Verify installation
+otto-stack version
 
-# Start Colima with recommended settings for development
-colima start --cpu 4 --memory 8 --disk 100
+# Initialize new project
+otto-stack init
 
-# Verify Docker is working
-docker --version
-docker compose version
-```
+# Start development environment
+otto-stack up
 
-**Colima Configuration for Framework:**
-
-```bash
-# For better performance with multiple services
-colima start --cpu 4 --memory 8 --disk 100 --vm-type=vz --mount-type=virtiofs
-
-# Enable Kubernetes (optional, for advanced use cases)
-colima start --kubernetes --cpu 4 --memory 8
-```
-
-**Managing Colima:**
-
-```bash
 # Check status
-colima status
-
-# Stop Colima
-colima stop
-
-# Reset if needed
-colima delete
-colima start --cpu 4 --memory 8
+otto-stack status
 ```
 
-### Docker Desktop (Alternative)
+## ⚙️ Configuration
 
-If you prefer Docker Desktop:
-
-```bash
-# Install via Homebrew
-brew install --cask docker
-
-# Or download from https://www.docker.com/products/docker-desktop
-```
-
-**Docker Desktop Configuration:**
-
-- Go to Settings > Resources
-- Set Memory to 8GB+
-- Set CPU to 4+ cores
-- Ensure sufficient disk space
-
-### Linux Setup
-
-**Ubuntu/Debian:**
-
-```bash
-# Update package index
-sudo apt-get update
-
-# Install Docker
-sudo apt-get install docker.io
-
-# Start Docker service
-sudo systemctl start docker
-sudo systemctl enable docker
-
-# Add user to docker group (requires logout/login)
-sudo usermod -aG docker $USER
-```
-
-**CentOS/RHEL/Fedora:**
-
-```bash
-# Install Docker
-sudo dnf install docker
-
-# Start Docker service
-sudo systemctl start docker
-sudo systemctl enable docker
-
-# Add user to docker group
-sudo usermod -aG docker $USER
-```
-
-**Verify Installation:**
-
-```bash
-# Test Docker installation
-docker --version
-docker compose version
-docker run hello-world
-```
-
-## 🧪 IntelliJ IDEA Integration
-
-### Docker Plugin Setup
-
-1. Open IntelliJ IDEA
-2. Go to Settings > Build, Execution, Deployment > Docker
-3. Add Docker configuration:
-   - **Name**: Local Docker
-   - **Connect to Docker daemon with**: Docker for Mac/Colima
-   - **Docker socket**: `unix:///var/run/docker.sock` (default)
-
-### Testcontainers Configuration
-
-Add to your `application-test.yml`:
+Otto-stack creates `otto-stack-config.yaml` during initialization:
 
 ```yaml
-# Use framework services for integration tests
-spring:
-  datasource:
-    url: jdbc:tc:postgresql:15:///test_db
-    driver-class-name: org.testcontainers.jdbc.ContainerDatabaseDriver
+# Basic configuration
+services:
+  - postgres
+  - redis
 
-  # Or connect to running framework services
-  datasource:
-    url: jdbc:postgresql://localhost:5432/local_dev
-    username: postgres
+service_configuration:
+  postgres:
+    database: my_app_dev
     password: password
-
-  data:
-    redis:
-      host: localhost
-      port: 6379
-      password: password
-
-testcontainers:
-  # Reuse containers across test runs
-  reuse:
-    enable: true
+  redis:
+    password: password
 ```
 
-### Test Dependencies
-
-Add to your `build.gradle`:
-
-```gradle
-dependencies {
-    // Framework-compatible test dependencies
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.testcontainers:junit-jupiter'
-    testImplementation 'org.testcontainers:postgresql'
-    testImplementation 'org.testcontainers:kafka'
-    testImplementation 'org.testcontainers:localstack'
-
-    // Use framework services instead of embedded
-    testImplementation 'redis.clients:jedis'
-    testRuntimeOnly 'org.postgresql:postgresql'
-}
-```
-
-### IDE Test Configuration
-
-**IntelliJ Run Configuration VM Options:**
+## 🔧 Verification
 
 ```bash
--Dspring.profiles.active=test
--Dtestcontainers.reuse.enable=true
--Dspring.datasource.url=jdbc:postgresql://localhost:5432/local_dev
--Dspring.data.redis.host=localhost
--Dspring.data.redis.port=6379
-```
-
-### Integration Test Strategies
-
-**Option 1: Use Framework Services (Recommended)**
-
-```java
-@SpringBootTest
-@TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:postgresql://localhost:5432/local_dev",
-    "spring.data.redis.host=localhost"
-})
-class IntegrationTest {
-    // Tests run against framework services
-    // Start framework: otto-stack up
-}
-```
-
-**Option 2: Testcontainers with Framework Images**
-
-```java
-@SpringBootTest
-@Testcontainers
-class ContainerizedIntegrationTest {
-
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15-alpine")
-            .withDatabaseName("test_db")
-            .withUsername("test_user")
-            .withPassword("test_password");
-
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-    }
-}
-```
-
-### Recommended IntelliJ Plugins
-
-Install these plugins for better Docker/framework integration:
-
-- **Docker**: Built-in Docker support
-- **Database Tools and SQL**: Connect to framework databases
-- **Redis**: Redis client integration
-- **Kafka**: Kafka topic browsing
-- **AWS Toolkit**: LocalStack integration
-
-## 🏗️ Framework Installation
-
-### Option 1: Copy Framework Directory
-
-```bash
-# Copy the entire framework to your project
-cp -r /path/to/otto-stack-framework /path/to/your/project/
-
-# Make scripts executable
-chmod +x /path/to/your/project/otto-stack-framework/scripts/*.sh
-```
-
-### Option 2: Git Submodule (Recommended)
-
-```bash
-# Add framework as a git submodule
-cd /path/to/your/project
-git submodule add <framework-repo-url> otto-stack-framework
-
-# Initialize and update submodule
-git submodule update --init --recursive
-```
-
-### Option 3: Symbolic Link
-
-```bash
-# Create symbolic link to shared framework
-ln -s /shared/path/to/otto-stack-framework /path/to/your/project/otto-stack-framework
-```
-
-## 🚀 Initial Setup
-
-See the [README](../README.md) for the main configuration example and command reference.
-
-### 1. Initialize Configuration
-
-```bash
-otto-stack init
-```
-
-This creates a sample `otto-stack-config.yaml` file in your project root.
-
-### 2. Edit Configuration
-
-Edit `otto-stack-config.yaml` to customize your stack.
-See the [Configuration Guide](configuration.md) for all options.
-
-### 3. Run Setup
-
-```bash
-otto-stack up
-```
-
-This will:
-
-- Validate your configuration
-- Pull required Docker images
-- Generate Docker Compose and environment files
-- Start services
-
-### 4. Verify Installation
-
-```bash
-otto-stack status             # Check service status and connection information
-docker ps                      # See running containers
-```
-
-## 🔄 Multi-Repository Usage
-
-The framework automatically detects existing instances from other repositories and provides options to:
-
-1. **Clean up existing instances** and start fresh with your configuration
-2. **Connect to existing instances** (reuse running services from another repo)
-3. **Cancel setup** to avoid conflicts
-
-### Workflow Example
-
-**First Repository:**
-
-```bash
-cd /path/to/repo1
-otto-stack up
-# Services start on standard ports
-```
-
-**Second Repository (Conflict Detection):**
-
-```bash
-cd /path/to/repo2
-otto-stack up
-
-# Framework detects existing instances and may reuse them automatically
-# Use otto-stack cleanup to remove existing instances if needed
-```
-
-### Automatic Options
-
-```bash
-# Cleanup existing and start fresh
-otto-stack cleanup
-otto-stack up
-
-# Check system health before starting
+# Check system health
 otto-stack doctor
-```
 
-## 🐛 Common Setup Issues
-
-### Docker Not Running
-
-```bash
-# Check Docker status
+# Test Docker connectivity
 docker info
 
-# Start Colima (macOS)
-colima start
-
-# Start Docker service (Linux)
-sudo systemctl start docker
+# Verify services start
+otto-stack up
+otto-stack status
 ```
 
-### Permission Denied (Linux)
+## 🧹 Uninstallation
 
 ```bash
-# Add user to docker group
-sudo usermod -aG docker $USER
-# Logout and login again
-
-# Or run with sudo (temporary)
-sudo otto-stack up
+# Remove otto-stack from your system
+curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts/uninstall.sh | bash
 ```
 
-### Port Conflicts
+## 📚 Next Steps
 
-```bash
-# Find what's using the port
-lsof -i :6379
+- **[Usage Guide](usage.md)** - Learn basic commands and workflows
+- **[Services Guide](services.md)** - Available services and configuration
+- **[Configuration](configuration.md)** - Detailed configuration options
+- **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
 
-# Kill the process
-kill -9 PID
+## 🆘 Need Help?
 
-# Or let framework handle it
-otto-stack cleanup
-```
-
-### Memory Issues
-
-```bash
-# Check available memory
-free -h  # Linux
-vm_stat  # macOS
-
-# Increase Docker memory limit
-# Docker Desktop: Settings > Resources > Memory
-# Colima: colima start --memory 8
-```
-
-### Colima Issues (macOS)
-
-```bash
-# Reset Colima
-colima stop
-colima delete
-colima start --cpu 4 --memory 8
-
-# Check Colima status
-colima status
-colima list
-```
-
-## ✅ Verification Checklist
-
-After setup, verify everything works:
-
-- [ ] Docker is running: `docker info`
-- [ ] Framework services start: `otto-stack status`
-- [ ] Configuration is valid: No errors during setup
-- [ ] Generated files exist: `docker-compose.generated.yml`, `.env.generated`
-- [ ] Services are accessible: Check ports with `otto-stack status`
-- [ ] IDE integration works: Database connections, Redis access
-- [ ] Application connects: Spring Boot can connect to services
-
-## 🎯 What's Next?
-
-Now that you have otto-stack installed and configured:
-
-1. **[Learn basic usage patterns](usage.md)** - Common workflows and daily commands
-2. **[Explore available services](services.md)** - Add databases, monitoring, and more
-3. **[Configure your stack](configuration.md)** - Customize settings for your needs
-4. **[Integration examples](integration.md)** - Connect your applications
-
-**Quick start:** Run `otto-stack init` to create your first project, then `otto-stack up` to start services.
-
-**Need help?** Check the [Troubleshooting Guide](troubleshooting.md) or run `otto-stack doctor`.
-
-## 🪝 Git Hooks Setup (Optional)
-
-For contributors and team development, set up pre-commit and pre-push hooks to ensure code quality:
-
-```bash
-# Install Git hooks for automatic checks
-task setup-hooks
-```
-
-This installs hooks that automatically run:
-
-- **Pre-commit**: Code formatting, linting, module tidying
-- **Pre-push**: All pre-commit checks + tests + build
-
-### Manual Usage
-
-You can also run these checks manually:
-
-```bash
-# Run pre-commit checks
-task pre-commit
-
-# Run pre-push checks
-task pre-push
-```
-
-### Skip Hooks
-
-To skip hooks temporarily (not recommended):
-
-```bash
-git commit --no-verify
-git push --no-verify
-```
-
-## 🗂️ See Also
-
-- [README](../README.md)
-- [Configuration Guide](configuration.md)
-- [Services Guide](services.md)
-- [Usage Guide](usage.md)
-- [Troubleshooting Guide](troubleshooting.md)
-- [Integration Guide](integration.md)
-- [Reference](reference.md)
+- **Issues**: [GitHub Issues](https://github.com/otto-nation/otto-stack/issues)
+- **Questions**: [GitHub Issues](https://github.com/otto-nation/otto-stack/issues)
+- **Documentation**: [Full Documentation](/)

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 get_ai_command() {
   if [ -f .env ] && grep -q "^AI_COMMAND=" .env; then
@@ -21,7 +22,7 @@ check_ai_available() {
     fi
   else
     echo "❌ AI not configured. Please set AI_COMMAND in .env file" >&2
-    echo "   Example: AI_COMMAND=q chat --no-interactive" >&2
+    echo "   Example: AI_COMMAND=kiro-cli --no-interactive" >&2
     return 1
   fi
 }

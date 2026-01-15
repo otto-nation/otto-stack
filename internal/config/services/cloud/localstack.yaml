@@ -1,31 +1,79 @@
 name: localstack
-description: Complete LocalStack AWS emulation environment
-category: cloud
-type: composite
-visibility: visible
+description: LocalStack core AWS service emulator
+hidden: true
+service_type: container
 
-components:
-  - localstack-core
-  - localstack-init
+service:
+  characteristics:
+    - network_service
+  dependencies:
+    provides:
+      - aws-emulation
+      - cloud-core
+  connection:
+    default_port: 4566
 
-dependencies:
-  required: []
-  soft: []
-  conflicts: []
-  provides: [aws-emulation, cloud-services]
+environment:
+  AWS_ACCESS_KEY_ID: test
+  AWS_DEFAULT_REGION: us-east-1
+  AWS_ENDPOINT_URL: http://${LOCALSTACK_HOST:-localhost}:${LOCALSTACK_PORT:-4566}
+  AWS_SECRET_ACCESS_KEY: test
+  LOCALSTACK_HOST: ${LOCALSTACK_HOST:-localhost}
+  LOCALSTACK_PORT: ${LOCALSTACK_PORT:-4566}
+  LOCALSTACK_URL: http://${LOCALSTACK_HOST:-localhost}:${LOCALSTACK_PORT:-4566}
+  SERVICES: ${LOCALSTACK_SERVICES:-}
+
+container:
+  image: localstack/localstack:latest
+  ports:
+    - external: "${LOCALSTACK_PORT:-4566}"
+      internal: "4566"
+      protocol: tcp
+  restart: unless-stopped
+  memory_limit: 512m
+  health_check:
+    test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+    interval: 15s
+    timeout: 10s
+    retries: 10
+    start_period: 60s
+
+init_service:
+  enabled: true
+  mode: local
+  image: amazon/aws-cli:latest
+  environment:
+    AWS_ACCESS_KEY_ID: test
+    AWS_SECRET_ACCESS_KEY: test
+    AWS_DEFAULT_REGION: us-east-1
+    AWS_ENDPOINT_URL: http://localstack:4566
+  scripts:
+    - content: |
+        # Create SQS queues
+        {{range .queues}}
+        docker run --rm --network=$DOCKER_NETWORK -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 $DOCKER_IMAGE sqs create-queue --queue-name {{.name}} --endpoint-url=${AWS_ENDPOINT_URL}
+        {{end}}
+
+        # Create SNS topics
+        {{range .topics}}
+        docker run --rm --network=$DOCKER_NETWORK -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 $DOCKER_IMAGE sns create-topic --name {{.name}} --endpoint-url=${AWS_ENDPOINT_URL}
+        {{end}}
+
+        # Create S3 buckets
+        {{range .buckets}}
+        docker run --rm --network=$DOCKER_NETWORK -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 $DOCKER_IMAGE s3 mb s3://{{.name}} --endpoint-url=${AWS_ENDPOINT_URL}
+        {{end}}
+  container:
+    depends_on_service: true
+    timeout: "30s"
 
 documentation:
   examples:
-    - "aws --endpoint-url=http://localhost:4566 s3 ls"
-    - "aws --endpoint-url=http://localhost:4566 sqs list-queues"
-  usage_notes: "Complete LocalStack setup with core services and automatic resource initialization"
+    - aws --endpoint-url=http://localhost:4566 s3 ls
+  usage_notes: Core LocalStack service providing AWS API emulation for local development. Web dashboard requires LocalStack Pro license.
   links:
-    - "https://docs.localstack.cloud/"
-  web_interfaces:
-    - name: LocalStack Dashboard
-      url: "http://localhost:8055"
-      description: LocalStack web dashboard
+    - https://docs.localstack.cloud/
   use_cases:
-    - Complete AWS service emulation for local development
+    - AWS service emulation for local development
     - Cloud service testing without AWS costs
-    - Offline development environment with pre-configured resources
+    - Offline development environment

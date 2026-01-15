@@ -2,131 +2,47 @@ package project
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
 type DoctorHandler struct {
-	output *ui.Output
+	common.BaseHandler
+	output             *ui.Output
+	healthCheckManager *HealthCheckManager
 }
 
 func NewDoctorHandler() *DoctorHandler {
 	return &DoctorHandler{
-		output: ui.NewOutput(),
+		output:             ui.NewOutput(),
+		healthCheckManager: NewHealthCheckManager(),
 	}
 }
 
-func (h *DoctorHandler) ValidateArgs(args []string) error {
-	return nil
-}
+func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandDoctor, logger.LogFieldProject, "health_check")
 
-func (h *DoctorHandler) GetRequiredFlags() []string {
-	return []string{}
-}
+	verbose, _ := cmd.Flags().GetBool("verbose")
+	logger.Debug("Running doctor command", "verbose", verbose)
 
-func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	h.output.Header("🩺 " + constants.AppNameTitle + " Health Check")
+	base.Output.Header(core.MsgDoctor_health_check_header, core.AppName)
+	logger.Info("Starting health checks")
 
-	allGood := true &&
-		h.checkDocker() &&
-		h.checkDockerCompose() &&
-		h.checkProjectInit() &&
-		h.checkConfiguration()
+	allGood := h.healthCheckManager.RunAllChecks(base)
 
 	if allGood {
-		h.output.Success("All checks passed! Your %s is healthy.", constants.AppNameLower)
+		base.Output.Success(core.MsgSuccess_all_checks_passed, core.AppName)
+		logger.Info("All health checks passed")
 		return nil
-	} else {
-		h.output.Error("Some issues found. Please address them above.")
-		return fmt.Errorf("health check failed")
-	}
-}
-
-func (h *DoctorHandler) checkDocker() bool {
-	h.output.Info("Checking Docker installation...")
-
-	if !h.isCommandAvailable(constants.DockerCmd) {
-		h.output.Error("Docker not found")
-		h.output.Muted("Install Docker: %s", constants.DockerInstallURL)
-		return false
 	}
 
-	// Check if Docker daemon is running
-	cmd := exec.Command(constants.DockerCmd, constants.DockerInfoCmd)
-	if err := cmd.Run(); err != nil {
-		h.output.Error("Docker daemon not running")
-		h.output.Muted("Start Docker daemon")
-		return false
-	}
-
-	h.output.Success("Docker is available and running")
-	return true
-}
-
-func (h *DoctorHandler) checkDockerCompose() bool {
-	h.output.Info("Checking Docker Compose...")
-
-	if !h.hasDockerComposePlugin() {
-		h.output.Error("Docker Compose not found")
-		h.output.Muted("Docker Compose is now integrated into Docker CLI")
-		h.output.Muted("Update Docker to get 'docker compose' command")
-		return false
-	}
-
-	h.output.Success("Docker Compose is available")
-	return true
-}
-
-func (h *DoctorHandler) checkProjectInit() bool {
-	h.output.Info("Checking project initialization...")
-
-	configPath := filepath.Join(constants.DevStackDir, constants.ConfigFileName)
-
-	if _, err := os.Stat(configPath); err != nil {
-		h.output.Error("Project not initialized")
-		h.output.Muted("Run '%s' to initialize", constants.AppName+" init")
-		return false
-	}
-
-	h.output.Success("Project is initialized")
-	return true
-}
-
-func (h *DoctorHandler) checkConfiguration() bool {
-	h.output.Info("Checking configuration validity...")
-
-	// Check if otto-stack directory exists
-	if _, err := os.Stat(constants.DevStackDir); os.IsNotExist(err) {
-		h.output.Error("Configuration directory missing")
-		h.output.Muted("Run '%s' to initialize", constants.AppName+" init")
-		return false
-	}
-
-	// Check if docker-compose file exists
-	composePath := filepath.Join(constants.DevStackDir, constants.DockerComposeFileName)
-	if _, err := os.Stat(composePath); os.IsNotExist(err) {
-		h.output.Error("Docker compose file missing")
-		h.output.Muted("Configuration is incomplete")
-		return false
-	}
-
-	h.output.Success("Configuration is valid")
-	return true
-}
-
-func (h *DoctorHandler) isCommandAvailable(command string) bool {
-	_, err := exec.LookPath(command)
-	return err == nil
-}
-
-func (h *DoctorHandler) hasDockerComposePlugin() bool {
-	cmd := exec.Command(constants.DockerCmd, constants.DockerComposeCmd, constants.DockerVersionCmd)
-	return cmd.Run() == nil
+	base.Output.Error(core.MsgDoctor_some_issues)
+	logger.Error("Health checks failed")
+	return pkgerrors.NewValidationError(FieldHealth, core.MsgDoctor_health_check_failed, nil)
 }

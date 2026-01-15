@@ -1,83 +1,50 @@
 name: localstack-sqs
 description: LocalStack SQS (Simple Queue Service) emulation
-category: cloud
-type: configuration
-target_service: localstack-core
-dependencies:
-  required:
-  - localstack
-  soft: []
-  conflicts: []
-  provides:
-  - sqs
-  - messaging-queue
-environment_additions:
-  SERVICES: sqs
+service_type: configuration
+
+container:
+  restart: unless-stopped
+
+service:
+  dependencies:
+    required:
+      - localstack
+    provides:
+      - sqs
+      - messaging-queue
+
+configuration_schema:
+  type: object
+  properties:
+    queues:
+      type: array
+      description: SQS queues to create
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            description: Queue name
+          visibility_timeout:
+            type: integer
+            default: 30
+            description: Message visibility timeout in seconds
+          dead_letter_queue:
+            type: string
+            description: Dead letter queue name
+          max_receive_count:
+            type: integer
+            default: 3
+            description: Max receive count before moving to DLQ
+        required: ["name"]
+
 documentation:
   examples:
-  - aws --endpoint-url=http://localhost:4566 sqs list-queues
+    - aws --endpoint-url=http://localhost:4566 sqs list-queues
   usage_notes: SQS message queue emulation for local development
   links:
-  - https://docs.localstack.cloud/user-guide/aws/sqs/
+    - https://docs.localstack.cloud/user-guide/aws/sqs/
   use_cases:
-  - Message queue testing
-  - Asynchronous processing development
-  - Event-driven architecture testing
-  docs:
-  - name: LocalStack SQS Documentation
-    url: https://docs.localstack.cloud/user-guide/aws/sqs/
-  spring_config:
-    properties:
-    - spring.cloud.aws.sqs.endpoint=http://localhost:${LOCALSTACK_PORT:-4566}
-    - spring.cloud.aws.credentials.access-key=test
-    - spring.cloud.aws.credentials.secret-key=test
-    - spring.cloud.aws.region.static=us-east-1
-service_configuration:
-- name: queues
-  type: string[]
-  description: List of SQS queue names to create automatically
-  default: '[]'
-  example: '["test-queue", "events-queue"]'
-  required: false
-- name: visibility_timeout
-  type: integer
-  description: Default visibility timeout for messages in seconds
-  default: '30'
-  example: '60'
-  required: false
-- name: message_retention_period
-  type: integer
-  description: How long messages are retained in seconds
-  default: '1209600'
-  example: '604800'
-  required: false
-management:
-  operations:
-    list_queues:
-      command:
-      - aws
-      - --endpoint-url=http://localhost:4566
-      - sqs
-      - list-queues
-      type: cli
-    create_queue:
-      command:
-      - aws
-      - --endpoint-url=http://localhost:4566
-      - sqs
-      - create-queue
-      - --queue-name
-      - test-queue
-      type: cli
-    send_message:
-      command:
-      - aws
-      - --endpoint-url=http://localhost:4566
-      - sqs
-      - send-message
-      - --queue-url
-      - http://localhost:4566/000000000000/test-queue
-      - --message-body
-      - '''Hello'
-      - World'
-      type: cli
+    - Message queue testing
+    - Asynchronous processing development
+    - Event-driven architecture testing

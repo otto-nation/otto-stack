@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,13 +27,13 @@ func setupTestDir(t *testing.T) (cleanup func()) {
 
 // createTestFile creates a file with given content
 func createTestFile(t *testing.T, path, content string) {
-	err := os.WriteFile(path, []byte(content), 0644)
+	err := os.WriteFile(path, []byte(content), core.PermReadWrite)
 	require.NoError(t, err)
 }
 
 // createTestConfig creates a config file
 func createTestConfig(t *testing.T) {
-	err := os.MkdirAll(constants.DevStackDir, 0755)
+	err := os.MkdirAll(core.OttoStackDir, core.PermReadWriteExec)
 	require.NoError(t, err)
 	createTestFile(t, TestConfigFilePath, TestConfigContent)
 }

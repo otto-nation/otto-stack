@@ -1,21 +1,19 @@
 name: prometheus-service
 description: Prometheus metrics collection and monitoring system
-category: observability
-dependencies:
-  required: []
-  soft: []
-  conflicts: []
-  provides:
-    - metrics
-    - monitoring
+service_type: container
+
 environment:
-  PROMETHEUS_HOST: localhost
+  PROMETHEUS_HOST: ${PROMETHEUS_HOST:-localhost}
   PROMETHEUS_PORT: ${PROMETHEUS_PORT:-9090}
-  PROMETHEUS_URL: http://localhost:${PROMETHEUS_PORT:-9090}
-docker:
+  PROMETHEUS_URL: http://${PROMETHEUS_HOST:-localhost}:${PROMETHEUS_PORT:-9090}
+
+container:
+  image: prom/prometheus:latest
+  ports:
+    - external: "9090"
+      internal: "9090"
+      protocol: tcp
   restart: unless-stopped
-  networks:
-    - otto-stack
   memory_limit: 256m
   command:
     - --config.file=/etc/prometheus/prometheus.yml
@@ -25,20 +23,51 @@ docker:
     - --storage.tsdb.retention.time=15d
     - --web.enable-lifecycle
     - --web.enable-admin-api
-  extra_hosts:
-    - host.docker.internal:host-gateway
   health_check:
     test:
-      - CMD
-      - wget
-      - --no-verbose
-      - --tries=1
-      - --spider
-      - http://localhost:9090/-/healthy
+      [
+        "CMD",
+        "wget",
+        "--no-verbose",
+        "--tries=1",
+        "--spider",
+        "http://localhost:9090/-/healthy",
+      ]
     interval: 30s
     timeout: 10s
     retries: 3
-    start_period: 30s
+
+service:
+  connection:
+    type: web
+    default_port: 9090
+    url_pattern: "http://localhost:9090"
+  dependencies:
+    provides:
+      - metrics
+      - monitoring
+
+configuration_schema:
+  type: object
+  properties:
+    scrape_configs:
+      type: array
+      description: Prometheus scrape configurations
+      items:
+        type: object
+        properties:
+          job_name:
+            type: string
+            description: Job name
+          static_configs:
+            type: array
+            description: Static target configurations
+          scrape_interval:
+            type: string
+            default: "15s"
+            description: Scrape interval
+        required: ["job_name"]
+
 documentation:
   examples:
     - curl http://localhost:9090/metrics
@@ -51,38 +80,5 @@ documentation:
     - Alerting and notifications
   web_interfaces:
     - name: Prometheus UI
-      url: http://localhost:${PROMETHEUS_PORT:-9090}
-      description: Prometheus metrics and query interface
-  docs:
-    - name: Prometheus Documentation
-      url: https://prometheus.io/docs/
-  spring_config:
-    properties:
-      - management.endpoints.web.exposure.include=health,info,metrics,prometheus
-      - management.endpoint.prometheus.enabled=true
-      - management.metrics.export.prometheus.enabled=true
-service_configuration:
-  - name: docker_image
-    type: string
-    description: Docker image to use for Prometheus container
-    default: prom/prometheus:latest
-    example: prom/prometheus:v2.47.0
-    required: false
-  - name: port
-    type: integer
-    description: Port number for Prometheus web interface and API
-    default: "9090"
-    example: "9091"
-    required: false
-  - name: memory_limit
-    type: string
-    description: Memory limit for Prometheus container
-    default: 512m
-    example: 1g
-    required: false
-  - name: retention_time
-    type: string
-    description: How long to retain metrics data
-    default: 15d
-    example: 30d
-    required: false
+      url: http://localhost:9090
+      description: Prometheus web interface for querying metrics

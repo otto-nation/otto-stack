@@ -3,9 +3,11 @@ package project
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/otto-nation/otto-stack/internal/pkg/version"
 	"github.com/spf13/cobra"
@@ -13,15 +15,19 @@ import (
 
 // Handler handles version command with update functionality
 type Handler struct {
-	enforcement *EnforcementHandler
-	output      *ui.Output
+	enforcement           *EnforcementHandler
+	output                *ui.Output
+	logger                *slog.Logger
+	versionDisplayManager *VersionDisplayManager
 }
 
 // NewVersionHandler creates a new version handler
 func NewVersionHandler() *Handler {
 	return &Handler{
-		enforcement: NewEnforcementHandler(nil), // Can handle nil
-		output:      ui.NewOutput(),
+		enforcement:           NewEnforcementHandler(nil), // Can handle nil
+		output:                ui.NewOutput(),
+		logger:                logger.GetLogger(),
+		versionDisplayManager: NewVersionDisplayManager(),
 	}
 }
 
@@ -37,11 +43,14 @@ func (h *Handler) GetRequiredFlags() []string {
 }
 
 // Handle handles the version command with update checking
-func (h *Handler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	// Check if --check-updates flag is set
-	checkUpdates, _ := cmd.Flags().GetBool("check-updates")
+func (h *Handler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	// Parse all flags with validation - single line!
+	flags, err := core.ParseVersionFlags(cmd)
+	if err != nil {
+		return err
+	}
 
-	if checkUpdates {
+	if flags.CheckUpdates {
 		return h.handleCheckUpdates(ctx, cmd, args, base)
 	}
 
@@ -50,124 +59,52 @@ func (h *Handler) Handle(ctx context.Context, cmd *cobra.Command, args []string,
 }
 
 // handleCheckUpdates handles the --check-updates flag
-func (h *Handler) handleCheckUpdates(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	h.output.Header("🔍 Checking for Updates")
+func (h *Handler) handleCheckUpdates(_ context.Context, _ *cobra.Command, _ []string, _ *base.BaseCommand) error {
+	h.output.Header("%s", core.MsgVersion_checking_updates)
 
 	// Get current version (this should come from build-time ldflags)
-	currentVersion := getCurrentVersion()
-	h.output.Info("Current version: %s", currentVersion)
+	currentVersion := h.versionDisplayManager.GetCurrentVersion()
+	h.output.Info(core.MsgVersion_current_info, currentVersion)
 
 	// Check for updates
 	checker := version.NewUpdateChecker(currentVersion)
 	release, hasUpdate, err := checker.CheckForUpdates()
 	if err != nil {
-		return fmt.Errorf("failed to check for updates: %w", err)
+		return fmt.Errorf(core.MsgErrors_failed_check_updates, err)
 	}
 
 	if !hasUpdate {
-		h.output.Success("✅ You are running the latest version")
+		h.output.Success("%s", core.MsgSuccess_latest_version)
 		return nil
 	}
 
-	h.output.Warning("⚠️  Update available: %s → %s", currentVersion, release.TagName)
-	h.output.Info("Release: %s", release.Name)
+	h.output.Warning(core.MsgVersion_update_available, currentVersion, release.TagName)
+	h.output.Info(core.MsgVersion_release_info, release.Name)
 
 	// Show update instructions
 	h.output.Info("")
-	h.output.Info("To update:")
-	h.output.Info("  • Using install script: curl -fsSL https://raw.githubusercontent.com/%s/%s/main/scripts/install.sh | bash",
-		constants.GitHubOrg, constants.GitHubRepo)
-	h.output.Info("  • Manual download: https://github.com/%s/%s/releases/latest",
-		constants.GitHubOrg, constants.GitHubRepo)
+	h.output.Info("%s", core.MsgVersion_update_info)
+	h.output.Info(core.MsgVersion_install_script,
+		core.GitHubOrg, core.GitHubRepo)
+	h.output.Info(core.MsgVersion_manual_download,
+		core.GitHubOrg, core.GitHubRepo)
 
 	return nil
 }
 
 // handleVersionDisplay handles the default version display
-func (h *Handler) handleVersionDisplay(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	full, _ := cmd.Flags().GetBool("full")
-	format, _ := cmd.Flags().GetString("format")
-
-	currentVersion := getCurrentVersion()
-
-	if full {
-		return h.displayFullVersion(currentVersion, format)
+func (h *Handler) handleVersionDisplay(_ context.Context, cmd *cobra.Command, _ []string, _ *base.BaseCommand) error {
+	// Parse all flags with validation - single line!
+	flags, err := core.ParseVersionFlags(cmd)
+	if err != nil {
+		return err
 	}
 
-	return h.displayBasicVersion(currentVersion, format)
-}
+	currentVersion := h.versionDisplayManager.GetCurrentVersion()
 
-// displayBasicVersion displays basic version information
-func (h *Handler) displayBasicVersion(version, format string) error {
-	switch format {
-	case "json":
-		fmt.Printf(`{"version":"%s","app":"%s"}%s`, version, constants.AppNameTitle, "\n")
-	case "yaml":
-		fmt.Printf("version: %s\napp: %s\n", version, constants.AppNameTitle)
-	default:
-		fmt.Printf("%s version %s\n", constants.AppNameTitle, version)
+	if flags.Full {
+		return h.versionDisplayManager.DisplayFull(currentVersion, flags.Format)
 	}
-	return nil
-}
 
-// displayFullVersion displays detailed version information
-func (h *Handler) displayFullVersion(version, format string) error {
-	buildInfo := getBuildInfo()
-
-	switch format {
-	case "json":
-		fmt.Printf(`{"version":"%s","app":"%s","build":%s}%s`,
-			version, constants.AppNameTitle, buildInfo.JSON(), "\n")
-	case "yaml":
-		fmt.Printf("version: %s\napp: %s\n%s", version, constants.AppNameTitle, buildInfo.YAML())
-	default:
-		h.output.Header("%s Version Information", constants.AppNameTitle)
-		h.output.Info("Version: %s", version)
-		h.output.Info("Build Date: %s", buildInfo.Date)
-		h.output.Info("Git Commit: %s", buildInfo.Commit)
-		h.output.Info("Go Version: %s", buildInfo.GoVersion)
-		h.output.Info("Platform: %s/%s", buildInfo.OS, buildInfo.Arch)
-	}
-	return nil
-}
-
-// BuildInfo contains build-time information
-type BuildInfo struct {
-	Date      string `json:"date" yaml:"date"`
-	Commit    string `json:"commit" yaml:"commit"`
-	GoVersion string `json:"go_version" yaml:"go_version"`
-	OS        string `json:"os" yaml:"os"`
-	Arch      string `json:"arch" yaml:"arch"`
-}
-
-// JSON returns JSON representation
-func (b BuildInfo) JSON() string {
-	return fmt.Sprintf(`{"date":"%s","commit":"%s","go_version":"%s","os":"%s","arch":"%s"}`,
-		b.Date, b.Commit, b.GoVersion, b.OS, b.Arch)
-}
-
-// YAML returns YAML representation
-func (b BuildInfo) YAML() string {
-	return fmt.Sprintf("build:\n  date: %s\n  commit: %s\n  go_version: %s\n  os: %s\n  arch: %s\n",
-		b.Date, b.Commit, b.GoVersion, b.OS, b.Arch)
-}
-
-// Helper functions
-
-// getCurrentVersion returns the current version (set at build time)
-func getCurrentVersion() string {
-	// Use the main version package which has proper build-time injection
-	return version.GetShortVersion()
-}
-
-// getBuildInfo returns build information (set at build time)
-func getBuildInfo() BuildInfo {
-	mainBuildInfo := version.GetBuildInfo()
-	return BuildInfo{
-		Date:      mainBuildInfo.BuildDate,
-		Commit:    mainBuildInfo.GitCommit,
-		GoVersion: mainBuildInfo.GoVersion,
-		OS:        mainBuildInfo.Platform,
-		Arch:      mainBuildInfo.Arch,
-	}
+	return h.versionDisplayManager.DisplayBasic(currentVersion, flags.Format)
 }

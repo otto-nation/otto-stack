@@ -1,9 +1,13 @@
 ---
-title: "otto-stack"
-description: "A powerful development stack management tool built in Go for streamlined local development automation"
-lead: "Streamline your local development with powerful CLI tools and automated service management"
+title: otto-stack
+description: >-
+  A powerful development stack management tool built in Go for streamlined local
+  development automation
+lead: >-
+  Streamline your local development with powerful CLI tools and automated
+  service management
 date: "2025-10-01"
-lastmod: "2025-10-31"
+lastmod: "2026-01-15"
 draft: false
 weight: 50
 toc: true
@@ -97,7 +101,7 @@ otto-stack up
 - **[Usage Guide](usage.md)**
 - **[Services Guide](services.md)**
 - **[Configuration](configuration.md)**
-- **[CLI Reference](reference.md)**
+- **[CLI Reference](cli-reference.md)**
 - **[Scripts Reference](scripts.md)**
 - **[Contributing](contributing.md)**
 

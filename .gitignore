@@ -1,6 +1,10 @@
 # Generated files
-internal/pkg/constants/flags_generated.go
-internal/pkg/cli/handlers/*/register_generated.go
+internal/**/*_generated.go
+internal/pkg/ci/generated.go
+**/generated/**
+
+# Task timestamp files
+.task/
 
 # Build artifacts and binaries
 build/

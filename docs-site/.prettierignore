@@ -5,6 +5,9 @@ themes/
 layouts/
 archetypes/
 
+# Ignore Handlebars template files
+templates/
+
 # Ignore shell scripts
 *.sh
 scripts/*.sh

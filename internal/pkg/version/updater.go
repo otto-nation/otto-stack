@@ -3,271 +3,131 @@ package version
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
-	"runtime"
-	"strings"
+	"time"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/core"
 )
 
 // GitHubRelease represents a GitHub release
 type GitHubRelease struct {
-	TagName string `json:"tag_name"`
-	Name    string `json:"name"`
-	Draft   bool   `json:"draft"`
-	Assets  []struct {
-		Name               string `json:"name"`
-		BrowserDownloadURL string `json:"browser_download_url"`
-	} `json:"assets"`
+	TagName     string    `json:"tag_name"`
+	Name        string    `json:"name"`
+	Body        string    `json:"body"`
+	Draft       bool      `json:"draft"`
+	Prerelease  bool      `json:"prerelease"`
+	PublishedAt time.Time `json:"published_at"`
+	HTMLURL     string    `json:"html_url"`
 }
 
-// UpdateChecker handles checking for updates
+// UpdateChecker checks for updates from GitHub
 type UpdateChecker struct {
 	currentVersion string
+	client         *http.Client
 }
 
 // NewUpdateChecker creates a new update checker
 func NewUpdateChecker(currentVersion string) *UpdateChecker {
 	return &UpdateChecker{
 		currentVersion: currentVersion,
+		client: &http.Client{
+			Timeout: core.DefaultStartTimeoutSeconds * time.Second,
+		},
 	}
 }
 
-// CheckForUpdates checks if a newer version is available
+// CheckForUpdates checks GitHub for newer releases
 func (u *UpdateChecker) CheckForUpdates() (*GitHubRelease, bool, error) {
-	latest, err := u.getLatestRelease()
-	if err != nil {
-		return nil, false, fmt.Errorf("failed to get latest release: %w", err)
-	}
-
-	if latest.Draft {
-		return nil, false, nil
-	}
-
-	// Compare versions using semantic versioning
-	currentVer, err := ParseVersion(cleanVersionString(u.currentVersion))
-	if err != nil {
-		// Fallback to string comparison if parsing fails
-		hasUpdate := latest.TagName != u.currentVersion && latest.TagName > u.currentVersion
-		return latest, hasUpdate, nil
-	}
-
-	latestVer, err := ParseVersion(cleanVersionString(latest.TagName))
-	if err != nil {
-		// Fallback to string comparison if parsing fails
-		hasUpdate := latest.TagName != u.currentVersion && latest.TagName > u.currentVersion
-		return latest, hasUpdate, nil
-	}
-
-	hasUpdate := latestVer.Compare(*currentVer) > 0
-
-	return latest, hasUpdate, nil
-}
-
-// cleanVersionString removes common prefixes from version strings
-func cleanVersionString(version string) string {
-	// Common version prefixes to remove
-	prefixes := []string{constants.AppName + "-", "v"}
-
-	cleaned := version
-	for _, prefix := range prefixes {
-		cleaned = strings.TrimPrefix(cleaned, prefix)
-	}
-	return cleaned
-}
-
-// SelfUpdater handles self-updating the binary
-type SelfUpdater struct {
-	currentVersion string
-}
-
-// NewSelfUpdater creates a new self-updater
-func NewSelfUpdater(currentVersion string) *SelfUpdater {
-	return &SelfUpdater{
-		currentVersion: currentVersion,
-	}
-}
-
-// Update downloads and installs the latest version
-func (u *SelfUpdater) Update(release *GitHubRelease) error {
-	// Get current executable path
-	execPath, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("failed to get executable path: %w", err)
-	}
-
-	// Create backup
-	backupPath := execPath + ".backup"
-	if err := u.copyFile(execPath, backupPath); err != nil {
-		return fmt.Errorf("failed to create backup: %w", err)
-	}
-
-	// Find the right asset for current platform
-	platform := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
-	assetName := fmt.Sprintf("%s-%s", constants.AppName, platform)
-	if runtime.GOOS == "windows" {
-		assetName += ".exe"
-	}
-
-	var downloadURL string
-	for _, asset := range release.Assets {
-		if asset.Name == assetName {
-			downloadURL = asset.BrowserDownloadURL
-			break
-		}
-	}
-
-	if downloadURL == "" {
-		return fmt.Errorf("no asset found for platform %s", platform)
-	}
-
-	// Download new version
-	tempFile, err := u.downloadFile(downloadURL)
-	if err != nil {
-		// Restore backup on failure
-		_ = u.copyFile(backupPath, execPath)
-		_ = os.Remove(backupPath)
-		return fmt.Errorf("failed to download new version: %w", err)
-	}
-
-	// Replace current executable
-	if err := u.copyFile(tempFile, execPath); err != nil {
-		// Restore backup on failure
-		_ = u.copyFile(backupPath, execPath)
-		_ = os.Remove(backupPath)
-		_ = os.Remove(tempFile)
-		return fmt.Errorf("failed to replace executable: %w", err)
-	}
-
-	// Make executable
-	if err := os.Chmod(execPath, 0755); err != nil {
-		return fmt.Errorf("failed to set executable permissions: %w", err)
-	}
-
-	// Cleanup temp file
-	_ = os.Remove(tempFile)
-
-	return nil
-}
-
-// Rollback restores the previous version from backup
-func (u *SelfUpdater) Rollback() error {
-	execPath, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("failed to get executable path: %w", err)
-	}
-
-	backupPath := execPath + ".backup"
-	if _, err := os.Stat(backupPath); os.IsNotExist(err) {
-		return fmt.Errorf("no backup found at %s", backupPath)
-	}
-
-	// Replace current with backup
-	if err := u.copyFile(backupPath, execPath); err != nil {
-		return fmt.Errorf("failed to restore backup: %w", err)
-	}
-
-	// Make executable
-	if err := os.Chmod(execPath, 0755); err != nil {
-		return fmt.Errorf("failed to set executable permissions: %w", err)
-	}
-
-	// Remove backup
-	_ = os.Remove(backupPath)
-
-	return nil
-}
-
-// getLatestRelease gets the latest release from GitHub API
-func (u *UpdateChecker) getLatestRelease() (*GitHubRelease, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest",
-		constants.GitHubOrg, constants.GitHubRepo)
+		core.GitHubOrg, core.GitHubRepo)
 
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	defer func() {
-		if closeErr := resp.Body.Close(); closeErr != nil {
-			_ = closeErr // Ignore close error
-		}
-	}()
+
+	req.Header.Set("User-Agent", GetUserAgent())
+	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	resp, err := u.client.Do(req)
+	if err != nil {
+		return nil, false, err
+	}
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+		return nil, false, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
 	}
 
 	var release GitHubRelease
 	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	return &release, nil
+	// Skip drafts and prereleases
+	if release.Draft || release.Prerelease {
+		return nil, false, nil
+	}
+
+	hasUpdate, err := u.isNewer(release.TagName)
+	if err != nil {
+		return &release, false, err
+	}
+
+	return &release, hasUpdate, nil
 }
 
-// downloadFile downloads a file from URL to a temporary location
-func (u *SelfUpdater) downloadFile(url string) (string, error) {
-	resp, err := http.Get(url)
+// isNewer checks if the release version is newer than current
+func (u *UpdateChecker) isNewer(releaseVersion string) (bool, error) {
+	if IsDevBuild() {
+		return false, nil // Dev builds don't need updates
+	}
+
+	current, err := ParseVersion(u.currentVersion)
 	if err != nil {
-		return "", err
-	}
-	defer func() {
-		if closeErr := resp.Body.Close(); closeErr != nil {
-			_ = closeErr // Ignore close error
-		}
-	}()
-
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("download failed with status %d", resp.StatusCode)
+		return false, err
 	}
 
-	// Create temporary file
-	tempFile, err := os.CreateTemp("", constants.AppName+"-update-*")
+	release, err := ParseVersion(releaseVersion)
 	if err != nil {
-		return "", err
-	}
-	defer func() {
-		if closeErr := tempFile.Close(); closeErr != nil {
-			_ = closeErr // Ignore close error
-		}
-	}()
-
-	// Copy response body to temp file
-	_, err = io.Copy(tempFile, resp.Body)
-	if err != nil {
-		if removeErr := os.Remove(tempFile.Name()); removeErr != nil {
-			_ = removeErr // Ignore remove error
-		}
-		return "", err
+		return false, err
 	}
 
-	return tempFile.Name(), nil
+	return release.Compare(*current) == VersionNewer, nil
 }
 
-// copyFile copies a file from src to dst
-func (u *SelfUpdater) copyFile(src, dst string) error {
-	srcFile, err := os.Open(src)
+// DetectProjectVersion detects required version from project config
+func DetectProjectVersion(projectPath string) (*VersionConstraint, error) {
+	// For now, return a wildcard constraint
+	// This can be enhanced later to read from project config files
+	return &VersionConstraint{
+		Operator: "*",
+		Version:  Version{},
+		Original: "*",
+	}, nil
+}
+
+// ValidateProjectVersion validates current version meets project requirements
+func ValidateProjectVersion(projectPath string) error {
+	constraint, err := DetectProjectVersion(projectPath)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if closeErr := srcFile.Close(); closeErr != nil {
-			_ = closeErr // Ignore close error
-		}
-	}()
 
-	dstFile, err := os.Create(dst)
+	// Dev builds always satisfy constraints
+	if IsDevBuild() {
+		return nil
+	}
+
+	currentVersion, err := ParseVersion(GetAppVersion())
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if closeErr := dstFile.Close(); closeErr != nil {
-			_ = closeErr // Ignore close error
-		}
-	}()
 
-	_, err = io.Copy(dstFile, srcFile)
-	return err
+	if !constraint.Satisfies(*currentVersion) {
+		return fmt.Errorf("version %s does not satisfy constraint %s",
+			currentVersion, constraint.Original)
+	}
+
+	return nil
 }

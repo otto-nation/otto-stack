@@ -2,13 +2,13 @@ package project
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/display"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 )
 
 // DepsHandler handles the deps command
@@ -20,62 +20,18 @@ func NewDepsHandler() *DepsHandler {
 }
 
 // Handle executes the deps command
-func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	ui.Header("Service Dependencies")
+func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	// Create command and middleware chain
+	depsCommand := NewDepsCommand()
+	loggingMiddleware := middleware.NewLoggingMiddleware()
 
-	// Get output format
-	format, _ := cmd.Flags().GetString("output")
+	handler := command.NewHandler(depsCommand, loggingMiddleware)
 
-	// Load service dependencies
-	serviceUtils := utils.NewServiceUtils()
-	dependencies, err := serviceUtils.LoadAllServiceDependencies()
-	if err != nil {
-		return fmt.Errorf("failed to load dependencies: %w", err)
-	}
+	// For now, create empty context - will be enhanced with flag processing
+	cliCtx := clicontext.Context{}
 
-	if len(dependencies) == 0 {
-		ui.Info("No service dependencies found")
-		return nil
-	}
-
-	// Create display data
-	var displayData []map[string]any
-	for serviceName, deps := range dependencies {
-		if len(deps) == 0 {
-			displayData = append(displayData, map[string]any{
-				"Service":      serviceName,
-				"Dependencies": "None",
-			})
-		} else {
-			for _, dep := range deps {
-				displayData = append(displayData, map[string]any{
-					"Service":      serviceName,
-					"Dependencies": dep,
-				})
-			}
-		}
-	}
-
-	// Display results
-	formatter, err := display.CreateFormatter(format, cmd.OutOrStdout())
-	if err != nil {
-		return fmt.Errorf("failed to create formatter: %w", err)
-	}
-
-	// Convert to ServiceStatus format for display
-	var services []display.ServiceStatus
-	for _, item := range displayData {
-		services = append(services, display.ServiceStatus{
-			Name:  item["Service"].(string),
-			State: item["Dependencies"].(string),
-		})
-	}
-
-	if err := formatter.FormatStatus(services, display.StatusOptions{}); err != nil {
-		return fmt.Errorf("failed to format output: %w", err)
-	}
-
-	return nil
+	// Execute through command pattern
+	return handler.Execute(ctx, cliCtx, base)
 }
 
 // ValidateArgs validates the command arguments

@@ -37,6 +37,8 @@ runs:
       with:
         go-version: ${{ steps.get-version.outputs.version }}
         check-latest: ${{ inputs.check-latest }}
+      env:
+        GOTOOLCHAIN: local
 
     - name: Setup Go module cache
       id: cache
@@ -59,3 +61,5 @@ runs:
         go version
         echo "GOPATH: $(go env GOPATH)"
         echo "GOROOT: $(go env GOROOT)"
+      env:
+        GOTOOLCHAIN: local
