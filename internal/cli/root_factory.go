@@ -4,131 +4,73 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	// Import handlers to trigger registration
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/lifecycle"
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/operations"
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
+	_ "github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utility"
 )
-
-// CreateRootCommand creates the root command using the functional builder
-func CreateRootCommand() (*cobra.Command, error) {
-	loader := config.NewLoader("")
-	commandConfig, err := loader.Load()
-	if err != nil {
-		return nil, fmt.Errorf("failed to load command configuration: %w", err)
-	}
-
-	validationResult := commandConfig.Validate()
-	if !validationResult.Valid {
-		fmt.Fprintf(os.Stderr, "Warning: Command configuration has validation errors:\n")
-		for _, err := range validationResult.Errors {
-			fmt.Fprintf(os.Stderr, "  - %s: %s\n", err.Field, err.Message)
-		}
-		if len(validationResult.Warnings) > 0 {
-			fmt.Fprintf(os.Stderr, "Warnings:\n")
-			for _, warning := range validationResult.Warnings {
-				fmt.Fprintf(os.Stderr, "  - %s: %s\n", warning.Field, warning.Message)
-			}
-		}
-	}
-
-	rootCmd, err := cli.BuildRootCommand(commandConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build root command: %w", err)
-	}
-
-	cobra.OnInitialize(func() {
-		initFactoryConfig(commandConfig)
-	})
-
-	return rootCmd, nil
-}
 
 // ExecuteFactory executes the root command using the functional builder
 func ExecuteFactory() error {
-	rootCmd, err := CreateRootCommand()
-	if err != nil {
-		return fmt.Errorf("failed to create CLI: %w", err)
-	}
-
+	rootCmd := cli.BuildRootCommand()
+	cobra.OnInitialize(initConfig)
 	return rootCmd.Execute()
 }
 
-// initFactoryConfig reads in config file and ENV variables if set
-func initFactoryConfig(commandConfig *config.CommandConfig) {
-	var cfgFile string
-	if cfgFile != "" {
-		// Use config file from the flag
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// Find home directory
-		home, err := os.UserHomeDir()
-		cobra.CheckErr(err)
+// CreateRootCommand creates the root command using the simplified builder
+func CreateRootCommand() (*cobra.Command, error) {
+	return cli.BuildRootCommand(), nil
+}
 
-		// Search config in multiple locations
-		viper.AddConfigPath(home)
-		viper.AddConfigPath(".")
-		viper.AddConfigPath(".otto-stack")
-		viper.SetConfigType("yaml")
+// initConfig reads in config file and ENV variables if set
+func initConfig() {
+	setupViper()
+	configureLogger()
+}
 
-		// Try to find config file with multiple names
-		configNames := []string{constants.AppName + "-config", "." + constants.AppName}
-		var configFound bool
-		for _, name := range configNames {
-			viper.SetConfigName(name)
-			if err := viper.ReadInConfig(); err == nil {
-				configFound = true
-				break
-			}
-		}
-
-		// If no config found, don't call ReadInConfig again
-		if configFound {
-			return
-		}
-	}
-
-	// read in environment variables that match
+func setupViper() {
+	viper.AddConfigPath(core.OttoStackDir)
+	viper.SetConfigType("yaml")
+	viper.SetConfigName(core.ConfigFileName[:len(core.ConfigFileName)-4]) // Remove .yml extension
 	viper.AutomaticEnv()
 
-	// If a config file is found, read it in (only if not already read above)
-	if err := viper.ReadInConfig(); err == nil {
-		if viper.GetBool("verbose") {
-			fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
-		}
+	if err := viper.ReadInConfig(); err == nil && viper.GetBool("verbose") {
+		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
+	}
+}
+
+// configureLogger sets up logger based on command line flags
+func configureLogger() {
+	config := logger.DefaultConfig()
+	if viper.GetBool("verbose") {
+		config.Level = logger.LogLevelDebug
+	} else {
+		config.Level = logger.LogLevelWarn
+	}
+
+	if err := logger.Init(config); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to configure logger: %v\n", err)
 	}
 }
 
 // GetCommandConfig loads and returns the command configuration
-func GetCommandConfig() (*config.CommandConfig, error) {
-	loader := config.NewLoader("")
-	return loader.Load()
+func GetCommandConfig() (map[string]any, error) {
+	return config.LoadCommandConfig()
 }
 
 // ValidateConfig validates the current configuration
 func ValidateConfig() error {
-	commandConfig, err := GetCommandConfig()
-	if err != nil {
-		return fmt.Errorf("failed to load configuration: %w", err)
+	if _, err := config.LoadConfig(); err != nil {
+		return fmt.Errorf("configuration validation failed: %w", err)
 	}
-
-	result := commandConfig.Validate()
-	if !result.Valid {
-		fmt.Printf("Configuration validation failed with %d errors:\n", len(result.Errors))
-		for _, err := range result.Errors {
-			fmt.Printf("  - %s: %s\n", err.Field, err.Message)
-		}
-		return fmt.Errorf("configuration validation failed")
-	}
-
-	fmt.Println("✅ Configuration is valid")
-	if len(result.Warnings) > 0 {
-		fmt.Printf("⚠️  %d warnings:\n", len(result.Warnings))
-		for _, warning := range result.Warnings {
-			fmt.Printf("  - %s: %s\n", warning.Field, warning.Message)
-		}
-	}
-
+	logger.Info("Configuration is valid")
 	return nil
 }

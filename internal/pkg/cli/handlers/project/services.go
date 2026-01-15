@@ -2,13 +2,16 @@ package project
 
 import (
 	"context"
-	"fmt"
+	"sort"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
-	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	"github.com/spf13/cobra"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/display"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
 
 // ServicesHandler handles the services command
@@ -20,57 +23,69 @@ func NewServicesHandler() *ServicesHandler {
 }
 
 // Handle executes the services command
-func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	// Get flags
-	format, _ := cmd.Flags().GetString(constants.FlagFormat)
-	category, _ := cmd.Flags().GetString(constants.FlagCategory)
+func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	base.Output.Header("%s Available Services", ui.IconBox)
 
-	// Load services by category
-	serviceUtils := utils.NewServiceUtils()
-	categorizedServices, err := serviceUtils.GetServicesByCategory()
+	servicesByCategory, totalCount, err := h.loadServices()
 	if err != nil {
-		return fmt.Errorf(constants.MsgFailedLoadServices.Content, err)
+		return err
 	}
 
-	// Build service catalog
-	catalog := h.buildServiceCatalog(categorizedServices)
+	groups := h.buildTableGroups(servicesByCategory)
 
-	// Create formatter
-	formatter, err := display.CreateFormatter(format, cmd.OutOrStdout())
-	if err != nil {
-		return fmt.Errorf("failed to create formatter: %w", err)
-	}
+	headers := []string{display.HeaderService, display.HeaderCategory, display.HeaderDescription}
+	display.RenderTableWithSeparators(base.Output.Writer(), headers, groups)
 
-	// Format and display
-	options := display.ServiceCatalogOptions{
-		Category: category,
-		Format:   format,
-	}
-
-	return formatter.FormatServiceCatalog(catalog, options)
+	base.Output.Info("\nTotal services available: %d", totalCount)
+	base.Output.Success("Services listed successfully")
+	return nil
 }
 
-// buildServiceCatalog converts service data to catalog format
-func (h *ServicesHandler) buildServiceCatalog(categorizedServices map[string][]types.ServiceInfo) display.ServiceCatalog {
-	catalog := display.ServiceCatalog{
-		Categories: make(map[string][]display.ServiceInfo),
-		Total:      0,
+func (h *ServicesHandler) loadServices() (map[string][]servicetypes.ServiceConfig, int, error) {
+	manager, err := services.New()
+	if err != nil {
+		return nil, 0, pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
 	}
 
-	for categoryName, services := range categorizedServices {
-		var catalogServices []display.ServiceInfo
-		for _, service := range services {
-			catalogServices = append(catalogServices, display.ServiceInfo{
-				Name:        service.Name,
-				Description: service.Description,
-				Category:    categoryName,
-			})
-		}
-		catalog.Categories[categoryName] = catalogServices
-		catalog.Total += len(catalogServices)
+	utils := services.NewServiceUtils()
+	servicesByCategory, err := utils.GetServicesByCategory()
+	if err != nil {
+		return nil, 0, pkgerrors.NewServiceError(services.ComponentServices, services.ActionLoadServices, err)
 	}
 
-	return catalog
+	return servicesByCategory, len(manager.GetAllServices()), nil
+}
+
+func (h *ServicesHandler) buildTableGroups(servicesByCategory map[string][]servicetypes.ServiceConfig) [][][]string {
+	categories := h.sortedCategories(servicesByCategory)
+	groups := make([][][]string, len(categories))
+
+	for i, category := range categories {
+		groups[i] = h.buildCategoryGroup(servicesByCategory[category], category)
+	}
+
+	return groups
+}
+
+func (h *ServicesHandler) sortedCategories(servicesByCategory map[string][]servicetypes.ServiceConfig) []string {
+	categories := make([]string, 0, len(servicesByCategory))
+	for category := range servicesByCategory {
+		categories = append(categories, category)
+	}
+	sort.Strings(categories)
+	return categories
+}
+
+func (h *ServicesHandler) buildCategoryGroup(categoryServices []servicetypes.ServiceConfig, category string) [][]string {
+	sort.Slice(categoryServices, func(a, b int) bool {
+		return categoryServices[a].Name < categoryServices[b].Name
+	})
+
+	group := make([][]string, len(categoryServices))
+	for i, svc := range categoryServices {
+		group[i] = []string{svc.Name, category, svc.Description}
+	}
+	return group
 }
 
 // ValidateArgs validates the command arguments

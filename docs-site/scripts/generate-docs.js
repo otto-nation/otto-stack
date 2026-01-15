@@ -3,222 +3,184 @@
 const { execSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const yaml = require("js-yaml");
 
-// Build the CLI first
-console.log("Building otto-stack CLI...");
-execSync("cd .. && go build -o docs-site/otto-stack ./cmd/otto-stack", {
-  stdio: "inherit",
-});
+// Parse CLI arguments
+const args = process.argv.slice(2);
+const flags = {
+  skipBuild: args.includes("--skip-build"),
+  skipFormat: args.includes("--skip-format"),
+  generator: args.find((arg) => arg.startsWith("--generator="))?.split("=")[1],
+};
 
-// Generate CLI reference
-function generateCLIReference() {
-  console.log("Generating CLI reference...");
+// Load configuration
+const config = require("../docs-config");
 
-  const helpOutput = execSync("./otto-stack --help", { encoding: "utf8" });
-  const commands = extractCommands(helpOutput);
+// Load generators
+const generators = {
+  "services-guide": require("../generators/services-guide"),
+  "cli-reference": require("../generators/cli-reference"),
+  homepage: require("../generators/homepage"),
+  "configuration-guide": require("../generators/configuration-guide"),
+  "contributing-guide": require("../generators/contributing-guide"),
+};
 
-  const today = new Date().toISOString().split("T")[0];
-  let markdown = `---
-title: "CLI Reference"
-description: "Complete command reference for otto-stack CLI"
-lead: "Comprehensive reference for all otto-stack CLI commands and their usage"
-date: "2025-10-01"
-lastmod: "${today}"
-draft: false
-weight: 50
-toc: true
----
+// Load utilities
+const ServiceAnalyzer = require("../utils/service-analyzer");
+const SchemaValidator = require("../utils/schema-validator");
 
-# otto-stack CLI Reference
+function validateServices() {
+  if (!config.validation?.enabled) return;
 
-${helpOutput.split("\n").slice(0, 3).join("\n")}
+  console.log("Validating service configurations...");
 
-## Commands
+  const analyzer = new ServiceAnalyzer(config);
+  const validator = new SchemaValidator();
+  const services = analyzer.loadAllServices();
 
-`;
+  const { errors, warnings } = validator.validateAllServices(services);
 
-  // Generate detailed help for each command
-  commands.forEach((cmd) => {
-    try {
-      const cmdHelp = execSync(`./otto-stack ${cmd} --help`, {
-        encoding: "utf8",
-      });
-      markdown += `### ${cmd}\n\n\`\`\`\n${cmdHelp}\`\`\`\n\n`;
-    } catch (error) {
-      console.warn(`Could not get help for command: ${cmd}`);
+  if (warnings.length > 0) {
+    console.warn("⚠️  Validation warnings:");
+    warnings.forEach((warning) => console.warn(`   ${warning}`));
+  }
+
+  if (errors.length > 0) {
+    console.error("❌ Validation errors:");
+    errors.forEach((error) => console.error(`   ${error}`));
+
+    if (config.validation.strict) {
+      process.exit(1);
     }
-  });
-
-  fs.writeFileSync("content/reference.md", markdown);
-  console.log("✅ Generated content/reference.md");
+  } else {
+    console.log("✅ Service validation passed");
+  }
 }
 
-// Generate services guide
-function generateServicesGuide() {
-  console.log("Generating services guide...");
+function buildCLI() {
+  if (flags.skipBuild) {
+    console.log("⏭️  Skipping CLI build");
+    return;
+  }
 
-  try {
-    const servicesDir = "../internal/config/services";
-    const services = {};
+  const binaryPath = path.join(__dirname, "../otto-stack");
+  const projectRoot = path.join(__dirname, "../..");
 
-    // Read all service YAML files recursively
-    function readServicesFromDir(dir) {
-      const items = fs.readdirSync(dir);
-      items.forEach((item) => {
-        const fullPath = path.join(dir, item);
-        const stat = fs.statSync(fullPath);
-
-        if (stat.isDirectory()) {
-          readServicesFromDir(fullPath);
-        } else if (item.endsWith(".yaml") || item.endsWith(".yml")) {
-          const serviceName = path.basename(item, path.extname(item));
-          const content = fs.readFileSync(fullPath, "utf8");
-          services[serviceName] = yaml.load(content);
-        }
-      });
+  // Check if binary exists and is recent
+  if (fs.existsSync(binaryPath)) {
+    const binaryAge = Date.now() - fs.statSync(binaryPath).mtimeMs;
+    if (binaryAge < 60000) {
+      // Less than 1 minute old
+      console.log("⏭️  Using existing CLI binary");
+      return;
     }
+  }
 
-    readServicesFromDir(servicesDir);
-
-    const today = new Date().toISOString().split("T")[0];
-    let markdown = `---
-title: "Services"
-description: "Available services and configuration options"
-lead: "Explore all the services you can use with otto-stack"
-date: "2025-10-01"
-lastmod: "${today}"
-draft: false
-weight: 30
-toc: true
----
-
-# Available Services
-
-${Object.keys(services).length} services available for your development stack.
-
-`;
-
-    // Sort services by name
-    const sortedServices = Object.entries(services).sort(([a], [b]) =>
-      a.localeCompare(b),
-    );
-
-    sortedServices.forEach(([name, config]) => {
-      markdown += `## ${name}\n\n`;
-      if (config.description) {
-        markdown += `${config.description}\n\n`;
-      }
-      if (config.defaults && config.defaults.port) {
-        markdown += `**Default Port:** ${config.defaults.port}\n\n`;
-      }
-      if (config.docker && config.docker.services) {
-        const serviceNames = Object.keys(config.docker.services);
-        markdown += `**Services:** ${serviceNames.join(", ")}\n\n`;
-      }
-      markdown += "---\n\n";
+  console.log("Building otto-stack CLI...");
+  try {
+    execSync(`go build -o ${binaryPath} ./cmd/otto-stack`, {
+      cwd: projectRoot,
+      stdio: "inherit",
     });
-
-    fs.writeFileSync("content/services.md", markdown);
-    console.log("✅ Generated content/services.md");
   } catch (error) {
-    console.warn("Could not generate services guide:", error.message);
+    console.error("❌ Failed to build CLI");
+    process.exit(1);
   }
 }
 
-// Generate homepage from README
-function generateHomepage() {
-  console.log("Generating homepage from README...");
+function runGenerators() {
+  const results = { success: [], failed: [] };
 
-  try {
-    const readmePath = path.join("..", "README.md");
-    const readmeContent = fs.readFileSync(readmePath, "utf8");
+  // Filter generators if specific one requested
+  const generatorsToRun = flags.generator
+    ? config.generators.filter((g) => g.name === flags.generator)
+    : config.generators.filter((g) => g.enabled);
 
-    // Extract content after the first heading
-    const lines = readmeContent.split("\n");
-    let contentStart = 0;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith("# ")) {
-        contentStart = i;
-        break;
-      }
-    }
-
-    let content = lines.slice(contentStart).join("\n");
-
-    // Fix links: convert docs-site/content/file.md to file.md
-    content = content.replace(/docs-site\/content\/([^)]+\.md)/g, "$1");
-
-    // Fix other problematic links
-    content = content.replace(/\[([^\]]+)\]\(docs-site\/\)/g, "[$1](/)");
-    content = content.replace(
-      /\[([^\]]+)\]\(LICENSE\)/g,
-      "[$1](https://github.com/otto-nation/otto-stack/blob/main/LICENSE)",
+  if (generatorsToRun.length === 0) {
+    console.error(
+      `❌ No generators found matching: ${flags.generator || "enabled"}`,
     );
-
-    // Create frontmatter for Hugo with yyyy-MM-dd format
-    const today = new Date().toISOString().split("T")[0];
-    const frontmatter = `---
-title: "otto-stack"
-description: "A powerful development stack management tool built in Go for streamlined local development automation"
-lead: "Streamline your local development with powerful CLI tools and automated service management"
-date: "2025-10-01"
-lastmod: "${today}"
-draft: false
-weight: 50
-toc: true
----
-
-`;
-
-    const fullContent = frontmatter + content;
-    fs.writeFileSync("content/_index.md", fullContent);
-    console.log("✅ Generated content/_index.md from README.md");
-  } catch (error) {
-    console.warn("Could not generate homepage:", error.message);
+    process.exit(1);
   }
-}
 
-// Extract command names from help output
-function extractCommands(helpOutput) {
-  const lines = helpOutput.split("\n");
-  const commandsStart = lines.findIndex((line) =>
-    line.includes("Available Commands:"),
-  );
-  if (commandsStart === -1) return [];
+  // Create output directory
+  if (!fs.existsSync(config.outputDir)) {
+    fs.mkdirSync(config.outputDir, { recursive: true });
+  }
 
-  const commands = [];
-  for (let i = commandsStart + 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line || line.startsWith("Flags:") || line.startsWith("Use ")) break;
+  // Run generators
+  for (const generatorConfig of generatorsToRun) {
+    const GeneratorClass = generators[generatorConfig.name];
+    if (!GeneratorClass) {
+      console.warn(`⚠️  Unknown generator: ${generatorConfig.name}`);
+      results.failed.push(generatorConfig.name);
+      continue;
+    }
 
-    const match = line.match(/^\s*(\w+)\s+/);
-    if (match && match[1] !== "help" && match[1] !== "completion") {
-      commands.push(match[1]);
+    try {
+      const generator = new GeneratorClass(config);
+      const content = generator.generate();
+
+      if (content) {
+        const outputPath = path.join(config.outputDir, generatorConfig.output);
+        fs.writeFileSync(outputPath, content);
+        console.log(`✅ Generated ${generatorConfig.output}`);
+        results.success.push(generatorConfig.name);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to generate ${generatorConfig.name}:`);
+      console.error(`   ${error.message}`);
+      if (process.env.DEBUG) {
+        console.error(error.stack);
+      }
+      results.failed.push(generatorConfig.name);
     }
   }
-  return commands;
+
+  return results;
 }
 
-// Create content directory if it doesn't exist
-if (!fs.existsSync("content")) {
-  fs.mkdirSync("content", { recursive: true });
+function formatDocs() {
+  if (flags.skipFormat) {
+    console.log("⏭️  Skipping formatting");
+    return;
+  }
+
+  console.log("Formatting generated documentation...");
+  try {
+    execSync("npm run format", { stdio: "inherit" });
+    console.log("✅ Documentation formatted");
+  } catch (error) {
+    console.warn("⚠️  Could not format documentation");
+  }
 }
 
-// Generate all docs
-generateHomepage();
-generateCLIReference();
-generateServicesGuide();
-
-// Format generated files with prettier
-console.log("Formatting generated documentation...");
-try {
-  execSync("npm run format", { stdio: "inherit" });
-  console.log("✅ Documentation formatted");
-} catch (error) {
-  console.warn("Could not format documentation:", error.message);
+function cleanup() {
+  const binaryPath = path.join(__dirname, "../otto-stack");
+  if (fs.existsSync(binaryPath)) {
+    fs.unlinkSync(binaryPath);
+  }
 }
 
-// Cleanup
-fs.unlinkSync("./otto-stack");
-console.log("🎉 Documentation generation complete!");
+function main() {
+  console.log("📚 Otto-Stack Documentation Generator\n");
+
+  buildCLI();
+  validateServices();
+  const results = runGenerators();
+  formatDocs();
+  cleanup();
+
+  // Summary
+  console.log("\n📊 Generation Summary:");
+  console.log(`   ✅ Success: ${results.success.length}`);
+  console.log(`   ❌ Failed: ${results.failed.length}`);
+
+  if (results.failed.length > 0) {
+    console.log(`\n❌ Failed generators: ${results.failed.join(", ")}`);
+    process.exit(1);
+  }
+
+  console.log("\n🎉 Documentation generation complete!");
+}
+
+main();

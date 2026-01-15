@@ -1,0 +1,66 @@
+package project
+
+// Project-specific error constants
+const (
+	// Components
+	ComponentProject   = "project"
+	ComponentFile      = "file"
+	ComponentEnv       = "env"
+	ComponentCompose   = "compose"
+	ComponentDirectory = "directory"
+	ComponentFormatter = "formatter"
+
+	// Actions
+	ActionListServices              = "list services"
+	ActionShowDependencies          = "show dependencies"
+	ActionCheckConflicts            = "check conflicts"
+	ActionValidateConfig            = "validate configuration"
+	ActionRunHealthCheck            = "run health check"
+	ActionGetCurrentDir             = "get current directory"
+	ActionGetProjectName            = "get project name from user"
+	ActionSelectServices            = "select services"
+	ActionValidateServices          = "validate services"
+	ActionGetOptions                = "get advanced options"
+	ActionValidation                = "validation"
+	ActionGetConfirmation           = "get confirmation"
+	ActionCreateDirectories         = "create directories"
+	ActionCreateConfigFile          = "create config file"
+	ActionGenerateFiles             = "generate compose files"
+	ActionGenerateEnvFile           = "generate .env file"
+	ActionGenerateDockerCompose     = "generate docker-compose.yml"
+	ActionWriteFile                 = "write file"
+	ActionOpenFile                  = "open .gitignore"
+	ActionWriteGitignore            = "write to .gitignore"
+	ActionCreateComposeGenerator    = "create compose generator"
+	ActionGenerateDockerComposeYAML = "generate docker-compose YAML"
+	ActionFormatOutput              = "format dependency output"
+	ActionLoadServices              = "load services"
+	ActionCreateManager             = "create service manager"
+	ActionResolveServices           = "resolve services"
+	ActionLoadCatalog               = "load service catalog"
+	ActionParseFlags                = "parse command flags"
+	ActionGenerateEnv               = "generate env content"
+	ActionCreateDirectory           = "create directory"
+
+	// Fields
+	FieldValidation   = "validation"
+	FieldAction       = "action"
+	FieldOptions      = "options"
+	FieldConfirmation = "confirmation"
+	FieldHealth       = "health"
+	FieldConfig       = "config"
+
+	// Messages
+	MsgNoServicesAvailable             = "no services available"
+	MsgNoServicesSelected              = "no services selected"
+	MsgHealthCheckFailed               = "health check failed"
+	MsgProjectNameTooShort             = "project name is too short"
+	MsgProjectNameTooLong              = "project name is too long"
+	MsgProjectNameEmpty                = "project name cannot be empty"
+	MsgFailedToGetProjectDetails       = "failed to get project details"
+	MsgFailedToGetValidationPreference = "failed to get validation preference"
+	MsgFailedToGetValidationOptions    = "failed to get validation options"
+	MsgFailedToGetAction               = "failed to get action"
+	MsgFailedToCreateDirectory         = "failed to create directory"
+	MsgFailedToWriteConfigFile         = "failed to write config file"
+)

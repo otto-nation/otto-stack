@@ -16,6 +16,15 @@ linters:
     - unused
     - ineffassign
     - misspell
+    - unconvert
+    - iface
+    - importas
+    - inamedparam
+    - goconst
+    - modernize
+    - unparam
+    - mnd
+    - nestif
   exclusions:
     rules:
       - path: '(.+)_test\.go'
@@ -25,6 +34,15 @@ linters:
         linters:
           - errcheck
           - unused
+      - path: "cmd/generate-*"
+        linters:
+          - unused
+      - path: "internal/pkg/constants/templates.go"
+        linters:
+          - lll
+      - path: "internal/scripts/embedded.go"
+        linters:
+          - nestif
 
 formatters:
   enable:

@@ -1,0 +1,215 @@
+package services
+
+import (
+	"fmt"
+	"maps"
+
+	"github.com/otto-nation/otto-stack/internal/config"
+	"github.com/otto-nation/otto-stack/internal/core"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
+	"gopkg.in/yaml.v3"
+)
+
+// Manager handles all service operations
+type Manager struct {
+	services map[string]servicetypes.ServiceConfig
+}
+
+// New creates a new service manager
+func New() (*Manager, error) {
+	manager := &Manager{
+		services: make(map[string]servicetypes.ServiceConfig),
+	}
+
+	if err := manager.loadServices(); err != nil {
+		return nil, pkgerrors.NewServiceError(ComponentServices, ActionLoadServices, err)
+	}
+
+	return manager, nil
+}
+
+// GetService returns a service by name
+func (m *Manager) GetService(name string) (*servicetypes.ServiceConfig, error) {
+	service, exists := m.services[name]
+	if !exists {
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "service not found: %s", name)
+	}
+	return &service, nil
+}
+
+// GetAllServices returns all services
+func (m *Manager) GetAllServices() map[string]servicetypes.ServiceConfig {
+	return m.services
+}
+
+// ValidateServices validates a list of service names
+func (m *Manager) ValidateServices(serviceNames []string) error {
+	for _, name := range serviceNames {
+		service, exists := m.services[name]
+		if !exists {
+			return pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "unknown service: %s", name)
+		}
+		if service.Hidden {
+			return pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "service not accessible: %s", name)
+		}
+	}
+	return nil
+}
+
+// GetDependencies returns dependencies for a service
+func (m *Manager) GetDependencies(serviceName string) ([]string, error) {
+	service, err := m.GetService(serviceName)
+	if err != nil {
+		return nil, err
+	}
+	return service.Service.Dependencies.Required, nil
+}
+
+// BuildConnectCommand builds a connection command for a service
+func (m *Manager) BuildConnectCommand(serviceName string, options map[string]string) ([]string, error) {
+	service, err := m.GetService(serviceName)
+	if err != nil {
+		return nil, err
+	}
+
+	return m.buildConnectCommand(service, options)
+}
+
+// buildConnectCommand builds connection command from management spec
+func (m *Manager) buildConnectCommand(service *servicetypes.ServiceConfig, options map[string]string) ([]string, error) {
+	if service.Service.Management == nil || service.Service.Management.Connect == nil {
+		return nil, pkgerrors.NewConfigErrorf(pkgerrors.FieldServiceName, "no connect operation configured for service: %s", service.Name)
+	}
+
+	connect := service.Service.Management.Connect
+	if len(connect.Command) == 0 {
+		return nil, pkgerrors.NewConfigErrorf(pkgerrors.FieldServiceName, "no connect command configured for service: %s", service.Name)
+	}
+
+	cmd := make([]string, len(connect.Command))
+	copy(cmd, connect.Command)
+
+	// Use default args if no specific args provided
+	if args, exists := connect.Args["default"]; exists {
+		cmd = append(cmd, args...)
+	}
+
+	// Apply any provided options/overrides
+	for key, value := range options {
+		if key == "database" && service.Service.Connection != nil && service.Service.Connection.DBFlag != "" {
+			cmd = append(cmd, service.Service.Connection.DBFlag, value)
+		}
+		// Add more option handling as needed
+	}
+
+	return cmd, nil
+}
+
+// loadServices loads all services from embedded filesystem
+func (m *Manager) loadServices() error {
+	entries, err := config.EmbeddedServicesFS.ReadDir(EmbeddedServicesDir)
+	if err != nil {
+		return pkgerrors.NewServiceError(ComponentServices, ActionReadServicesDirectory, err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		category := entry.Name()
+		if err := m.loadCategoryServices(category); err != nil {
+			return pkgerrors.NewServiceError(ComponentServices, ActionLoadCategory, err)
+		}
+	}
+
+	return nil
+}
+
+// loadCategoryServices loads services from a specific category directory
+func (m *Manager) loadCategoryServices(category string) error {
+	categoryPath := fmt.Sprintf("%s/%s", EmbeddedServicesDir, category)
+	entries, err := config.EmbeddedServicesFS.ReadDir(categoryPath)
+	if err != nil {
+		return pkgerrors.NewServiceError(ComponentServices, ActionReadCategoryDirectory, err)
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() || !core.IsYAMLFile(entry.Name()) {
+			continue
+		}
+
+		fileName := entry.Name()
+		serviceName := core.TrimYAMLExt(fileName)
+
+		if err := m.loadService(category, serviceName); err != nil {
+			return pkgerrors.NewServiceError(ComponentServices, ActionLoadService, err)
+		}
+	}
+
+	return nil
+}
+
+// loadService loads a single service from YAML
+func (m *Manager) loadService(category, serviceName string) error {
+	// Try exact filename first
+	exactPath := fmt.Sprintf("%s/%s/%s.yaml", EmbeddedServicesDir, category, serviceName)
+	if data, err := config.EmbeddedServicesFS.ReadFile(exactPath); err == nil {
+		return m.parseService(data, serviceName, category)
+	}
+
+	return pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "service file not found: %s", serviceName)
+}
+
+func (m *Manager) parseService(data []byte, serviceName, category string) error {
+	var service servicetypes.ServiceConfig
+	if err := yaml.Unmarshal(data, &service); err != nil {
+		return pkgerrors.NewConfigError("", ActionParseServiceYAML, err)
+	}
+
+	// Set category if not specified in YAML
+	if service.Category == "" {
+		service.Category = category
+	}
+
+	// Use the name from the YAML file, not the filename
+	actualServiceName := service.Name
+	if actualServiceName == "" {
+		actualServiceName = serviceName
+	}
+
+	// Combine environment variables into AllEnvironment
+	service.AllEnvironment = make(map[string]string)
+	maps.Copy(service.AllEnvironment, service.Environment)
+	maps.Copy(service.AllEnvironment, service.Container.Environment)
+
+	m.services[actualServiceName] = service
+	return nil
+}
+
+// ExecuteCustomOperation executes custom management operations
+func (m *Manager) ExecuteCustomOperation(serviceName, operationName string) ([]string, error) {
+	service, err := m.GetService(serviceName)
+	if err != nil {
+		return nil, err
+	}
+
+	if service.Service.Management == nil || service.Service.Management.Custom == nil {
+		return nil, pkgerrors.NewConfigErrorf(pkgerrors.FieldServiceName, "no custom operations for service: %s", serviceName)
+	}
+
+	operation, exists := service.Service.Management.Custom[operationName]
+	if !exists {
+		return nil, pkgerrors.NewValidationErrorf("operation", "operation %s not found", operationName)
+	}
+
+	cmd := make([]string, len(operation.Command))
+	copy(cmd, operation.Command)
+
+	if args, exists := operation.Args["default"]; exists {
+		cmd = append(cmd, args...)
+	}
+
+	return cmd, nil
+}

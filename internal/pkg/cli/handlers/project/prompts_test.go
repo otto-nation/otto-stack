@@ -1,9 +1,12 @@
+//go:build unit
+
 package project
 
 import (
 	"strings"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,7 +41,7 @@ func TestPromptForServices_SelectionLogic(t *testing.T) {
 	serviceOptions := []string{
 		"postgres - PostgreSQL database",
 		"redis - In-memory data store",
-		"nginx - Web server",
+		"mysql - MySQL database",
 	}
 
 	var selectedServices []string
@@ -48,16 +51,16 @@ func TestPromptForServices_SelectionLogic(t *testing.T) {
 	}
 
 	assert.Len(t, selectedServices, 3)
-	assert.Contains(t, selectedServices, TestServicePostgres)
-	assert.Contains(t, selectedServices, TestServiceRedis)
-	assert.Contains(t, selectedServices, TestServiceNginx)
+	assert.Contains(t, selectedServices, services.ServicePostgres)
+	assert.Contains(t, selectedServices, services.ServiceRedis)
+	assert.Contains(t, selectedServices, services.ServiceMysql)
 }
 
 func TestPromptForAdvancedOptions_StructureLogic(t *testing.T) {
 	// Test the validation and advanced option structures
 	validation := map[string]bool{
 		"schema":       true,
-		"health":       false,
+		FieldHealth:    false,
 		"dependencies": true,
 	}
 

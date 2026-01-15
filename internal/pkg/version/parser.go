@@ -6,265 +6,203 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/constants"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
 
-var (
-	// Semantic version regex pattern
-	semverRegex = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z\-\.]+))?(?:\+([0-9A-Za-z\-\.]+))?$`)
-)
+var semverRegex = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z\-\.]+))?(?:\+([0-9A-Za-z\-\.]+))?$`)
+
+// Version represents a semantic version
+type Version struct {
+	Major      int    `json:"major"`
+	Minor      int    `json:"minor"`
+	Patch      int    `json:"patch"`
+	PreRelease string `json:"prerelease,omitempty"`
+	Build      string `json:"build,omitempty"`
+	Original   string `json:"original"`
+}
+
+// String returns the string representation of the version
+func (v Version) String() string {
+	if v.Original != "" {
+		return v.Original
+	}
+	version := fmt.Sprintf("%d.%d.%d", v.Major, v.Minor, v.Patch)
+	if v.PreRelease != "" {
+		version += "-" + v.PreRelease
+	}
+	if v.Build != "" {
+		version += "+" + v.Build
+	}
+	return version
+}
+
+// Compare compares two versions, returns VersionOlder/VersionEqual/VersionNewer
+func (v Version) Compare(other Version) int {
+	if v.Major != other.Major {
+		if v.Major < other.Major {
+			return VersionOlder
+		}
+		return VersionNewer
+	}
+
+	if v.Minor != other.Minor {
+		if v.Minor < other.Minor {
+			return VersionOlder
+		}
+		return VersionNewer
+	}
+
+	if v.Patch != other.Patch {
+		if v.Patch < other.Patch {
+			return VersionOlder
+		}
+		return VersionNewer
+	}
+
+	// Handle pre-release versions
+	if v.PreRelease == "" && other.PreRelease != "" {
+		return VersionNewer // release > pre-release
+	}
+	if v.PreRelease != "" && other.PreRelease == "" {
+		return VersionOlder // pre-release < release
+	}
+	if v.PreRelease != other.PreRelease {
+		if v.PreRelease < other.PreRelease {
+			return VersionOlder
+		}
+		return VersionNewer
+	}
+
+	return VersionEqual
+}
 
 // ParseVersion parses a version string into a Version struct
 func ParseVersion(versionStr string) (*Version, error) {
 	if versionStr == "" {
-		return nil, NewVersionError(ErrVersionInvalid, constants.MsgInvalidVersion.Content, nil)
+		return nil, pkgerrors.NewValidationError("input", "empty version string", nil)
 	}
 
-	// Clean the version string
 	versionStr = strings.TrimSpace(versionStr)
 
 	// Handle special cases
-	if _, isSpecial := SpecialVersions[versionStr]; isSpecial {
+	if versionStr == "latest" || versionStr == "*" {
 		return &Version{
-			Major:    999,
-			Minor:    999,
-			Patch:    999,
+			Major:    MaxVersionNumber,
+			Minor:    MaxVersionNumber,
+			Patch:    MaxVersionNumber,
 			Original: versionStr,
 		}, nil
 	}
 
 	matches := semverRegex.FindStringSubmatch(versionStr)
 	if matches == nil {
-		return nil, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf(constants.MsgInvalidVersion.Content, versionStr), nil)
+		return nil, fmt.Errorf("invalid version format: %s", versionStr)
 	}
 
 	major, err := strconv.Atoi(matches[1])
 	if err != nil {
-		return nil, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf(constants.MsgInvalidVersion.Content, matches[1]), err)
+		return nil, fmt.Errorf("invalid major version: %s", matches[1])
 	}
 
 	minor, err := strconv.Atoi(matches[2])
 	if err != nil {
-		return nil, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf(constants.MsgInvalidVersion.Content, matches[2]), err)
+		return nil, fmt.Errorf("invalid minor version: %s", matches[2])
 	}
 
 	patch, err := strconv.Atoi(matches[3])
 	if err != nil {
-		return nil, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf(constants.MsgInvalidVersion.Content, matches[3]), err)
+		return nil, fmt.Errorf("invalid patch version: %s", matches[3])
 	}
 
-	version := &Version{
-		Major:    major,
-		Minor:    minor,
-		Patch:    patch,
-		Original: versionStr,
-	}
+	return &Version{
+		Major:      major,
+		Minor:      minor,
+		Patch:      patch,
+		PreRelease: matches[4],
+		Build:      matches[5],
+		Original:   versionStr,
+	}, nil
+}
 
-	// Pre-release version
-	if len(matches) > 4 && matches[4] != "" {
-		version.PreRelease = matches[4]
-	}
+// VersionConstraint represents a simple version constraint
+type VersionConstraint struct {
+	Operator string  `json:"operator"`
+	Version  Version `json:"version"`
+	Original string  `json:"original"`
+}
 
-	// Build metadata
-	if len(matches) > 5 && matches[5] != "" {
-		version.Build = matches[5]
-	}
+// Satisfies checks if a version satisfies the constraint
+func (c VersionConstraint) Satisfies(version Version) bool {
+	cmp := version.Compare(c.Version)
 
-	return version, nil
+	switch c.Operator {
+	case "=", "==", "":
+		return cmp == VersionEqual
+	case "!=":
+		return cmp != VersionEqual
+	case ">":
+		return cmp == VersionNewer
+	case ">=":
+		return cmp == VersionNewer || cmp == VersionEqual
+	case "<":
+		return cmp == VersionOlder
+	case "<=":
+		return cmp == VersionOlder || cmp == VersionEqual
+	case "*":
+		return true
+	default:
+		return false
+	}
 }
 
 // ParseVersionConstraint parses a version constraint string
-func ParseVersionConstraint(constraintStr string) (*VersionConstraint, error) {
-	if constraintStr == "" {
-		return nil, NewVersionError(ErrVersionConstraint, "constraint string cannot be empty", nil)
+func ParseVersionConstraint(constraint string) (*VersionConstraint, error) {
+	constraint = strings.TrimSpace(constraint)
+
+	if wildcardConstraint := handleWildcardConstraint(constraint); wildcardConstraint != nil {
+		return wildcardConstraint, nil
 	}
 
-	constraintStr = strings.TrimSpace(constraintStr)
-
-	// Handle wildcards
-	if constraintStr == "*" || constraintStr == "latest" {
-		return &VersionConstraint{
-			Operator: "*",
-			Version:  Version{Major: 0, Minor: 0, Patch: 0},
-			Original: constraintStr,
-		}, nil
-	}
-
-	// Try to extract operator from the beginning
-	var operator, versionStr string
-
-	// Check for operators in order of precedence (longest first)
-	operators := []string{">=", "<=", "!=", "==", ">", "<", "~", "^", "="}
-	for _, op := range operators {
-		if strings.HasPrefix(constraintStr, op) {
-			operator = op
-			versionStr = strings.TrimSpace(constraintStr[len(op):])
-			break
-		}
-	}
-
-	// If no operator found, assume exact match
-	if operator == "" {
-		operator = "="
-		versionStr = constraintStr
-	}
-
-	// Normalize == to =
-	if operator == "==" {
-		operator = "="
-	}
+	operator, versionStr := extractOperator(constraint)
 
 	version, err := ParseVersion(versionStr)
 	if err != nil {
-		return nil, NewVersionError(ErrVersionConstraint,
-			fmt.Sprintf(constants.MsgInvalidVersion.Content, versionStr), err)
+		return nil, fmt.Errorf("invalid version constraint: %s", constraint)
 	}
 
 	return &VersionConstraint{
 		Operator: operator,
 		Version:  *version,
-		Original: constraintStr,
+		Original: constraint,
 	}, nil
 }
 
-// ParseVersionRange parses a version range like ">=1.0.0 <2.0.0"
-func ParseVersionRange(rangeStr string) ([]*VersionConstraint, error) {
-	if rangeStr == "" {
-		return nil, NewVersionError(ErrVersionConstraint, "range string cannot be empty", nil)
-	}
-
-	// Split by spaces or commas
-	parts := regexp.MustCompile(`[\s,]+`).Split(strings.TrimSpace(rangeStr), -1)
-	var constraints []*VersionConstraint
-
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
+func handleWildcardConstraint(constraint string) *VersionConstraint {
+	if constraint == "" || constraint == "*" {
+		return &VersionConstraint{
+			Operator: "*",
+			Version:  Version{},
+			Original: constraint,
 		}
-
-		constraint, err := ParseVersionConstraint(part)
-		if err != nil {
-			return nil, err
-		}
-
-		constraints = append(constraints, constraint)
 	}
-
-	if len(constraints) == 0 {
-		return nil, NewVersionError(ErrVersionConstraint, "no valid constraints found in range", nil)
-	}
-
-	return constraints, nil
+	return nil
 }
 
-// ValidateVersion checks if a version string is valid
-func ValidateVersion(versionStr string) error {
-	_, err := ParseVersion(versionStr)
+func extractOperator(constraint string) (string, string) {
+	operators := []string{">=", "<=", "!=", "==", ">", "<", "="}
+
+	for _, op := range operators {
+		if strings.HasPrefix(constraint, op) {
+			versionStr := strings.TrimSpace(constraint[len(op):])
+			return op, versionStr
+		}
+	}
+
+	return "=", constraint
+}
+
+// ValidateConstraint validates a version constraint string
+func ValidateConstraint(constraint string) error {
+	_, err := ParseVersionConstraint(constraint)
 	return err
-}
-
-// ValidateConstraint checks if a constraint string is valid
-func ValidateConstraint(constraintStr string) error {
-	_, err := ParseVersionConstraint(constraintStr)
-	return err
-}
-
-// NormalizeVersion normalizes a version string to a standard format
-func NormalizeVersion(versionStr string) (string, error) {
-	version, err := ParseVersion(versionStr)
-	if err != nil {
-		return "", err
-	}
-	return version.String(), nil
-}
-
-// CompareVersions compares two version strings
-func CompareVersions(v1Str, v2Str string) (int, error) {
-	v1, err := ParseVersion(v1Str)
-	if err != nil {
-		return 0, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf("invalid version v1: %s", v1Str), err)
-	}
-
-	v2, err := ParseVersion(v2Str)
-	if err != nil {
-		return 0, NewVersionError(ErrVersionInvalid,
-			fmt.Sprintf("invalid version v2: %s", v2Str), err)
-	}
-
-	return v1.Compare(*v2), nil
-}
-
-// SortVersions sorts a slice of version strings in ascending order
-func SortVersions(versions []string) ([]string, error) {
-	type versionPair struct {
-		original string
-		parsed   *Version
-	}
-
-	var pairs []versionPair
-	for _, v := range versions {
-		parsed, err := ParseVersion(v)
-		if err != nil {
-			return nil, err
-		}
-		pairs = append(pairs, versionPair{original: v, parsed: parsed})
-	}
-
-	// Sort pairs by parsed version
-	for i := 0; i < len(pairs); i++ {
-		for j := i + 1; j < len(pairs); j++ {
-			if pairs[i].parsed.Compare(*pairs[j].parsed) > 0 {
-				pairs[i], pairs[j] = pairs[j], pairs[i]
-			}
-		}
-	}
-
-	result := make([]string, len(pairs))
-	for i, pair := range pairs {
-		result[i] = pair.original
-	}
-
-	return result, nil
-}
-
-// GetLatestVersion returns the latest version from a list of version strings
-func GetLatestVersion(versions []string) (string, error) {
-	if len(versions) == 0 {
-		return "", NewVersionError(ErrVersionNotFound, "no versions provided", nil)
-	}
-
-	sorted, err := SortVersions(versions)
-	if err != nil {
-		return "", err
-	}
-
-	return sorted[len(sorted)-1], nil
-}
-
-// FilterVersionsByConstraint filters versions that satisfy a constraint
-func FilterVersionsByConstraint(versions []string, constraintStr string) ([]string, error) {
-	constraint, err := ParseVersionConstraint(constraintStr)
-	if err != nil {
-		return nil, err
-	}
-
-	var filtered []string
-	for _, vStr := range versions {
-		version, err := ParseVersion(vStr)
-		if err != nil {
-			continue // Skip invalid versions
-		}
-
-		if constraint.Satisfies(*version) {
-			filtered = append(filtered, vStr)
-		}
-	}
-
-	return filtered, nil
 }

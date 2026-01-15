@@ -2,9 +2,10 @@ package docker
 
 import (
 	"log/slog"
-	"os"
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -17,7 +18,7 @@ func TestNewClient(t *testing.T) {
 	}{
 		{
 			name:        "create client with valid logger",
-			logger:      slog.New(slog.NewTextHandler(os.Stdout, nil)),
+			logger:      logger.GetLogger(),
 			expectError: false,
 		},
 		{
@@ -32,16 +33,15 @@ func TestNewClient(t *testing.T) {
 			client, err := NewClient(tt.logger)
 
 			if tt.expectError {
-				assert.Error(t, err)
-				assert.Nil(t, client)
+				testhelpers.AssertErrorPattern(t, client, err, true, "NewClient")
 			} else {
 				if err != nil {
 					// Docker might not be available in test environment
 					t.Skipf("Docker not available: %v", err)
 				}
 				require.NotNil(t, client)
-				assert.NotNil(t, client.cli)
-				assert.Equal(t, tt.logger, client.logger)
+				assert.NotNil(t, client.GetCli())
+				assert.Equal(t, tt.logger, client.GetLogger())
 
 				// Clean up
 				_ = client.Close()
@@ -51,9 +51,9 @@ func TestNewClient(t *testing.T) {
 }
 
 func TestClient_Close(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	testLogger := logger.GetLogger()
 
-	client, err := NewClient(logger)
+	client, err := NewClient(testLogger)
 	if err != nil {
 		t.Skipf("Docker not available: %v", err)
 	}
@@ -72,9 +72,9 @@ func TestClient_Close(t *testing.T) {
 }
 
 func TestClient_GetCli(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	testLogger := logger.GetLogger()
 
-	client, err := NewClient(logger)
+	client, err := NewClient(testLogger)
 	if err != nil {
 		t.Skipf("Docker not available: %v", err)
 	}
@@ -82,21 +82,21 @@ func TestClient_GetCli(t *testing.T) {
 
 	t.Run("get underlying docker client", func(t *testing.T) {
 		// Test that the underlying client is accessible
-		assert.NotNil(t, client.cli)
+		assert.NotNil(t, client.GetCli())
 	})
 }
 
 func TestClient_GetLogger(t *testing.T) {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	testLogger := logger.GetLogger()
 
-	client, err := NewClient(logger)
+	client, err := NewClient(testLogger)
 	if err != nil {
 		t.Skipf("Docker not available: %v", err)
 	}
 	defer func() { _ = client.Close() }()
 
 	t.Run("get logger", func(t *testing.T) {
-		assert.Equal(t, logger, client.logger)
+		assert.Equal(t, testLogger, client.GetLogger())
 	})
 }
 
@@ -113,7 +113,7 @@ func TestClient_WithNilLogger(t *testing.T) {
 
 	t.Run("client works with nil logger", func(t *testing.T) {
 		assert.NotNil(t, client)
-		assert.NotNil(t, client.cli)
-		assert.Nil(t, client.logger)
+		assert.NotNil(t, client.GetCli())
+		assert.Nil(t, client.GetLogger())
 	})
 }

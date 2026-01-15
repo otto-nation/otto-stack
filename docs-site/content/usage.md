@@ -1,283 +1,191 @@
 ---
-title: "Usage & Management"
-description: "Daily usage patterns, service management commands, and common workflows for otto-stack"
-lead: "Learn how to effectively use otto-stack for your daily development workflow"
+title: "Usage"
+description: "Daily usage patterns and common workflows for otto-stack"
+lead: "Learn how to effectively use otto-stack for your development workflow"
 date: "2025-10-01"
-lastmod: "2025-10-11"
+lastmod: "2025-11-10"
 draft: false
 weight: 20
 toc: true
 ---
 
-# Usage & Management Guide (otto-stack)
+# Usage Guide
 
-This guide covers daily usage patterns, service management commands, and common workflows for **otto-stack**.
-
----
-
-## ✅ Quick Checklist
-
-- [ ] Setup your environment ([Setup Guide](setup.md))
-- [ ] Configure your stack ([Configuration Guide](configuration.md))
-- [ ] Start services ([README](../README.md))
-- [ ] Manage services ([reference.md](reference.md))
-- [ ] Troubleshoot issues ([Troubleshooting Guide](troubleshooting.md))
-- [ ] Integrate with your app ([Integration Guide](integration.md))
-
----
-
-## 📋 Overview
-
-**otto-stack** provides a unified CLI for all development stack operations:
-
-- **`otto-stack up`**: Start services and development environment
-- **`otto-stack down`**: Stop services and clean up
-- **`otto-stack status`**: Check service status and health
-- **`otto-stack logs`**: View service logs
-- **`otto-stack exec`**: Execute commands in containers
-
-For a complete command reference, see [CLI Reference](reference.md).
-
-## 🚀 Common Workflows
-
-### Starting a New Go Project
+## 🚀 Quick Start
 
 ```bash
-# Initialize with Go template
-otto-stack init go --name my-api --with-database postgres
+# Initialize a new project
+otto-stack init
 
-# Start the development environment
-otto-stack up
-
-# Your Go application is now running with:
-# - Hot reload enabled
-# - PostgreSQL database
-# - Health checks configured
-```
-
-**Project structure created:**
-
-```
-my-api/
-├── main.go
-├── go.mod
-├── otto-stack-config.yaml
-├── docker-compose.override.yml
-└── .env.local
-```
-
-### Adding Services to Existing Project
-
-```bash
-# Add Redis for caching
-otto-stack service add redis
-
-# Add monitoring stack
-otto-stack service add prometheus grafana
-
-# Add message queue
-otto-stack service add kafka
-
-# Restart to apply changes
-otto-stack restart
-```
-
-**Verify services are running:**
-
-```bash
-otto-stack status
-otto-stack health redis
-```
-
-### Team Collaboration
-
-Share your development environment configuration:
-
-```bash
-# Export current configuration
-otto-stack config export > otto-stack.yaml
-
-# Team members can import it
-otto-stack config import otto-stack.yaml
-otto-stack up
-```
-
-**Team workflow best practices:**
-
-- Commit `otto-stack-config.yaml` to version control
-- Use `.env.local` for personal overrides (don't commit)
-- Document service dependencies in README
-- Use `otto-stack doctor` to verify team setup
-
-### Database Development Workflow
-
-```bash
-# Start with database services
-otto-stack init --services postgres,redis
-otto-stack up
-
-# Run migrations
-otto-stack exec postgres psql -U postgres -d myapp < migrations/001_initial.sql
-
-# Backup data for testing
-otto-stack backup postgres
-
-# Reset database for clean testing
-otto-stack reset postgres
-otto-stack restore postgres backup-20241006.sql
-```
-
-### Microservices Development
-
-```bash
-# Initialize with multiple services
-otto-stack init --name order-service --services postgres,kafka,jaeger
-otto-stack service add prometheus grafana
-
-# Start everything
-otto-stack up
-
-# Monitor distributed traces
-open http://localhost:16686  # Jaeger UI
-
-# View metrics
-open http://localhost:3000   # Grafana UI
-```
-
-### Daily Development Workflow
-
-**Start of day:**
-
-```bash
-# Quick health check
-otto-stack doctor
-
-# Start your stack
+# Start your development stack
 otto-stack up
 
 # Check service status
 otto-stack status
-```
 
-**During development:**
+# View logs
+otto-stack logs
 
-```bash
-# View logs for debugging
-otto-stack logs api
-otto-stack logs postgres
-
-# Monitor resource usage
-otto-stack stats
-
-# Reset data for testing
-otto-stack reset redis
-```
-
-**End of day:**
-
-```bash
 # Stop services
 otto-stack down
-
-# Or pause (keeps data)
-otto-stack pause
 ```
 
-## 🛠 Setup Commands
+## 📋 Basic Commands
 
-See [README](../README.md) and [Configuration Guide](configuration.md) for setup and configuration commands.
+### Project Management
 
-### Configuration Options
+```bash
+# Initialize new project with configuration
+otto-stack init
 
-See [Configuration Guide](configuration.md) for all available options and overrides.
+# Start all configured services
+otto-stack up
 
-### Instance Management
+# Stop all services
+otto-stack down
 
-See [README](../README.md) for instance management commands.
+# Restart services
+otto-stack restart
+```
 
-### Advanced Setup Options
+### Service Management
 
-See [Configuration Guide](configuration.md) for advanced setup options.
+```bash
+# Start specific service
+otto-stack up postgres
 
-## 🎛 Management Commands
+# Stop specific service
+otto-stack down redis
 
-See [README](../README.md) and [reference.md](reference.md) for all management commands.
+# Check service status
+otto-stack status postgres
 
-### Service Information
+# View service logs
+otto-stack logs postgres --follow
+```
 
-See [README](../README.md) and [services.md](services.md) for service info and status commands.
+### Health & Diagnostics
 
-### Logging and Monitoring
+```bash
+# Check overall system health
+otto-stack doctor
 
-See [README](../README.md) and [troubleshooting.md](troubleshooting.md) for logging and monitoring commands.
+# View detailed status
+otto-stack status --verbose
 
-### Service Interaction
+# List available services
+otto-stack services list
+```
 
-See [services.md](services.md) for service CLI and exec commands.
+## 🔧 Common Workflows
 
-### Data Management
+### Database Development
 
-See [usage.md](usage.md) and [reference.md](reference.md) for backup, restore, and data management commands.
+```bash
+# Start database services
+otto-stack up postgres redis
 
-### Maintenance
+# Connect to database
+otto-stack exec postgres psql -U postgres
 
-See [usage.md](usage.md) and [reference.md](reference.md) for update and cleanup commands.
+# View database logs
+otto-stack logs postgres
+```
 
-## 📊 Multi-Repository Workflows
+### Full Stack Development
 
-See [README](../README.md) and [setup.md](setup.md) for multi-repo usage and resource management workflows.
+```bash
+# Start complete development environment
+otto-stack up
 
-## 🔧 Configuration Management
+# Monitor all services
+otto-stack status
 
-See [configuration.md](configuration.md) for runtime config changes, environment-specific configs, and validation.
+# View aggregated logs
+otto-stack logs --all
+```
 
-## 🧪 Testing Workflows
+### Service Testing
 
-See [integration.md](integration.md) and [configuration.md](configuration.md) for integration, CI/CD, and database testing workflows.
+```bash
+# Start specific services for testing
+otto-stack up postgres redis kafka
 
-## 🔍 Debugging and Troubleshooting
+# Run health checks
+otto-stack doctor
 
-See [troubleshooting.md](troubleshooting.md) for health checks, log analysis, network debugging, and performance tips.
+# Clean restart
+otto-stack down && otto-stack up
+```
 
-## 📈 Performance Optimization
+## 📁 Configuration
 
-See [configuration.md](configuration.md) and [usage.md](usage.md) for resource tuning, service optimization, and speed tips.
+Otto-stack uses `otto-stack-config.yaml` for configuration:
 
-## 🔄 Update and Maintenance
+```yaml
+# Example configuration
+services:
+  - postgres
+  - redis
+  - kafka
 
-See [contributing.md](contributing.md) for update and maintenance workflows.
+service_configuration:
+  postgres:
+    database: my_app_dev
+    password: secure_password
+  redis:
+    password: redis_password
+```
 
-## 📚 Integration Examples
+See [Configuration Guide](configuration.md) for detailed options.
 
-See [integration.md](integration.md) for application integration patterns and Spring Boot examples.
+## 🔍 Monitoring
 
-## 🆘 Getting Help
+### Check Service Health
 
-See [README](../README.md) and [reference.md](reference.md) for help commands and quick reference.
+```bash
+# Overall health check
+otto-stack doctor
 
-## 🎯 What's Next?
+# Individual service status
+otto-stack status postgres
 
-After mastering these workflows, explore advanced otto-stack features:
+# Resource usage
+docker stats
+```
 
-1. **[Configure advanced settings](configuration.md)** - Custom ports, environment variables, service options
-2. **[Integrate with your applications](integration.md)** - Spring Boot, Node.js, and other framework examples
-3. **[Set up monitoring and observability](services.md#monitoring-stack)** - Prometheus, Grafana, Jaeger
-4. **[Troubleshoot common issues](troubleshooting.md)** - Debug problems and optimize performance
+### View Logs
 
-**Pro tips:**
+```bash
+# All services
+otto-stack logs
 
-- Use `otto-stack config validate` to check your configuration
-- Set up shell completion: `otto-stack completion bash`
-- Create project templates for your team's common stacks
+# Specific service
+otto-stack logs postgres
 
-**Share your setup:** Export configurations with `otto-stack config export` for team collaboration.
+# Follow logs in real-time
+otto-stack logs postgres --follow
 
-## 🗂️ See Also
+# Last 100 lines
+otto-stack logs postgres --tail 100
+```
 
-- [README](../README.md)
-- [Setup Guide](setup.md)
-- [Configuration Guide](configuration.md)
-- [Services Guide](services.md)
-- [Integration Guide](integration.md)
-- [Troubleshooting Guide](troubleshooting.md)
-- [Quick Reference](reference.md)
+## 🧹 Cleanup
+
+```bash
+# Stop all services
+otto-stack down
+
+# Remove containers and volumes
+otto-stack down --volumes
+
+# Clean up Docker resources
+docker system prune
+```
+
+## 📚 Next Steps
+
+- **[Services Guide](services.md)** - Available services and configuration
+- **[CLI Reference](cli-reference.md)** - Complete command reference
+- **[Configuration](configuration.md)** - Detailed configuration options
+- **[Troubleshooting](troubleshooting.md)** - Common issues and solutions

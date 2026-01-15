@@ -2,13 +2,16 @@ package project
 
 import (
 	"context"
-	"fmt"
+	"strings"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/utils"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/display"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/display"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
 
 // DepsHandler handles the deps command
@@ -20,62 +23,65 @@ func NewDepsHandler() *DepsHandler {
 }
 
 // Handle executes the deps command
-func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *types.BaseCommand) error {
-	ui.Header("Service Dependencies")
+func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	base.Output.Header("%s Service Dependencies", ui.IconInfo)
 
-	// Get output format
-	format, _ := cmd.Flags().GetString("output")
-
-	// Load service dependencies
-	serviceUtils := utils.NewServiceUtils()
-	dependencies, err := serviceUtils.LoadAllServiceDependencies()
-	if err != nil {
-		return fmt.Errorf("failed to load dependencies: %w", err)
-	}
-
-	if len(dependencies) == 0 {
-		ui.Info("No service dependencies found")
+	if len(args) == 0 {
+		base.Output.Warning("No services specified")
 		return nil
 	}
 
-	// Create display data
-	var displayData []map[string]any
-	for serviceName, deps := range dependencies {
-		if len(deps) == 0 {
-			displayData = append(displayData, map[string]any{
-				"Service":      serviceName,
-				"Dependencies": "None",
-			})
-		} else {
-			for _, dep := range deps {
-				displayData = append(displayData, map[string]any{
-					"Service":      serviceName,
-					"Dependencies": dep,
-				})
-			}
-		}
-	}
-
-	// Display results
-	formatter, err := display.CreateFormatter(format, cmd.OutOrStdout())
+	allServices, err := h.loadServices()
 	if err != nil {
-		return fmt.Errorf("failed to create formatter: %w", err)
+		return err
 	}
 
-	// Convert to ServiceStatus format for display
-	var services []display.ServiceStatus
-	for _, item := range displayData {
-		services = append(services, display.ServiceStatus{
-			Name:  item["Service"].(string),
-			State: item["Dependencies"].(string),
-		})
-	}
+	rows := h.buildDependencyRows(args, allServices)
 
-	if err := formatter.FormatStatus(services, display.StatusOptions{}); err != nil {
-		return fmt.Errorf("failed to format output: %w", err)
-	}
+	headers := []string{display.HeaderService, display.HeaderDependencies}
+	display.RenderTable(base.Output.Writer(), headers, rows)
 
+	base.Output.Success("Dependencies displayed successfully")
 	return nil
+}
+
+func (h *DepsHandler) loadServices() (map[string]servicetypes.ServiceConfig, error) {
+	manager, err := services.New()
+	if err != nil {
+		return nil, pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
+	}
+	return manager.GetAllServices(), nil
+}
+
+func (h *DepsHandler) buildDependencyRows(serviceNames []string, allServices map[string]servicetypes.ServiceConfig) [][]string {
+	rows := make([][]string, 0, len(serviceNames))
+
+	for _, name := range serviceNames {
+		service, exists := allServices[name]
+		if !exists {
+			continue
+		}
+
+		depsStr := h.formatDependencies(service.Service.Dependencies.Required)
+		rows = append(rows, []string{name, depsStr})
+	}
+
+	return rows
+}
+
+func (h *DepsHandler) formatDependencies(deps []string) string {
+	if len(deps) == 0 {
+		return "None"
+	}
+
+	var result strings.Builder
+	for i, dep := range deps {
+		if i > 0 {
+			result.WriteString(", ")
+		}
+		result.WriteString(dep)
+	}
+	return result.String()
 }
 
 // ValidateArgs validates the command arguments
