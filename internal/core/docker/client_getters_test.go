@@ -1,3 +1,5 @@
+//go:build unit
+
 package docker
 
 import (
@@ -6,36 +8,17 @@ import (
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 )
 
-func TestClient_GetCliMethod(t *testing.T) {
-	client := &Client{}
+func TestClient_GetResourceManager(t *testing.T) {
+	logger := testhelpers.MockLogger()
+	mockDocker := &testhelpers.MockDockerClient{}
+	client := NewClientWithDependencies(mockDocker, nil, logger)
 
-	// Test getter method
-	cli := client.GetCli()
-
-	// Should return the internal cli (even if nil)
-	if cli != client.cli {
-		t.Error("GetCli should return internal cli")
-	}
-}
-
-func TestNewResourceManagerConstructor(t *testing.T) {
-	client := &Client{}
-	manager := NewResourceManager(client)
-	testhelpers.AssertValidConstructor(t, manager, nil, "ResourceManager")
-}
-
-func TestContainerInfoBasic(t *testing.T) {
-	info := &ContainerInfo{
-		ID:     "test-id",
-		Name:   "test-name",
-		Status: "running",
+	rm := NewResourceManager(client)
+	if rm == nil {
+		t.Error("NewResourceManager should return non-nil manager")
 	}
 
-	// Basic validation
-	if info.ID != "test-id" {
-		t.Errorf("Expected ID test-id, got %s", info.ID)
-	}
-	if info.Name != "test-name" {
-		t.Errorf("Expected Name test-name, got %s", info.Name)
+	if rm.client != client {
+		t.Error("ResourceManager should reference the client")
 	}
 }

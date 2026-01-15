@@ -68,14 +68,14 @@ type ComposeManagerInterface interface {
 }
 
 type Client struct {
-	cli       *client.Client
+	cli       DockerClient
 	logger    *slog.Logger
 	resources *ResourceManager
 	compose   *Manager
 }
 
 // NewClientWithDependencies creates a client with injected dependencies (for testing)
-func NewClientWithDependencies(cli *client.Client, compose *Manager, logger *slog.Logger) *Client {
+func NewClientWithDependencies(cli DockerClient, compose *Manager, logger *slog.Logger) *Client {
 	dc := &Client{
 		cli:     cli,
 		logger:  logger,
@@ -97,7 +97,7 @@ func NewClient(logger *slog.Logger) (*Client, error) {
 	}
 
 	dc := &Client{
-		cli:     cli,
+		cli:     NewDockerClientAdapter(cli),
 		logger:  logger,
 		compose: composeManager,
 	}
@@ -111,8 +111,18 @@ func (c *Client) Close() error {
 }
 
 // GetCli returns the underlying Docker client
-func (c *Client) GetCli() *client.Client {
+func (c *Client) GetCli() DockerClient {
 	return c.cli
+}
+
+// GetLogger returns the logger
+func (c *Client) GetLogger() *slog.Logger {
+	return c.logger
+}
+
+// GetResources returns the resource manager
+func (c *Client) GetResources() *ResourceManager {
+	return c.resources
 }
 
 // GetComposeManager returns the compose manager

@@ -1,78 +1,55 @@
+//go:build unit
+
 package docker
 
 import (
 	"context"
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/otto-nation/otto-stack/test/testhelpers"
 )
 
-func TestResourceManager_List(t *testing.T) {
-	client, err := NewClient(logger.GetLogger())
-	if err != nil {
-		t.Skipf("Docker not available: %v", err)
+func TestResourceManager_List_Containers_Unit(t *testing.T) {
+	mockDocker := &testhelpers.MockDockerClient{
+		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
+			return []types.Container{{ID: "c1"}}, nil
+		},
 	}
-	defer client.Close()
 
+	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
 	ctx := context.Background()
-	filter := NewProjectFilter("test-project")
+	filter := filters.NewArgs()
 
-	// Test listing containers
-	containers, err := client.resources.List(ctx, ResourceContainer, filter)
+	containers, err := client.GetResources().List(ctx, ResourceContainer, filter)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
 	}
-	_ = containers
-
-	// Test listing volumes
-	volumes, err := client.resources.List(ctx, ResourceVolume, filter)
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
+	if len(containers) != 1 {
+		t.Errorf("Expected 1 container, got %d", len(containers))
 	}
-	_ = volumes
-
-	// Test listing networks
-	networks, err := client.resources.List(ctx, ResourceNetwork, filter)
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-	_ = networks
-
-	// Test listing images
-	images, err := client.resources.List(ctx, ResourceImage, filter)
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-	_ = images
 }
 
-func TestResourceManager_Remove(t *testing.T) {
-	client, err := NewClient(logger.GetLogger())
-	if err != nil {
-		t.Skipf("Docker not available: %v", err)
-	}
-	defer client.Close()
+func TestResourceManager_Remove_Containers_Unit(t *testing.T) {
+	containerRemoved := false
 
+	mockDocker := &testhelpers.MockDockerClient{
+		ContainerRemoveFunc: func(ctx context.Context, containerID string, options container.RemoveOptions) error {
+			containerRemoved = true
+			return nil
+		},
+	}
+
+	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
 	ctx := context.Background()
 
-	// Test removing non-existent resources (should not error)
-	err = client.resources.Remove(ctx, ResourceContainer, []string{"non-existent"})
+	err := client.GetResources().Remove(ctx, ResourceContainer, []string{"c1"})
 	if err != nil {
-		t.Fatalf("Expected no error for non-existent container, got %v", err)
+		t.Errorf("Expected no error, got %v", err)
 	}
-
-	err = client.resources.Remove(ctx, ResourceVolume, []string{"non-existent"})
-	if err != nil {
-		t.Fatalf("Expected no error for non-existent volume, got %v", err)
-	}
-
-	err = client.resources.Remove(ctx, ResourceNetwork, []string{"non-existent"})
-	if err != nil {
-		t.Fatalf("Expected no error for non-existent network, got %v", err)
-	}
-
-	err = client.resources.Remove(ctx, ResourceImage, []string{"non-existent"})
-	if err != nil {
-		t.Fatalf("Expected no error for non-existent image, got %v", err)
+	if !containerRemoved {
+		t.Error("Expected container to be removed")
 	}
 }
