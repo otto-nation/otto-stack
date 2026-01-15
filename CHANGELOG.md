@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.0.0 (2026-01-15)
+
+
+### Features
+
+* add Close method to logger for proper file handle cleanup ([#5](https://github.com/otto-nation/otto-stack/issues/5)) ([0de0dff](https://github.com/otto-nation/otto-stack/commit/0de0dff42f9c6b8dd5aa3e755edfa338a0e45738))
+* Add complete CLI implementation for otto-stack ([#1](https://github.com/otto-nation/otto-stack/issues/1)) ([456f050](https://github.com/otto-nation/otto-stack/commit/456f050739196b6eb55c961d7a702fc5770ccea1))
+* add comprehensive CLI installation and build automation ([#12](https://github.com/otto-nation/otto-stack/issues/12)) ([d7fee41](https://github.com/otto-nation/otto-stack/commit/d7fee41e6b417b44549cee6746b42cbad2806866))
+* add configurable AI agent support for git automation ([#23](https://github.com/otto-nation/otto-stack/issues/23)) ([b431b63](https://github.com/otto-nation/otto-stack/commit/b431b6353b84fb47840335cfb4ec8ffe1eadd304))
+* add schema-driven config generation and flexible service output formats ([#25](https://github.com/otto-nation/otto-stack/issues/25)) ([3289b74](https://github.com/otto-nation/otto-stack/commit/3289b741975ce12627915111250aab0712c72f06))
+* consolidate CLI architecture and centralize branding constants ([#24](https://github.com/otto-nation/otto-stack/issues/24)) ([a4b14ea](https://github.com/otto-nation/otto-stack/commit/a4b14eabe39474a8223b23cc2878d3ea418267a7))
+
+
+### Bug Fixes
+
+* improve cross-platform command detection and Windows compatibility ([#4](https://github.com/otto-nation/otto-stack/issues/4)) ([557f5ad](https://github.com/otto-nation/otto-stack/commit/557f5adcbfc1cc858e39513ca28675fd2ad422f4))
+
+
+### Dependencies
+
+* **deps-dev:** bump markdown-link-check from 3.13.7 to 3.14.1 in /docs-site ([#6](https://github.com/otto-nation/otto-stack/issues/6)) ([4fec5d3](https://github.com/otto-nation/otto-stack/commit/4fec5d3cf834003f5d476366ec48bf9240f225a2))
+* **deps-dev:** bump vite from 7.1.9 to 7.1.12 in /docs-site ([#20](https://github.com/otto-nation/otto-stack/issues/20)) ([c8a0a1a](https://github.com/otto-nation/otto-stack/commit/c8a0a1a2182d2479747da6cce6dd8d06d93b3ec9))
+
 ## [1.1.0](https://github.com/otto-nation/otto-stack/compare/otto-stack-v1.0.1...otto-stack-v1.1.0) (2025-10-13)
 
 
