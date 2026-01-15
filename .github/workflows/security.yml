@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main, develop]
   schedule:
-    - cron: "0 2 * * 0"  # Weekly on Sundays at 2 AM UTC
+    - cron: "0 2 * * 0" # Weekly on Sundays at 2 AM UTC
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -37,9 +37,6 @@ jobs:
       - name: Setup environment
         uses: ./.github/actions/setup-environment
 
-      - name: Generate code
-        run: task generate
-
       - name: Run security scan
         run: task security
 
@@ -47,7 +44,7 @@ jobs:
         id: scan-strategy
         run: |
           echo "🔍 Determining TruffleHog scan strategy..."
-          
+
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             echo "strategy=diff" >> $GITHUB_OUTPUT
             echo "base=${{ github.event.pull_request.base.sha }}" >> $GITHUB_OUTPUT
@@ -86,8 +83,6 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ **Security scan**: Completed using Taskfile" >> $GITHUB_STEP_SUMMARY
           echo "🔍 **TruffleHog**: Secrets scan completed using ${{ steps.scan-strategy.outputs.strategy }} strategy" >> $GITHUB_STEP_SUMMARY
-
-
 
   advanced-security:
     name: Advanced Security

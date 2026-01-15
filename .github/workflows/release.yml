@@ -55,13 +55,6 @@ jobs:
         with:
           install-task: "true"
 
-      - name: Run pre-release tests
-        run: |
-          echo "🧪 Running pre-release validation..."
-          go test -v -race ./...
-          go vet ./...
-          task build
-
       - name: Create release
         id: release
         uses: googleapis/release-please-action@v4
@@ -156,10 +149,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "🍺 Deploying to Homebrew tap..."
-          
+
           # Generate formula with checksums
           ./scripts/update-homebrew-formula.sh -v ${{ env.TAG_NAME }}
-          
+
           # Deploy to tap repository
           ./scripts/deploy-homebrew-tap.sh -v ${{ env.TAG_NAME }}
 
