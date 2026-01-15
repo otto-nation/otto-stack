@@ -161,11 +161,13 @@ jobs:
           go-version: ${{ matrix.go-version }}
           cache: true
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          install-task: "true"
 
       - name: Run tests
-        run: go test -v -race -tags=unit ./internal/...
+        run: task test
 
       - name: Build
         shell: bash
