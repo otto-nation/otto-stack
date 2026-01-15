@@ -266,22 +266,13 @@ func (g *Generator) buildOttoLabels(serviceName string) map[string]string {
 	}
 }
 
-// GenerateFromServiceConfigs creates a docker-compose file from ServiceConfigs
-func (g *Generator) GenerateFromServiceConfigs(serviceConfigs []types.ServiceConfig, projectName string) error {
+// BuildComposeData generates docker-compose YAML content from ServiceConfigs without writing to disk
+func (g *Generator) BuildComposeData(serviceConfigs []types.ServiceConfig) ([]byte, error) {
 	composeData, err := g.buildComposeStructure(serviceConfigs)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	composeContent, err := g.marshalComposeData(composeData)
-	if err != nil {
-		return err
-	}
-
-	return g.writeComposeFile(composeContent)
-}
-
-func (g *Generator) marshalComposeData(composeData map[string]any) ([]byte, error) {
 	composeContent, err := yaml.Marshal(composeData)
 	if err != nil {
 		return nil, pkgerrors.NewServiceError("compose", "marshal data", err)
@@ -289,14 +280,26 @@ func (g *Generator) marshalComposeData(composeData map[string]any) ([]byte, erro
 	return composeContent, nil
 }
 
-func (g *Generator) writeComposeFile(content []byte) error {
-	if err := filesystem.EnsureDir(core.OttoStackDir); err != nil {
+// WriteComposeFile writes docker-compose content to the specified directory
+func (g *Generator) WriteComposeFile(content []byte, outputDir string) error {
+	if err := filesystem.EnsureDir(outputDir); err != nil {
 		return pkgerrors.NewServiceError("compose", "create directory", err)
 	}
 
-	if err := filesystem.WriteFile(dockerConstants.DockerComposeFilePath, content, core.PermReadWrite); err != nil {
+	filePath := outputDir + "/docker-compose.yml"
+	if err := filesystem.WriteFile(filePath, content, core.PermReadWrite); err != nil {
 		return pkgerrors.NewServiceError("compose", "write file", err)
 	}
 
 	return nil
+}
+
+// GenerateFromServiceConfigs creates a docker-compose file from ServiceConfigs
+func (g *Generator) GenerateFromServiceConfigs(serviceConfigs []types.ServiceConfig, projectName string) error {
+	content, err := g.BuildComposeData(serviceConfigs)
+	if err != nil {
+		return err
+	}
+
+	return g.WriteComposeFile(content, core.OttoStackDir)
 }

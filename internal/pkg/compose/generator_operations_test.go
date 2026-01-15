@@ -128,10 +128,12 @@ func TestGenerator_EdgeCases(t *testing.T) {
 			{Name: services.ServicePostgres},
 		}
 
-		err = generator.GenerateFromServiceConfigs(configs, "test-project")
-		// Should handle gracefully
+		// Test BuildComposeData instead of file-writing method
+		data, err := generator.BuildComposeData(configs)
 		if err != nil {
 			assert.Error(t, err)
+		} else {
+			assert.NotEmpty(t, data)
 		}
 	})
 
