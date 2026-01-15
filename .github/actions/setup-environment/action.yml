@@ -74,19 +74,19 @@ runs:
         # jq is pre-installed on GitHub runners
         echo "jq version: $(jq --version)"
 
-    - name: Download Go dependencies
-      shell: bash
-      run: |
-        echo "Downloading Go dependencies..."
-        go mod download
-        go mod verify
-
     - name: Run code generation
       if: inputs.install-task == 'true'
       shell: bash
       run: |
         echo "Running code generation..."
         task generate
+
+    - name: Download Go dependencies
+      shell: bash
+      run: |
+        echo "Downloading Go dependencies..."
+        go mod download
+        go mod verify
 
     - name: Environment summary
       shell: bash
