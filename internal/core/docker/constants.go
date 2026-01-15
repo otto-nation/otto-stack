@@ -128,15 +128,6 @@ const (
 	HealthNone      = "none"
 )
 
-// Otto Stack labels
-const (
-	LabelOttoManaged     = "io.otto-stack.managed"
-	LabelOttoProject     = "io.otto-stack.project"
-	LabelOttoService     = "io.otto-stack.service"
-	LabelOttoVersion     = "io.otto-stack.version"
-	LabelOttoSharingMode = "io.otto-stack.sharing-mode"
-)
-
 // Network names
 const (
 	DefaultNetworkName = "default"

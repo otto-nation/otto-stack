@@ -48,15 +48,8 @@ func GetProcessPID(name string) (int, error) {
 		return 0, fmt.Errorf("process name cannot be empty")
 	}
 
-	var cmd *exec.Cmd
-
-	switch runtime.GOOS {
-	case docker.OSLinux, docker.OSDarwin:
-		cmd = exec.Command(docker.CmdPgrep, "-f", name)
-	case docker.OSWindows:
-		args := []string{"/FI", fmt.Sprintf("IMAGENAME eq %s.exe", name), "/FO", "CSV", "/NH"}
-		cmd = exec.Command(docker.CmdTasklist, args...)
-	default:
+	cmd := createProcessCommand(name)
+	if cmd == nil {
 		return 0, fmt.Errorf(docker.ErrUnsupportedOS, runtime.GOOS)
 	}
 
@@ -65,17 +58,41 @@ func GetProcessPID(name string) (int, error) {
 		return 0, err
 	}
 
-	outputStr := strings.TrimSpace(string(output))
+	return parsePIDFromOutput(string(output), name)
+}
+
+func createProcessCommand(name string) *exec.Cmd {
+	switch runtime.GOOS {
+	case docker.OSLinux, docker.OSDarwin:
+		return exec.Command(docker.CmdPgrep, "-f", name)
+	case docker.OSWindows:
+		args := []string{"/FI", fmt.Sprintf("IMAGENAME eq %s.exe", name), "/FO", "CSV", "/NH"}
+		return exec.Command(docker.CmdTasklist, args...)
+	default:
+		return nil
+	}
+}
+
+func parsePIDFromOutput(output, processName string) (int, error) {
+	outputStr := strings.TrimSpace(output)
 	if outputStr == "" {
-		return 0, fmt.Errorf(docker.ErrProcessNotFound, name)
+		return 0, fmt.Errorf(docker.ErrProcessNotFound, processName)
 	}
 
 	if runtime.GOOS != docker.OSWindows {
-		pidStr := strings.Split(outputStr, "\n")[0]
-		return strconv.Atoi(pidStr)
+		return parseUnixPID(outputStr)
 	}
 
-	lines := strings.Split(outputStr, "\n")
+	return parseWindowsPID(outputStr)
+}
+
+func parseUnixPID(output string) (int, error) {
+	pidStr := strings.Split(output, "\n")[0]
+	return strconv.Atoi(pidStr)
+}
+
+func parseWindowsPID(output string) (int, error) {
+	lines := strings.Split(output, "\n")
 	if len(lines) == 0 {
 		return 0, pkgerrors.NewValidationError("input", "failed to parse PID from tasklist output", nil)
 	}
@@ -92,11 +109,18 @@ func GetProcessPID(name string) (int, error) {
 // KillProcess kills a process by PID
 func KillProcess(pid int) error {
 	if runtime.GOOS == docker.OSWindows {
-		args := []string{"/F", "/PID", strconv.Itoa(pid)}
-		cmd := exec.Command(docker.CmdTaskkill, args...)
-		return cmd.Run()
+		return killWindowsProcess(pid)
 	}
+	return killUnixProcess(pid)
+}
 
+func killWindowsProcess(pid int) error {
+	args := []string{"/F", "/PID", strconv.Itoa(pid)}
+	cmd := exec.Command(docker.CmdTaskkill, args...)
+	return cmd.Run()
+}
+
+func killUnixProcess(pid int) error {
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		return err

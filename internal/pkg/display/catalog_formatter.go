@@ -27,49 +27,66 @@ func (cf *CatalogFormatter) FormatTable(catalog ServiceCatalog) error {
 	widths := []int{ColWidthService, ColWidthCategory, ColWidthDescription}
 
 	cf.table.WriteHeader(headers, widths)
+	cf.writeTableRows(catalog, widths)
+	return nil
+}
 
-	// Flatten categories into services list
+func (cf *CatalogFormatter) writeTableRows(catalog ServiceCatalog, widths []int) {
 	for category, services := range catalog.Categories {
 		for _, service := range services {
-			values := []string{
-				service.Name,
-				category,
-				service.Description,
-			}
+			values := []string{service.Name, category, service.Description}
 			cf.table.WriteRow(values, widths)
 		}
 	}
-	return nil
 }
 
 // FormatGrouped formats catalog grouped by category
 func (cf *CatalogFormatter) FormatGrouped(catalog ServiceCatalog) error {
-	// Sort categories
-	var categoryNames []string
+	categoryNames := cf.getSortedCategoryNames(catalog)
+
+	for i, category := range categoryNames {
+		cf.formatCategory(i, category, catalog.Categories[category])
+	}
+	return nil
+}
+
+func (cf *CatalogFormatter) getSortedCategoryNames(catalog ServiceCatalog) []string {
+	categoryNames := make([]string, 0, len(catalog.Categories))
 	for category := range catalog.Categories {
 		categoryNames = append(categoryNames, category)
 	}
 	sort.Strings(categoryNames)
+	return categoryNames
+}
 
-	for i, category := range categoryNames {
-		if i > 0 {
-			_, _ = fmt.Fprintln(cf.writer)
-		}
-
-		_, _ = fmt.Fprintf(cf.writer, "%s:\n", strings.ToUpper(category))
-		cf.table.WriteSeparator(TableWidthCatalog)
-
-		// Sort services within category
-		services := catalog.Categories[category]
-		sort.Slice(services, func(i, j int) bool {
-			return services[i].Name < services[j].Name
-		})
-
-		for _, service := range services {
-			_, _ = fmt.Fprintf(cf.writer, "  %-*s %s\n", ColWidthService, service.Name, service.Description)
-		}
+func (cf *CatalogFormatter) formatCategory(index int, category string, services []ServiceInfo) {
+	if index > 0 {
+		_, _ = fmt.Fprintln(cf.writer)
 	}
-	return nil
+
+	cf.writeCategoryHeader(category)
+	cf.writeSortedServices(services)
+}
+
+func (cf *CatalogFormatter) writeCategoryHeader(category string) {
+	_, _ = fmt.Fprintf(cf.writer, "%s:\n", strings.ToUpper(category))
+	cf.table.WriteSeparator(TableWidthCatalog)
+}
+
+func (cf *CatalogFormatter) writeSortedServices(services []ServiceInfo) {
+	sortedServices := cf.sortServicesByName(services)
+	for _, service := range sortedServices {
+		_, _ = fmt.Fprintf(cf.writer, "  %-*s %s\n", ColWidthService, service.Name, service.Description)
+	}
+}
+
+func (cf *CatalogFormatter) sortServicesByName(services []ServiceInfo) []ServiceInfo {
+	sorted := make([]ServiceInfo, len(services))
+	copy(sorted, services)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Name < sorted[j].Name
+	})
+	return sorted
 }
 
 // FilterCatalogByCategory filters catalog by category

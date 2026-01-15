@@ -158,30 +158,12 @@ func (c VersionConstraint) Satisfies(version Version) bool {
 // ParseVersionConstraint parses a version constraint string
 func ParseVersionConstraint(constraint string) (*VersionConstraint, error) {
 	constraint = strings.TrimSpace(constraint)
-	if constraint == "" || constraint == "*" {
-		return &VersionConstraint{
-			Operator: "*",
-			Version:  Version{},
-			Original: constraint,
-		}, nil
+
+	if wildcardConstraint := handleWildcardConstraint(constraint); wildcardConstraint != nil {
+		return wildcardConstraint, nil
 	}
 
-	// Extract operator
-	operators := []string{">=", "<=", "!=", "==", ">", "<", "="}
-	var operator, versionStr string
-
-	for _, op := range operators {
-		if strings.HasPrefix(constraint, op) {
-			operator = op
-			versionStr = strings.TrimSpace(constraint[len(op):])
-			break
-		}
-	}
-
-	if operator == "" {
-		operator = "="
-		versionStr = constraint
-	}
+	operator, versionStr := extractOperator(constraint)
 
 	version, err := ParseVersion(versionStr)
 	if err != nil {
@@ -193,6 +175,30 @@ func ParseVersionConstraint(constraint string) (*VersionConstraint, error) {
 		Version:  *version,
 		Original: constraint,
 	}, nil
+}
+
+func handleWildcardConstraint(constraint string) *VersionConstraint {
+	if constraint == "" || constraint == "*" {
+		return &VersionConstraint{
+			Operator: "*",
+			Version:  Version{},
+			Original: constraint,
+		}
+	}
+	return nil
+}
+
+func extractOperator(constraint string) (string, string) {
+	operators := []string{">=", "<=", "!=", "==", ">", "<", "="}
+
+	for _, op := range operators {
+		if strings.HasPrefix(constraint, op) {
+			versionStr := strings.TrimSpace(constraint[len(op):])
+			return op, versionStr
+		}
+	}
+
+	return "=", constraint
 }
 
 // ValidateConstraint validates a version constraint string

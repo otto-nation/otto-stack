@@ -2,12 +2,14 @@ package project
 
 import (
 	"context"
+	"slices"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
 
@@ -62,38 +64,68 @@ func NewDepsCommand() *DepsCommand {
 func (c *DepsCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header("%s Service Dependencies", ui.IconInfo)
 
-	if len(cliCtx.Services.Names) == 0 {
-		base.Output.Warning("No services specified")
+	if !c.validateInput(cliCtx, base) {
 		return nil
 	}
 
-	// Get service manager
-	manager, err := services.New()
+	allServices, err := c.loadServices()
 	if err != nil {
-		return pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
-	}
-	allServices := manager.GetAllServices()
-
-	// Show dependencies for each specified service
-	for _, serviceName := range cliCtx.Services.Names {
-		service, exists := allServices[serviceName]
-		if !exists {
-			base.Output.Warning("Service '%s' not found", serviceName)
-			continue
-		}
-
-		base.Output.Info("\n%s %s:", display.StatusSuccess, serviceName)
-		if len(service.Service.Dependencies.Required) == 0 {
-			base.Output.Info("  No dependencies")
-		} else {
-			for _, dep := range service.Service.Dependencies.Required {
-				base.Output.Info("  • %s", dep)
-			}
-		}
+		return err
 	}
 
+	c.showAllDependencies(base, cliCtx.Services.Names, allServices)
 	base.Output.Success("Dependencies displayed successfully")
 	return nil
+}
+
+func (c *DepsCommand) validateInput(cliCtx clicontext.Context, base *base.BaseCommand) bool {
+	if len(cliCtx.Services.Names) == 0 {
+		base.Output.Warning("No services specified")
+		return false
+	}
+	return true
+}
+
+func (c *DepsCommand) loadServices() (map[string]*types.ServiceConfig, error) {
+	manager, err := services.New()
+	if err != nil {
+		return nil, pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
+	}
+
+	allServices := manager.GetAllServices()
+	result := make(map[string]*types.ServiceConfig, len(allServices))
+	for name, service := range allServices {
+		svc := service
+		result[name] = &svc
+	}
+	return result, nil
+}
+
+func (c *DepsCommand) showAllDependencies(base *base.BaseCommand, names []string, allServices map[string]*types.ServiceConfig) {
+	for _, name := range names {
+		c.showServiceDeps(base, name, allServices)
+	}
+}
+
+func (c *DepsCommand) showServiceDeps(base *base.BaseCommand, name string, allServices map[string]*types.ServiceConfig) {
+	service, exists := allServices[name]
+	if !exists {
+		base.Output.Warning("Service '%s' not found", name)
+		return
+	}
+
+	base.Output.Info("\n%s %s:", display.StatusSuccess, name)
+	c.displayDeps(base, service.Service.Dependencies.Required)
+}
+
+func (c *DepsCommand) displayDeps(base *base.BaseCommand, deps []string) {
+	if len(deps) == 0 {
+		base.Output.Info("  No dependencies")
+		return
+	}
+	for _, dep := range deps {
+		base.Output.Info("  • %s", dep)
+	}
 }
 
 // ConflictsCommand handles checking service conflicts
@@ -108,48 +140,81 @@ func NewConflictsCommand() *ConflictsCommand {
 func (c *ConflictsCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header("%s Service Conflicts", ui.IconWarning)
 
-	if len(cliCtx.Services.Names) == 0 {
-		base.Output.Warning("No services specified")
+	if !c.validateInput(cliCtx, base) {
 		return nil
 	}
 
-	// Get service manager
-	manager, err := services.New()
+	allServices, err := c.loadServices()
 	if err != nil {
-		return pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
-	}
-	allServices := manager.GetAllServices()
-
-	// Check for conflicts between specified services
-	conflicts := make(map[string][]string)
-	for _, serviceName := range cliCtx.Services.Names {
-		service, exists := allServices[serviceName]
-		if !exists {
-			continue
-		}
-
-		for _, conflict := range service.Service.Dependencies.Conflicts {
-			for _, otherService := range cliCtx.Services.Names {
-				if otherService == conflict {
-					conflicts[serviceName] = append(conflicts[serviceName], conflict)
-				}
-			}
-		}
+		return err
 	}
 
-	if len(conflicts) == 0 {
-		base.Output.Success("No conflicts detected between selected services")
-	} else {
-		for service, conflictList := range conflicts {
-			base.Output.Warning("Service '%s' conflicts with:", service)
-			for _, conflict := range conflictList {
-				base.Output.Info("  • %s", conflict)
-			}
-		}
-	}
-
+	conflicts := c.findAllConflicts(cliCtx.Services.Names, allServices)
+	c.reportConflicts(base, conflicts)
 	base.Output.Success("Conflicts checked successfully")
 	return nil
+}
+
+func (c *ConflictsCommand) validateInput(cliCtx clicontext.Context, base *base.BaseCommand) bool {
+	if len(cliCtx.Services.Names) == 0 {
+		base.Output.Warning("No services specified")
+		return false
+	}
+	return true
+}
+
+func (c *ConflictsCommand) loadServices() (map[string]*types.ServiceConfig, error) {
+	manager, err := services.New()
+	if err != nil {
+		return nil, pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
+	}
+
+	allServices := manager.GetAllServices()
+	result := make(map[string]*types.ServiceConfig, len(allServices))
+	for name, service := range allServices {
+		svc := service
+		result[name] = &svc
+	}
+	return result, nil
+}
+
+func (c *ConflictsCommand) findAllConflicts(names []string, allServices map[string]*types.ServiceConfig) map[string][]string {
+	conflicts := make(map[string][]string)
+	for _, name := range names {
+		c.checkServiceConflicts(name, names, allServices, conflicts)
+	}
+	return conflicts
+}
+
+func (c *ConflictsCommand) checkServiceConflicts(name string, allNames []string, allServices map[string]*types.ServiceConfig, conflicts map[string][]string) {
+	service, exists := allServices[name]
+	if !exists {
+		return
+	}
+
+	for _, conflict := range service.Service.Dependencies.Conflicts {
+		if slices.Contains(allNames, conflict) {
+			conflicts[name] = append(conflicts[name], conflict)
+		}
+	}
+}
+
+func (c *ConflictsCommand) reportConflicts(base *base.BaseCommand, conflicts map[string][]string) {
+	if len(conflicts) == 0 {
+		base.Output.Success("No conflicts detected between selected services")
+		return
+	}
+
+	for service, conflictList := range conflicts {
+		c.displayServiceConflicts(base, service, conflictList)
+	}
+}
+
+func (c *ConflictsCommand) displayServiceConflicts(base *base.BaseCommand, service string, conflicts []string) {
+	base.Output.Warning("Service '%s' conflicts with:", service)
+	for _, conflict := range conflicts {
+		base.Output.Info("  • %s", conflict)
+	}
 }
 
 // ValidateCommand handles validating configurations
@@ -164,28 +229,24 @@ func NewValidateCommand() *ValidateCommand {
 func (c *ValidateCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header("%s Configuration Validation", ui.IconInfo)
 
-	// Basic validation checks
-	validationPassed := true
-
-	// Check if services are specified
 	if len(cliCtx.Services.Names) == 0 {
 		base.Output.Warning("No services specified for validation")
-		validationPassed = false
-	} else {
-		// Get service manager and validate each service
-		manager, err := services.New()
-		if err != nil {
-			return pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
-		}
-		allServices := manager.GetAllServices()
+		return nil
+	}
 
-		for _, serviceName := range cliCtx.Services.Names {
-			if _, exists := allServices[serviceName]; !exists {
-				base.Output.Error("Service '%s' not found", serviceName)
-				validationPassed = false
-			} else {
-				base.Output.Info("%sService '%s' is valid", display.StatusSuccess, serviceName)
-			}
+	manager, err := services.New()
+	if err != nil {
+		return pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
+	}
+	allServices := manager.GetAllServices()
+
+	validationPassed := true
+	for _, serviceName := range cliCtx.Services.Names {
+		if _, exists := allServices[serviceName]; !exists {
+			base.Output.Error("Service '%s' not found", serviceName)
+			validationPassed = false
+		} else {
+			base.Output.Info("%sService '%s' is valid", display.StatusSuccess, serviceName)
 		}
 	}
 
@@ -210,32 +271,51 @@ func NewDoctorCommand() *DoctorCommand {
 func (c *DoctorCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header("%s System Health Check", ui.IconInfo)
 
-	// Run basic health checks
-	healthChecks := []struct {
+	healthChecks := c.runHealthChecks(cliCtx)
+	allPassed := c.displayHealthChecks(base, healthChecks)
+	c.displayHealthResult(base, allPassed)
+
+	return nil
+}
+
+// runHealthChecks runs all system health checks
+func (c *DoctorCommand) runHealthChecks(cliCtx clicontext.Context) []struct {
+	name string
+	pass bool
+} {
+	return []struct {
 		name string
 		pass bool
 	}{
-		{"Docker daemon", true}, // Simplified - would check actual Docker connection
+		{"Docker daemon", true},
 		{"Configuration files", true},
 		{"Service definitions", len(cliCtx.Services.Names) > 0},
 		{"Project structure", true},
 	}
+}
 
+// displayHealthChecks displays each health check and returns whether all passed
+func (c *DoctorCommand) displayHealthChecks(base *base.BaseCommand, healthChecks []struct {
+	name string
+	pass bool
+}) bool {
 	allPassed := true
 	for _, check := range healthChecks {
-		if check.pass {
-			base.Output.Info("%s%s", display.StatusSuccess, check.name)
-		} else {
-			base.Output.Warning("%s%s", display.StatusError, check.name)
+		status := display.StatusSuccess
+		if !check.pass {
+			status = display.StatusError
 			allPassed = false
 		}
+		base.Output.Info("%s%s", status, check.name)
 	}
+	return allPassed
+}
 
+// displayHealthResult displays the final health check result
+func (c *DoctorCommand) displayHealthResult(base *base.BaseCommand, allPassed bool) {
 	if allPassed {
 		base.Output.Success("All health checks passed")
 	} else {
 		base.Output.Warning("Some health checks failed")
 	}
-
-	return nil
 }

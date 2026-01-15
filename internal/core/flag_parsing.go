@@ -1,14 +1,21 @@
 package core
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/spf13/cobra"
 )
 
-// parseFlags uses reflection to parse cobra flags into a struct
-func parseFlags(cmd *cobra.Command, flagStruct any) {
-	v := reflect.ValueOf(flagStruct).Elem()
+// parseFlags uses reflection to parse cobra flags into a struct.
+// The flagStruct parameter must be a pointer to a struct with `flag` tags.
+func parseFlags(cmd *cobra.Command, flagStruct any) error {
+	v := reflect.ValueOf(flagStruct)
+	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
+		return fmt.Errorf("flagStruct must be a pointer to a struct")
+	}
+
+	v = v.Elem()
 	t := v.Type()
 
 	for i := 0; i < v.NumField(); i++ {
@@ -20,25 +27,50 @@ func parseFlags(cmd *cobra.Command, flagStruct any) {
 			continue
 		}
 
-		switch field.Kind() {
-		case reflect.String:
-			if val, err := cmd.Flags().GetString(flagName); err == nil {
-				field.SetString(val)
-			}
-		case reflect.Bool:
-			if val, err := cmd.Flags().GetBool(flagName); err == nil {
-				field.SetBool(val)
-			}
-		case reflect.Int:
-			if val, err := cmd.Flags().GetInt(flagName); err == nil {
-				field.SetInt(int64(val))
-			}
-		case reflect.Slice:
-			if field.Type().Elem().Kind() == reflect.String {
-				if val, err := cmd.Flags().GetStringSlice(flagName); err == nil {
-					field.Set(reflect.ValueOf(val))
-				}
-			}
+		if !field.CanSet() {
+			continue
+		}
+
+		if err := setFieldFromFlag(cmd, field, flagName); err != nil {
+			return fmt.Errorf("failed to set field %s: %w", fieldType.Name, err)
 		}
 	}
+
+	return nil
+}
+
+func setFieldFromFlag(cmd *cobra.Command, field reflect.Value, flagName string) error {
+	switch field.Kind() {
+	case reflect.String:
+		val, err := cmd.Flags().GetString(flagName)
+		if err != nil {
+			return err
+		}
+		field.SetString(val)
+
+	case reflect.Bool:
+		val, err := cmd.Flags().GetBool(flagName)
+		if err != nil {
+			return err
+		}
+		field.SetBool(val)
+
+	case reflect.Int:
+		val, err := cmd.Flags().GetInt(flagName)
+		if err != nil {
+			return err
+		}
+		field.SetInt(int64(val))
+
+	case reflect.Slice:
+		if field.Type().Elem().Kind() == reflect.String {
+			val, err := cmd.Flags().GetStringSlice(flagName)
+			if err != nil {
+				return err
+			}
+			field.Set(reflect.ValueOf(val))
+		}
+	}
+
+	return nil
 }

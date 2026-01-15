@@ -705,7 +705,7 @@ func generateMultiFileSchema(configSchemas []ServiceConfigSchema) error {
 		}
 
 		structName := codegen.ToPascalCase(schema.ServiceName) + "Config"
-		fileName := codegen.ToPascalCase(schema.ServiceName) + "_config_generated.go"
+		fileName := strings.ToLower(codegen.ToPascalCase(schema.ServiceName)) + "_config_generated.go"
 
 		serviceFiles = append(serviceFiles, codegen.ServiceFileData{
 			ServiceName: schema.ServiceName,

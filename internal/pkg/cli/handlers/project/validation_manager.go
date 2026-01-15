@@ -41,3 +41,31 @@ func (vm *ValidationManager) RunValidations(selectedValidations map[string]bool,
 func (vm *ValidationManager) isRequiredValidation(key string) bool {
 	return core.ValidationRequired[key]
 }
+
+// ValidateProjectName validates a project name
+func (vm *ValidationManager) ValidateProjectName(name string) error {
+	if name == "" {
+		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgProjectNameEmpty, nil)
+	}
+
+	if len(name) < core.MinProjectNameLength {
+		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgProjectNameTooShort, nil)
+	}
+
+	if len(name) > core.MaxProjectNameLength {
+		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgProjectNameTooLong, nil)
+	}
+
+	if name[0] == '-' || name[0] == '_' {
+		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, core.MsgValidation_project_name_invalid_start, nil)
+	}
+
+	for _, char := range name {
+		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') &&
+			(char < '0' || char > '9') && char != '-' && char != '_' {
+			return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, core.MsgValidation_project_name_invalid_chars, nil)
+		}
+	}
+
+	return nil
+}

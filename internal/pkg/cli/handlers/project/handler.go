@@ -108,15 +108,3 @@ func (h *Handler) handleVersionDisplay(_ context.Context, cmd *cobra.Command, _ 
 
 	return h.versionDisplayManager.DisplayBasic(currentVersion, flags.Format)
 }
-
-// BuildInfo contains build-time information
-
-// JSON returns JSON representation
-
-// YAML returns YAML representation
-
-// Helper functions
-
-// getCurrentVersion returns the current version (set at build time)
-
-// getBuildInfo returns build information (set at build time)

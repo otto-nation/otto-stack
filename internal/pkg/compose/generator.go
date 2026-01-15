@@ -273,18 +273,28 @@ func (g *Generator) GenerateFromServiceConfigs(serviceConfigs []types.ServiceCon
 		return err
 	}
 
-	composeContent, err := yaml.Marshal(composeData)
+	composeContent, err := g.marshalComposeData(composeData)
 	if err != nil {
-		return pkgerrors.NewServiceError("compose", "marshal data", err)
+		return err
 	}
 
-	// Ensure the directory exists
+	return g.writeComposeFile(composeContent)
+}
+
+func (g *Generator) marshalComposeData(composeData map[string]any) ([]byte, error) {
+	composeContent, err := yaml.Marshal(composeData)
+	if err != nil {
+		return nil, pkgerrors.NewServiceError("compose", "marshal data", err)
+	}
+	return composeContent, nil
+}
+
+func (g *Generator) writeComposeFile(content []byte) error {
 	if err := filesystem.EnsureDir(core.OttoStackDir); err != nil {
 		return pkgerrors.NewServiceError("compose", "create directory", err)
 	}
 
-	// Write the compose file
-	if err := filesystem.WriteFile(dockerConstants.DockerComposeFilePath, composeContent, core.PermReadWrite); err != nil {
+	if err := filesystem.WriteFile(dockerConstants.DockerComposeFilePath, content, core.PermReadWrite); err != nil {
 		return pkgerrors.NewServiceError("compose", "write file", err)
 	}
 

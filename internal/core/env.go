@@ -5,21 +5,35 @@ import (
 	"strings"
 )
 
-// ResolveVar resolves environment variable syntax ${VAR:-default}
-func ResolveVar(value string) string {
-	if strings.HasPrefix(value, "${") && strings.HasSuffix(value, "}") {
-		inner := value[2 : len(value)-1]
-		const splitLen = 2
-		if parts := strings.Split(inner, ":-"); len(parts) == splitLen {
-			envVar := parts[0]
-			defaultValue := parts[1]
+const expectedEnvParts = 2
 
-			// Check if environment variable is set
-			if envValue := os.Getenv(envVar); envValue != "" {
-				return envValue
-			}
-			return defaultValue // Return default value if env var not set
-		}
+// ResolveEnvVar resolves an environment variable with the format ${VAR:-default}
+// Returns the environment variable value if set and non-empty,
+// otherwise returns the default value if provided,
+// or the original string if the syntax is malformed.
+func ResolveVar(value string) string {
+	// Check if value matches ${...} pattern
+	if !strings.HasPrefix(value, "${") || !strings.HasSuffix(value, "}") {
+		return value
 	}
-	return value
+
+	// Extract inner content: ${VAR:-default} -> "VAR:-default"
+	inner := value[2 : len(value)-1]
+
+	// Split on ":-" delimiter
+	parts := strings.SplitN(inner, ":-", expectedEnvParts)
+	if len(parts) != expectedEnvParts {
+		// No default value provided, return original
+		return value
+	}
+
+	envVar := parts[0]
+	defaultValue := parts[1]
+
+	// Return env var value if set and non-empty, otherwise return default
+	if envValue := os.Getenv(envVar); envValue != "" {
+		return envValue
+	}
+
+	return defaultValue
 }

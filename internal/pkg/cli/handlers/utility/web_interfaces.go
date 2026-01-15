@@ -139,10 +139,7 @@ func (h *WebInterfacesHandler) shouldIncludeService(serviceName string, runningS
 // outputResults outputs the interfaces in the requested format
 func (h *WebInterfacesHandler) outputResults(interfaces []WebInterface, ciFlags ci.Flags, base *base.BaseCommand) {
 	if ciFlags.JSON {
-		ci.OutputResult(ciFlags, map[string]any{
-			"interfaces": interfaces,
-			"count":      len(interfaces),
-		}, core.ExitSuccess)
+		h.outputJSON(interfaces, ciFlags)
 		return
 	}
 
@@ -154,11 +151,25 @@ func (h *WebInterfacesHandler) outputResults(interfaces []WebInterface, ciFlags 
 	h.printTable(interfaces)
 }
 
+func (h *WebInterfacesHandler) outputJSON(interfaces []WebInterface, ciFlags ci.Flags) {
+	ci.OutputResult(ciFlags, map[string]any{
+		"interfaces": interfaces,
+		"count":      len(interfaces),
+	}, core.ExitSuccess)
+}
+
 // printTable prints interfaces in table format
 func (h *WebInterfacesHandler) printTable(interfaces []WebInterface) {
+	h.printTableHeader()
+	h.printTableRows(interfaces)
+}
+
+func (h *WebInterfacesHandler) printTableHeader() {
 	fmt.Printf("%-20s %-28s %-32s %s\n", "SERVICE", "INTERFACE", "URL", "STATUS")
 	fmt.Println("--------------------------------------------------------------------------------")
+}
 
+func (h *WebInterfacesHandler) printTableRows(interfaces []WebInterface) {
 	for _, iface := range interfaces {
 		status := h.checkStatus(iface.URL)
 		fmt.Printf("%-20s %-28s %-32s %s\n", iface.Service, iface.Name, iface.URL, status)
@@ -170,14 +181,22 @@ func (h *WebInterfacesHandler) checkStatus(url string) string {
 	client := &http.Client{Timeout: core.DefaultHTTPTimeoutSeconds * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
-		return core.IconHealth_unhealthy + " " + core.MsgWeb_interfaces_not_available
+		return h.formatStatus(false)
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode < core.HTTPOKStatusThreshold {
+	return h.formatStatusFromResponse(resp.StatusCode)
+}
+
+func (h *WebInterfacesHandler) formatStatus(available bool) string {
+	if available {
 		return core.IconHealth_healthy + " " + core.MsgWeb_interfaces_available
 	}
 	return core.IconHealth_unhealthy + " " + core.MsgWeb_interfaces_not_available
+}
+
+func (h *WebInterfacesHandler) formatStatusFromResponse(statusCode int) string {
+	return h.formatStatus(statusCode < core.HTTPOKStatusThreshold)
 }
 
 // WebInterface represents a service web interface

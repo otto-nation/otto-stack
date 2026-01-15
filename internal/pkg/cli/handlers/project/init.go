@@ -12,6 +12,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
@@ -45,12 +46,7 @@ func (h *InitHandler) ValidateProjectName(name string) error {
 // Handle executes the init command
 func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	logger.Info(logger.LogMsgStartingOperation, logger.LogFieldOperation, logger.OperationInit)
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationInit, logger.LogFieldError, fmt.Errorf("panic: %v", r))
-			panic(r)
-		}
-	}()
+	defer h.handlePanic()
 
 	if err := h.validateInitFlags(cmd); err != nil {
 		return err
@@ -58,46 +54,21 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	ciFlags := ci.GetFlags(cmd)
 	initFlags, _ := core.ParseInitFlags(cmd)
-	verbose := base.GetVerbose(cmd)
 
-	if verbose {
-		logger.Debug("Initializing project", "projectName", initFlags.ProjectName, "force", initFlags.Force)
+	h.logDebugInfo(base, cmd, initFlags)
+
+	if err := h.setDefaultProjectName(initFlags, base, cmd); err != nil {
+		return err
 	}
 
-	// Default project name to current directory if not provided
-	if initFlags.ProjectName == "" {
-		cwd, err := os.Getwd()
-		if err != nil {
-			return pkgerrors.NewValidationError(core.FlagProjectName, "failed to get current directory", err)
-		}
-		initFlags.ProjectName = filepath.Base(cwd)
-		if verbose {
-			logger.Debug("Using current directory as project name", "projectName", initFlags.ProjectName)
-		}
-	}
-
-	// Set force flag in handler for validation functions
 	h.forceOverwrite = initFlags.Force
 
-	processor := NewModeProcessor(ciFlags.NonInteractive, h)
-	projectCtx, err := processor.Process(initFlags, base)
+	projectCtx, err := h.processMode(ciFlags, initFlags, base, cmd)
 	if err != nil {
 		return err
 	}
 
-	if verbose {
-		logger.Debug("Project context created", "services", len(projectCtx.Services.Names))
-	}
-
-	// Create command and middleware chain
-	initCommand := NewInitCommand(h.projectManager)
-	validationMiddleware := middleware.NewValidationMiddleware()
-	loggingMiddleware := middleware.NewLoggingMiddleware()
-
-	handler := command.NewHandler(initCommand, loggingMiddleware, validationMiddleware)
-
-	// Execute through command pattern
-	if err := handler.Execute(ctx, projectCtx, base); err != nil {
+	if err := h.executeInit(ctx, projectCtx, base); err != nil {
 		return err
 	}
 
@@ -105,20 +76,73 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	return nil
 }
 
+func (h *InitHandler) handlePanic() {
+	if r := recover(); r != nil {
+		logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationInit, logger.LogFieldError, fmt.Errorf("panic: %v", r))
+		panic(r)
+	}
+}
+
+func (h *InitHandler) logDebugInfo(base *base.BaseCommand, cmd *cobra.Command, initFlags *core.InitFlags) {
+	if base.GetVerbose(cmd) {
+		logger.Debug("Initializing project", "projectName", initFlags.ProjectName, "force", initFlags.Force)
+	}
+}
+
+func (h *InitHandler) setDefaultProjectName(initFlags *core.InitFlags, base *base.BaseCommand, cmd *cobra.Command) error {
+	if initFlags.ProjectName != "" {
+		return nil
+	}
+
+	cwd, err := os.Getwd()
+	if err != nil {
+		return pkgerrors.NewValidationError(core.FlagProjectName, "failed to get current directory", err)
+	}
+
+	initFlags.ProjectName = filepath.Base(cwd)
+	if base.GetVerbose(cmd) {
+		logger.Debug("Using current directory as project name", "projectName", initFlags.ProjectName)
+	}
+	return nil
+}
+
+func (h *InitHandler) processMode(ciFlags ci.Flags, initFlags *core.InitFlags, base *base.BaseCommand, cmd *cobra.Command) (clicontext.Context, error) {
+	processor := NewModeProcessor(ciFlags.NonInteractive, h)
+	projectCtx, err := processor.Process(initFlags, base)
+	if err != nil {
+		return clicontext.Context{}, err
+	}
+
+	if base.GetVerbose(cmd) {
+		logger.Debug("Project context created", "services", len(projectCtx.Services.Names))
+	}
+
+	return projectCtx, nil
+}
+
+func (h *InitHandler) executeInit(ctx context.Context, projectCtx clicontext.Context, base *base.BaseCommand) error {
+	initCommand := NewInitCommand(h.projectManager)
+	validationMiddleware := middleware.NewValidationMiddleware()
+	loggingMiddleware := middleware.NewLoggingMiddleware()
+
+	handler := command.NewHandler(initCommand, loggingMiddleware, validationMiddleware)
+	return handler.Execute(ctx, projectCtx, base)
+}
+
 func (h *InitHandler) validateInitFlags(cmd *cobra.Command) error {
-	_, err := core.ParseInitFlags(cmd)
+	initFlags, err := core.ParseInitFlags(cmd)
 	if err != nil {
 		logger.Error(logger.LogMsgOperationFailed, logger.LogFieldOperation, logger.OperationInit, logger.LogFieldError, err)
 		return err
 	}
 
+	return h.validateNonInteractiveMode(cmd, initFlags)
+}
+
+func (h *InitHandler) validateNonInteractiveMode(cmd *cobra.Command, initFlags *core.InitFlags) error {
 	ciFlags := ci.GetFlags(cmd)
-	if ciFlags.NonInteractive {
-		// In non-interactive mode, we need services flag
-		initFlags, _ := core.ParseInitFlags(cmd)
-		if initFlags.Services == "" {
-			return pkgerrors.NewValidationError(core.FlagServices, "services are required in non-interactive mode", nil)
-		}
+	if ciFlags.NonInteractive && initFlags.Services == "" {
+		return pkgerrors.NewValidationError(core.FlagServices, "services are required in non-interactive mode", nil)
 	}
 	return nil
 }
@@ -126,6 +150,10 @@ func (h *InitHandler) validateInitFlags(cmd *cobra.Command) error {
 func (h *InitHandler) displaySuccessMessage(_ string, base *base.BaseCommand) {
 	base.Output.Success("%s", core.MsgSuccess_init)
 	base.Output.Info("%s", core.MsgInit_next_steps)
+	h.displayNextSteps(base)
+}
+
+func (h *InitHandler) displayNextSteps(base *base.BaseCommand) {
 	base.Output.Info(core.MsgInit_step_review_config, core.OttoStackDir, core.ConfigFileName)
 	base.Output.Info(core.MsgInit_step_start_stack, core.AppName)
 	base.Output.Info(core.MsgInit_step_check_status, core.AppName)
@@ -141,4 +169,7 @@ func (h *InitHandler) GetRequiredFlags() []string {
 	return []string{}
 }
 
-// runValidations executes selected validation functions
+// validateProjectName validates a project name
+func (h *InitHandler) validateProjectName(name string) error {
+	return h.validationManager.ValidateProjectName(name)
+}

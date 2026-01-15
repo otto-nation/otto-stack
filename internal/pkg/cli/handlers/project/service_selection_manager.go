@@ -25,42 +25,98 @@ func NewServiceSelectionManager(promptManager *PromptManager, validationManager 
 
 // RunWorkflow executes the complete service selection workflow
 func (ssm *ServiceSelectionManager) RunWorkflow(handler *InitHandler, base *base.BaseCommand) ([]types.ServiceConfig, map[string]bool, map[string]bool, error) {
-	base.Output.Header("%s", core.MsgProcess_initializing)
-	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
+	ssm.logWorkflowStart(base)
 
 	for {
-		serviceConfigs, err := ssm.promptManager.PromptForServiceConfigs()
+		serviceConfigs, validation, advanced, action, err := ssm.runSelectionCycle(handler, base)
 		if err != nil {
-			return nil, nil, nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionSelectServices, err)
-		}
-		if err := handler.validateServiceConfigs(serviceConfigs); err != nil {
-			return nil, nil, nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionValidateServices, err)
+			return nil, nil, nil, err
 		}
 
-		validation, advanced, err := ssm.promptManager.PromptForAdvancedOptions()
-		if err != nil {
-			return nil, nil, nil, pkgerrors.NewValidationError(FieldOptions, ActionGetOptions, err)
-		}
-
-		if err := ssm.validationManager.RunValidations(validation, handler, serviceConfigs, base); err != nil {
-			return nil, nil, nil, pkgerrors.NewValidationError("validation-check", ActionValidation, err)
-		}
-
-		serviceNames := svc.ExtractServiceNames(serviceConfigs)
-		action, err := ssm.promptManager.ConfirmInitialization("", serviceNames, validation, advanced, base)
-		if err != nil {
-			return nil, nil, nil, pkgerrors.NewValidationError(FieldConfirmation, ActionGetConfirmation, err)
-		}
-
-		switch action {
-		case core.ActionProceed:
+		if shouldProceed := ssm.handleAction(action, base); shouldProceed {
 			return serviceConfigs, validation, advanced, nil
-		case core.ActionBack:
-			base.Output.Info("%s", core.MsgInit_going_back)
-			continue
-		default:
-			base.Output.Info("%s", core.MsgInit_cancelled)
+		}
+
+		if action != core.ActionBack {
 			return nil, nil, nil, nil
 		}
+	}
+}
+
+func (ssm *ServiceSelectionManager) logWorkflowStart(base *base.BaseCommand) {
+	base.Output.Header("%s", core.MsgProcess_initializing)
+	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
+}
+
+func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, base *base.BaseCommand) ([]types.ServiceConfig, map[string]bool, map[string]bool, string, error) {
+	serviceConfigs, err := ssm.selectAndValidateServices(handler)
+	if err != nil {
+		return nil, nil, nil, "", err
+	}
+
+	validation, advanced, err := ssm.getAdvancedOptions()
+	if err != nil {
+		return nil, nil, nil, "", err
+	}
+
+	if err := ssm.runValidationChecks(validation, handler, serviceConfigs, base); err != nil {
+		return nil, nil, nil, "", err
+	}
+
+	action, err := ssm.confirmSelection(serviceConfigs, validation, advanced, base)
+	if err != nil {
+		return nil, nil, nil, "", err
+	}
+
+	return serviceConfigs, validation, advanced, action, nil
+}
+
+func (ssm *ServiceSelectionManager) selectAndValidateServices(handler *InitHandler) ([]types.ServiceConfig, error) {
+	serviceConfigs, err := ssm.promptManager.PromptForServiceConfigs()
+	if err != nil {
+		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionSelectServices, err)
+	}
+
+	if err := handler.validateServiceConfigs(serviceConfigs); err != nil {
+		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionValidateServices, err)
+	}
+
+	return serviceConfigs, nil
+}
+
+func (ssm *ServiceSelectionManager) getAdvancedOptions() (map[string]bool, map[string]bool, error) {
+	validation, advanced, err := ssm.promptManager.PromptForAdvancedOptions()
+	if err != nil {
+		return nil, nil, pkgerrors.NewValidationError(FieldOptions, ActionGetOptions, err)
+	}
+	return validation, advanced, nil
+}
+
+func (ssm *ServiceSelectionManager) runValidationChecks(validation map[string]bool, handler *InitHandler, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
+	if err := ssm.validationManager.RunValidations(validation, handler, serviceConfigs, base); err != nil {
+		return pkgerrors.NewValidationError("validation-check", ActionValidation, err)
+	}
+	return nil
+}
+
+func (ssm *ServiceSelectionManager) confirmSelection(serviceConfigs []types.ServiceConfig, validation, advanced map[string]bool, base *base.BaseCommand) (string, error) {
+	serviceNames := svc.ExtractServiceNames(serviceConfigs)
+	action, err := ssm.promptManager.ConfirmInitialization("", serviceNames, validation, advanced, base)
+	if err != nil {
+		return "", pkgerrors.NewValidationError(FieldConfirmation, ActionGetConfirmation, err)
+	}
+	return action, nil
+}
+
+func (ssm *ServiceSelectionManager) handleAction(action string, base *base.BaseCommand) bool {
+	switch action {
+	case core.ActionProceed:
+		return true
+	case core.ActionBack:
+		base.Output.Info("%s", core.MsgInit_going_back)
+		return false
+	default:
+		base.Output.Info("%s", core.MsgInit_cancelled)
+		return false
 	}
 }

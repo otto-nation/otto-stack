@@ -98,36 +98,35 @@ func (rm *ResourceManager) listImages(ctx context.Context, filter filters.Args) 
 }
 
 func (rm *ResourceManager) removeContainers(ctx context.Context, ids []string) error {
-	for _, id := range ids {
-		if err := rm.client.cli.ContainerRemove(ctx, id, container.RemoveOptions{Force: true}); err != nil {
-			rm.client.logger.Error("Failed to remove container", "id", id, "error", err)
-		}
-	}
-	return nil
+	return rm.removeResources(ids, "container", func(id string) error {
+		return rm.client.cli.ContainerRemove(ctx, id, container.RemoveOptions{Force: true})
+	})
 }
 
 func (rm *ResourceManager) removeVolumes(ctx context.Context, names []string) error {
-	for _, name := range names {
-		if err := rm.client.cli.VolumeRemove(ctx, name, false); err != nil {
-			rm.client.logger.Error("Failed to remove volume", "name", name, "error", err)
-		}
-	}
-	return nil
+	return rm.removeResources(names, "volume", func(name string) error {
+		return rm.client.cli.VolumeRemove(ctx, name, false)
+	})
 }
 
 func (rm *ResourceManager) removeNetworks(ctx context.Context, names []string) error {
-	for _, name := range names {
-		if err := rm.client.cli.NetworkRemove(ctx, name); err != nil {
-			rm.client.logger.Error("Failed to remove network", "name", name, "error", err)
-		}
-	}
-	return nil
+	return rm.removeResources(names, "network", func(name string) error {
+		return rm.client.cli.NetworkRemove(ctx, name)
+	})
 }
 
 func (rm *ResourceManager) removeImages(ctx context.Context, names []string) error {
+	return rm.removeResources(names, "image", func(name string) error {
+		_, err := rm.client.cli.ImageRemove(ctx, name, image.RemoveOptions{Force: true})
+		return err
+	})
+}
+
+//nolint:unparam // ctx is used in closures passed as removeFn
+func (rm *ResourceManager) removeResources(names []string, resourceType string, removeFn func(string) error) error {
 	for _, name := range names {
-		if _, err := rm.client.cli.ImageRemove(ctx, name, image.RemoveOptions{Force: true}); err != nil {
-			rm.client.logger.Error("Failed to remove image", "name", name, "error", err)
+		if err := removeFn(name); err != nil {
+			rm.client.logger.Error("Failed to remove "+resourceType, "name", name, "error", err)
 		}
 	}
 	return nil

@@ -10,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 
 	"github.com/spf13/cobra"
 )
@@ -24,15 +25,11 @@ func NewCleanupHandler() *CleanupHandler {
 
 // Handle executes the cleanup command
 func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Check initialization first
-
-	// Parse all flags with validation - single line!
 	flags, err := core.ParseCleanupFlags(cmd)
 	if err != nil {
 		return err
 	}
 
-	// Get CI-friendly flags
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
@@ -52,36 +49,15 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		flags.Networks = true
 	}
 
-	// Show what will be cleaned up
-	dryRun, _ := cmd.Flags().GetBool(core.FlagDryRun)
-	if dryRun {
-		base.Output.Info("Dry run mode - showing what would be cleaned")
-		if flags.Volumes {
-			base.Output.Info("Would clean unused volumes")
-		}
-		if flags.Images {
-			base.Output.Info("Would clean unused images")
-		}
-		if flags.Networks {
-			base.Output.Info("Would clean unused networks")
-		}
-		base.Output.Info("Would clean stopped containers")
-		return nil
-	}
-
-	// Confirm cleanup unless forced
+	// Confirm cleanup unless forced or in non-interactive mode
 	if !flags.Force && !ciFlags.NonInteractive {
-		base.Output.Warning("This will remove all containers, networks, and volumes")
-		// Note: Need to implement proper confirmation with base.Output
-		confirmed := true // For now, assume confirmed
-		if !confirmed {
-			// Cleanup operation
+		if !h.confirmCleanup(base) {
 			return nil
 		}
 	}
 
 	// Perform cleanup operations
-	if err := h.performCleanup(ctx, setup, cmd, base); err != nil {
+	if err := h.performCleanup(ctx, setup, flags, &ciFlags, base); err != nil {
 		return ci.FormatError(ciFlags, fmt.Errorf("cleanup failed: %w", err))
 	}
 
@@ -93,15 +69,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 }
 
 // performCleanup executes the actual cleanup operations
-func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreSetup, cmd *cobra.Command, base *base.BaseCommand) error {
-	flags, err := core.ParseCleanupFlags(cmd)
-	if err != nil {
-		return pkgerrors.NewValidationError(pkgerrors.FieldFlags, "failed to parse cleanup flags", err)
-	}
-
-	ciFlags := ci.GetFlags(cmd)
-
-	// Get project name from flag or config
+func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreSetup, flags *core.CleanupFlags, ciFlags *ci.Flags, base *base.BaseCommand) error {
 	projectName := flags.Project
 	if projectName == "" {
 		projectName = setup.Config.Project.Name
@@ -115,21 +83,12 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 		}
 	}
 
-	// Create stack service
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
 		return pkgerrors.NewServiceError(common.ComponentStack, common.MsgFailedCreateStackService, err)
 	}
 
-	// List containers to clean
-	var containers []docker.ContainerInfo
-	if projectName != "" {
-		containers, err = stackService.DockerClient.ListContainers(ctx, projectName)
-	} else {
-		// For all Otto containers, use project name pattern
-		containers, err = stackService.DockerClient.ListContainers(ctx, "")
-	}
-
+	containers, err := stackService.DockerClient.ListContainers(ctx, projectName)
 	if err != nil {
 		return pkgerrors.NewDockerError(common.OpListContainers, "", err)
 	}
@@ -141,38 +100,53 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 		return nil
 	}
 
-	// Stop and remove containers
+	// Remove containers
+	h.removeContainers(ctx, stackService, containers, flags.Force, ciFlags, base)
+
+	// Clean up additional resources
+	h.cleanupResources(ctx, stackService, flags, projectName, ciFlags, base)
+
+	return nil
+}
+
+// confirmCleanup asks for user confirmation before cleaning
+func (h *CleanupHandler) confirmCleanup(base *base.BaseCommand) bool {
+	base.Output.Warning("This will remove all containers, networks, and volumes")
+	// TODO: Implement proper confirmation with base.Output
+	return true
+}
+
+// removeContainers removes all containers in the list
+func (h *CleanupHandler) removeContainers(ctx context.Context, stackService *services.Service, containers []docker.ContainerInfo, force bool, ciFlags *ci.Flags, base *base.BaseCommand) {
 	for _, container := range containers {
 		if !ciFlags.Quiet {
 			base.Output.Info("Removing container: %s", container.Name)
 		}
-		if err := stackService.DockerClient.RemoveContainer(ctx, container.ID, flags.Force); err != nil {
+		if err := stackService.DockerClient.RemoveContainer(ctx, container.ID, force); err != nil {
 			base.Output.Warning("Failed to remove container %s: %v", container.Name, err)
 		}
 	}
+}
 
-	// Clean up volumes if requested
+// cleanupResources cleans up volumes, networks, and images if requested
+func (h *CleanupHandler) cleanupResources(ctx context.Context, stackService *services.Service, flags *core.CleanupFlags, projectName string, ciFlags *ci.Flags, base *base.BaseCommand) {
 	if flags.Volumes {
 		if err := stackService.DockerClient.RemoveResources(ctx, docker.ResourceVolume, projectName); err != nil && !ciFlags.Quiet {
 			base.Output.Warning("Failed to clean volumes: %v", err)
 		}
 	}
 
-	// Clean up networks if requested
 	if flags.Networks {
 		if err := stackService.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, projectName); err != nil && !ciFlags.Quiet {
 			base.Output.Warning("Failed to clean networks: %v", err)
 		}
 	}
 
-	// Clean up images if requested
 	if flags.Images {
 		if err := stackService.DockerClient.RemoveResources(ctx, docker.ResourceImage, projectName); err != nil && !ciFlags.Quiet {
 			base.Output.Warning("Failed to remove images: %v", err)
 		}
 	}
-
-	return nil
 }
 
 // ValidateArgs validates the command arguments

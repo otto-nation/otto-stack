@@ -9,17 +9,17 @@ import (
 )
 
 const (
-	LabelManaged     = "io.otto-stack.managed"
-	LabelProject     = "io.otto-stack.project"
-	LabelService     = "io.otto-stack.service"
-	LabelVersion     = "io.otto-stack.version"
-	LabelSharingMode = "io.otto-stack.sharing-mode"
+	LabelOttoManaged     = "io.otto-stack.managed"
+	LabelOttoProject     = "io.otto-stack.project"
+	LabelOttoService     = "io.otto-stack.service"
+	LabelOttoVersion     = "io.otto-stack.version"
+	LabelOttoSharingMode = "io.otto-stack.sharing-mode"
 )
 
 // ListOttoContainers returns all containers managed by Otto Stack
 func (c *Client) ListOttoContainers(ctx context.Context) ([]container.Summary, error) {
 	filter := filters.NewArgs()
-	filter.Add("label", fmt.Sprintf("%s=true", LabelManaged))
+	filter.Add("label", fmt.Sprintf("%s=true", LabelOttoManaged))
 
 	return c.cli.ContainerList(ctx, container.ListOptions{
 		All:     true,
@@ -30,8 +30,8 @@ func (c *Client) ListOttoContainers(ctx context.Context) ([]container.Summary, e
 // ListProjectContainers returns containers for a specific project
 func (c *Client) ListProjectContainers(ctx context.Context, projectName string) ([]container.Summary, error) {
 	filter := filters.NewArgs()
-	filter.Add("label", fmt.Sprintf("%s=true", LabelManaged))
-	filter.Add("label", fmt.Sprintf("%s=%s", LabelProject, projectName))
+	filter.Add("label", fmt.Sprintf("%s=true", LabelOttoManaged))
+	filter.Add("label", fmt.Sprintf("%s=%s", LabelOttoProject, projectName))
 
 	return c.cli.ContainerList(ctx, container.ListOptions{
 		All:     true,

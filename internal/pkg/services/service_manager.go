@@ -314,13 +314,8 @@ func (s *Service) processScriptTemplate(scriptContent string, config servicetype
 
 // collectTemplateData collects template data from dependent services
 func (s *Service) collectTemplateData(config servicetypes.ServiceConfig, allConfigs []servicetypes.ServiceConfig) map[string]any {
-	templateData := map[string]any{
-		"queues":  []map[string]any{},
-		"topics":  []map[string]any{},
-		"buckets": []map[string]any{},
-	}
+	templateData := make(map[string]any)
 
-	// Find services that depend on this service and collect their config data
 	for _, serviceConfig := range allConfigs {
 		if s.dependsOn(serviceConfig, config.Name) {
 			s.addConfigData(templateData, serviceConfig)
@@ -343,39 +338,61 @@ func (s *Service) addConfigData(templateData map[string]any, serviceConfig servi
 	v := reflect.ValueOf(serviceConfig)
 
 	for i := 0; i < v.NumField(); i++ {
-		field := v.Field(i)
-
-		// Skip non-pointer fields or nil pointers
-		if field.Kind() != reflect.Ptr || field.IsNil() {
-			continue
-		}
-
-		// Dereference the pointer to get the actual struct
-		structValue := field.Elem()
-		structType := structValue.Type()
-
-		// Check if this is a generated config struct (from generated package)
-		if !strings.Contains(structType.PkgPath(), "/generated") {
-			continue
-		}
-
-		// Iterate through fields of the embedded struct
-		for j := 0; j < structValue.NumField(); j++ {
-			structField := structValue.Field(j)
-			structFieldType := structType.Field(j)
-
-			if structField.Kind() != reflect.Slice || structField.Len() == 0 {
-				continue
-			}
-
-			yamlTag := structFieldType.Tag.Get("yaml")
-			fieldName := strings.Split(yamlTag, ",")[0]
-
-			if fieldName != "" && fieldName != "-" {
-				templateData[fieldName] = structField.Interface()
-			}
-		}
+		s.processServiceField(templateData, v.Field(i))
 	}
+}
+
+func (s *Service) processServiceField(templateData map[string]any, field reflect.Value) {
+	if !s.isValidConfigField(field) {
+		return
+	}
+
+	structValue := field.Elem()
+	structType := structValue.Type()
+
+	if !s.isGeneratedConfigStruct(structType) {
+		return
+	}
+
+	s.extractFieldsFromStruct(templateData, structValue, structType)
+}
+
+func (s *Service) isValidConfigField(field reflect.Value) bool {
+	return field.Kind() == reflect.Ptr && !field.IsNil()
+}
+
+func (s *Service) isGeneratedConfigStruct(structType reflect.Type) bool {
+	return strings.Contains(structType.PkgPath(), "/generated")
+}
+
+func (s *Service) extractFieldsFromStruct(templateData map[string]any, structValue reflect.Value, structType reflect.Type) {
+	for j := 0; j < structValue.NumField(); j++ {
+		s.processStructField(templateData, structValue.Field(j), structType.Field(j))
+	}
+}
+
+func (s *Service) processStructField(templateData map[string]any, structField reflect.Value, structFieldType reflect.StructField) {
+	if !s.isPopulatedSlice(structField) {
+		return
+	}
+
+	fieldName := s.getYAMLFieldName(structFieldType)
+	if fieldName != "" {
+		templateData[fieldName] = structField.Interface()
+	}
+}
+
+func (s *Service) isPopulatedSlice(field reflect.Value) bool {
+	return field.Kind() == reflect.Slice && field.Len() > 0
+}
+
+func (s *Service) getYAMLFieldName(structField reflect.StructField) string {
+	yamlTag := structField.Tag.Get("yaml")
+	fieldName := strings.Split(yamlTag, ",")[0]
+	if fieldName != "-" {
+		return fieldName
+	}
+	return ""
 }
 
 // loadAndValidateServiceConfigs loads user service config files and validates them
@@ -415,36 +432,70 @@ func loadServiceConfigFile(serviceName string) (map[string]any, error) {
 	return configData, nil
 }
 
-// mergeConfigIntoStruct merges config file data into the ServiceConfig struct
+// mergeConfigIntoStruct merges config file data into the ServiceConfig struct using reflection
 func mergeConfigIntoStruct(config servicetypes.ServiceConfig, configData map[string]any) servicetypes.ServiceConfig {
-	switch config.Name {
-	case ServiceLocalstackSqs:
-		if queues, ok := configData["queues"].([]any); ok {
-			config.LocalstackSqsConfig = &servicetypes.LocalstackSqsConfig{
-				Queues: convertToMapSlice(queues),
-			}
+	configValue := reflect.ValueOf(&config).Elem()
+	configType := configValue.Type()
+
+	for i := 0; i < configValue.NumField(); i++ {
+		field := configValue.Field(i)
+		fieldType := configType.Field(i)
+
+		if !isConfigStructField(field, fieldType) {
+			continue
 		}
-	case ServiceLocalstackSns:
-		if topics, ok := configData["topics"].([]any); ok {
-			config.LocalstackSnsConfig = &servicetypes.LocalstackSnsConfig{
-				Topics: convertToMapSlice(topics),
-			}
-		}
-	case ServiceLocalstackS3:
-		if buckets, ok := configData["buckets"].([]any); ok {
-			config.LocalstackS3Config = &servicetypes.LocalstackS3Config{
-				Buckets: convertToMapSlice(buckets),
-			}
-		}
-	case ServiceLocalstackDynamodb:
-		if tables, ok := configData["tables"].([]any); ok {
-			config.LocalstackDynamodbConfig = &servicetypes.LocalstackDynamodbConfig{
-				Tables: convertToMapSlice(tables),
-			}
-		}
+
+		mergeFieldFromConfigData(field, configData)
 	}
 
 	return config
+}
+
+func isConfigStructField(field reflect.Value, fieldType reflect.StructField) bool {
+	return field.Kind() == reflect.Ptr &&
+		field.Type().Elem().Kind() == reflect.Struct &&
+		strings.Contains(fieldType.Type.String(), "Config")
+}
+
+func mergeFieldFromConfigData(field reflect.Value, configData map[string]any) {
+	structType := field.Type().Elem()
+
+	for j := 0; j < structType.NumField(); j++ {
+		structField := structType.Field(j)
+		yamlTag := getYAMLFieldNameFromTag(structField)
+
+		if yamlTag == "" {
+			continue
+		}
+
+		if data, exists := configData[yamlTag]; exists {
+			assignConfigFieldData(field, structType, j, data)
+			break
+		}
+	}
+}
+
+func getYAMLFieldNameFromTag(structField reflect.StructField) string {
+	yamlTag := structField.Tag.Get("yaml")
+	if yamlTag == "" || yamlTag == "-" {
+		return ""
+	}
+	fieldName := strings.Split(yamlTag, ",")[0]
+	return fieldName
+}
+
+func assignConfigFieldData(field reflect.Value, structType reflect.Type, fieldIndex int, data any) {
+	if field.IsNil() {
+		newStruct := reflect.New(structType)
+		field.Set(newStruct)
+	}
+
+	structField := field.Elem().Field(fieldIndex)
+	if structField.Kind() == reflect.Slice {
+		if sliceData, ok := data.([]any); ok {
+			structField.Set(reflect.ValueOf(convertToMapSlice(sliceData)))
+		}
+	}
 }
 
 // convertToMapSlice converts []any to []map[string]any
@@ -535,9 +586,6 @@ func (s *Service) Logs(ctx context.Context, req LogRequest) error {
 	consumer := &docker.SimpleLogConsumer{}
 	err := s.compose.Logs(ctx, req.Project, consumer, options.ToSDK())
 	if err != nil {
-		if len(serviceNames) > 0 {
-			return pkgerrors.NewServiceError("project", "get logs", err)
-		}
 		return pkgerrors.NewServiceError("project", "get logs", err)
 	}
 	return nil

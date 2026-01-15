@@ -83,7 +83,22 @@ func (pm *PromptManager) PromptForAdvancedOptions() (map[string]bool, map[string
 	validation := make(map[string]bool)
 	advanced := make(map[string]bool)
 
-	// Validation options prompt
+	enableValidation, err := pm.askToEnableValidation()
+	if err != nil {
+		return validation, advanced, err
+	}
+
+	if enableValidation {
+		validation, err = pm.selectValidationOptions()
+		if err != nil {
+			return validation, advanced, err
+		}
+	}
+
+	return validation, advanced, nil
+}
+
+func (pm *PromptManager) askToEnableValidation() (bool, error) {
 	validationPrompt := &survey.Confirm{
 		Message: "Select validation options:",
 		Default: true,
@@ -92,41 +107,54 @@ func (pm *PromptManager) PromptForAdvancedOptions() (map[string]bool, map[string
 
 	var enableValidation bool
 	if err := survey.AskOne(validationPrompt, &enableValidation); err != nil {
-		return validation, advanced, pkgerrors.NewValidationError(FieldValidation, MsgFailedToGetValidationPreference, err)
+		return false, pkgerrors.NewValidationError(FieldValidation, MsgFailedToGetValidationPreference, err)
+	}
+	return enableValidation, nil
+}
+
+func (pm *PromptManager) selectValidationOptions() (map[string]bool, error) {
+	validationOptions := pm.buildValidationOptionsList()
+	selectedValidations, err := pm.promptForValidationSelection(validationOptions)
+	if err != nil {
+		return nil, err
+	}
+	return pm.mapValidationSelections(selectedValidations), nil
+}
+
+func (pm *PromptManager) buildValidationOptionsList() []string {
+	validationOptions := make([]string, 0, len(core.ValidationOptions))
+	for _, description := range core.ValidationOptions {
+		validationOptions = append(validationOptions, description)
+	}
+	return validationOptions
+}
+
+func (pm *PromptManager) promptForValidationSelection(validationOptions []string) ([]string, error) {
+	var selectedValidations []string
+	validationSelectPrompt := &survey.MultiSelect{
+		Message: "Select validation options:",
+		Options: validationOptions,
+		Default: validationOptions,
+		Help:    "Choose which validations to run",
 	}
 
-	if enableValidation {
-		// Individual validation options
-		// Use ValidationOptions from generated constants
-		validationOptions := make([]string, 0, len(core.ValidationOptions))
-		for _, description := range core.ValidationOptions {
-			validationOptions = append(validationOptions, description)
-		}
+	if err := survey.AskOne(validationSelectPrompt, &selectedValidations); err != nil {
+		return nil, pkgerrors.NewValidationError(FieldValidation, MsgFailedToGetValidationOptions, err)
+	}
+	return selectedValidations, nil
+}
 
-		var selectedValidations []string
-		validationSelectPrompt := &survey.MultiSelect{
-			Message: "Select validation options:",
-			Options: validationOptions,
-			Default: validationOptions, // All enabled by default
-			Help:    "Choose which validations to run",
-		}
-
-		if err := survey.AskOne(validationSelectPrompt, &selectedValidations); err != nil {
-			return validation, advanced, pkgerrors.NewValidationError(FieldValidation, MsgFailedToGetValidationOptions, err)
-		}
-
-		// Convert descriptions back to keys
-		for _, selectedDesc := range selectedValidations {
-			for key, description := range core.ValidationOptions {
-				if description == selectedDesc {
-					validation[key] = true
-					break
-				}
+func (pm *PromptManager) mapValidationSelections(selectedValidations []string) map[string]bool {
+	validation := make(map[string]bool)
+	for _, selectedDesc := range selectedValidations {
+		for key, description := range core.ValidationOptions {
+			if description == selectedDesc {
+				validation[key] = true
+				break
 			}
 		}
 	}
-
-	return validation, advanced, nil
+	return validation
 }
 
 // ConfirmInitialization shows final confirmation with option to go back
@@ -169,14 +197,27 @@ func (pm *PromptManager) loadServiceCategories() (map[string][]types.ServiceConf
 
 // selectServicesFromAllCategories shows all services in one list with category labels
 func (pm *PromptManager) selectServicesFromAllCategories(categories map[string][]types.ServiceConfig) ([]types.ServiceConfig, error) {
-	// Build flat list of all services with category labels
+	allServices, serviceOptions := pm.buildServiceList(categories)
+
+	selected, err := pm.promptForServiceSelection(serviceOptions)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(selected) == 0 {
+		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgNoServicesSelected, nil)
+	}
+
+	return pm.mapSelectedServices(selected, allServices), nil
+}
+
+func (pm *PromptManager) buildServiceList(categories map[string][]types.ServiceConfig) ([]types.ServiceConfig, []string) {
 	var allServices []types.ServiceConfig
 	var serviceOptions []string
+	caser := cases.Title(language.English)
 
 	for categoryName, categoryServices := range categories {
 		for _, service := range categoryServices {
-			// Format: [Category] ServiceName - Description
-			caser := cases.Title(language.English)
 			displayName := fmt.Sprintf("[%s] %s - %s",
 				caser.String(categoryName), service.Name, service.Description)
 			serviceOptions = append(serviceOptions, displayName)
@@ -184,9 +225,10 @@ func (pm *PromptManager) selectServicesFromAllCategories(categories map[string][
 		}
 	}
 
-	// Sort options for better UX
-	// (Could add sorting by category then name if needed)
+	return allServices, serviceOptions
+}
 
+func (pm *PromptManager) promptForServiceSelection(serviceOptions []string) ([]string, error) {
 	prompt := &survey.MultiSelect{
 		Message: "Select services for your project:",
 		Options: serviceOptions,
@@ -198,41 +240,48 @@ func (pm *PromptManager) selectServicesFromAllCategories(categories map[string][
 		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, "failed to select services", err)
 	}
 
-	if len(selected) == 0 {
-		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgNoServicesSelected, nil)
-	}
+	return selected, nil
+}
 
-	// Map selected display names back to ServiceConfigs
+func (pm *PromptManager) mapSelectedServices(selected []string, allServices []types.ServiceConfig) []types.ServiceConfig {
 	var selectedConfigs []types.ServiceConfig
 	selectedMap := make(map[string]bool)
 
-	const minParts = 2
 	for _, selection := range selected {
-		// Extract service name from "[Category] ServiceName - Description"
-		parts := strings.Split(selection, "] ")
-		if len(parts) < minParts {
-			continue
-		}
-		serviceNamePart := strings.Split(parts[1], " - ")
-		if len(serviceNamePart) < 1 {
-			continue
-		}
-		serviceName := serviceNamePart[0]
-
-		// Prevent duplicates
-		if selectedMap[serviceName] {
+		serviceName := pm.extractServiceName(selection)
+		if serviceName == "" || selectedMap[serviceName] {
 			continue
 		}
 		selectedMap[serviceName] = true
 
-		// Find the corresponding ServiceConfig
-		for _, service := range allServices {
-			if service.Name == serviceName {
-				selectedConfigs = append(selectedConfigs, service)
-				break
-			}
+		if config := pm.findServiceConfig(serviceName, allServices); config != nil {
+			selectedConfigs = append(selectedConfigs, *config)
 		}
 	}
 
-	return selectedConfigs, nil
+	return selectedConfigs
+}
+
+func (pm *PromptManager) extractServiceName(selection string) string {
+	const minParts = 2
+	parts := strings.Split(selection, "] ")
+	if len(parts) < minParts {
+		return ""
+	}
+
+	serviceNamePart := strings.Split(parts[1], " - ")
+	if len(serviceNamePart) < 1 {
+		return ""
+	}
+
+	return serviceNamePart[0]
+}
+
+func (pm *PromptManager) findServiceConfig(serviceName string, allServices []types.ServiceConfig) *types.ServiceConfig {
+	for _, service := range allServices {
+		if service.Name == serviceName {
+			return &service
+		}
+	}
+	return nil
 }

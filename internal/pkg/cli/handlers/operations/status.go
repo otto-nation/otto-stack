@@ -32,9 +32,6 @@ func NewStatusHandler() *StatusHandler {
 
 // Handle executes the status command
 func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Check initialization first
-
-	// Get CI-friendly flags
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
@@ -47,52 +44,63 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	}
 	defer cleanup()
 
-	// Resolve services to ServiceConfigs
+	serviceConfigs, err := h.resolveServices(args, setup, &ciFlags)
+	if err != nil {
+		return err
+	}
+
+	statuses, err := h.getServiceStatuses(ctx, setup.Config.Project.Name, serviceConfigs, &ciFlags)
+	if err != nil {
+		return err
+	}
+
+	if ciFlags.JSON {
+		h.outputJSON(&ciFlags, statuses)
+		return nil
+	}
+
+	h.displayStatus(base, cmd, statuses, serviceConfigs)
+	return nil
+}
+
+func (h *StatusHandler) resolveServices(args []string, setup *common.CoreSetup, ciFlags *ci.Flags) ([]types.ServiceConfig, error) {
 	serviceConfigs, err := ResolveServiceConfigs(args, setup)
 	if err != nil {
-		return ci.FormatError(ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
+		return nil, ci.FormatError(*ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
 	}
+	return serviceConfigs, nil
+}
 
-	// Filter out init containers (restart: "no") from status display
+func (h *StatusHandler) getServiceStatuses(ctx context.Context, projectName string, serviceConfigs []types.ServiceConfig, ciFlags *ci.Flags) ([]docker.ContainerStatus, error) {
 	filteredServices := filterInitContainers(serviceConfigs)
 
-	// Get service status using StackService
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return ci.FormatError(ciFlags, pkgerrors.NewServiceError("stack", "create service", err))
+		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError("stack", "create service", err))
 	}
 
-	statuses, err := stackService.DockerClient.GetServiceStatus(ctx, setup.Config.Project.Name, filteredServices)
+	statuses, err := stackService.DockerClient.GetServiceStatus(ctx, projectName, filteredServices)
 	if err != nil {
-		return ci.FormatError(ciFlags, fmt.Errorf(core.MsgStack_failed_get_service_status, err))
+		return nil, ci.FormatError(*ciFlags, fmt.Errorf(core.MsgStack_failed_get_service_status, err))
 	}
 
-	// Handle CI-friendly output
-	if ciFlags.JSON {
-		ci.OutputResult(ciFlags, map[string]any{
-			"services": statuses,
-			"count":    len(statuses),
-		}, core.ExitSuccess)
-		return nil
-	}
+	return statuses, nil
+}
 
-	// Display user-friendly status
+func (h *StatusHandler) outputJSON(ciFlags *ci.Flags, statuses []docker.ContainerStatus) {
+	ci.OutputResult(*ciFlags, map[string]any{
+		"services": statuses,
+		"count":    len(statuses),
+	}, core.ExitSuccess)
+}
+
+func (h *StatusHandler) displayStatus(base *base.BaseCommand, cmd *cobra.Command, statuses []docker.ContainerStatus, serviceConfigs []types.ServiceConfig) {
 	if len(statuses) == 0 {
-		// Restart operation
-		return nil
+		return
 	}
 
-	// Map services to their container names
-	serviceToContainer := make(map[string]string)
-	for _, config := range serviceConfigs {
-		containerName := getContainerName(config)
-		serviceToContainer[config.Name] = containerName
-	}
-
-	// Convert statuses with inheritance and display
+	serviceToContainer := h.buildServiceContainerMap(serviceConfigs)
 	serviceStatuses := convertToDisplayStatuses(statuses, serviceConfigs, serviceToContainer)
-
-	// Get verbose flag
 	verbose := base.GetVerbose(cmd)
 
 	formatter := display.NewStatusFormatter(os.Stdout)
@@ -100,8 +108,14 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		Compact: !verbose,
 		Verbose: verbose,
 	})
+}
 
-	return nil
+func (h *StatusHandler) buildServiceContainerMap(serviceConfigs []types.ServiceConfig) map[string]string {
+	serviceToContainer := make(map[string]string)
+	for _, config := range serviceConfigs {
+		serviceToContainer[config.Name] = getContainerName(config)
+	}
+	return serviceToContainer
 }
 
 // ValidateArgs validates the command arguments
@@ -116,63 +130,85 @@ func (h *StatusHandler) GetRequiredFlags() []string {
 
 // getContainerName returns the actual container name for a service
 func getContainerName(config types.ServiceConfig) string {
-	// If service is hidden, it's the actual container
 	if config.Hidden {
 		return config.Name
 	}
 
-	// Check if service has dependencies that provide the actual container
 	if len(config.Service.Dependencies.Required) > 0 {
-		// Return the first required dependency as the container name
 		return config.Service.Dependencies.Required[0]
 	}
 
-	// If no dependencies, service name is the container name
 	return config.Name
 }
 
 // convertToDisplayStatuses creates display service statuses with health inheritance
 func convertToDisplayStatuses(containerStatuses []docker.ContainerStatus, serviceConfigs []types.ServiceConfig, serviceToContainer map[string]string) []display.ServiceStatus {
-	containerMap := make(map[string]docker.ContainerStatus)
+	containerMap := buildContainerMap(containerStatuses)
+	return buildDisplayStatuses(serviceConfigs, serviceToContainer, containerMap)
+}
+
+func buildContainerMap(containerStatuses []docker.ContainerStatus) map[string]docker.ContainerStatus {
+	containerMap := make(map[string]docker.ContainerStatus, len(containerStatuses))
 	for _, status := range containerStatuses {
 		containerMap[status.Name] = status
 	}
+	return containerMap
+}
 
-	var result []display.ServiceStatus
+func buildDisplayStatuses(serviceConfigs []types.ServiceConfig, serviceToContainer map[string]string, containerMap map[string]docker.ContainerStatus) []display.ServiceStatus {
+	result := make([]display.ServiceStatus, 0, len(serviceConfigs))
 	for _, config := range serviceConfigs {
-		if config.Container.Restart == types.RestartPolicyNo || config.Hidden {
-			continue // Skip init containers and hidden services
+		if shouldSkipService(config) {
+			continue
 		}
-
-		provider := serviceToContainer[config.Name]
-		providerName := ""
-		if provider != config.Name {
-			providerName = provider
-		}
-
-		if containerStatus, exists := containerMap[provider]; exists {
-			result = append(result, display.ServiceStatus{
-				Name:     config.Name,
-				Provider: providerName,
-				State:    containerStatus.State,
-				Health:   containerStatus.Health,
-			})
-		} else {
-			result = append(result, display.ServiceStatus{
-				Name:     config.Name,
-				Provider: providerName,
-				State:    "not found",
-				Health:   "unknown",
-			})
-		}
+		result = append(result, createServiceStatus(config, serviceToContainer, containerMap))
 	}
-
 	return result
 }
 
-// filterInitContainers removes init containers (restart: "no") from status display
+func shouldSkipService(config types.ServiceConfig) bool {
+	return config.Container.Restart == types.RestartPolicyNo || config.Hidden
+}
+
+func createServiceStatus(config types.ServiceConfig, serviceToContainer map[string]string, containerMap map[string]docker.ContainerStatus) display.ServiceStatus {
+	provider := serviceToContainer[config.Name]
+	providerName := getProviderName(config.Name, provider)
+
+	if containerStatus, exists := containerMap[provider]; exists {
+		return buildFoundStatus(config.Name, providerName, containerStatus)
+	}
+
+	return buildNotFoundStatus(config.Name, providerName)
+}
+
+func getProviderName(serviceName, provider string) string {
+	if provider == serviceName {
+		return ""
+	}
+	return provider
+}
+
+func buildFoundStatus(name, provider string, containerStatus docker.ContainerStatus) display.ServiceStatus {
+	return display.ServiceStatus{
+		Name:     name,
+		Provider: provider,
+		State:    containerStatus.State,
+		Health:   containerStatus.Health,
+	}
+}
+
+func buildNotFoundStatus(name, provider string) display.ServiceStatus {
+	return display.ServiceStatus{
+		Name:     name,
+		Provider: provider,
+		State:    "not found",
+		Health:   "unknown",
+	}
+}
+
+// filterInitContainers removes init containers from status display
 func filterInitContainers(serviceConfigs []types.ServiceConfig) []string {
-	var filtered []string
+	filtered := make([]string, 0, len(serviceConfigs))
 	for _, config := range serviceConfigs {
 		if config.Container.Restart != types.RestartPolicyNo {
 			filtered = append(filtered, config.Name)

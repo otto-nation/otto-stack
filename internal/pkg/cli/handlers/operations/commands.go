@@ -77,17 +77,11 @@ func (c *ServiceCommand) executeUp(ctx context.Context, cliCtx clicontext.Contex
 		ForceRecreate:  false,
 	}
 
-	err = service.Start(ctx, startRequest)
-	if err != nil {
+	if err = service.Start(ctx, startRequest); err != nil {
 		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStartServices, err)
 	}
 
-	base.Output.Success("Services started successfully")
-	base.Output.Info("Project: %s", cliCtx.Project.Name)
-	for _, svc := range cliCtx.Services.Configs {
-		base.Output.Info("  %s %s", display.StatusSuccess, svc.Name)
-	}
-
+	c.showServiceSuccess(base, cliCtx, "started")
 	return nil
 }
 
@@ -95,29 +89,16 @@ func (c *ServiceCommand) executeUp(ctx context.Context, cliCtx clicontext.Contex
 func (c *ServiceCommand) executeDown(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header(core.MsgStopping)
 
-	service, err := common.NewServiceManager(false)
+	service, err := c.createServiceManager()
 	if err != nil {
-		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
+		return err
 	}
 
-	stopRequest := services.StopRequest{
-		Project:        cliCtx.Project.Name,
-		ServiceConfigs: cliCtx.Services.Configs,
-		Remove:         true,
-		RemoveVolumes:  false,
+	if err = c.stopServices(ctx, service, cliCtx, true); err != nil {
+		return err
 	}
 
-	err = service.Stop(ctx, stopRequest)
-	if err != nil {
-		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStopServices, err)
-	}
-
-	base.Output.Success("Services stopped successfully")
-	base.Output.Info("Project: %s", cliCtx.Project.Name)
-	for _, svc := range cliCtx.Services.Configs {
-		base.Output.Info("  %s %s", display.StatusSuccess, svc.Name)
-	}
-
+	c.showServiceSuccess(base, cliCtx, "stopped")
 	return nil
 }
 
@@ -125,43 +106,23 @@ func (c *ServiceCommand) executeDown(ctx context.Context, cliCtx clicontext.Cont
 func (c *ServiceCommand) executeLogs(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header(core.MsgLogs)
 
-	dockerClient, err := docker.NewClient(nil)
+	dockerClient, err := c.createDockerClient()
 	if err != nil {
-		return pkgerrors.NewDockerError("create client", "", err)
+		return err
 	}
 	defer func() { _ = dockerClient.Close() }()
 
-	var serviceNames []string
-	for _, svc := range cliCtx.Services.Configs {
-		serviceNames = append(serviceNames, svc.Name)
-	}
-
-	manager := dockerClient.GetComposeManager()
-	consumer := &docker.SimpleLogConsumer{}
-
-	logOptions := docker.LogOptions{
-		Services:   serviceNames,
-		Follow:     cliCtx.Runtime.Force,
-		Timestamps: true,
-		Tail:       core.DefaultLogTailLines,
-	}
-
-	err = manager.Logs(ctx, cliCtx.Project.Name, consumer, logOptions.ToSDK())
-	if err != nil {
-		return pkgerrors.NewDockerError(common.OpShowLogs, cliCtx.Project.Name, err)
-	}
-
-	base.Output.Success("Logs displayed successfully")
-	return nil
+	serviceNames := c.extractServiceNames(cliCtx)
+	return c.streamLogs(ctx, dockerClient, cliCtx.Project.Name, serviceNames, true)
 }
 
 // executeStatus shows status for the specified services
 func (c *ServiceCommand) executeStatus(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header("%s Status", ui.IconHeader)
 
-	dockerClient, err := docker.NewClient(nil)
+	dockerClient, err := c.createDockerClient()
 	if err != nil {
-		return pkgerrors.NewDockerError("create client", "", err)
+		return err
 	}
 	defer func() { _ = dockerClient.Close() }()
 
@@ -170,25 +131,7 @@ func (c *ServiceCommand) executeStatus(ctx context.Context, cliCtx clicontext.Co
 		return pkgerrors.NewDockerError(common.OpListContainers, cliCtx.Project.Name, err)
 	}
 
-	if len(containers) == 0 {
-		base.Output.Info("No containers found for project: %s", cliCtx.Project.Name)
-		return nil
-	}
-
-	base.Output.Info("Project: %s", cliCtx.Project.Name)
-	for _, container := range containers {
-		var status string
-		switch container.State {
-		case "running":
-			status = display.StatusSuccess
-		case "exited":
-			status = display.StatusError
-		default:
-			status = display.StatusStarting
-		}
-		base.Output.Info("  %s%s (%s) - %s", status, container.Service, container.State, container.Status)
-	}
-
+	c.displayContainerStatus(base, cliCtx.Project.Name, containers)
 	return nil
 }
 
@@ -228,38 +171,20 @@ func (c *ServiceCommand) executeConnect(ctx context.Context, cliCtx clicontext.C
 func (c *ServiceCommand) executeRestart(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header(core.MsgRestarting)
 
-	service, err := common.NewServiceManager(false)
+	service, err := c.createServiceManager()
 	if err != nil {
-		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
+		return err
 	}
 
-	stopRequest := services.StopRequest{
-		Project:        cliCtx.Project.Name,
-		ServiceConfigs: cliCtx.Services.Configs,
-		Remove:         false,
-	}
-	err = service.Stop(ctx, stopRequest)
-	if err != nil {
-		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStopServices, err)
+	if err = c.stopServices(ctx, service, cliCtx, false); err != nil {
+		return err
 	}
 
-	startRequest := services.StartRequest{
-		Project:        cliCtx.Project.Name,
-		ServiceConfigs: cliCtx.Services.Configs,
-		Build:          false,
-		ForceRecreate:  false,
-	}
-	err = service.Start(ctx, startRequest)
-	if err != nil {
-		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStartServices, err)
+	if err = c.startServices(ctx, service, cliCtx); err != nil {
+		return err
 	}
 
-	base.Output.Success("Services restarted successfully")
-	base.Output.Info("Project: %s", cliCtx.Project.Name)
-	for _, svc := range cliCtx.Services.Configs {
-		base.Output.Info("  %s %s", display.StatusSuccess, svc.Name)
-	}
-
+	c.showServiceSuccess(base, cliCtx, "restarted")
 	return nil
 }
 
@@ -267,31 +192,145 @@ func (c *ServiceCommand) executeRestart(ctx context.Context, cliCtx clicontext.C
 func (c *ServiceCommand) executeCleanup(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	base.Output.Header(core.MsgCleaning)
 
-	dockerClient, err := docker.NewClient(nil)
+	dockerClient, err := c.createDockerClient()
 	if err != nil {
-		return pkgerrors.NewDockerError("create client", "", err)
+		return err
 	}
 	defer func() { _ = dockerClient.Close() }()
 
-	projectName := cliCtx.Project.Name
-
-	err = dockerClient.RemoveResources(ctx, docker.ResourceContainer, projectName)
-	if err != nil {
-		return pkgerrors.NewDockerError(common.OpRemoveResources, "containers", err)
-	}
-
-	err = dockerClient.RemoveResources(ctx, docker.ResourceVolume, projectName)
-	if err != nil {
-		return pkgerrors.NewDockerError(common.OpRemoveResources, "volumes", err)
-	}
-
-	err = dockerClient.RemoveResources(ctx, docker.ResourceNetwork, projectName)
-	if err != nil {
-		return pkgerrors.NewDockerError(common.OpRemoveResources, "networks", err)
+	if err = c.cleanupResources(ctx, dockerClient, cliCtx.Project.Name); err != nil {
+		return err
 	}
 
 	base.Output.Success("Cleanup completed successfully")
 	base.Output.Info("Project: %s", cliCtx.Project.Name)
-
 	return nil
+}
+
+// Helper methods
+
+// createServiceManager creates a new service manager
+func (c *ServiceCommand) createServiceManager() (*services.Service, error) {
+	service, err := common.NewServiceManager(false)
+	if err != nil {
+		return nil, pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
+	}
+	return service, nil
+}
+
+// createDockerClient creates a new Docker client
+func (c *ServiceCommand) createDockerClient() (*docker.Client, error) {
+	dockerClient, err := docker.NewClient(nil)
+	if err != nil {
+		return nil, pkgerrors.NewDockerError("create client", "", err)
+	}
+	return dockerClient, nil
+}
+
+// startServices starts the services with the given configuration
+func (c *ServiceCommand) startServices(ctx context.Context, service *services.Service, cliCtx clicontext.Context) error {
+	startRequest := services.StartRequest{
+		Project:        cliCtx.Project.Name,
+		ServiceConfigs: cliCtx.Services.Configs,
+		Build:          cliCtx.Runtime.Force,
+		ForceRecreate:  false,
+	}
+
+	if err := service.Start(ctx, startRequest); err != nil {
+		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStartServices, err)
+	}
+	return nil
+}
+
+// stopServices stops the services with the given configuration
+func (c *ServiceCommand) stopServices(ctx context.Context, service *services.Service, cliCtx clicontext.Context, remove bool) error {
+	stopRequest := services.StopRequest{
+		Project:        cliCtx.Project.Name,
+		ServiceConfigs: cliCtx.Services.Configs,
+		Remove:         remove,
+		RemoveVolumes:  false,
+	}
+
+	if err := service.Stop(ctx, stopRequest); err != nil {
+		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStopServices, err)
+	}
+	return nil
+}
+
+// extractServiceNames extracts service names from the context
+func (c *ServiceCommand) extractServiceNames(cliCtx clicontext.Context) []string {
+	serviceNames := make([]string, 0, len(cliCtx.Services.Configs))
+	for _, svc := range cliCtx.Services.Configs {
+		serviceNames = append(serviceNames, svc.Name)
+	}
+	return serviceNames
+}
+
+// streamLogs streams logs for the specified services
+func (c *ServiceCommand) streamLogs(ctx context.Context, dockerClient *docker.Client, projectName string, serviceNames []string, follow bool) error {
+	logOptions := docker.LogOptions{
+		Services:   serviceNames,
+		Follow:     follow,
+		Timestamps: true,
+		Tail:       core.DefaultLogTailLines,
+	}
+
+	manager := dockerClient.GetComposeManager()
+	consumer := &docker.SimpleLogConsumer{}
+
+	if err := manager.Logs(ctx, projectName, consumer, logOptions.ToSDK()); err != nil {
+		return pkgerrors.NewDockerError(common.OpShowLogs, projectName, err)
+	}
+	return nil
+}
+
+// displayContainerStatus displays the status of containers
+func (c *ServiceCommand) displayContainerStatus(base *base.BaseCommand, projectName string, containers []docker.ContainerInfo) {
+	if len(containers) == 0 {
+		base.Output.Info("No containers found for project: %s", projectName)
+		return
+	}
+
+	base.Output.Info("Project: %s", projectName)
+	for _, container := range containers {
+		status := c.getContainerStatusIcon(container.State)
+		base.Output.Info("  %s%s (%s) - %s", status, container.Service, container.State, container.Status)
+	}
+}
+
+// cleanupResources removes all resources for a project
+func (c *ServiceCommand) cleanupResources(ctx context.Context, dockerClient *docker.Client, projectName string) error {
+	resources := []docker.ResourceType{
+		docker.ResourceContainer,
+		docker.ResourceVolume,
+		docker.ResourceNetwork,
+	}
+
+	for _, resource := range resources {
+		if err := dockerClient.RemoveResources(ctx, resource, projectName); err != nil {
+			return pkgerrors.NewDockerError(common.OpRemoveResources, string(resource), err)
+		}
+	}
+	return nil
+}
+
+// showServiceSuccess displays success message for service operations
+func (c *ServiceCommand) showServiceSuccess(base *base.BaseCommand, cliCtx clicontext.Context, action string) {
+	base.Output.Success("Services %s successfully", action)
+	base.Output.Info("Project: %s", cliCtx.Project.Name)
+	for _, svc := range cliCtx.Services.Configs {
+		base.Output.Info("  %s %s", display.StatusSuccess, svc.Name)
+	}
+}
+
+// getContainerStatusIcon returns the appropriate status icon for a container state
+func (c *ServiceCommand) getContainerStatusIcon(state string) string {
+	switch state {
+	case "running":
+		return display.StatusSuccess
+	case "exited":
+		return display.StatusError
+	default:
+		return display.StatusStarting
+	}
 }

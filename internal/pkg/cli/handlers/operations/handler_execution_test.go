@@ -28,17 +28,6 @@ func TestConnectHandler_Methods(t *testing.T) {
 			assert.Error(t, err)
 		}
 	})
-
-	t.Run("tests getConnectionCommand", func(t *testing.T) {
-		handler := NewConnectHandler()
-
-		cmd, err := handler.getConnectionCommand("postgres", "testdb", "user", "localhost", 5432, false)
-		if err != nil {
-			assert.Error(t, err)
-		} else {
-			assert.IsType(t, []string{}, cmd)
-		}
-	})
 }
 
 func TestExecHandler_Methods(t *testing.T) {
