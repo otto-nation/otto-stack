@@ -33,7 +33,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
-		base.Output.Header(core.MsgCleaning)
+		base.Output.Header(core.MsgLifecycle_cleaning)
 	}
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)

@@ -20,6 +20,7 @@ import (
 	"github.com/docker/compose/v5/pkg/api"
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
@@ -33,7 +34,6 @@ type Service struct {
 	project         ProjectLoader
 	DockerClient    *docker.Client // Exposed for direct access
 	logger          *slog.Logger
-	verbose         bool // Enable verbose logging
 }
 
 // ServiceInterface defines the interface for service operations
@@ -52,13 +52,7 @@ func NewServiceWithDependencies(compose api.Compose, characteristics Characteris
 		project:         project,
 		DockerClient:    dockerClient,
 		logger:          logger.GetLogger(),
-		verbose:         false,
 	}
-}
-
-// SetVerbose enables or disables verbose logging
-func (s *Service) SetVerbose(verbose bool) {
-	s.verbose = verbose
 }
 
 // ResolveUpServices resolves service names and returns their configs with dependencies
@@ -180,22 +174,25 @@ func NewService(compose api.Compose, characteristics CharacteristicsResolver, pr
 		characteristics: characteristics,
 		project:         project,
 		DockerClient:    dockerClient,
-		verbose:         false,
+		logger:          logger.GetLogger(),
 	}, nil
 }
 
 // Start starts services with automatic characteristics resolution
 func (s *Service) Start(ctx context.Context, req StartRequest) error {
-	if s.verbose {
-		s.logger.Debug("Starting services",
-			"project", req.Project,
-			"serviceCount", len(req.ServiceConfigs),
-			"build", req.Build,
-			"forceRecreate", req.ForceRecreate)
-	}
+	s.logger.Debug("Starting services",
+		"project", req.Project,
+		"serviceCount", len(req.ServiceConfigs),
+		"build", req.Build,
+		"forceRecreate", req.ForceRecreate)
 
 	// Load and validate service configs from .otto-stack/service-configs/
 	req.ServiceConfigs = s.loadAndValidateServiceConfigs(req.ServiceConfigs)
+
+	// Generate docker-compose.yml from service configs
+	if err := s.GenerateComposeFile(req.Project, req.ServiceConfigs); err != nil {
+		return pkgerrors.NewServiceError("project", "generate compose file", err)
+	}
 
 	// Load project
 	project, err := s.project.Load(req.Project)
@@ -203,9 +200,7 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 		return pkgerrors.NewServiceError("project", "load", err)
 	}
 
-	if s.verbose {
-		s.logger.Debug("Project loaded successfully", "project", req.Project)
-	}
+	s.logger.Debug("Project loaded successfully", "project", req.Project)
 
 	// Resolve characteristics to options and convert to SDK format
 	options := s.characteristics.ResolveUpOptions(req.Characteristics, req.ServiceConfigs, docker.UpOptions{
@@ -221,9 +216,7 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 		return pkgerrors.NewServiceError("project", "start", err)
 	}
 
-	if s.verbose {
-		s.logger.Debug("Services started successfully")
-	}
+	s.logger.Debug("Services started successfully")
 
 	// Execute local init scripts for services that have them
 	if err := s.executeLocalInitScripts(ctx, req.ServiceConfigs, req.Project); err != nil {
@@ -235,6 +228,7 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 
 // executeLocalInitScripts executes local init scripts for all services that have them
 func (s *Service) executeLocalInitScripts(ctx context.Context, serviceConfigs []servicetypes.ServiceConfig, projectName string) error {
+	s.logger.Debug("Executing local init scripts for services")
 	for _, config := range serviceConfigs {
 		if s.hasLocalInitScripts(config) {
 			if err := s.executeServiceInitScripts(ctx, config, serviceConfigs, projectName); err != nil {
@@ -245,24 +239,26 @@ func (s *Service) executeLocalInitScripts(ctx context.Context, serviceConfigs []
 	return nil
 }
 
-// hasLocalInitScripts checks if a service has local init scripts enabled
-func (s *Service) hasLocalInitScripts(config servicetypes.ServiceConfig) bool {
-	hasInit := config.InitService != nil && config.InitService.Enabled && config.InitService.Mode == "local"
+// hasInitScripts checks if a service has init scripts enabled
+func (s *Service) hasInitScripts(config servicetypes.ServiceConfig) bool {
+	hasInit := config.InitService != nil && config.InitService.Enabled
 
-	// Log verbose information about init service configuration
-	if s.verbose {
-		if config.InitService == nil {
-			s.logger.Debug("Service has no InitService configuration", "service", config.Name)
-		} else {
-			s.logger.Debug("Service InitService configuration",
-				"service", config.Name,
-				"enabled", config.InitService.Enabled,
-				"mode", config.InitService.Mode,
-				"hasScripts", len(config.InitService.Scripts) > 0)
-		}
+	// Log debug information about init service configuration
+	if config.InitService == nil {
+		s.logger.Debug("Service has no InitService configuration", "service", config.Name)
+	} else {
+		s.logger.Debug("Service InitService configuration",
+			"service", config.Name,
+			"enabled", config.InitService.Enabled,
+			"mode", config.InitService.Mode)
 	}
 
 	return hasInit
+}
+
+// hasLocalInitScripts checks if a service has local init scripts enabled (for backward compatibility)
+func (s *Service) hasLocalInitScripts(config servicetypes.ServiceConfig) bool {
+	return s.hasInitScripts(config) && config.InitService.Mode == docker.InitServiceModeLocal
 }
 
 // executeServiceInitScripts executes all init scripts for a single service
@@ -274,20 +270,23 @@ func (s *Service) executeServiceInitScripts(ctx context.Context, config servicet
 			return fmt.Errorf("failed to process template for service %s: %w", config.Name, err)
 		}
 
-		// Prepare environment with required variables
-		env := make(map[string]string)
-		if config.InitService.Environment != nil {
-			maps.Copy(env, config.InitService.Environment)
-		}
-
-		// Add Docker-specific variables for local mode scripts
-		if config.InitService.Mode == "local" {
+		// Execute based on mode
+		if config.InitService.Mode == docker.InitServiceModeContainer {
+			if err := s.executeScriptInContainer(ctx, processedScript, config, projectName); err != nil {
+				return err
+			}
+		} else {
+			// local mode
+			env := make(map[string]string)
+			if config.InitService.Environment != nil {
+				maps.Copy(env, config.InitService.Environment)
+			}
 			env["DOCKER_IMAGE"] = config.InitService.Image
 			env["DOCKER_NETWORK"] = projectName + "-network"
-		}
 
-		if err := s.executeScript(ctx, processedScript, env, config.Name); err != nil {
-			return err
+			if err := s.executeScript(ctx, processedScript, env, config.Name); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -312,21 +311,24 @@ func (s *Service) processScriptTemplate(scriptContent string, config servicetype
 	return buf.String(), nil
 }
 
-// collectTemplateData collects template data from dependent services
+// collectTemplateData collects template data from enabled services that depend on this service
 func (s *Service) collectTemplateData(config servicetypes.ServiceConfig, allConfigs []servicetypes.ServiceConfig) map[string]any {
 	templateData := make(map[string]any)
 
+	// Collect data from services that depend on the current service (config.Name)
 	for _, serviceConfig := range allConfigs {
-		if s.dependsOn(serviceConfig, config.Name) {
+		if s.serviceDependsOn(serviceConfig, config.Name) {
 			s.addConfigData(templateData, serviceConfig)
 		}
 	}
 
+	s.logger.Debug("Collected template data", "data", templateData)
+
 	return templateData
 }
 
-// dependsOn checks if serviceConfig depends on the given service name
-func (s *Service) dependsOn(serviceConfig servicetypes.ServiceConfig, serviceName string) bool {
+// serviceDependsOn checks if serviceConfig depends on the given service name
+func (s *Service) serviceDependsOn(serviceConfig servicetypes.ServiceConfig, serviceName string) bool {
 	if serviceConfig.Service.Dependencies.Required != nil {
 		return slices.Contains(serviceConfig.Service.Dependencies.Required, serviceName)
 	}
@@ -343,26 +345,18 @@ func (s *Service) addConfigData(templateData map[string]any, serviceConfig servi
 }
 
 func (s *Service) processServiceField(templateData map[string]any, field reflect.Value) {
-	if !s.isValidConfigField(field) {
+	if field.Kind() != reflect.Pointer || field.IsNil() {
 		return
 	}
 
 	structValue := field.Elem()
 	structType := structValue.Type()
 
-	if !s.isGeneratedConfigStruct(structType) {
+	if !strings.HasSuffix(structType.Name(), "Config") {
 		return
 	}
 
 	s.extractFieldsFromStruct(templateData, structValue, structType)
-}
-
-func (s *Service) isValidConfigField(field reflect.Value) bool {
-	return field.Kind() == reflect.Ptr && !field.IsNil()
-}
-
-func (s *Service) isGeneratedConfigStruct(structType reflect.Type) bool {
-	return strings.Contains(structType.PkgPath(), "/generated")
 }
 
 func (s *Service) extractFieldsFromStruct(templateData map[string]any, structValue reflect.Value, structType reflect.Type) {
@@ -403,12 +397,16 @@ func (s *Service) loadAndValidateServiceConfigs(serviceConfigs []servicetypes.Se
 		configData, err := loadServiceConfigFile(config.Name)
 		if err != nil {
 			// File doesn't exist - that's OK, not all services need config files
+			s.logger.Debug("No config file for service", "service", config.Name)
 			enrichedConfigs = append(enrichedConfigs, config)
 			continue
 		}
 
+		s.logger.Debug("Loaded config file", "service", config.Name, "data", configData)
+
 		// Merge config data into ServiceConfig struct
 		enrichedConfig := mergeConfigIntoStruct(config, configData)
+		s.logger.Debug("Merged config", "service", config.Name, "enrichedConfig", enrichedConfig)
 		enrichedConfigs = append(enrichedConfigs, enrichedConfig)
 	}
 
@@ -469,6 +467,7 @@ func mergeFieldFromConfigData(field reflect.Value, configData map[string]any) {
 		}
 
 		if data, exists := configData[yamlTag]; exists {
+			logger.GetLogger().Debug("Assigning field data", "field", yamlTag, "data", data)
 			assignConfigFieldData(field, structType, j, data)
 			break
 		}
@@ -509,7 +508,7 @@ func convertToMapSlice(data []any) []map[string]any {
 	return result
 }
 
-// executeScript executes a single script with environment variables
+// executeScript executes a single script with environment variables on the host
 func (s *Service) executeScript(ctx context.Context, scriptContent string, env map[string]string, serviceName string) error {
 	cmd := exec.CommandContext(ctx, "bash", "-c", scriptContent)
 
@@ -530,14 +529,31 @@ func (s *Service) executeScript(ctx context.Context, scriptContent string, env m
 	return nil
 }
 
+// executeScriptInContainer executes a script inside a Docker container
+func (s *Service) executeScriptInContainer(ctx context.Context, scriptContent string, config servicetypes.ServiceConfig, projectName string) error {
+	// Build init container config
+	initConfig := docker.InitContainerConfig{
+		Image:       config.InitService.Image,
+		Command:     []string{"bash", "-c", scriptContent},
+		Environment: config.InitService.Environment,
+		Networks:    []string{projectName + docker.NetworkNameSuffix},
+	}
+
+	// Use docker client to run init container
+	containerName := fmt.Sprintf("%s-init-%d", config.Name, time.Now().Unix())
+	if err := s.DockerClient.RunInitContainer(ctx, containerName, initConfig); err != nil {
+		return fmt.Errorf("failed to execute init container for service %s: %w", config.Name, err)
+	}
+
+	return nil
+}
+
 // Stop stops services with automatic characteristics resolution
 func (s *Service) Stop(ctx context.Context, req StopRequest) error {
-	if s.verbose {
-		s.logger.Debug("Stopping services",
-			"project", req.Project,
-			"remove", req.Remove,
-			"serviceCount", len(req.ServiceConfigs))
-	}
+	s.logger.Debug("Stopping services",
+		"project", req.Project,
+		"remove", req.Remove,
+		"serviceCount", len(req.ServiceConfigs))
 
 	// Load project
 	project, err := s.project.Load(req.Project)
@@ -616,4 +632,14 @@ func (s *Service) Exec(ctx context.Context, req ExecRequest) error {
 		return pkgerrors.NewServiceError("project", "exec command", err)
 	}
 	return nil
+}
+
+// GenerateComposeFile generates docker-compose.yml from service configs
+func (s *Service) GenerateComposeFile(projectName string, serviceConfigs []servicetypes.ServiceConfig) error {
+	generator, err := compose.NewGenerator(projectName)
+	if err != nil {
+		return err
+	}
+
+	return generator.GenerateFromServiceConfigs(serviceConfigs, projectName)
 }

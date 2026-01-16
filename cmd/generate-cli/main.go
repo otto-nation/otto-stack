@@ -14,11 +14,10 @@ import (
 
 const (
 	CommandsYAMLPath     = "internal/config/commands.yaml"
+	MessagesYAMLPath     = "internal/config/messages.yaml"
 	CoreTemplateFilePath = "cmd/generate-cli/templates/core.tmpl"
-	CLITemplateFilePath  = "cmd/generate-cli/templates/ci.tmpl"
 	CLICommandsTemplate  = "cmd/generate-cli/templates/cli.tmpl"
 	CoreGeneratedPath    = "internal/core/constants_generated.go"
-	CIGeneratedPath      = "internal/pkg/ci/generated.go"
 	CLICommandsPath      = "internal/pkg/cli/cli_generated.go"
 	CoreTemplateName     = "core"
 )
@@ -103,11 +102,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := generateCIUtilities(); err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to generate CI utilities: %v\n", err)
-		os.Exit(1)
-	}
-
 	if err := generateCLICommands(rawConfig); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate CLI commands: %v\n", err)
 		os.Exit(1)
@@ -121,11 +115,23 @@ func loadCommandConfig() (map[string]any, error) {
 	return codegen.LoadYAMLConfig(CommandsYAMLPath)
 }
 
+func loadMessagesConfig() (map[string]any, error) {
+	return codegen.LoadYAMLConfig(MessagesYAMLPath)
+}
+
 func generateCoreConstants() error {
 	rawConfig, err := loadCommandConfig()
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "load raw config", err)
+		return pkgerrors.NewServiceError("generator", "load commands config", err)
 	}
+
+	messagesConfig, err := loadMessagesConfig()
+	if err != nil {
+		return pkgerrors.NewServiceError("generator", "load messages config", err)
+	}
+
+	// Merge messages into rawConfig for template
+	rawConfig[KeyMessages] = messagesConfig
 
 	tmpl, err := codegen.ParseTemplate(CoreTemplateFilePath, CoreTemplateName)
 	if err != nil {
@@ -162,22 +168,6 @@ func generateCoreConstants() error {
 	}
 
 	return tmpl.Execute(file, data)
-}
-
-func generateCIUtilities() error {
-	tmpl, err := template.ParseFiles(CLITemplateFilePath)
-	if err != nil {
-		return pkgerrors.NewServiceError("generator", "parse CI template", err)
-	}
-
-	file, err := os.Create(CIGeneratedPath)
-	if err != nil {
-		return pkgerrors.NewServiceError("generator", "create CI file", err)
-	}
-	defer func() { _ = file.Close() }()
-
-	// CI utilities don't need data from YAML, they're static
-	return tmpl.Execute(file, nil)
 }
 
 func countFlags(rawConfig map[string]any) int {

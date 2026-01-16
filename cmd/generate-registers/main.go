@@ -33,43 +33,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Define command categories for target folder structure
-	commandCategories := map[string]string{
-		// Lifecycle commands (from stack)
-		"up":      "lifecycle",
-		"down":    "lifecycle",
-		"restart": "lifecycle",
-		"cleanup": "lifecycle",
-
-		// Operations commands (from stack)
-		"status":  "operations",
-		"logs":    "operations",
-		"exec":    "operations",
-		"connect": "operations",
-
-		// Utility commands
-		"web-interfaces": "utility",
-
-		// Project commands
-		"init":      "project",
-		"services":  "project",
-		"deps":      "project",
-		"conflicts": "project",
-		"validate":  "project",
-		"doctor":    "project",
-		"version":   "project",
-	}
-
-	// Group commands by category instead of handler
+	// Group commands by handler/category
 	categoryCommands := make(map[string][]string)
 	for cmdName, cmd := range commandConfig.Commands {
 		if cmd.Handler != "" {
-			category := commandCategories[cmdName]
-			if category == "" {
-				// Fallback to handler if no category defined
-				category = cmd.Handler
-			}
-			categoryCommands[category] = append(categoryCommands[category], cmdName)
+			categoryCommands[cmd.Handler] = append(categoryCommands[cmd.Handler], cmdName)
 		}
 	}
 

@@ -3,7 +3,7 @@ title: Services
 description: Available services and configuration options
 lead: Explore all the services you can use with otto-stack
 date: "2025-10-01"
-lastmod: "2026-01-15"
+lastmod: "2026-01-16"
 draft: false
 weight: 30
 toc: true
@@ -44,22 +44,42 @@ Database user
 - Type: `string`
 - Default: `root`
 
+#### databases
+
+Additional databases to create
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`)
+
+#### users
+
+Additional users to create
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`)
+
+- **password** (`string`)
+
+- **database** (`string`)
+
 ##### Example Configuration
 
 ```yaml
 database: local_dev
 password: password
 user: root
-```
-
-#### Examples
-
-```bash
-mysql -h localhost -u root -p -e "SELECT version();"
-```
-
-```bash
-spring.datasource.url=jdbc:mysql://localhost:3306/my_app_dev
+databases:
+  - name: example-name
+users:
+  - name: example-name
+    password: example-password
+    database: example-database
 ```
 
 #### Use Cases
@@ -105,16 +125,6 @@ Database user
 database: local_dev
 password: password
 user: postgres
-```
-
-#### Examples
-
-```bash
-psql -h localhost -U postgres -c "SELECT version();"
-```
-
-```bash
-spring.datasource.url=jdbc:postgresql://localhost:5432/my_app_dev
 ```
 
 #### Use Cases
@@ -166,16 +176,6 @@ max_memory: 256m
 databases: 16
 ```
 
-#### Examples
-
-```bash
-redis-cli -h localhost -p 6379 ping
-```
-
-```bash
-spring.data.redis.host=localhost
-```
-
 #### Use Cases
 
 - Session storage
@@ -221,16 +221,6 @@ topics:
     replication_factor: 1
 ```
 
-#### Examples
-
-```bash
-kafka-console-producer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --topic test-topic
-```
-
-```bash
-kafka-console-consumer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --topic test-topic --from-beginning
-```
-
 #### Use Cases
 
 - Event streaming and processing
@@ -249,10 +239,29 @@ kafka-console-consumer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:
 
 Apache Kafka broker for event streaming and messaging
 
-#### Examples
+#### Configuration Options
 
-```bash
-kafka-broker-api-versions --bootstrap-server localhost:9099
+#### topics
+
+Kafka topics to create on startup
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`): Topic name
+
+- **partitions** (`integer`) = `3`: Number of partitions
+
+- **replication_factor** (`integer`) = `1`: Replication factor
+
+##### Example Configuration
+
+```yaml
+topics:
+  - name: example-name
+    partitions: 3
+    replication_factor: 1
 ```
 
 #### Use Cases
@@ -271,12 +280,6 @@ kafka-broker-api-versions --bootstrap-server localhost:9099
 
 Web UI for Kafka cluster management and topic browsing
 
-#### Examples
-
-```bash
-curl -f http://localhost:8099/actuator/health
-```
-
 #### Use Cases
 
 - Topic management and browsing
@@ -292,12 +295,6 @@ curl -f http://localhost:8099/actuator/health
 ### zookeeper
 
 Apache Zookeeper coordination service for distributed systems
-
-#### Examples
-
-```bash
-echo 'ruok' | nc localhost 2181
-```
 
 #### Use Cases
 
@@ -348,12 +345,6 @@ tables:
     write_capacity: 5
 ```
 
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 dynamodb list-tables
-```
-
 #### Use Cases
 
 - NoSQL database testing
@@ -395,12 +386,6 @@ buckets:
     public_read: false
 ```
 
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 s3 ls
-```
-
 #### Use Cases
 
 - File storage and retrieval testing
@@ -438,12 +423,6 @@ topics:
   - name: example-name
 ```
 
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 sns list-topics
-```
-
 #### Use Cases
 
 - Pub/sub messaging patterns
@@ -478,6 +457,8 @@ SQS queues to create
 
 - **max_receive_count** (`integer`) = `3`: Max receive count before moving to DLQ
 
+- **subscription** (`object`) _required_
+
 ##### Example Configuration
 
 ```yaml
@@ -486,12 +467,6 @@ queues:
     visibility_timeout: 30
     dead_letter_queue: example-dead_letter_queue
     max_receive_count: 3
-```
-
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 sqs list-queues
 ```
 
 #### Use Cases
@@ -544,12 +519,6 @@ storage:
   type: memory
 ```
 
-#### Examples
-
-```bash
-curl -f http://localhost:16686/
-```
-
 #### Use Cases
 
 - Distributed tracing
@@ -588,12 +557,6 @@ Prometheus scrape configurations
 scrape_configs:
   - job_name: example-job_name
     scrape_interval: 15s
-```
-
-#### Examples
-
-```bash
-curl http://localhost:9090/metrics
 ```
 
 #### Use Cases

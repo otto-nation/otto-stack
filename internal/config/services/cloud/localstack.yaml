@@ -49,27 +49,57 @@ init_service:
     AWS_ENDPOINT_URL: http://localstack:4566
   scripts:
     - content: |
-        # Create SQS queues
-        {{range .queues}}
-        docker run --rm --network=$DOCKER_NETWORK -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 $DOCKER_IMAGE sqs create-queue --queue-name {{.name}} --endpoint-url=${AWS_ENDPOINT_URL}
-        {{end}}
+        # Setup function
+        awscli() {
+          docker run --rm --network=$DOCKER_NETWORK -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 $DOCKER_IMAGE "$@" --endpoint-url=http://localstack:4566
+        }
+
+        # Setup environment variables
+        export AWS_ACCOUNT_ID=000000000000
+
+        # Wait for LocalStack to be ready
+        echo "Waiting for LocalStack to be ready..."
+        for i in {1..30}; do
+          if awscli sts get-caller-identity >/dev/null 2>&1; then
+            echo "LocalStack is ready!"
+            break
+          fi
+          echo "Waiting... ($i/30)"
+          sleep 2
+        done
 
         # Create SNS topics
         {{range .topics}}
-        docker run --rm --network=$DOCKER_NETWORK -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 $DOCKER_IMAGE sns create-topic --name {{.name}} --endpoint-url=${AWS_ENDPOINT_URL}
+        awscli sns create-topic --name {{.name}}
+        {{end}}
+
+        # Create SQS queues
+        {{range .queues}}
+        awscli sqs create-queue --queue-name {{.name}}
+
+        # Create Subscription
+        subscriptionArn=$(awscli sns subscribe \
+          --topic-arn arn:aws:sns:${AWS_DEFAULT_REGION}:${AWS_ACCOUNT_ID}:{{.subscription.topic}} \
+          --protocol sqs \
+          --notification-endpoint arn:aws:sqs:${AWS_DEFAULT_REGION}:${AWS_ACCOUNT_ID}:{{.name}} \
+          | jq -r '.SubscriptionArn')
+
+        # Set Subscription Attributes
+        awscli sns set-subscription-attributes \
+          --subscription-arn $subscriptionArn \
+          --attribute-name RawMessageDelivery \
+          --attribute-value {{.subscription.rawMessageDelivery}}
         {{end}}
 
         # Create S3 buckets
         {{range .buckets}}
-        docker run --rm --network=$DOCKER_NETWORK -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 $DOCKER_IMAGE s3 mb s3://{{.name}} --endpoint-url=${AWS_ENDPOINT_URL}
+        awscli s3 mb s3://{{.name}}
         {{end}}
   container:
     depends_on_service: true
     timeout: "30s"
 
 documentation:
-  examples:
-    - aws --endpoint-url=http://localhost:4566 s3 ls
   usage_notes: Core LocalStack service providing AWS API emulation for local development. Web dashboard requires LocalStack Pro license.
   links:
     - https://docs.localstack.cloud/

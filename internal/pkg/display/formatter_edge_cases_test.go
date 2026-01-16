@@ -4,6 +4,8 @@ package display
 
 import (
 	"bytes"
+	"io"
+	"os"
 	"testing"
 	"time"
 
@@ -50,37 +52,7 @@ func TestStatusFormatter_EdgeCases(t *testing.T) {
 	})
 }
 
-func TestTableFormatter_EdgeCases(t *testing.T) {
-	t.Run("handles empty headers", func(t *testing.T) {
-		var buf bytes.Buffer
-		formatter := NewTableFormatter(&buf)
-
-		formatter.WriteHeader([]string{}, []int{})
-		// Should not panic
-		assert.NotNil(t, formatter)
-	})
-
-	t.Run("handles mismatched headers and widths", func(t *testing.T) {
-		var buf bytes.Buffer
-		formatter := NewTableFormatter(&buf)
-
-		headers := []string{"Name", "Status"}
-		widths := []int{10} // Only one width for two headers
-
-		formatter.WriteHeader(headers, widths)
-		// Should handle gracefully
-		assert.NotNil(t, formatter)
-	})
-
-	t.Run("writes separator correctly", func(t *testing.T) {
-		var buf bytes.Buffer
-		formatter := NewTableFormatter(&buf)
-
-		formatter.WriteSeparator(20)
-		output := buf.String()
-		assert.Contains(t, output, "-")
-	})
-}
+// TableFormatter tests removed - now using go-pretty/table which handles edge cases internally
 
 func TestValidationFormatter_EdgeCases(t *testing.T) {
 	t.Run("handles empty validation result", func(t *testing.T) {
@@ -227,6 +199,7 @@ func (m *mockOutput) Warning(msg string, args ...any) {}
 func (m *mockOutput) Info(msg string, args ...any)    {}
 func (m *mockOutput) Header(msg string, args ...any)  {}
 func (m *mockOutput) Muted(msg string, args ...any)   {}
+func (m *mockOutput) Writer() io.Writer               { return os.Stdout }
 
 func TestServiceStatus_Fields(t *testing.T) {
 	t.Run("validates service status fields", func(t *testing.T) {

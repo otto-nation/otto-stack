@@ -36,10 +36,56 @@ service:
       - messaging
       - streaming
 
+init_service:
+  enabled: true
+  mode: container
+  image: confluentinc/cp-kafka:latest
+  scripts:
+    - content: |
+        echo "Waiting for Kafka broker to be ready..."
+        until kafka-broker-api-versions --bootstrap-server kafka-broker:9099 >/dev/null 2>&1; do
+          echo "Kafka is unavailable - sleeping"
+          sleep 2
+        done
+        echo "Kafka is ready!"
+
+        # Create topics if specified
+        {{range .topics}}
+        echo "Creating topic: {{.name}}"
+        kafka-topics --create \
+          --bootstrap-server kafka-broker:9099 \
+          --topic {{.name}} \
+          --partitions {{.partitions}} \
+          --replication-factor {{.replication_factor}} \
+          --if-not-exists
+        {{end}}
+  wait_for_service: true
+  timeout: "60s"
+
+configuration_schema:
+  type: object
+  properties:
+    topics:
+      type: array
+      description: Kafka topics to create on startup
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            description: Topic name
+          partitions:
+            type: integer
+            default: 3
+            description: Number of partitions
+          replication_factor:
+            type: integer
+            default: 1
+            description: Replication factor
+        required: ["name"]
+
 documentation:
-  examples:
-    - kafka-broker-api-versions --bootstrap-server localhost:9099
-  usage_notes: Kafka broker handles message storage and delivery. Requires Zookeeper for coordination.
+  usage_notes: Kafka broker handles message storage and delivery. Requires Zookeeper for coordination. Supports automatic topic creation via init service.
   links:
     - https://kafka.apache.org/documentation/
     - https://docs.spring.io/spring-kafka/docs/current/reference/html/

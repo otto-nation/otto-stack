@@ -72,26 +72,25 @@ container:
     timeout: 10s
     retries: 3
 
-init_container:
+init_service:
   enabled: true
+  mode: container
   image: postgres:15-alpine
   scripts:
-    - type: shell
-      content: |
+    - content: |
         echo "Waiting for PostgreSQL to be ready..."
         until pg_isready -h ${SERVICE_NAME} -p 5432 -U postgres; do
           echo "PostgreSQL is unavailable - sleeping"
           sleep 2
         done
         echo "PostgreSQL is ready!"
-    - type: sql
-      content: |
+    - content: |
         -- Create additional databases if specified
         {{range .databases}}
         CREATE DATABASE IF NOT EXISTS {{.name}};
         {{end}}
-        
-        -- Create schemas if specified  
+
+        -- Create schemas if specified
         {{range .schemas}}
         CREATE SCHEMA IF NOT EXISTS {{.name}};
         {{end}}
@@ -117,9 +116,6 @@ configuration_schema:
       description: Database user
 
 documentation:
-  examples:
-    - psql -h localhost -U postgres -c "SELECT version();"
-    - spring.datasource.url=jdbc:postgresql://localhost:5432/my_app_dev
   usage_notes: Ideal for structured data and transactional workloads. Use overrides to set custom database/user.
   links:
     - https://www.postgresql.org/docs/

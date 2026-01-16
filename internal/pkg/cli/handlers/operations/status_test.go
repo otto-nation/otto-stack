@@ -103,7 +103,6 @@ func TestNewLogsHandler(t *testing.T) {
 
 		assert.NotNil(t, handler)
 		assert.IsType(t, &LogsHandler{}, handler)
-		assert.NotNil(t, handler.stateManager, "StateManager should be initialized")
 	})
 }
 

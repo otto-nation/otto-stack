@@ -127,6 +127,7 @@ jobs:
   get-go-matrix:
     name: Get Go Matrix
     runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
     outputs:
       go-matrix: ${{ steps.matrix.outputs.go-matrix }}
     steps:
@@ -136,7 +137,7 @@ jobs:
       - name: Generate Go version matrix
         id: matrix
         run: |
-          GO_MATRIX=$(./scripts/get-go-version.sh --github-matrix)
+          GO_MATRIX=$(./scripts/go-version.sh get --github-matrix)
           echo "go-matrix=$GO_MATRIX" >> $GITHUB_OUTPUT
           echo "Generated Go matrix: $GO_MATRIX"
 

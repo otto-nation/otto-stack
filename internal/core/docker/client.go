@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"slices"
 	"strings"
+	"time"
 
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 
@@ -14,6 +15,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 )
 
 type ResourceType string
@@ -235,9 +237,12 @@ func (c *Client) RunInitContainer(ctx context.Context, name string, config InitC
 
 // ContainerStatus represents basic container status
 type ContainerStatus struct {
-	Name   string
-	State  string
-	Health string
+	Name      string
+	State     string
+	Health    string
+	Ports     []string
+	CreatedAt time.Time
+	StartedAt time.Time
 }
 
 // GetServiceStatus gets status of services in a project
@@ -260,11 +265,30 @@ func (c *Client) GetServiceStatus(ctx context.Context, project string, services 
 
 	// Update with actual container status
 	for _, cont := range containers {
-		if cont.Service != "" {
-			if status, exists := statusMap[cont.Service]; exists {
-				status.State = cont.State
-				status.Health = getHealthStatus(cont.State, cont.Status)
-			}
+		if cont.Service == "" {
+			continue
+		}
+
+		status, exists := statusMap[cont.Service]
+		if !exists {
+			continue
+		}
+
+		status.State = cont.State
+		status.Health = getHealthStatus(cont.Status)
+
+		// Get detailed container info
+		details, err := c.cli.ContainerInspect(ctx, cont.ID)
+		if err != nil {
+			continue
+		}
+
+		status.Ports = extractPorts(details.NetworkSettings.Ports)
+		if created, err := time.Parse(time.RFC3339Nano, details.Created); err == nil {
+			status.CreatedAt = created
+		}
+		if started, err := time.Parse(time.RFC3339Nano, details.State.StartedAt); err == nil {
+			status.StartedAt = started
 		}
 	}
 
@@ -276,21 +300,26 @@ func (c *Client) GetServiceStatus(ctx context.Context, project string, services 
 	return result, nil
 }
 
+// extractPorts extracts port mappings from container network settings
+func extractPorts(portMap nat.PortMap) []string {
+	var ports []string
+	for port, bindings := range portMap {
+		if len(bindings) > 0 {
+			ports = append(ports, bindings[0].HostPort+":"+port.Port())
+		}
+	}
+	return ports
+}
+
 // getHealthStatus determines health status from container state and status
-func getHealthStatus(state, status string) string {
+func getHealthStatus(status string) string {
 	if strings.Contains(status, HealthStatusHealthy) {
 		return HealthStatusHealthy
 	}
 	if strings.Contains(status, HealthStatusUnhealthy) {
 		return HealthStatusUnhealthy
 	}
-	if state == "running" {
-		return HealthStatusRunning
-	}
-	if state == "exited" {
-		return HealthStatusStopped
-	}
-	return HealthStatusUnknown
+	return "n/a"
 }
 
 // mapToEnvSlice converts a map to environment variable slice

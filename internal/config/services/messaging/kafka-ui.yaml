@@ -34,8 +34,6 @@ service:
       - management
 
 documentation:
-  examples:
-    - curl -f http://localhost:8099/actuator/health
   usage_notes: Web interface for managing Kafka topics, viewing messages, and monitoring cluster health
   links:
     - https://github.com/provectus/kafka-ui

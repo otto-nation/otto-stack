@@ -3,7 +3,7 @@ title: Configuration Guide
 description: Complete guide to configuring otto-stack services
 lead: Learn how to configure services for your specific needs
 date: "2025-10-01"
-lastmod: "2026-01-15"
+lastmod: "2026-01-16"
 draft: false
 weight: 25
 toc: true

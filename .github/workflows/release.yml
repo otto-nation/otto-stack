@@ -151,10 +151,10 @@ jobs:
           echo "🍺 Deploying to Homebrew tap..."
 
           # Generate formula with checksums
-          ./scripts/update-homebrew-formula.sh -v ${{ env.TAG_NAME }}
+          ./scripts/homebrew.sh update -v ${{ env.TAG_NAME }}
 
           # Deploy to tap repository
-          ./scripts/deploy-homebrew-tap.sh -v ${{ env.TAG_NAME }}
+          ./scripts/homebrew.sh deploy -v ${{ env.TAG_NAME }}
 
       - name: Verify release
         run: |
@@ -208,7 +208,7 @@ jobs:
 
           if [[ "${{ steps.package-config.outputs.homebrew_enabled }}" == "true" ]]; then
             echo "🍺 Updating Homebrew formula..."
-            ./scripts/update-homebrew-formula.sh --version ${{ needs.release.outputs.tag_name }}
+            ./scripts/homebrew.sh update --version ${{ needs.release.outputs.tag_name }}
 
             # Check if formula was updated
             if git diff --quiet Formula/otto-stack.rb; then

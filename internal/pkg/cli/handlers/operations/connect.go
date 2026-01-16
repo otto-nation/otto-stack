@@ -5,24 +5,17 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
-	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
 
 // ConnectHandler handles the connect command
-type ConnectHandler struct {
-	stateManager *common.StateManager
-}
+type ConnectHandler struct{}
 
 // NewConnectHandler creates a new connect handler
 func NewConnectHandler() *ConnectHandler {
-	return &ConnectHandler{
-		stateManager: common.NewStateManager(),
-	}
+	return &ConnectHandler{}
 }
 
 // ValidateArgs validates the command arguments
@@ -40,19 +33,24 @@ func (h *ConnectHandler) GetRequiredFlags() []string {
 
 // Handle executes the connect command
 func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Get verbose flag
-	verbose := base.GetVerbose(cmd)
+	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
 
-	// Create command and middleware chain
-	connectCommand := NewServiceCommand(core.CommandConnect, h.stateManager)
-	connectCommand.SetVerbose(verbose)
-	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
+	base.Output.Header("Connecting to service")
 
-	handler := command.NewHandler(connectCommand, loggingMiddleware, validationMiddleware)
+	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
+	if err != nil {
+		return err
+	}
 
-	// For now, create empty context - will be enhanced with flag processing
-	cliCtx := clicontext.Context{}
+	if len(serviceConfigs) > 0 {
+		base.Output.Info("Service: %s", serviceConfigs[0].Name)
+	}
+	base.Output.Success("Connected successfully")
+	base.Output.Info("Project: %s", setup.Config.Project.Name)
 
-	// Execute through command pattern
-	return handler.Execute(ctx, cliCtx, base)
+	return nil
 }

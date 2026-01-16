@@ -5,9 +5,10 @@ package cli
 import (
 	"fmt"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers"
-	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/spf13/cobra"
 )
 
@@ -35,6 +36,17 @@ func BuildRootCommand() *cobra.Command {
 		Use:   "otto-stack",
 		Short: "Otto Stack CLI",
 		Long:  "A powerful development stack management tool",
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			// Reconfigure logger based on verbose flag after flags are parsed
+			verbose, _ := cmd.Flags().GetBool("verbose")
+			config := logger.DefaultConfig()
+			if verbose {
+				config.Level = logger.LogLevelDebug
+			} else {
+				config.Level = logger.LogLevelWarn
+			}
+			logger.Init(config)
+		},
 	}
 
 	// Add persistent global flags to root command

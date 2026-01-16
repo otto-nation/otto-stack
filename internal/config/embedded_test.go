@@ -18,7 +18,6 @@ func TestEmbeddedCommandsYAML(t *testing.T) {
 
 		// Should contain expected sections
 		assert.Contains(t, commands, "commands", "Should contain commands section")
-		assert.Contains(t, commands, "messages", "Should contain messages section")
 	})
 
 	t.Run("contains required commands", func(t *testing.T) {

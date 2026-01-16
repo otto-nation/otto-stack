@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"time"
 
@@ -18,6 +19,11 @@ type Output struct {
 // NewOutput creates a new output handler
 func NewOutput() *Output {
 	return &Output{}
+}
+
+// Writer returns the underlying writer (stdout)
+func (o *Output) Writer() io.Writer {
+	return os.Stdout
 }
 
 // Success prints a success message

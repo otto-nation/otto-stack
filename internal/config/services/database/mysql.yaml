@@ -50,6 +50,35 @@ service:
       args:
         default: ["-h", "localhost", "-P", "3306", "-u", "root", "-p"]
 
+init_service:
+  enabled: true
+  mode: container
+  image: mysql:8.0
+  scripts:
+    - content: |
+        echo "Waiting for MySQL to be ready..."
+        until mysqladmin ping -h ${SERVICE_NAME} --silent; do
+          echo "MySQL is unavailable - sleeping"
+          sleep 2
+        done
+        echo "MySQL is ready!"
+    - content: |
+        -- Create additional databases if specified
+        {{range .databases}}
+        CREATE DATABASE IF NOT EXISTS {{.name}};
+        {{end}}
+
+        -- Create users if specified
+        {{range .users}}
+        CREATE USER IF NOT EXISTS '{{.name}}'@'%' IDENTIFIED BY '{{.password}}';
+        GRANT ALL PRIVILEGES ON {{.database}}.* TO '{{.name}}'@'%';
+        {{end}}
+        FLUSH PRIVILEGES;
+  environment:
+    MYSQL_PWD: "${MYSQL_PASSWORD:-password}"
+  wait_for_service: true
+  timeout: "60s"
+
 configuration_schema:
   type: object
   properties:
@@ -65,12 +94,29 @@ configuration_schema:
       type: string
       default: "root"
       description: Database user
+    databases:
+      type: array
+      description: Additional databases to create
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+    users:
+      type: array
+      description: Additional users to create
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          password:
+            type: string
+          database:
+            type: string
 
 documentation:
-  examples:
-    - mysql -h localhost -u root -p -e "SELECT version();"
-    - spring.datasource.url=jdbc:mysql://localhost:3306/my_app_dev
-  usage_notes: MySQL database for relational data storage. Alternative to PostgreSQL.
+  usage_notes: MySQL database for relational data storage. Alternative to PostgreSQL. Supports automatic database and user creation via init service.
   links:
     - https://dev.mysql.com/doc/
   use_cases:

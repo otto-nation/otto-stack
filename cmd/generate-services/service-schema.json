@@ -1,0 +1,217 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/otto-nation/otto-stack/schemas/service.json",
+  "title": "Otto Stack Service Definition",
+  "description": "Schema for otto-stack service YAML files",
+  "type": "object",
+  "required": ["name", "description", "service_type"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Service name",
+      "pattern": "^[a-z0-9-]+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Service description"
+    },
+    "service_type": {
+      "type": "string",
+      "description": "Type of service definition",
+      "enum": ["container", "composite", "configuration"]
+    },
+    "hidden": {
+      "type": "boolean",
+      "description": "Whether service is hidden from listings",
+      "default": false
+    },
+    "container": {
+      "type": "object",
+      "description": "Docker container configuration",
+      "properties": {
+        "image": {
+          "type": "string",
+          "description": "Docker image name"
+        },
+        "ports": {
+          "type": "array",
+          "description": "Port mappings",
+          "items": {
+            "type": "object",
+            "properties": {
+              "external": {"type": "string"},
+              "internal": {"type": "string"},
+              "protocol": {
+                "type": "string",
+                "default": "tcp"
+              }
+            }
+          }
+        },
+        "networks": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "memory_limit": {
+          "type": "string",
+          "description": "Memory limit (e.g., 512m, 1g)"
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        },
+        "command": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "restart": {
+          "type": "string"
+        },
+        "health_check": {
+          "type": "object",
+          "properties": {
+            "test": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "interval": {"type": "string"},
+            "timeout": {"type": "string"},
+            "retries": {"type": "integer"}
+          }
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "description": "Service-level configuration",
+      "properties": {
+        "characteristics": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "connection": {
+          "type": "object",
+          "properties": {
+            "type": {"type": "string"},
+            "client": {"type": "string"},
+            "default_user": {"type": "string"},
+            "default_port": {"type": "integer"},
+            "user_flag": {"type": "string"},
+            "host_flag": {"type": "string"},
+            "port_flag": {"type": "string"},
+            "database_flag": {"type": "string"}
+          }
+        },
+        "dependencies": {
+          "type": "object",
+          "properties": {
+            "required": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "soft": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "conflicts": {
+              "type": "array",
+              "items": {"type": "string"}
+            },
+            "provides": {
+              "type": "array",
+              "items": {"type": "string"}
+            }
+          }
+        },
+        "management": {
+          "type": "object"
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "description": "Environment variables",
+      "additionalProperties": {"type": "string"}
+    },
+    "tags": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "configuration_schema": {
+      "type": "object"
+    },
+    "init_service": {
+      "type": "object",
+      "description": "Initialization service configuration",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "mode": {
+          "type": "string",
+          "enum": ["local", "container"]
+        },
+        "image": {"type": "string"},
+        "environment": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        },
+        "scripts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "content": {"type": "string"}
+            },
+            "required": ["content"]
+          }
+        },
+        "depends_on_service": {"type": "boolean"},
+        "timeout": {"type": "string"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"service_type": {"const": "container"}}
+      },
+      "then": {
+        "required": ["container"],
+        "properties": {
+          "container": {
+            "required": ["image"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "init_service": {
+            "properties": {"enabled": {"const": true}}
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "init_service": {
+            "required": ["mode"]
+          }
+        }
+      }
+    }
+  ],
+  "x-enums": {
+    "service_type": {
+      "description": "Type of service definition",
+      "values": ["container", "composite", "configuration"]
+    },
+    "init_service_mode": {
+      "description": "Execution mode for init scripts",
+      "values": ["local", "container"]
+    },
+    "init_script_type": {
+      "description": "Type of initialization script",
+      "values": ["shell", "sql", "aws_resources", "kafka_topics", "http_requests"]
+    }
+  }
+}

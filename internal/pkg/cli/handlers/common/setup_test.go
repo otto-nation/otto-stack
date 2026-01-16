@@ -159,10 +159,3 @@ func TestLoadProjectConfig(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
-
-func TestCreateStandardMiddlewareChain(t *testing.T) {
-	validation, logging := CreateStandardMiddlewareChain()
-
-	assert.NotNil(t, validation)
-	assert.NotNil(t, logging)
-}

@@ -63,9 +63,6 @@ configuration_schema:
       description: Number of databases
 
 documentation:
-  examples:
-    - redis-cli -h localhost -p 6379 ping
-    - spring.data.redis.host=localhost
   usage_notes: Use Redis for caching, session storage, and pub/sub. Set a password for production-like security.
   links:
     - https://redis.io/documentation

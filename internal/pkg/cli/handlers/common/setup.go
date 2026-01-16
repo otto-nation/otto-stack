@@ -10,11 +10,10 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -111,11 +110,6 @@ func mergeProjectConfigs(base, local *config.Config) *config.Config {
 	return &merged
 }
 
-// CreateStandardMiddlewareChain creates the standard middleware chain used by all stack handlers
-func CreateStandardMiddlewareChain() (validationMiddleware, loggingMiddleware command.Middleware) {
-	return middleware.NewInitializationMiddleware(), middleware.NewLoggingMiddleware()
-}
-
 // BuildStackContext builds CLI context from command and args
 func BuildStackContext(cmd *cobra.Command, args []string) (clicontext.Context, error) {
 	// Load project configuration
@@ -140,4 +134,22 @@ func BuildStackContext(cmd *cobra.Command, args []string) (clicontext.Context, e
 		WithServices(serviceNames, serviceConfigs)
 
 	return builder.Build(), nil
+}
+
+// ResolveServiceConfigs resolves service configurations from args or enabled services
+func ResolveServiceConfigs(args []string, setup *CoreSetup) ([]types.ServiceConfig, error) {
+	var serviceConfigs []types.ServiceConfig
+	var err error
+
+	if len(args) > 0 {
+		serviceConfigs, err = services.ResolveUpServices(args, setup.Config)
+	} else {
+		serviceConfigs, err = services.ResolveUpServices(setup.Config.Stack.Enabled, setup.Config)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve services: %w", err)
+	}
+
+	return serviceConfigs, nil
 }

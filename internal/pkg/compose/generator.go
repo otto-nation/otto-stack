@@ -2,6 +2,7 @@ package compose
 
 import (
 	"fmt"
+	"log/slog"
 	"maps"
 	"os"
 	"strings"
@@ -10,7 +11,7 @@ import (
 	dockerConstants "github.com/otto-nation/otto-stack/internal/core/docker"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/filesystem"
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"gopkg.in/yaml.v3"
 )
@@ -20,14 +21,14 @@ const expectedEnvParts = 2
 // Generator handles docker-compose file generation
 type Generator struct {
 	projectName string
-	manager     *services.Manager
+	logger      *slog.Logger
 }
 
 // NewGenerator creates a new compose generator
-func NewGenerator(projectName string, servicesPath string, manager *services.Manager) (*Generator, error) {
+func NewGenerator(projectName string) (*Generator, error) {
 	return &Generator{
 		projectName: projectName,
-		manager:     manager,
+		logger:      logger.GetLogger(),
 	}, nil
 }
 
@@ -223,8 +224,11 @@ func (g *Generator) addServiceConfiguration(service map[string]any, config *type
 // addServiceHealthCheck adds health check configuration to the service
 func (g *Generator) addServiceHealthCheck(service map[string]any, config *types.ServiceConfig) {
 	if config.Container.HealthCheck == nil {
+		g.logger.Debug("No healthcheck configured", "service", config.Name)
 		return
 	}
+
+	g.logger.Debug("Adding healthcheck", "service", config.Name, "test", config.Container.HealthCheck.Test)
 
 	healthCheck := map[string]any{
 		dockerConstants.HealthCheckFieldTest: config.Container.HealthCheck.Test,

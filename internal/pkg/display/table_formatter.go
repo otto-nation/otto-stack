@@ -1,13 +1,12 @@
 package display
 
 import (
-	"fmt"
 	"io"
-	"strings"
-	"time"
+
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-// TableFormatter handles table-specific formatting
+// TableFormatter handles generic table formatting
 type TableFormatter struct {
 	writer io.Writer
 }
@@ -17,71 +16,71 @@ func NewTableFormatter(writer io.Writer) *TableFormatter {
 	return &TableFormatter{writer: writer}
 }
 
-// WriteHeader writes table headers
-func (tf *TableFormatter) WriteHeader(headers []string, widths []int) {
-	tf.writeTableRow(headers, widths)
-	tf.writeTableSeparator(calculateTotalWidth(widths))
+// FormatTable formats data as a table with given headers and rows
+func (tf *TableFormatter) FormatTable(headers []string, rows [][]string) error {
+	tw := table.NewWriter()
+	tw.SetOutputMirror(tf.writer)
+	tw.SetStyle(table.StyleLight)
+
+	// Convert headers to table.Row
+	headerRow := make(table.Row, len(headers))
+	for i, h := range headers {
+		headerRow[i] = h
+	}
+	tw.AppendHeader(headerRow)
+
+	// Convert rows to table.Row
+	for _, row := range rows {
+		tableRow := make(table.Row, len(row))
+		for i, cell := range row {
+			tableRow[i] = cell
+		}
+		tw.AppendRow(tableRow)
+	}
+
+	tw.Render()
+	return nil
 }
 
-// WriteRow writes a table row
-func (tf *TableFormatter) WriteRow(values []string, widths []int) {
-	tf.writeTableRow(values, widths)
-}
+// FormatTableWithSeparators formats data as a table with separators between groups
+func (tf *TableFormatter) FormatTableWithSeparators(headers []string, groups [][][]string) error {
+	tw := table.NewWriter()
+	tw.SetOutputMirror(tf.writer)
+	tw.SetStyle(table.StyleLight)
 
-// WriteSeparator writes a table separator
-func (tf *TableFormatter) WriteSeparator(width int) {
-	tf.writeTableSeparator(width)
-}
+	// Convert headers to table.Row
+	headerRow := make(table.Row, len(headers))
+	for i, h := range headers {
+		headerRow[i] = h
+	}
+	tw.AppendHeader(headerRow)
 
-func (tf *TableFormatter) writeTableRow(values []string, widths []int) {
-	for i, value := range values {
-		if i < len(widths) {
-			_, _ = fmt.Fprintf(tf.writer, "%-*s ", widths[i], truncateString(value, widths[i]))
+	// Add rows with separators between groups
+	for i, group := range groups {
+		for _, row := range group {
+			tableRow := make(table.Row, len(row))
+			for j, cell := range row {
+				tableRow[j] = cell
+			}
+			tw.AppendRow(tableRow)
+		}
+		if i < len(groups)-1 {
+			tw.AppendSeparator()
 		}
 	}
-	_, _ = fmt.Fprintln(tf.writer)
+
+	tw.Render()
+	return nil
 }
 
-func (tf *TableFormatter) writeTableSeparator(width int) {
-	_, _ = fmt.Fprintln(tf.writer, strings.Repeat("-", width))
+// RenderTable is a convenience function to render a simple table
+func RenderTable(writer io.Writer, headers []string, rows [][]string) {
+	tf := NewTableFormatter(writer)
+	_ = tf.FormatTable(headers, rows)
 }
 
-func calculateTotalWidth(widths []int) int {
-	total := 0
-	for _, w := range widths {
-		total += w + 1 // +1 for space
-	}
-	return total
-}
-
-func truncateString(s string, maxLen int) string {
-	if len(s) <= maxLen {
-		return s
-	}
-	return s[:maxLen-3] + "..."
-}
-
-// FormatDuration formats duration for display
-func (tf *TableFormatter) FormatDuration(d time.Duration) string {
-	if d < time.Minute {
-		return fmt.Sprintf("%ds", int(d.Seconds()))
-	}
-	if d < time.Hour {
-		return fmt.Sprintf("%dm", int(d.Minutes()))
-	}
-	if d < HoursPerDay*time.Hour {
-		return fmt.Sprintf("%dh", int(d.Hours()))
-	}
-	return fmt.Sprintf("%dd", int(d.Hours())/HoursPerDay)
-}
-
-// FormatPorts formats port list for display
-func (tf *TableFormatter) FormatPorts(ports []string) string {
-	if len(ports) == 0 {
-		return "-"
-	}
-	if len(ports) <= MaxPortsDisplay {
-		return strings.Join(ports, ",")
-	}
-	return strings.Join(ports[:MaxPortsDisplay], ",") + "..."
+// RenderTableWithSeparators is a convenience function to render a table with group separators
+func RenderTableWithSeparators(writer io.Writer, headers []string, groups [][][]string) {
+	tf := NewTableFormatter(writer)
+	_ = tf.FormatTableWithSeparators(headers, groups)
 }

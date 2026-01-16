@@ -3,78 +3,15 @@ package core
 import (
 	"fmt"
 	"os"
-	"strings"
+	"path/filepath"
 )
 
-// Application identity
+// Application constants
 const (
-	AppName      = "otto-stack" // CLI command name
-	AppNameTitle = "Otto Stack" // Title case for headers
-	AppNameLower = "otto stack" // Sentence case for messages
-)
-
-// Host constants
-const (
-	ServiceLocalhost = "localhost"
-)
-
-// AWS constants
-const (
-	DefaultAWSRegion = "us-east-1"
-)
-
-// GitHub repository information
-const (
-	GitHubOrg  = "otto-nation"
-	GitHubRepo = AppName
-)
-
-// GitHub URLs
-const (
-	GitHubRepoURL     = "https://github.com/" + GitHubOrg + "/" + GitHubRepo
-	GitHubReleaseURL  = GitHubRepoURL + "/releases/tag/v%s"
-	GitHubDownloadURL = GitHubRepoURL + "/releases/download/v%s/" + AppName
-)
-
-// Documentation URLs
-const (
-	DocsURL = "https://" + GitHubOrg + ".github.io/" + GitHubRepo + "/"
-)
-
-// File names
-const (
-	ConfigFileName       = "otto-stack-config.yml"
-	LocalConfigFileName  = "otto-stack-config" + LocalFileExtension + ".yml"
-	ServiceConfigsDir    = "service-configs"
-	ScriptsDir           = "scripts"
-	GeneratedDir         = "generated"
-	ReadmeFileName       = "README.md"
-	GitIgnoreFileName    = ".gitignore"
-	StateFileName        = "state.json"
-	OttoStackDir         = "." + AppName
-	EnvGeneratedFileName = ".env.generated"
-	LocalFileExtension   = ".local"
-	YAMLFileExtension    = ".yaml"
-	YMLFileExtension     = ".yml"
-)
-
-// File paths
-const (
-	StateFilePath        = OttoStackDir + "/" + GeneratedDir + "/" + StateFileName
-	EnvGeneratedFilePath = OttoStackDir + "/" + GeneratedDir + "/" + EnvGeneratedFileName
-)
-
-var YAMLExtensions = []string{YMLFileExtension, YAMLFileExtension}
-
-// File and directory permissions
-const (
-	PermReadWrite     = 0644
-	PermReadWriteExec = 0755
-)
-
-// Environment variables
-const (
-	EnvOttoNonInteractive = "OTTO_NON_INTERACTIVE"
+	AppName      = "otto-stack"
+	AppNameTitle = "Otto Stack"
+	GitHubOrg    = "otto-nation"
+	GitHubRepo   = "otto-stack"
 )
 
 // Exit codes
@@ -83,115 +20,134 @@ const (
 	ExitError   = 1
 )
 
-// Messages
-const (
-	MsgCleaning = "Cleaning up " + AppNameTitle
-)
-
-// Timeouts
+// Timeout constants
 const (
 	DefaultStartTimeoutSeconds = 30
-	DefaultStopTimeoutSeconds  = 10
 	DefaultHTTPTimeoutSeconds  = 5
 )
 
-// HTTP constants
+// Threshold constants
 const (
 	HTTPOKStatusThreshold = 400
+	MinArgumentCount      = 1
+	DefaultLogTailLines   = "100"
+	MinProjectNameLength  = 2
+	MaxProjectNameLength  = 50
 )
 
-// Log constants
+// File names
 const (
-	DefaultLogTailLines = "100"
+	EnvGeneratedFileName = ".env.generated"
+	ReadmeFileName       = "README.md"
+	GitIgnoreFileName    = ".gitignore"
 )
 
-// Time constants
+// URLs
 const (
-	HoursPerDay = 24
+	DocsURL = "https://github.com/otto-nation/otto-stack/blob/main/docs"
 )
 
-// Display constants
-const (
-	MaxCategoryCommands = 3
-)
-
-// System constants
-const (
-	MinArgumentCount     = 2
-	MinProjectNameLength = 3
-	MaxProjectNameLength = 50
-)
-
-// Messages
-const (
-	MsgStopping       = "Stopping " + AppNameTitle
-	MsgStopSuccess    = AppNameLower + " stopped successfully"
-	MsgLogs           = "Logs"
-	MsgRestarting     = "Restarting"
-	MsgRestartSuccess = "Restart successful"
-	MsgStatus         = "Status"
-	MsgStarting       = "Starting " + AppNameTitle
-	MsgStartSuccess   = AppNameTitle + " started successfully"
-)
-
-// Prompt constants
-const (
-	PromptProjectName       = "Enter project name:"
-	HelpProjectName         = "The project name will be used to identify your stack"
-	PromptGoBack            = "← Go back"
-	HelpServiceSelection    = "Select services to include in your stack"
-	PromptValidationOptions = "Select validation options:"
-	HelpValidationOptions   = "Choose which validations to run"
-	PromptActionSelect      = "What would you like to do?"
-	PromptProceedInit       = "Proceed with initialization?"
-	PromptFinishSelection   = "Finish selection"
-	PromptSelectCategory    = "Select a service category (or finish selection):"
-	PromptGoBackOption      = "Go Back"
-)
-
-// Template constants
-const (
-	MultiSelectTemplateWithBack = "multiselect_with_back"
-)
-
-// IsYAMLFile checks if a filename has a YAML extension
-func IsYAMLFile(filename string) bool {
-	return strings.HasSuffix(filename, YAMLFileExtension) || strings.HasSuffix(filename, YMLFileExtension)
-}
-
-// TrimYAMLExt removes YAML extension from filename
-func TrimYAMLExt(filename string) string {
-	if name, found := strings.CutSuffix(filename, YAMLFileExtension); found {
-		return name
-	}
-	if name, found := strings.CutSuffix(filename, YMLFileExtension); found {
-		return name
-	}
-	return filename
-}
-
-// FindYAMLFile finds a YAML file with either .yml or .yaml extension
-func FindYAMLFile(dir, baseName string) (string, error) {
-	for _, ext := range YAMLExtensions {
-		path := fmt.Sprintf("%s/%s%s", dir, baseName, ext)
-		if _, err := os.Stat(path); err == nil {
-			return path, nil
-		}
-	}
-	return "", fmt.Errorf("YAML file not found: %s", baseName)
-}
-
-// Action constants
+// Actions
 const (
 	ActionProceed = "proceed"
 	ActionBack    = "back"
-	ActionCancel  = "cancel"
 )
 
-// GitignoreEntries contains default .gitignore entries for otto-stack projects
-var GitignoreEntries = []string{
-	"# " + AppNameTitle + " generated files",
-	AppName + "/" + GeneratedDir + "/",
-	"*.log",
-	".DS_Store",
+// Prompts
+const (
+	PromptProjectName = "Enter project name"
+	HelpProjectName   = "The name of your project (alphanumeric and hyphens only)"
+)
+
+// File permissions
+const (
+	PermReadWriteExec = 0755
+	PermReadWrite     = 0644
+)
+
+// File extension constants
+const (
+	ExtYAML          = ".yaml"
+	ExtYML           = ".yml"
+	ExtJSON          = ".json"
+	ExtENV           = ".env"
+	ExtSH            = ".sh"
+	ExtMD            = ".md"
+	YMLFileExtension = ExtYML // Alias for compatibility
+)
+
+// Otto Stack directory and file constants
+const (
+	OttoStackDir        = ".otto-stack"
+	ConfigFileName      = "config.yaml"
+	LocalConfigFileName = "config.local.yaml"
+	ServiceConfigsDir   = "services"
+	GeneratedDir        = "generated"
+	LocalFileExtension  = ".local"
+)
+
+// Docker command constants
+const (
+	DockerCmdPs    = "ps"
+	DockerCmdLogs  = "logs"
+	DockerCmdExec  = "exec"
+	DockerCmdStop  = "stop"
+	DockerCmdStart = "start"
+	DockerCmdRm    = "rm"
+	DockerCmdPull  = "pull"
+	DockerCmdBuild = "build"
+)
+
+// HTTP status constants
+const (
+	HTTPStatusOK                  = 200
+	HTTPStatusBadRequest          = 400
+	HTTPStatusUnauthorized        = 401
+	HTTPStatusForbidden           = 403
+	HTTPStatusNotFound            = 404
+	HTTPStatusInternalServerError = 500
+)
+
+// Common environment variable names
+const (
+	EnvVarPATH            = "PATH"
+	EnvVarHOME            = "HOME"
+	EnvVarUSER            = "USER"
+	EnvVarTERM            = "TERM"
+	EnvOttoNonInteractive = "OTTO_NON_INTERACTIVE"
+)
+
+// FindYAMLFile finds a YAML file with the given name in the specified directory
+// It checks for both .yaml and .yml extensions
+func FindYAMLFile(dir, filename string) (string, error) {
+	// Try .yaml first
+	yamlPath := filepath.Join(dir, filename+ExtYAML)
+	if _, err := os.Stat(yamlPath); err == nil {
+		return yamlPath, nil
+	}
+
+	// Try .yml
+	ymlPath := filepath.Join(dir, filename+ExtYML)
+	if _, err := os.Stat(ymlPath); err == nil {
+		return ymlPath, nil
+	}
+
+	return "", fmt.Errorf("YAML file not found: %s", filename)
+}
+
+// IsYAMLFile checks if a filename has a YAML extension
+func IsYAMLFile(filename string) bool {
+	ext := filepath.Ext(filename)
+	return ext == ExtYAML || ext == ExtYML
+}
+
+// TrimYAMLExt removes the YAML extension from a filename
+func TrimYAMLExt(filename string) string {
+	if filepath.Ext(filename) == ExtYAML {
+		return filename[:len(filename)-len(ExtYAML)]
+	}
+	if filepath.Ext(filename) == ExtYML {
+		return filename[:len(filename)-len(ExtYML)]
+	}
+	return filename
 }

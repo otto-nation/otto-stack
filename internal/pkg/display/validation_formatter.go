@@ -3,6 +3,8 @@ package display
 import (
 	"fmt"
 	"io"
+
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 const (
@@ -18,43 +20,30 @@ const (
 // ValidationFormatter handles validation result formatting
 type ValidationFormatter struct {
 	writer io.Writer
-	table  *TableFormatter
 }
 
 // NewValidationFormatter creates a new validation formatter
 func NewValidationFormatter(writer io.Writer) *ValidationFormatter {
-	return &ValidationFormatter{
-		writer: writer,
-		table:  NewTableFormatter(writer),
-	}
+	return &ValidationFormatter{writer: writer}
 }
 
 // FormatTable formats validation results as a table
 func (vf *ValidationFormatter) FormatTable(result ValidationResult) error {
-	headers := []string{"Type", "Field", "Message"}
-	widths := []int{ColWidthCheck, ColWidthState, ColWidthMessage}
+	tw := table.NewWriter()
+	tw.SetOutputMirror(vf.writer)
+	tw.SetStyle(table.StyleLight)
 
-	vf.table.WriteHeader(headers, widths)
+	tw.AppendHeader(table.Row{HeaderType, HeaderField, HeaderMessage})
 
-	// Show errors
 	for _, issue := range result.Errors {
-		values := []string{
-			"ERROR",
-			issue.Field,
-			issue.Message,
-		}
-		vf.table.WriteRow(values, widths)
+		tw.AppendRow(table.Row{"ERROR", issue.Field, issue.Message})
 	}
 
-	// Show warnings
 	for _, issue := range result.Warnings {
-		values := []string{
-			"WARNING",
-			issue.Field,
-			issue.Message,
-		}
-		vf.table.WriteRow(values, widths)
+		tw.AppendRow(table.Row{"WARNING", issue.Field, issue.Message})
 	}
+
+	tw.Render()
 
 	_, _ = fmt.Fprintln(vf.writer)
 	if result.Valid {
@@ -68,32 +57,30 @@ func (vf *ValidationFormatter) FormatTable(result ValidationResult) error {
 // HealthFormatter handles health report formatting
 type HealthFormatter struct {
 	writer io.Writer
-	table  *TableFormatter
 }
 
 // NewHealthFormatter creates a new health formatter
 func NewHealthFormatter(writer io.Writer) *HealthFormatter {
-	return &HealthFormatter{
-		writer: writer,
-		table:  NewTableFormatter(writer),
-	}
+	return &HealthFormatter{writer: writer}
 }
 
 // FormatTable formats health report as a table
 func (hf *HealthFormatter) FormatTable(report HealthReport, options Options) error {
-	headers := []string{"Check", "Status", "Message"}
-	widths := []int{ColWidthService, ColWidthHealth, ColWidthMessage}
+	tw := table.NewWriter()
+	tw.SetOutputMirror(hf.writer)
+	tw.SetStyle(table.StyleLight)
 
-	hf.table.WriteHeader(headers, widths)
+	tw.AppendHeader(table.Row{HeaderCheck, HeaderStatus, HeaderMessage})
 
 	for _, check := range report.Checks {
-		values := []string{
+		tw.AppendRow(table.Row{
 			check.Name,
 			hf.getHealthIcon(check.Status) + check.Status,
 			check.Message,
-		}
-		hf.table.WriteRow(values, widths)
+		})
 	}
+
+	tw.Render()
 
 	if options.ShowSummary {
 		hf.formatHealthSummary(report)
@@ -123,30 +110,23 @@ func (hf *HealthFormatter) getHealthIcon(health string) string {
 // VersionFormatter handles version info formatting
 type VersionFormatter struct {
 	writer io.Writer
-	table  *TableFormatter
 }
 
 // NewVersionFormatter creates a new version formatter
 func NewVersionFormatter(writer io.Writer) *VersionFormatter {
-	return &VersionFormatter{
-		writer: writer,
-		table:  NewTableFormatter(writer),
-	}
+	return &VersionFormatter{writer: writer}
 }
 
 // FormatTable formats version info as a table
 func (vf *VersionFormatter) FormatTable(info VersionInfo, options Options) error {
-	headers := []string{"Component", "Version", "Platform"}
-	widths := []int{ColWidthService, ColWidthState, ColWidthMessage}
+	tw := table.NewWriter()
+	tw.SetOutputMirror(vf.writer)
+	tw.SetStyle(table.StyleLight)
 
-	vf.table.WriteHeader(headers, widths)
+	tw.AppendHeader(table.Row{HeaderComponent, HeaderVersion, HeaderPlatform})
+	tw.AppendRow(table.Row{"Otto Stack", info.Version, info.Platform})
 
-	values := []string{
-		"Otto Stack",
-		info.Version,
-		info.Platform,
-	}
-	vf.table.WriteRow(values, widths)
+	tw.Render()
 
 	if options.ShowSummary {
 		_, _ = fmt.Fprintln(vf.writer)

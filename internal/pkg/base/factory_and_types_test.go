@@ -4,6 +4,8 @@ package base
 
 import (
 	"context"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -103,3 +105,4 @@ func (m *mockOutput) Warning(msg string, args ...any) {}
 func (m *mockOutput) Info(msg string, args ...any)    {}
 func (m *mockOutput) Header(msg string, args ...any)  {}
 func (m *mockOutput) Muted(msg string, args ...any)   {}
+func (m *mockOutput) Writer() io.Writer               { return os.Stdout }

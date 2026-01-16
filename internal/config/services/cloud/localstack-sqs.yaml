@@ -36,11 +36,20 @@ configuration_schema:
             type: integer
             default: 3
             description: Max receive count before moving to DLQ
+          subscription:
+            type: object
+            properties:
+              topic:
+                type: string
+                description: Topic name for subscription
+              rawMessageDelivery:
+                type: boolean
+                default: true
+                description: Whether to deliver raw messages
+            required: ["topic"]
         required: ["name"]
 
 documentation:
-  examples:
-    - aws --endpoint-url=http://localhost:4566 sqs list-queues
   usage_notes: SQS message queue emulation for local development
   links:
     - https://docs.localstack.cloud/user-guide/aws/sqs/

@@ -1,15 +1,13 @@
 name: kafka
 description: Complete Apache Kafka messaging platform with UI and topic management
-service_type: container
-
-container:
-  restart: unless-stopped
-
-init_container:
-  image: alpine:latest
+service_type: composite
 
 service:
   dependencies:
+    required:
+      - kafka-broker
+      - zookeeper
+      - kafka-ui
     provides:
       - messaging
       - streaming
@@ -38,9 +36,6 @@ configuration_schema:
         required: ["name"]
 
 documentation:
-  examples:
-    - kafka-console-producer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --topic test-topic
-    - kafka-console-consumer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --topic test-topic --from-beginning
   usage_notes: Complete Kafka setup with Zookeeper coordination, broker, automatic topic creation, and web UI for management
   links:
     - https://kafka.apache.org/documentation/

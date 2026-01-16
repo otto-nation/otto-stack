@@ -3,7 +3,7 @@ title: CLI Reference
 description: Complete command reference for otto-stack CLI
 lead: Comprehensive reference for all otto-stack CLI commands and their usage
 date: "2025-10-01"
-lastmod: "2026-01-15"
+lastmod: "2026-01-16"
 draft: false
 weight: 50
 toc: true
@@ -11,7 +11,7 @@ toc: true
 
 # otto-stack CLI Reference
 
-Development stack management tool
+A powerful development stack management tool for streamlined local development automation
 
 ## Command Categories
 

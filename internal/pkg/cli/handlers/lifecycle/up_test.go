@@ -28,7 +28,6 @@ func TestNewUpHandler(t *testing.T) {
 
 		assert.NotNil(t, handler)
 		assert.IsType(t, &UpHandler{}, handler)
-		assert.NotNil(t, handler.stateManager, "StateManager should be initialized")
 	})
 }
 
@@ -85,12 +84,11 @@ func TestUpHandler_Handle(t *testing.T) {
 		args := []string{}
 
 		// Test that handler executes without panicking
-		// We expect an error due to missing project config in test environment
+		// We expect an error due to missing project initialization in test environment
 		err := handler.Handle(ctx, cmd, args, base)
 
-		// Should get a config-related error but not panic
-		assert.Error(t, err, "Expected error due to missing project config in test environment")
-		assert.Contains(t, err.Error(), "config", "Error should be related to missing config")
+		// Should get an initialization error but not panic
+		assert.Error(t, err, "Expected error due to missing project initialization in test environment")
 	})
 }
 
@@ -109,7 +107,6 @@ func TestNewDownHandler(t *testing.T) {
 
 		assert.NotNil(t, handler)
 		assert.IsType(t, &DownHandler{}, handler)
-		assert.NotNil(t, handler.stateManager, "StateManager should be initialized")
 	})
 }
 

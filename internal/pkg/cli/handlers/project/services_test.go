@@ -78,22 +78,6 @@ func TestServicesHandler_Handle(t *testing.T) {
 	})
 }
 
-// TestNewServicesCommand tests the services command constructor
-func TestNewServicesCommand(t *testing.T) {
-	t.Run("creates command successfully", func(t *testing.T) {
-		command := NewServicesCommand()
-
-		assert.NotNil(t, command)
-		assert.IsType(t, &ServicesCommand{}, command)
-	})
-}
-
-// TODO: CRITICAL ARCHITECTURE INCONSISTENCY IDENTIFIED:
-// Project handlers use individual command structs (ServicesCommand, DepsCommand, etc.)
-// while lifecycle/operations use consolidated ServiceCommand pattern.
-// This creates maintenance burden and inconsistent patterns.
-// RECOMMENDATION: Consolidate project commands to use same pattern as lifecycle/operations
-
 // TODO: Add unit tests for service validation logic
 // TODO: Add tests for different output formats (table, json, yaml)
 // TODO: Add tests for service category filtering

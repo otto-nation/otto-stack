@@ -9,33 +9,45 @@ import (
 )
 
 const (
-	// Table formatting constants
-	TableWidthCompact  = 42
-	TableWidthStandard = 75
-	TableWidthCatalog  = 80
-	TableWidthHealth   = 90
-
-	// Column widths
-	ColWidthService        = 15
-	ColWidthServiceCompact = 20
-	ColWidthProvider       = 12
-	ColWidthState          = 12
-	ColWidthHealth         = 12
-	ColWidthUptime         = 8
-	ColWidthPorts          = 12
-	ColWidthUpdated        = 10
-	ColWidthCategory       = 15
-	ColWidthDescription    = 20
-	ColWidthCheck          = 25
-	ColWidthMessage        = 40
-
 	// Duration formatting
-	SecondsPerMinute = 60
-	MinutesPerHour   = 60
-	HoursPerDay      = 24
+	HoursPerDay = 24
 
 	// Port display limits
 	MaxPortsDisplay = 12
+
+	// Table headers - Status
+	HeaderService    = "SERVICE"
+	HeaderProvidedBy = "PROVIDED BY"
+	HeaderState      = "STATE"
+	HeaderHealth     = "HEALTH"
+	HeaderUptime     = "UPTIME"
+	HeaderPorts      = "PORTS"
+	HeaderUpdated    = "UPDATED"
+
+	// Table headers - Catalog
+	HeaderCategory    = "CATEGORY"
+	HeaderDescription = "DESCRIPTION"
+
+	// Table headers - Validation
+	HeaderType    = "TYPE"
+	HeaderField   = "FIELD"
+	HeaderMessage = "MESSAGE"
+
+	// Table headers - Health
+	HeaderCheck  = "CHECK"
+	HeaderStatus = "STATUS"
+
+	// Table headers - Version
+	HeaderComponent = "COMPONENT"
+	HeaderVersion   = "VERSION"
+	HeaderPlatform  = "PLATFORM"
+
+	// Table headers - Web Interfaces
+	HeaderInterface = "INTERFACE"
+	HeaderURL       = "URL"
+
+	// Table headers - Dependencies
+	HeaderDependencies = "DEPENDENCIES"
 )
 
 // FormatHandler defines the interface for format-specific handlers

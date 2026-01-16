@@ -27,46 +27,6 @@ const (
 {{range .Flags}}	{{.Name}} = {{.Value}}
 {{end}})
 
-// File extension constants
-const (
-	ExtYAML = ".yaml"
-	ExtYML  = ".yml"
-	ExtJSON = ".json"
-	ExtENV  = ".env"
-	ExtSH   = ".sh"
-	ExtMD   = ".md"
-)
-
-// Docker command constants
-const (
-	DockerCmdPs     = "ps"
-	DockerCmdLogs   = "logs"
-	DockerCmdExec   = "exec"
-	DockerCmdStop   = "stop"
-	DockerCmdStart  = "start"
-	DockerCmdRm     = "rm"
-	DockerCmdPull   = "pull"
-	DockerCmdBuild  = "build"
-)
-
-// HTTP status constants
-const (
-	HTTPStatusOK                  = 200
-	HTTPStatusBadRequest          = 400
-	HTTPStatusUnauthorized        = 401
-	HTTPStatusForbidden           = 403
-	HTTPStatusNotFound            = 404
-	HTTPStatusInternalServerError = 500
-)
-
-// Common environment variable names
-const (
-	EnvVarPATH = "PATH"
-	EnvVarHOME = "HOME"
-	EnvVarUSER = "USER"
-	EnvVarTERM = "TERM"
-)
-
 // Message constants
 const (
 {{range .Messages}}	{{.Name}} = {{.Value}}

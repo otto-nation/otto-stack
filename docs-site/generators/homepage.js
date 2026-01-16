@@ -26,9 +26,17 @@ class HomepageGenerator {
 
       let content = lines.slice(contentStart).join("\n");
 
-      // Fix links
-      content = content.replace(/docs-site\/content\/([^)]+\.md)/g, "$1");
+      // Fix links for Hugo
+      // Convert docs-site/content/file.md -> /file (Hugo format)
+      content = content.replace(/docs-site\/content\/([^)]+)\.md/g, "/$1");
+
+      // Convert any remaining .md links to Hugo format
+      content = content.replace(/\]\(([^)]+)\.md\)/g, "](/$1)");
+
+      // Fix docs-site root links
       content = content.replace(/\[([^\]]+)\]\(docs-site\/\)/g, "[$1](/)");
+
+      // Fix LICENSE link
       content = content.replace(
         /\[([^\]]+)\]\(LICENSE\)/g,
         "[$1](https://github.com/otto-nation/otto-stack/blob/main/LICENSE)",

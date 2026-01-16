@@ -1,157 +1,125 @@
 # Documentation Site
 
-This directory contains the Hugo-based documentation site for the otto-stack project.
+Hugo-based documentation site for otto-stack.
 
-## Documentation Generation
-
-The CLI reference and services guide are automatically generated from the actual CLI code and service configurations:
-
-```bash
-# Generate docs from CLI and service configs
-npm run docs:generate
-
-# Build site with fresh docs
-npm run docs:build
-
-# Serve with auto-generated docs
-npm run docs:serve
-```
-
-### Generated Files
-
-- `content/reference.md` - CLI command reference (generated from `otto-stack --help`)
-- `content/services.md` - Services guide (generated from service YAML files)
-
-These files are automatically generated and should not be edited manually.
-
-## Structure
-
-```
-docs-site/
-├── config/           # Hugo configuration files
-│   └── _default/     # Default configuration
-│       ├── hugo.toml # Main Hugo configuration
-│       ├── params.toml # Site parameters
-│       ├── module.toml # Hugo modules
-│       └── menus/    # Navigation menus
-├── content/          # Markdown content files
-├── layouts/          # Custom Hugo layouts (optional)
-├── static/           # Static assets (images, etc.)
-├── assets/           # Hugo asset pipeline files
-├── themes/           # Hugo themes (Doks theme)
-├── resources/        # Hugo resource cache
-├── public/           # Generated site output (ignored in git)
-├── package.json      # Node.js dependencies for Hugo theme
-└── node_modules/     # Node.js modules (ignored in git)
-```
-
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- Hugo Extended (latest version)
+- Hugo Extended v0.146.0+
 - Node.js 18+
-- npm
 
-### Installation
-
-From the project root directory:
+### Setup
 
 ```bash
-# Install Node.js dependencies for the documentation site
 cd docs-site
 npm install
-
-# Initialize Hugo themes (if needed)
-npm run docs:setup
-# Or manually: git submodule update --init --recursive
+git submodule update --init --recursive
 ```
 
 ### Development
 
 ```bash
-# From project root - build docs and start Hugo dev server
-task hugo-serve
-
-# Or manually from docs-site directory
-cd docs-site
+# Generate docs and start dev server
 npm run docs:dev
+
+# Or from project root
+task docs-serve
 ```
 
-### Building
+Visit <http://localhost:1313>
+
+## Documentation Generation
+
+CLI reference and services guide are auto-generated from source:
 
 ```bash
-# From project root - generate docs and build site
-task hugo-build
+# Generate all documentation
+npm run docs:generate
 
-# Or manually from docs-site directory
-cd docs-site
-npm run docs:build
+# Generate with options
+node scripts/generate-docs.js --skip-build --generator=homepage
 ```
+
+### Generated Files
+
+- `content/cli-reference.md` - From `internal/config/commands.yaml`
+- `content/services.md` - From service configurations
+- `content/configuration.md` - Configuration examples
+- `content/_index.md` - From root `README.md`
+- `content/contributing.md` - From root `CONTRIBUTING.md`
+
+Do not edit these files manually - they are regenerated on each build.
 
 ## Available Commands
 
-### From Project Root (using Taskfile)
+### npm Scripts
 
-- `task docs` - Generate CLI documentation only
-- `task docs-hugo` - Generate docs and sync to Hugo content
-- `task hugo-build` - Build the complete documentation site
-- `task hugo-serve` - Start development server
-- `task hugo-clean` - Clean build artifacts
-- `task validate-docs` - Validate Hugo configuration and content
-
-### From docs-site Directory (using npm)
-
+- `npm run docs:generate` - Generate documentation from source
+- `npm run docs:dev` - Start Hugo dev server
 - `npm run docs:build` - Build production site
-- `npm run docs:serve` - Serve built site locally
-- `npm run docs:dev` - Start development server with drafts
-- `npm run docs:clean` - Clean build output
-- `npm run docs:setup` - Initialize git submodules for themes
+- `npm run docs:serve` - Serve built site
+- `npm run docs:clean` - Clean build artifacts
+- `npm run format` - Format with Prettier
+- `npm run lint:md` - Lint markdown files
+- `npm run lint:links` - Check for broken links
 
-## Configuration
+### Task Commands (from project root)
 
-The main Hugo configuration is in `config/_default/hugo.toml`. Key settings:
+- `task docs` - Generate documentation
+- `task docs-serve` - Generate and serve docs
+- `task docs-fmt` - Format documentation
+- `task lint:docs` - Lint documentation
 
-- **Content Directory**: `content/` (contains all Markdown files)
-- **Theme**: Doks (modern documentation theme)
-- **Base URL**: Configured for deployment
-- **Content Types**: Supports docs, blog posts, and CLI reference
+## Structure
 
-## Content Organization
+```
+docs-site/
+├── config/_default/   # Hugo configuration
+│   ├── hugo.toml      # Main config
+│   ├── params.toml    # Site parameters
+│   └── menus/         # Navigation
+├── content/           # Markdown content
+├── generators/        # Doc generators
+├── scripts/           # Build scripts
+├── templates/         # Handlebars templates
+├── themes/PaperMod/   # Hugo theme (submodule)
+└── utils/             # Generator utilities
+```
 
-Content in the `content/` directory follows this structure:
+## Theme
 
-- `_index.md` - Homepage content
-- `*.md` - Individual documentation pages
-- Subdirectories for organized sections
+Uses [PaperMod](https://github.com/adityatelange/hugo-PaperMod) theme via git submodule.
 
-## Theme Customization
-
-The Doks theme provides:
-
-- Responsive design
-- Search functionality
-- Navigation menus
-- Syntax highlighting
-- SEO optimization
-
-Custom layouts can be added in the `layouts/` directory to override theme defaults.
+Update theme:
+```bash
+cd themes/PaperMod
+git pull origin master
+```
 
 ## Deployment
 
-The site is built to the `public/` directory and can be deployed to:
+Site deploys automatically to GitHub Pages via `.github/workflows/pages.yml` on push to `main`.
 
-- GitHub Pages
-- Netlify
-- Vercel
-- Any static hosting service
+See [docs/GITHUB_PAGES.md](../docs/GITHUB_PAGES.md) for setup details.
 
 ## Troubleshooting
 
-1. **Hugo build fails**: Check `hugo config` for configuration errors
-2. **Theme issues**: Run `npm run docs:setup` to update theme submodules (located in `docs-site/themes/doks`)
-3. **Missing content**: Ensure content files have proper front matter
-4. **Development server issues**: Try `npm run docs:clean` then rebuild
-5. **Submodule issues**: Run `git submodule update --init --recursive` from project root
+**Hugo build fails:**
+```bash
+hugo config  # Check configuration
+```
 
-For more help, see the main project documentation or run `task help`.
+**Theme missing:**
+```bash
+git submodule update --init --recursive
+```
+
+**Stale content:**
+```bash
+npm run docs:clean
+npm run docs:build
+```
+
+**Link checker fails:**
+Internal Hugo links (starting with `/`) are ignored by the link checker - this is expected.

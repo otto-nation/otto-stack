@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
@@ -35,7 +36,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
-		base.Output.Header(core.MsgStatus)
+		base.Output.Header(core.MsgLifecycle_status)
 	}
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
@@ -64,7 +65,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 }
 
 func (h *StatusHandler) resolveServices(args []string, setup *common.CoreSetup, ciFlags *ci.Flags) ([]types.ServiceConfig, error) {
-	serviceConfigs, err := ResolveServiceConfigs(args, setup)
+	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
 		return nil, ci.FormatError(*ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
 	}
@@ -189,11 +190,20 @@ func getProviderName(serviceName, provider string) string {
 }
 
 func buildFoundStatus(name, provider string, containerStatus docker.ContainerStatus) display.ServiceStatus {
+	uptime := time.Duration(0)
+	if !containerStatus.StartedAt.IsZero() {
+		uptime = time.Since(containerStatus.StartedAt)
+	}
+
 	return display.ServiceStatus{
-		Name:     name,
-		Provider: provider,
-		State:    containerStatus.State,
-		Health:   containerStatus.Health,
+		Name:      name,
+		Provider:  provider,
+		State:     containerStatus.State,
+		Health:    containerStatus.Health,
+		Ports:     containerStatus.Ports,
+		CreatedAt: containerStatus.CreatedAt,
+		UpdatedAt: containerStatus.StartedAt,
+		Uptime:    uptime,
 	}
 }
 

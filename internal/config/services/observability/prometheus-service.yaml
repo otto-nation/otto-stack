@@ -69,8 +69,6 @@ configuration_schema:
         required: ["job_name"]
 
 documentation:
-  examples:
-    - curl http://localhost:9090/metrics
   usage_notes: Metrics collection and monitoring. Scrapes application /metrics endpoints.
   links:
     - https://prometheus.io/docs/

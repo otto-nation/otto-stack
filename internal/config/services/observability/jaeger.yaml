@@ -68,8 +68,6 @@ configuration_schema:
           description: Storage backend type
 
 documentation:
-  examples:
-    - curl -f http://localhost:16686/
   usage_notes: Distributed tracing for microservices. Supports OpenTelemetry and Zipkin protocols.
   links:
     - https://www.jaegertracing.io/docs/

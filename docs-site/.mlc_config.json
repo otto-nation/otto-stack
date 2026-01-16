@@ -5,6 +5,9 @@
     },
     {
       "pattern": "^https://localhost"
+    },
+    {
+      "pattern": "^/"
     }
   ],
   "timeout": "10s",

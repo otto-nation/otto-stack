@@ -47,7 +47,7 @@ tasks:
     deps: [generate:cli, generate:services]
     silent: true
     cmds:
-      - gofmt -w internal/core/constants_generated.go internal/core/docker/types_generated.go internal/pkg/cli/cli_generated.go internal/pkg/services/services_generated.go internal/pkg/types/*_generated.go
+      - gofmt -w $(find internal -name '*_generated.go')
       - echo "✅ Generated code from YAML configs"
 
   generate:cli:
@@ -202,7 +202,7 @@ tasks:
 
         Return only the commit message, nothing else."
 
-        source ./scripts/ai-helper.sh
+        source ./scripts/common.sh
 
         if ! AI_COMMAND=$(check_ai_available 2>&1); then
           echo "$AI_COMMAND"
@@ -265,7 +265,7 @@ tasks:
         Return: TITLE: <title>
         DESCRIPTION: <filled template>"
 
-        source ./scripts/ai-helper.sh
+        source ./scripts/common.sh
 
         if ! AI_COMMAND=$(check_ai_available 2>&1); then
           echo "$AI_COMMAND"
@@ -382,6 +382,14 @@ tasks:
       - |
         echo "🔧 Auto-fixing formatting and modules..."
         CHANGES_MADE=false
+
+        # Check if generated files need formatting
+        git diff --quiet && BEFORE_FMT_CLEAN=true || BEFORE_FMT_CLEAN=false
+        task fmt
+        if [ "$BEFORE_FMT_CLEAN" = "true" ] && ! git diff --quiet; then
+          echo "❌ Formatting changes detected"
+          CHANGES_MADE=true
+        fi
 
         # Check if go mod tidy makes changes
         git diff --quiet && BEFORE_MOD_CLEAN=true || BEFORE_MOD_CLEAN=false
@@ -544,14 +552,14 @@ tasks:
     desc: "🔄 Sync Go version across all configuration files"
     silent: true
     cmds:
-      - ./scripts/sync-go-version.sh --fix
+      - ./scripts/go-version.sh sync --fix
       - GOTOOLCHAIN=local go mod tidy
 
   check-go-version:
     desc: "✅ Check if Go versions are consistent across files"
     silent: true
     cmds:
-      - ./scripts/sync-go-version.sh --check
+      - ./scripts/go-version.sh sync --check
 
   # ============================================================================
   # TESTING

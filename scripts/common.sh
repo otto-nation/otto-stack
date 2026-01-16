@@ -13,18 +13,32 @@ get_project_root() {
     cd "$script_dir/.." && pwd
 }
 
-# Load constants from Go code
-load_constants() {
-    local script_dir
-    script_dir=$(get_script_dir)
+# Brand constants (matches internal/pkg/constants/app.go)
+export GITHUB_ORG="otto-nation"
+export APP_NAME="otto-stack"
+export APP_NAME_TITLE="Otto Stack"
+export GITHUB_REPO="otto-stack"
+
+# Get current GitHub user dynamically
+get_github_user() {
+    if [[ -n "${GITHUB_USER:-}" ]]; then
+        echo "$GITHUB_USER"
+        return
+    fi
     
-    # Source the extracted constants
-    # shellcheck source=scripts/extract-constants.sh
-    source "$script_dir/extract-constants.sh"
+    if command -v git >/dev/null 2>&1; then
+        local git_user
+        git_user=$(git config --get user.name 2>/dev/null || echo "")
+        if [[ -n "$git_user" ]]; then
+            echo "$git_user"
+            return
+        fi
+    fi
+    
+    echo "${USER:-unknown}"
 }
 
-# Initialize constants
-load_constants
+export GITHUB_USER="${GITHUB_USER:-$(get_github_user)}"
 
 # Colors
 readonly RED='\033[0;31m'
@@ -65,6 +79,35 @@ check_dependencies() {
     fi
     
     return 0
+}
+
+# AI helper functions
+get_ai_command() {
+    if [[ -f .env ]] && grep -q "^AI_COMMAND=" .env; then
+        grep "^AI_COMMAND=" .env | cut -d'=' -f2-
+    else
+        return 1
+    fi
+}
+
+check_ai_available() {
+    local ai_command
+    ai_command=$(get_ai_command) || {
+        print_error "AI not configured. Please set AI_COMMAND in .env file"
+        print_info "Example: AI_COMMAND=kiro-cli --no-interactive"
+        return 1
+    }
+    
+    local ai_cmd
+    ai_cmd=$(echo "$ai_command" | cut -d' ' -f1)
+    
+    if command_exists "$ai_cmd"; then
+        echo "$ai_command"
+        return 0
+    else
+        print_error "AI command not found: $ai_cmd"
+        return 1
+    fi
 }
 
 # Detect platform (OS and architecture)
@@ -191,8 +234,5 @@ confirm() {
     esac
 }
 
-# Export functions for use in other scripts
-export -f print_status print_success print_warning print_error print_info print_header
-export -f command_exists get_script_dir get_project_root check_dependencies
-export -f detect_platform get_latest_version create_temp_dir download_file
-export -f verify_executable install_file confirm load_constants
+# Functions are available when this file is sourced
+# Note: export -f is not needed when sourcing in the same shell

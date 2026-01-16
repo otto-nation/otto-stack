@@ -9,21 +9,32 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/otto-nation/otto-stack/cmd/codegen"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
+var validate = validator.New()
+var serviceSchema *ServiceSchema // Loaded at startup
+
+// Schema-derived constants for validation
 const (
-	TemplateFilePath              = "cmd/generate-services/templates/services.tmpl"
-	ServiceConfigTemplateFilePath = "cmd/generate-services/templates/service_config.tmpl"
-	MainConfigTemplateFilePath    = "cmd/generate-services/templates/main_config.tmpl"
-	GeneratedFilePath             = "internal/pkg/services/services_generated.go"
-	GeneratedConfigsDir           = "internal/pkg/types"
-	MainConfigGeneratedFilePath   = GeneratedConfigsDir + "/service_config_generated.go"
-	ServicesDir                   = "internal/config/services"
-	YAMLExtension                 = ".yaml"
-	DefaultProtocol               = "tcp"
+	ServiceTypeContainer     = "container"
+	ServiceTypeComposite     = "composite"
+	ServiceTypeConfiguration = "configuration"
+)
+
+const (
+	TemplateFilePath            = "cmd/generate-services/templates/services.tmpl"
+	MainConfigTemplateFilePath  = "cmd/generate-services/templates/main_config.tmpl"
+	SchemaFilePath              = "cmd/generate-services/service-schema.json"
+	GeneratedFilePath           = "internal/pkg/services/services_generated.go"
+	GeneratedConfigsDir         = "internal/pkg/types"
+	MainConfigGeneratedFilePath = GeneratedConfigsDir + "/service_config_generated.go"
+	ServicesDir                 = "internal/config/services"
+	YAMLExtension               = ".yaml"
+	DefaultProtocol             = "tcp"
 )
 
 // Keys defines all YAML structure keys
@@ -164,6 +175,14 @@ type collectors struct {
 }
 
 func main() {
+	// Load schema first
+	var err error
+	serviceSchema, err = loadServiceSchema(SchemaFilePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load schema: %v\n", err)
+		os.Exit(1)
+	}
+
 	serviceConstants, configSchemas, err := extractServiceConstants()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to extract service constants: %v\n", err)
@@ -180,8 +199,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := generateDockerTypes(); err != nil {
+	if err := generateDockerTypes(serviceSchema); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate docker types: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := generateYAMLKeys(serviceSchema); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to generate YAML keys: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -237,8 +261,92 @@ func processServiceFile(path string, collectors *collectors, configSchemas *[]Se
 		return err
 	}
 
+	// Validate required fields
+	if err := validateServiceYAML(service, path); err != nil {
+		return fmt.Errorf("validation failed for %s: %w", path, err)
+	}
+
 	serviceName := strings.TrimSuffix(filepath.Base(path), YAMLExtension)
 	processService(service, serviceName, path, collectors, configSchemas)
+	return nil
+}
+
+func validateServiceYAML(service map[string]any, path string) error {
+	// Unmarshal into validation struct
+	data, err := yaml.Marshal(service)
+	if err != nil {
+		return fmt.Errorf("failed to marshal service for validation: %w", err)
+	}
+
+	var svc serviceValidation
+	if err := yaml.Unmarshal(data, &svc); err != nil {
+		return fmt.Errorf("failed to unmarshal service for validation: %w", err)
+	}
+
+	// Use validator
+	validate := validator.New()
+	if err := validate.Struct(svc); err != nil {
+		return fmt.Errorf("validation failed: %w", err)
+	}
+
+	// Validate enums against schema
+	if svc.ServiceType != "" {
+		if err := validateEnumField("service_type", svc.ServiceType); err != nil {
+			return err
+		}
+	}
+	if svc.InitService != nil && svc.InitService.Mode != "" {
+		if err := validateEnumField("init_service_mode", svc.InitService.Mode); err != nil {
+			return err
+		}
+	}
+
+	// Custom validation: container type requires container.image
+	if svc.ServiceType == ServiceTypeContainer {
+		if svc.Container == nil || svc.Container.Image == "" {
+			return fmt.Errorf("service_type '%s' requires container.image", ServiceTypeContainer)
+		}
+	}
+
+	// Custom validation: init_service.enabled requires mode
+	if svc.InitService != nil && svc.InitService.Enabled {
+		if svc.InitService.Mode == "" {
+			return fmt.Errorf("init_service.mode is required when init_service.enabled is true")
+		}
+	}
+
+	return nil
+}
+
+// serviceValidation defines the validation schema for service YAMLs
+type serviceValidation struct {
+	Name        string                 `yaml:"name" validate:"required"`
+	Description string                 `yaml:"description" validate:"required"`
+	ServiceType string                 `yaml:"service_type"` // validated dynamically
+	Container   *containerValidation   `yaml:"container,omitempty"`
+	InitService *initServiceValidation `yaml:"init_service,omitempty"`
+}
+
+type containerValidation struct {
+	Image string `yaml:"image"`
+}
+
+type initServiceValidation struct {
+	Enabled bool   `yaml:"enabled"`
+	Mode    string `yaml:"mode"` // validated dynamically
+}
+
+// validateEnumField validates a field against schema enum
+func validateEnumField(fieldName, value string) error {
+	enumName := strings.ReplaceAll(fieldName, ".", "_")
+	if enumDef, exists := serviceSchema.Enums[enumName]; exists {
+		for _, validValue := range enumDef.Values {
+			if value == validValue {
+				return nil
+			}
+		}
+		return fmt.Errorf("%s must be one of: %s", fieldName, strings.Join(enumDef.Values, ", "))
+	}
 	return nil
 }
 
@@ -325,7 +433,7 @@ func processConnectionFlags(conn map[string]any, serviceName string, collectors 
 }
 
 func processContainer(service map[string]any, serviceName string, collectors *collectors) {
-	container, ok := service["container"].(map[string]any)
+	container, ok := service[Keys.Container.Root].(map[string]any)
 	if !ok {
 		return
 	}
@@ -336,16 +444,16 @@ func processContainer(service map[string]any, serviceName string, collectors *co
 }
 
 func processContainerBasics(container map[string]any, serviceName string, collectors *collectors) {
-	if image, ok := container["image"].(string); ok {
-		collectors.images["Image"+toPascalCase(serviceName)] = image
+	if image, ok := container[Keys.Container.Image].(string); ok {
+		collectors.images[Prefix.Image+toPascalCase(serviceName)] = image
 	}
-	if mem, ok := container["memory_limit"].(string); ok {
-		collectors.memoryLimits["MemoryLimit"+toPascalCase(mem)] = mem
+	if mem, ok := container[Keys.Container.MemoryLimit].(string); ok {
+		collectors.memoryLimits[Prefix.MemoryLimit+toPascalCase(mem)] = mem
 	}
 }
 
 func processContainerPorts(container map[string]any, serviceName string, collectors *collectors) {
-	ports, ok := container["ports"].([]any)
+	ports, ok := container[Keys.Container.Ports].([]any)
 	if !ok || len(ports) == 0 {
 		return
 	}
@@ -355,21 +463,21 @@ func processContainerPorts(container map[string]any, serviceName string, collect
 		return
 	}
 
-	if external, ok := portMap["external"].(string); ok {
+	if external, ok := portMap[Keys.Container.External].(string); ok {
 		if portNum, err := strconv.Atoi(external); err == nil {
-			collectors.ports["Port"+toPascalCase(serviceName)] = portNum
+			collectors.ports[Prefix.Port+toPascalCase(serviceName)] = portNum
 		}
 	}
 
-	protocol := "tcp"
-	if p, ok := portMap["protocol"].(string); ok {
+	protocol := DefaultProtocol
+	if p, ok := portMap[Keys.Container.Protocol].(string); ok {
 		protocol = p
 	}
-	collectors.protocols["Protocol"+toPascalCase(protocol)] = protocol
+	collectors.protocols[Prefix.Protocol+toPascalCase(protocol)] = protocol
 }
 
 func processContainerNetworks(container map[string]any, collectors *collectors) {
-	nets, ok := container["networks"].([]any)
+	nets, ok := container[Keys.Container.Networks].([]any)
 	if !ok {
 		return
 	}
@@ -381,17 +489,17 @@ func processContainerNetworks(container map[string]any, collectors *collectors) 
 }
 
 func processEnvironment(service map[string]any, serviceName string, collectors *collectors) {
-	env, ok := service["environment"].(map[string]any)
+	env, ok := service[Keys.Environment].(map[string]any)
 	if !ok {
 		return
 	}
 
 	for key, value := range env {
 		if strValue, ok := value.(string); ok {
-			envKey := "Env" + toPascalCase(serviceName) + toPascalCase(key)
+			envKey := Prefix.Env + toPascalCase(serviceName) + toPascalCase(key)
 			collectors.envVars[envKey] = strValue
 
-			envKeyConstant := "EnvKey" + toPascalCase(key)
+			envKeyConstant := Prefix.EnvKey + toPascalCase(key)
 			if _, exists := collectors.envKeys[envKeyConstant]; !exists {
 				collectors.envKeys[envKeyConstant] = key
 			}
@@ -400,43 +508,43 @@ func processEnvironment(service map[string]any, serviceName string, collectors *
 }
 
 func processDependencies(service map[string]any, collectors *collectors) {
-	deps, ok := service["dependencies"].(map[string]any)
+	deps, ok := service[Keys.Dependencies.Root].(map[string]any)
 	if !ok {
 		return
 	}
 
-	provides, ok := deps["provides"].([]any)
+	provides, ok := deps[Keys.Dependencies.Provides].([]any)
 	if !ok {
 		return
 	}
 
 	for _, cap := range provides {
 		if capStr, ok := cap.(string); ok {
-			collectors.capabilities["Capability"+toPascalCase(capStr)] = capStr
+			collectors.capabilities[Prefix.Capability+toPascalCase(capStr)] = capStr
 		}
 	}
 }
 
 func processHealth(service map[string]any, serviceName string, collectors *collectors) {
-	health, ok := service["health_check"].(map[string]any)
+	health, ok := service[Keys.HealthCheck.Root].(map[string]any)
 	if !ok {
 		return
 	}
 
-	if endpoint, ok := health["endpoint"].(string); ok {
-		collectors.healthEndpoints["HealthEndpoint"+toPascalCase(serviceName)] = endpoint
+	if endpoint, ok := health[Keys.HealthCheck.Endpoint].(string); ok {
+		collectors.healthEndpoints[Prefix.HealthEndpoint+toPascalCase(serviceName)] = endpoint
 	}
 }
 
 func processTags(service map[string]any, collectors *collectors) {
-	tags, ok := service["tags"].([]any)
+	tags, ok := service[Keys.Tags].([]any)
 	if !ok {
 		return
 	}
 
 	for _, tag := range tags {
 		if tagStr, ok := tag.(string); ok {
-			collectors.tags["Tag"+toPascalCase(tagStr)] = tagStr
+			collectors.tags[Prefix.Tag+toPascalCase(tagStr)] = tagStr
 		}
 	}
 }
@@ -485,30 +593,30 @@ const (
 )
 
 func (c *collectors) addBasic(serviceName, path string) {
-	c.names["Service"+toPascalCase(serviceName)] = serviceName
+	c.names[Prefix.Service+toPascalCase(serviceName)] = serviceName
 
 	parts := strings.Split(path, "/")
 	if len(parts) >= minPathParts {
 		cat := parts[len(parts)-pathParts]
-		c.categories["Category"+toPascalCase(cat)] = cat
+		c.categories[Prefix.Category+toPascalCase(cat)] = cat
 	}
 }
 
 func (c *collectors) addConnection(service map[string]any, serviceName string) {
-	conn, ok := service["connection"].(map[string]any)
+	conn, ok := service[Keys.Connection.Root].(map[string]any)
 	if !ok {
 		return
 	}
 
-	if client, ok := conn["client"].(string); ok {
-		c.clients["Client"+toPascalCase(client)] = client
+	if client, ok := conn[Keys.Connection.Client].(string); ok {
+		c.clients[Prefix.Client+toPascalCase(client)] = client
 	}
 
-	if user, ok := conn["default_user"].(string); ok {
-		c.defaultUsers["DefaultUser"+toPascalCase(serviceName)] = user
+	if user, ok := conn[Keys.Connection.DefaultUser].(string); ok {
+		c.defaultUsers[Prefix.DefaultUser+toPascalCase(serviceName)] = user
 	}
 
-	flags := []string{"user_flag", "host_flag", "port_flag", "database_flag"}
+	flags := []string{Keys.Connection.UserFlag, Keys.Connection.HostFlag, Keys.Connection.PortFlag, Keys.Connection.DatabaseFlag}
 	for _, flag := range flags {
 		if val, ok := conn[flag].(string); ok {
 			key := toPascalCase(flag) + toPascalCase(serviceName)
@@ -518,35 +626,35 @@ func (c *collectors) addConnection(service map[string]any, serviceName string) {
 }
 
 func (c *collectors) addDocker(service map[string]any, serviceName string) {
-	container, ok := service["container"].(map[string]any)
+	container, ok := service[Keys.Container.Root].(map[string]any)
 	if !ok {
 		return
 	}
 
-	if image, ok := container["image"].(string); ok {
-		c.images["Image"+toPascalCase(serviceName)] = image
+	if image, ok := container[Keys.Container.Image].(string); ok {
+		c.images[Prefix.Image+toPascalCase(serviceName)] = image
 	}
 
-	if nets, ok := container["networks"].([]any); ok {
+	if nets, ok := container[Keys.Container.Networks].([]any); ok {
 		for _, net := range nets {
 			if netStr, ok := net.(string); ok {
-				c.networks["Network"+toPascalCase(netStr)] = netStr
+				c.networks[Prefix.Network+toPascalCase(netStr)] = netStr
 			}
 		}
 	}
 
-	if mem, ok := container["memory_limit"].(string); ok {
-		c.memoryLimits["MemoryLimit"+toPascalCase(mem)] = mem
+	if mem, ok := container[Keys.Container.MemoryLimit].(string); ok {
+		c.memoryLimits[Prefix.MemoryLimit+toPascalCase(mem)] = mem
 	}
 }
 
 func (c *collectors) addPorts(service map[string]any, serviceName string) {
-	container, ok := service["container"].(map[string]any)
+	container, ok := service[Keys.Container.Root].(map[string]any)
 	if !ok {
 		return
 	}
 
-	ports, ok := container["ports"].([]any)
+	ports, ok := container[Keys.Container.Ports].([]any)
 	if !ok {
 		return
 	}
@@ -557,7 +665,7 @@ func (c *collectors) addPorts(service map[string]any, serviceName string) {
 			continue
 		}
 
-		external, ok := portMap["external"].(string)
+		external, ok := portMap[Keys.Container.External].(string)
 		if !ok {
 			continue
 		}
@@ -567,13 +675,13 @@ func (c *collectors) addPorts(service map[string]any, serviceName string) {
 			continue
 		}
 
-		c.ports["Port"+toPascalCase(serviceName)] = portNum
+		c.ports[Prefix.Port+toPascalCase(serviceName)] = portNum
 
-		protocol := "tcp"
-		if p, ok := portMap["protocol"].(string); ok {
+		protocol := DefaultProtocol
+		if p, ok := portMap[Keys.Container.Protocol].(string); ok {
 			protocol = p
 		}
-		c.protocols["Protocol"+toPascalCase(protocol)] = protocol
+		c.protocols[Prefix.Protocol+toPascalCase(protocol)] = protocol
 		return
 	}
 }
@@ -696,7 +804,7 @@ func generateConstants(serviceConstants *ServiceConstants) error {
 }
 
 func generateMultiFileSchema(configSchemas []ServiceConfigSchema) error {
-	// Generate individual service config files
+	// Generate service config files
 	var serviceFiles []codegen.ServiceFileData
 
 	for _, schema := range configSchemas {
@@ -713,12 +821,12 @@ func generateMultiFileSchema(configSchemas []ServiceConfigSchema) error {
 			FileName:    fileName,
 			Schema:      schema.Schema,
 		})
-	}
 
-	// Generate individual service files
-	generator := codegen.NewMultiFileGenerator(GeneratedConfigsDir)
-	if err := generator.GenerateServiceFiles(ServiceConfigTemplateFilePath, serviceFiles); err != nil {
-		return pkgerrors.NewServiceError("generator", "generate service files", err)
+		// Generate individual config file
+		filePath := filepath.Join(GeneratedConfigsDir, fileName)
+		if err := generateIndividualConfigFile(structName, filePath); err != nil {
+			return fmt.Errorf("failed to generate %s: %w", fileName, err)
+		}
 	}
 
 	// Generate main ServiceConfig with embedded structs
@@ -734,6 +842,22 @@ func generateMultiFileSchema(configSchemas []ServiceConfigSchema) error {
 	}
 
 	return executor.ExecuteTemplateWithFuncs(mainConfigData, funcMap)
+}
+
+func generateIndividualConfigFile(structName, filePath string) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Write simple empty struct - schema details not needed for now
+	fmt.Fprintln(file, "// Code generated by generate-services. DO NOT EDIT.")
+	fmt.Fprintln(file, "package types")
+	fmt.Fprintln(file)
+	fmt.Fprintf(file, "type %s struct {}\n", structName)
+
+	return nil
 }
 
 func printSummary(sc *ServiceConstants) {
@@ -774,7 +898,7 @@ func toPascalCase(s string) string {
 	return strings.Join(parts, "")
 }
 
-func generateDockerTypes() error {
+func generateDockerTypes(schema *ServiceSchema) error {
 	const (
 		DockerTemplateFilePath  = "cmd/generate-services/templates/docker.tmpl"
 		DockerGeneratedFilePath = "internal/core/docker/types_generated.go"
@@ -797,5 +921,33 @@ func generateDockerTypes() error {
 	}
 	defer func() { _ = file.Close() }()
 
-	return tmpl.Execute(file, nil)
+	// Generate enum constants from schema
+	enumGroups := schema.generateEnumConstants()
+
+	return tmpl.Execute(file, map[string]any{
+		"EnumGroups": enumGroups,
+	})
+}
+
+func generateYAMLKeys(schema *ServiceSchema) error {
+	const (
+		KeysTemplateFilePath  = "cmd/generate-services/templates/keys.tmpl"
+		KeysGeneratedFilePath = "internal/pkg/services/keys_generated.go"
+	)
+
+	tmpl, err := template.ParseFiles(KeysTemplateFilePath)
+	if err != nil {
+		return pkgerrors.NewServiceError("generator", "parse keys template", err)
+	}
+
+	file, err := os.Create(KeysGeneratedFilePath)
+	if err != nil {
+		return pkgerrors.NewServiceError("generator", "create keys file", err)
+	}
+	defer func() { _ = file.Close() }()
+
+	// Generate YAML key constants from schema
+	yamlKeys := schema.generateYAMLKeys()
+
+	return tmpl.Execute(file, yamlKeys)
 }

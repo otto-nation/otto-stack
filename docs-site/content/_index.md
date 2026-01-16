@@ -7,7 +7,7 @@ lead: >-
   Streamline your local development with powerful CLI tools and automated
   service management
 date: "2025-10-01"
-lastmod: "2026-01-15"
+lastmod: "2026-01-16"
 draft: false
 weight: 50
 toc: true
@@ -97,23 +97,23 @@ otto-stack up
 
 ## Documentation
 
-- **[Setup & Installation](setup.md)**
-- **[Usage Guide](usage.md)**
-- **[Services Guide](services.md)**
-- **[Configuration](configuration.md)**
-- **[CLI Reference](cli-reference.md)**
-- **[Scripts Reference](scripts.md)**
-- **[Contributing](contributing.md)**
+- **[Setup & Installation](/setup)**
+- **[Usage Guide](/usage)**
+- **[Services Guide](/services)**
+- **[Configuration](/configuration)**
+- **[CLI Reference](/cli-reference)**
+- **[Scripts Reference](/scripts)**
+- **[Contributing](/contributing)**
 
 ## Get Started
 
-1. **[Complete installation guide](setup.md)**
-2. **[Learn basic usage](usage.md)**
-3. **[Explore available services](services.md)**
+1. **[Complete installation guide](/setup)**
+2. **[Learn basic usage](/usage)**
+3. **[Explore available services](/services)**
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](contributing.md) for details.
+We welcome contributions! Please see our [Contributing Guide](/contributing) for details.
 
 ## License
 
