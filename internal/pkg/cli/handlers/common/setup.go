@@ -15,6 +15,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
@@ -140,4 +141,22 @@ func BuildStackContext(cmd *cobra.Command, args []string) (clicontext.Context, e
 		WithServices(serviceNames, serviceConfigs)
 
 	return builder.Build(), nil
+}
+
+// ResolveServiceConfigs resolves service configurations from args or enabled services
+func ResolveServiceConfigs(args []string, setup *CoreSetup) ([]types.ServiceConfig, error) {
+	var serviceConfigs []types.ServiceConfig
+	var err error
+
+	if len(args) > 0 {
+		serviceConfigs, err = services.ResolveUpServices(args, setup.Config)
+	} else {
+		serviceConfigs, err = services.ResolveUpServices(setup.Config.Stack.Enabled, setup.Config)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve services: %w", err)
+	}
+
+	return serviceConfigs, nil
 }

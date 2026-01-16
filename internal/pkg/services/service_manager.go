@@ -20,6 +20,7 @@ import (
 	"github.com/docker/compose/v5/pkg/api"
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
@@ -187,6 +188,11 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 
 	// Load and validate service configs from .otto-stack/service-configs/
 	req.ServiceConfigs = s.loadAndValidateServiceConfigs(req.ServiceConfigs)
+
+	// Generate docker-compose.yml from service configs
+	if err := s.GenerateComposeFile(req.Project, req.ServiceConfigs); err != nil {
+		return pkgerrors.NewServiceError("project", "generate compose file", err)
+	}
 
 	// Load project
 	project, err := s.project.Load(req.Project)
@@ -599,4 +605,14 @@ func (s *Service) Exec(ctx context.Context, req ExecRequest) error {
 		return pkgerrors.NewServiceError("project", "exec command", err)
 	}
 	return nil
+}
+
+// GenerateComposeFile generates docker-compose.yml from service configs
+func (s *Service) GenerateComposeFile(projectName string, serviceConfigs []servicetypes.ServiceConfig) error {
+	generator, err := compose.NewGenerator(projectName)
+	if err != nil {
+		return err
+	}
+
+	return generator.GenerateFromServiceConfigs(serviceConfigs, projectName)
 }

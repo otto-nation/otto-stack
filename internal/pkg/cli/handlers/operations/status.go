@@ -65,7 +65,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 }
 
 func (h *StatusHandler) resolveServices(args []string, setup *common.CoreSetup, ciFlags *ci.Flags) ([]types.ServiceConfig, error) {
-	serviceConfigs, err := ResolveServiceConfigs(args, setup)
+	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
 		return nil, ci.FormatError(*ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
 	}

@@ -108,17 +108,12 @@ func (pm *ProjectManager) generateEnvFile(serviceConfigs []types.ServiceConfig, 
 
 // generateDockerCompose generates the docker-compose.yml file
 func (pm *ProjectManager) generateDockerCompose(serviceConfigs []types.ServiceConfig, projectName string, base *base.BaseCommand) error {
-	manager, err := svc.New()
+	generator, err := compose.NewGenerator(projectName)
 	if err != nil {
 		return err
 	}
 
-	generator, err := compose.NewGenerator(projectName, "", manager)
-	if err != nil {
-		return err
-	}
-	err = generator.GenerateFromServiceConfigs(serviceConfigs, projectName)
-	if err != nil {
+	if err := generator.GenerateFromServiceConfigs(serviceConfigs, projectName); err != nil {
 		return err
 	}
 

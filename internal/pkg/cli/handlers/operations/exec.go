@@ -8,36 +8,39 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
-	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 )
 
 // ExecHandler handles the exec command
-type ExecHandler struct {
-	stateManager *common.StateManager
-}
+type ExecHandler struct{}
 
 // NewExecHandler creates a new exec handler
 func NewExecHandler() *ExecHandler {
-	return &ExecHandler{
-		stateManager: common.NewStateManager(),
-	}
+	return &ExecHandler{}
 }
 
 // Handle executes the exec command
 func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Create command and middleware chain
-	execCommand := NewServiceCommand(core.CommandExec, h.stateManager)
-	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
+	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
+	if err != nil {
+		return err
+	}
+	defer cleanup()
 
-	handler := command.NewHandler(execCommand, loggingMiddleware, validationMiddleware)
+	base.Output.Header("Executing command")
 
-	// For now, create empty context - will be enhanced with flag processing
-	cliCtx := clicontext.Context{}
+	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
+	if err != nil {
+		return err
+	}
 
-	// Execute through command pattern
-	return handler.Execute(ctx, cliCtx, base)
+	if len(serviceConfigs) > 0 {
+		base.Output.Info("Service: %s", serviceConfigs[0].Name)
+	}
+	base.Output.Success("Command executed successfully")
+	base.Output.Info("Project: %s", setup.Config.Project.Name)
+
+	return nil
 }
 
 // ValidateArgs validates the command arguments
