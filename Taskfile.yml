@@ -202,7 +202,7 @@ tasks:
 
         Return only the commit message, nothing else."
 
-        source ./scripts/ai-helper.sh
+        source ./scripts/common.sh
 
         if ! AI_COMMAND=$(check_ai_available 2>&1); then
           echo "$AI_COMMAND"
@@ -265,7 +265,7 @@ tasks:
         Return: TITLE: <title>
         DESCRIPTION: <filled template>"
 
-        source ./scripts/ai-helper.sh
+        source ./scripts/common.sh
 
         if ! AI_COMMAND=$(check_ai_available 2>&1); then
           echo "$AI_COMMAND"
@@ -544,14 +544,14 @@ tasks:
     desc: "🔄 Sync Go version across all configuration files"
     silent: true
     cmds:
-      - ./scripts/sync-go-version.sh --fix
+      - ./scripts/go-version.sh sync --fix
       - GOTOOLCHAIN=local go mod tidy
 
   check-go-version:
     desc: "✅ Check if Go versions are consistent across files"
     silent: true
     cmds:
-      - ./scripts/sync-go-version.sh --check
+      - ./scripts/go-version.sh sync --check
 
   # ============================================================================
   # TESTING

@@ -90,32 +90,27 @@ Sets up Git hooks for the development workflow.
 - Configures automatic code quality checks
 - Sets up commit message validation
 
-### sync-go-version.sh
+### go-version.sh
 
-Synchronizes Go version across different configuration files in the project.
+Unified Go version management script with two subcommands:
 
-**Usage:**
+**Get version:**
 
 ```bash
-./scripts/sync-go-version.sh
+./scripts/go-version.sh get [--major-minor|--full|--env|--github-matrix]
 ```
 
-**Files updated:**
+**Sync version across files:**
+
+```bash
+./scripts/go-version.sh sync [--check|--fix]
+```
+
+**Files synchronized:**
 
 - `.go-version`
 - `go.mod`
-- GitHub Actions workflows
-- Docker configurations
-
-### get-go-version.sh
-
-Retrieves the current Go version from project configuration.
-
-**Usage:**
-
-```bash
-./scripts/get-go-version.sh
-```
+- `.golangci.yml`
 
 ## Build & Release Scripts
 
@@ -162,24 +157,7 @@ Validates project structure and configuration files.
 - Documentation consistency
 - Build requirements
 
-## Security & Quality Scripts
-
-### run-security-scan.sh
-
-Runs comprehensive security scans on the codebase.
-
-**Usage:**
-
-```bash
-./scripts/run-security-scan.sh
-```
-
-**Scans performed:**
-
-- Dependency vulnerability scanning
-- Static code analysis
-- Secret detection
-- License compliance
+## Quality Scripts
 
 ### update-homebrew-formula.sh
 
