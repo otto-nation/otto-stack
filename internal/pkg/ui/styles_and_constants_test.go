@@ -8,22 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestServiceOption_Fields(t *testing.T) {
-	t.Run("validates ServiceOption structure", func(t *testing.T) {
-		option := ServiceOption{
-			Name:         "postgres",
-			Description:  "PostgreSQL database",
-			Dependencies: []string{"network"},
-			Category:     "database",
-		}
-
-		assert.Equal(t, "postgres", option.Name)
-		assert.Equal(t, "PostgreSQL database", option.Description)
-		assert.Len(t, option.Dependencies, 1)
-		assert.Equal(t, "database", option.Category)
-	})
-}
-
 func TestUIConstants(t *testing.T) {
 	t.Run("validates icon constants", func(t *testing.T) {
 		assert.NotEmpty(t, IconSuccess)

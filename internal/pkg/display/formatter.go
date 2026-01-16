@@ -9,30 +9,8 @@ import (
 )
 
 const (
-	// Table formatting constants
-	TableWidthCompact  = 42
-	TableWidthStandard = 75
-	TableWidthCatalog  = 80
-	TableWidthHealth   = 90
-
-	// Column widths
-	ColWidthService        = 15
-	ColWidthServiceCompact = 20
-	ColWidthProvider       = 12
-	ColWidthState          = 12
-	ColWidthHealth         = 12
-	ColWidthUptime         = 8
-	ColWidthPorts          = 15
-	ColWidthUpdated        = 10
-	ColWidthCategory       = 15
-	ColWidthDescription    = 20
-	ColWidthCheck          = 25
-	ColWidthMessage        = 40
-
 	// Duration formatting
-	SecondsPerMinute = 60
-	MinutesPerHour   = 60
-	HoursPerDay      = 24
+	HoursPerDay = 24
 
 	// Port display limits
 	MaxPortsDisplay = 12

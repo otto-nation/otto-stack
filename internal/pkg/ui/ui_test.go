@@ -8,7 +8,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -140,35 +139,6 @@ func TestOutput_Box(t *testing.T) {
 
 	assert.Contains(t, result, "Title")
 	assert.Contains(t, result, "Content")
-}
-
-func TestPromptInput(t *testing.T) {
-	// Test that PromptInput function exists and has correct signature
-	assert.NotNil(t, PromptInput)
-}
-
-func TestPromptConfirm(t *testing.T) {
-	// Test that PromptConfirm function exists and has correct signature
-	assert.NotNil(t, PromptConfirm)
-}
-
-func TestPromptMultiSelect(t *testing.T) {
-	// Test that PromptMultiSelect function exists and has correct signature
-	assert.NotNil(t, PromptMultiSelect)
-}
-
-func TestServiceOption(t *testing.T) {
-	option := ServiceOption{
-		Name:         services.ServiceRedis,
-		Description:  "Redis cache server",
-		Dependencies: []string{"network"},
-		Category:     "cache",
-	}
-
-	assert.Equal(t, "redis", option.Name)
-	assert.Equal(t, "Redis cache server", option.Description)
-	assert.Equal(t, []string{"network"}, option.Dependencies)
-	assert.Equal(t, "cache", option.Category)
 }
 
 func TestFormatFunctions(t *testing.T) {

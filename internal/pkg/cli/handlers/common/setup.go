@@ -10,9 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
@@ -110,11 +108,6 @@ func mergeProjectConfigs(base, local *config.Config) *config.Config {
 	}
 
 	return &merged
-}
-
-// CreateStandardMiddlewareChain creates the standard middleware chain used by all stack handlers
-func CreateStandardMiddlewareChain() (validationMiddleware, loggingMiddleware command.Middleware) {
-	return middleware.NewInitializationMiddleware(), middleware.NewLoggingMiddleware()
 }
 
 // BuildStackContext builds CLI context from command and args
