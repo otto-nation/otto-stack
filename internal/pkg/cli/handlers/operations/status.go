@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
@@ -189,11 +190,20 @@ func getProviderName(serviceName, provider string) string {
 }
 
 func buildFoundStatus(name, provider string, containerStatus docker.ContainerStatus) display.ServiceStatus {
+	uptime := time.Duration(0)
+	if !containerStatus.StartedAt.IsZero() {
+		uptime = time.Since(containerStatus.StartedAt)
+	}
+
 	return display.ServiceStatus{
-		Name:     name,
-		Provider: provider,
-		State:    containerStatus.State,
-		Health:   containerStatus.Health,
+		Name:      name,
+		Provider:  provider,
+		State:     containerStatus.State,
+		Health:    containerStatus.Health,
+		Ports:     containerStatus.Ports,
+		CreatedAt: containerStatus.CreatedAt,
+		UpdatedAt: containerStatus.StartedAt,
+		Uptime:    uptime,
 	}
 }
 
