@@ -6,39 +6,40 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestShellType_Validation(t *testing.T) {
 	t.Run("validates supported shell types", func(t *testing.T) {
-		assert.True(t, ShellTypeBash.IsValid())
-		assert.True(t, ShellTypeZsh.IsValid())
-		assert.True(t, ShellTypeFish.IsValid())
-		assert.True(t, ShellTypePowerShell.IsValid())
+		assert.True(t, types.ShellTypeBash.IsValid())
+		assert.True(t, types.ShellTypeZsh.IsValid())
+		assert.True(t, types.ShellTypeFish.IsValid())
+		assert.True(t, types.ShellTypePowershell.IsValid())
 	})
 
 	t.Run("rejects invalid shell types", func(t *testing.T) {
-		invalidShell := ShellType("invalid")
+		invalidShell := types.ShellType("invalid")
 		assert.False(t, invalidShell.IsValid())
 
-		emptyShell := ShellType("")
+		emptyShell := types.ShellType("")
 		assert.False(t, emptyShell.IsValid())
 	})
 }
 
 func TestShellType_Constants(t *testing.T) {
 	t.Run("validates shell type constants", func(t *testing.T) {
-		assert.Equal(t, "bash", string(ShellTypeBash))
-		assert.Equal(t, "zsh", string(ShellTypeZsh))
-		assert.Equal(t, "fish", string(ShellTypeFish))
-		assert.Equal(t, "powershell", string(ShellTypePowerShell))
+		assert.Equal(t, "bash", string(types.ShellTypeBash))
+		assert.Equal(t, "zsh", string(types.ShellTypeZsh))
+		assert.Equal(t, "fish", string(types.ShellTypeFish))
+		assert.Equal(t, "powershell", string(types.ShellTypePowershell))
 	})
 }
 
 func TestAllShellTypeStrings(t *testing.T) {
 	t.Run("returns all shell types", func(t *testing.T) {
-		shells := AllShellTypeStrings()
+		shells := types.AllShellTypeStrings()
 
 		assert.Len(t, shells, 4)
 		assert.Contains(t, shells, "bash")

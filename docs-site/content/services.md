@@ -44,12 +44,42 @@ Database user
 - Type: `string`
 - Default: `root`
 
+#### databases
+
+Additional databases to create
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`)
+
+#### users
+
+Additional users to create
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`)
+
+- **password** (`string`)
+
+- **database** (`string`)
+
 ##### Example Configuration
 
 ```yaml
 database: local_dev
 password: password
 user: root
+databases:
+  - name: example-name
+users:
+  - name: example-name
+    password: example-password
+    database: example-database
 ```
 
 #### Use Cases
@@ -208,6 +238,31 @@ topics:
 ### kafka-broker
 
 Apache Kafka broker for event streaming and messaging
+
+#### Configuration Options
+
+#### topics
+
+Kafka topics to create on startup
+
+- Type: `array`
+
+**Items:**
+
+- **name** (`string`): Topic name
+
+- **partitions** (`integer`) = `3`: Number of partitions
+
+- **replication_factor** (`integer`) = `1`: Replication factor
+
+##### Example Configuration
+
+```yaml
+topics:
+  - name: example-name
+    partitions: 3
+    replication_factor: 1
+```
 
 #### Use Cases
 

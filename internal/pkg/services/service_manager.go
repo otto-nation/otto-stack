@@ -239,9 +239,9 @@ func (s *Service) executeLocalInitScripts(ctx context.Context, serviceConfigs []
 	return nil
 }
 
-// hasLocalInitScripts checks if a service has local init scripts enabled
-func (s *Service) hasLocalInitScripts(config servicetypes.ServiceConfig) bool {
-	hasInit := config.InitService != nil && config.InitService.Enabled && config.InitService.Mode == "local"
+// hasInitScripts checks if a service has init scripts enabled
+func (s *Service) hasInitScripts(config servicetypes.ServiceConfig) bool {
+	hasInit := config.InitService != nil && config.InitService.Enabled
 
 	// Log debug information about init service configuration
 	if config.InitService == nil {
@@ -256,6 +256,11 @@ func (s *Service) hasLocalInitScripts(config servicetypes.ServiceConfig) bool {
 	return hasInit
 }
 
+// hasLocalInitScripts checks if a service has local init scripts enabled (for backward compatibility)
+func (s *Service) hasLocalInitScripts(config servicetypes.ServiceConfig) bool {
+	return s.hasInitScripts(config) && config.InitService.Mode == docker.InitServiceModeLocal
+}
+
 // executeServiceInitScripts executes all init scripts for a single service
 func (s *Service) executeServiceInitScripts(ctx context.Context, config servicetypes.ServiceConfig, allConfigs []servicetypes.ServiceConfig, projectName string) error {
 	for _, script := range config.InitService.Scripts {
@@ -265,20 +270,23 @@ func (s *Service) executeServiceInitScripts(ctx context.Context, config servicet
 			return fmt.Errorf("failed to process template for service %s: %w", config.Name, err)
 		}
 
-		// Prepare environment with required variables
-		env := make(map[string]string)
-		if config.InitService.Environment != nil {
-			maps.Copy(env, config.InitService.Environment)
-		}
-
-		// Add Docker-specific variables for local mode scripts
-		if config.InitService.Mode == "local" {
+		// Execute based on mode
+		if config.InitService.Mode == docker.InitServiceModeContainer {
+			if err := s.executeScriptInContainer(ctx, processedScript, config, projectName); err != nil {
+				return err
+			}
+		} else {
+			// local mode
+			env := make(map[string]string)
+			if config.InitService.Environment != nil {
+				maps.Copy(env, config.InitService.Environment)
+			}
 			env["DOCKER_IMAGE"] = config.InitService.Image
 			env["DOCKER_NETWORK"] = projectName + "-network"
-		}
 
-		if err := s.executeScript(ctx, processedScript, env, config.Name); err != nil {
-			return err
+			if err := s.executeScript(ctx, processedScript, env, config.Name); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -500,7 +508,7 @@ func convertToMapSlice(data []any) []map[string]any {
 	return result
 }
 
-// executeScript executes a single script with environment variables
+// executeScript executes a single script with environment variables on the host
 func (s *Service) executeScript(ctx context.Context, scriptContent string, env map[string]string, serviceName string) error {
 	cmd := exec.CommandContext(ctx, "bash", "-c", scriptContent)
 
@@ -518,6 +526,25 @@ func (s *Service) executeScript(ctx context.Context, scriptContent string, env m
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to execute init script for service %s: %w", serviceName, err)
 	}
+	return nil
+}
+
+// executeScriptInContainer executes a script inside a Docker container
+func (s *Service) executeScriptInContainer(ctx context.Context, scriptContent string, config servicetypes.ServiceConfig, projectName string) error {
+	// Build init container config
+	initConfig := docker.InitContainerConfig{
+		Image:       config.InitService.Image,
+		Command:     []string{"bash", "-c", scriptContent},
+		Environment: config.InitService.Environment,
+		Networks:    []string{projectName + docker.NetworkNameSuffix},
+	}
+
+	// Use docker client to run init container
+	containerName := fmt.Sprintf("%s-init-%d", config.Name, time.Now().Unix())
+	if err := s.DockerClient.RunInitContainer(ctx, containerName, initConfig); err != nil {
+		return fmt.Errorf("failed to execute init container for service %s: %w", config.Name, err)
+	}
+
 	return nil
 }
 
