@@ -14,6 +14,40 @@ const (
 
 	// Port display limits
 	MaxPortsDisplay = 12
+
+	// Table headers - Status
+	HeaderService    = "SERVICE"
+	HeaderProvidedBy = "PROVIDED BY"
+	HeaderState      = "STATE"
+	HeaderHealth     = "HEALTH"
+	HeaderUptime     = "UPTIME"
+	HeaderPorts      = "PORTS"
+	HeaderUpdated    = "UPDATED"
+
+	// Table headers - Catalog
+	HeaderCategory    = "CATEGORY"
+	HeaderDescription = "DESCRIPTION"
+
+	// Table headers - Validation
+	HeaderType    = "TYPE"
+	HeaderField   = "FIELD"
+	HeaderMessage = "MESSAGE"
+
+	// Table headers - Health
+	HeaderCheck  = "CHECK"
+	HeaderStatus = "STATUS"
+
+	// Table headers - Version
+	HeaderComponent = "COMPONENT"
+	HeaderVersion   = "VERSION"
+	HeaderPlatform  = "PLATFORM"
+
+	// Table headers - Web Interfaces
+	HeaderInterface = "INTERFACE"
+	HeaderURL       = "URL"
+
+	// Table headers - Dependencies
+	HeaderDependencies = "DEPENDENCIES"
 )
 
 // FormatHandler defines the interface for format-specific handlers

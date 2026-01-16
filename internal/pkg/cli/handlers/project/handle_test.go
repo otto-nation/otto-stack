@@ -4,7 +4,9 @@ package project
 
 import (
 	"context"
+	"io"
 	"log/slog"
+	"os"
 	"strings"
 	"testing"
 
@@ -31,6 +33,7 @@ func (m *MockOutput) Warning(msg string, args ...any) {}
 func (m *MockOutput) Info(msg string, args ...any)    {}
 func (m *MockOutput) Header(msg string, args ...any)  {}
 func (m *MockOutput) Muted(msg string, args ...any)   {}
+func (m *MockOutput) Writer() io.Writer               { return os.Stdout }
 
 func TestHandle_DirectoryValidation(t *testing.T) {
 	cleanup := setupTestDir(t)

@@ -4,6 +4,8 @@ package display
 
 import (
 	"bytes"
+	"io"
+	"os"
 	"testing"
 	"time"
 
@@ -197,6 +199,7 @@ func (m *mockOutput) Warning(msg string, args ...any) {}
 func (m *mockOutput) Info(msg string, args ...any)    {}
 func (m *mockOutput) Header(msg string, args ...any)  {}
 func (m *mockOutput) Muted(msg string, args ...any)   {}
+func (m *mockOutput) Writer() io.Writer               { return os.Stdout }
 
 func TestServiceStatus_Fields(t *testing.T) {
 	t.Run("validates service status fields", func(t *testing.T) {

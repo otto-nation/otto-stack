@@ -33,16 +33,3 @@ const (
 	TableWidth90          = 90
 	UIPadding             = 2
 )
-
-// Status display constants
-const (
-	StatusHeaderService         = "SERVICE"
-	StatusHeaderProvidedBy      = "PROVIDED BY"
-	StatusHeaderState           = "STATE"
-	StatusHeaderHealth          = "HEALTH"
-	StatusHeaderUptime          = "UPTIME"
-	StatusHeaderPorts           = "PORTS"
-	StatusHeaderUpdated         = "UPDATED"
-	StatusSeparator             = "---------------------------------------------"
-	StatusSeparatorWithProvider = "----------------------------------------------------------"
-)

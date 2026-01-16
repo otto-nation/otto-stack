@@ -2,13 +2,16 @@ package project
 
 import (
 	"context"
+	"strings"
 
 	"github.com/spf13/cobra"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
-	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
+	"github.com/otto-nation/otto-stack/internal/pkg/display"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
 
 // DepsHandler handles the deps command
@@ -21,17 +24,64 @@ func NewDepsHandler() *DepsHandler {
 
 // Handle executes the deps command
 func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Create command and middleware chain
-	depsCommand := NewDepsCommand()
-	loggingMiddleware := middleware.NewLoggingMiddleware()
+	base.Output.Header("%s Service Dependencies", ui.IconInfo)
 
-	handler := command.NewHandler(depsCommand, loggingMiddleware)
+	if len(args) == 0 {
+		base.Output.Warning("No services specified")
+		return nil
+	}
 
-	// For now, create empty context - will be enhanced with flag processing
-	cliCtx := clicontext.Context{}
+	allServices, err := h.loadServices()
+	if err != nil {
+		return err
+	}
 
-	// Execute through command pattern
-	return handler.Execute(ctx, cliCtx, base)
+	rows := h.buildDependencyRows(args, allServices)
+
+	headers := []string{display.HeaderService, display.HeaderDependencies}
+	display.RenderTable(base.Output.Writer(), headers, rows)
+
+	base.Output.Success("Dependencies displayed successfully")
+	return nil
+}
+
+func (h *DepsHandler) loadServices() (map[string]servicetypes.ServiceConfig, error) {
+	manager, err := services.New()
+	if err != nil {
+		return nil, pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
+	}
+	return manager.GetAllServices(), nil
+}
+
+func (h *DepsHandler) buildDependencyRows(serviceNames []string, allServices map[string]servicetypes.ServiceConfig) [][]string {
+	rows := make([][]string, 0, len(serviceNames))
+
+	for _, name := range serviceNames {
+		service, exists := allServices[name]
+		if !exists {
+			continue
+		}
+
+		depsStr := h.formatDependencies(service.Service.Dependencies.Required)
+		rows = append(rows, []string{name, depsStr})
+	}
+
+	return rows
+}
+
+func (h *DepsHandler) formatDependencies(deps []string) string {
+	if len(deps) == 0 {
+		return "None"
+	}
+
+	var result strings.Builder
+	for i, dep := range deps {
+		if i > 0 {
+			result.WriteString(", ")
+		}
+		result.WriteString(dep)
+	}
+	return result.String()
 }
 
 // ValidateArgs validates the command arguments

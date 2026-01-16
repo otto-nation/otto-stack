@@ -2,8 +2,8 @@ package utility
 
 import (
 	"context"
-	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -11,6 +11,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
@@ -160,20 +161,15 @@ func (h *WebInterfacesHandler) outputJSON(interfaces []WebInterface, ciFlags ci.
 
 // printTable prints interfaces in table format
 func (h *WebInterfacesHandler) printTable(interfaces []WebInterface) {
-	h.printTableHeader()
-	h.printTableRows(interfaces)
-}
+	headers := []string{display.HeaderService, display.HeaderInterface, display.HeaderURL, display.HeaderStatus}
+	rows := make([][]string, len(interfaces))
 
-func (h *WebInterfacesHandler) printTableHeader() {
-	fmt.Printf("%-20s %-28s %-32s %s\n", "SERVICE", "INTERFACE", "URL", "STATUS")
-	fmt.Println("--------------------------------------------------------------------------------")
-}
-
-func (h *WebInterfacesHandler) printTableRows(interfaces []WebInterface) {
-	for _, iface := range interfaces {
+	for i, iface := range interfaces {
 		status := h.checkStatus(iface.URL)
-		fmt.Printf("%-20s %-28s %-32s %s\n", iface.Service, iface.Name, iface.URL, status)
+		rows[i] = []string{iface.Service, iface.Name, iface.URL, status}
 	}
+
+	display.RenderTable(os.Stdout, headers, rows)
 }
 
 // checkStatus checks if a web interface is accessible

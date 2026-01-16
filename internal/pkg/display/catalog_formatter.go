@@ -1,10 +1,8 @@
 package display
 
 import (
-	"fmt"
 	"io"
 	"sort"
-	"strings"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 )
@@ -25,7 +23,7 @@ func (cf *CatalogFormatter) FormatTable(catalog ServiceCatalog) error {
 	tw.SetOutputMirror(cf.writer)
 	tw.SetStyle(table.StyleLight)
 
-	tw.AppendHeader(table.Row{"Service", "Category", "Description"})
+	tw.AppendHeader(table.Row{HeaderService, HeaderCategory, HeaderDescription})
 	for category, services := range catalog.Categories {
 		for _, service := range services {
 			tw.AppendRow(table.Row{service.Name, category, service.Description})
@@ -38,51 +36,35 @@ func (cf *CatalogFormatter) FormatTable(catalog ServiceCatalog) error {
 
 // FormatGrouped formats catalog grouped by category
 func (cf *CatalogFormatter) FormatGrouped(catalog ServiceCatalog) error {
-	categoryNames := cf.getSortedCategoryNames(catalog)
+	tw := table.NewWriter()
+	tw.SetOutputMirror(cf.writer)
+	tw.SetStyle(table.StyleLight)
 
-	for i, category := range categoryNames {
-		cf.formatCategory(i, category, catalog.Categories[category])
-	}
-	return nil
-}
+	tw.AppendHeader(table.Row{HeaderService, HeaderCategory, HeaderDescription})
 
-func (cf *CatalogFormatter) getSortedCategoryNames(catalog ServiceCatalog) []string {
 	categoryNames := make([]string, 0, len(catalog.Categories))
 	for category := range catalog.Categories {
 		categoryNames = append(categoryNames, category)
 	}
 	sort.Strings(categoryNames)
-	return categoryNames
-}
 
-func (cf *CatalogFormatter) formatCategory(index int, category string, services []ServiceInfo) {
-	if index > 0 {
-		_, _ = fmt.Fprintln(cf.writer)
+	for i, category := range categoryNames {
+		services := catalog.Categories[category]
+		sort.Slice(services, func(a, b int) bool {
+			return services[a].Name < services[b].Name
+		})
+
+		for _, service := range services {
+			tw.AppendRow(table.Row{service.Name, category, service.Description})
+		}
+
+		if i < len(categoryNames)-1 {
+			tw.AppendSeparator()
+		}
 	}
 
-	cf.writeCategoryHeader(category)
-	cf.writeSortedServices(services)
-}
-
-func (cf *CatalogFormatter) writeCategoryHeader(category string) {
-	_, _ = fmt.Fprintf(cf.writer, "%s:\n", strings.ToUpper(category))
-	_, _ = fmt.Fprintln(cf.writer, strings.Repeat("-", TableWidthCatalog))
-}
-
-func (cf *CatalogFormatter) writeSortedServices(services []ServiceInfo) {
-	sortedServices := cf.sortServicesByName(services)
-	for _, service := range sortedServices {
-		_, _ = fmt.Fprintf(cf.writer, "  %-*s %s\n", ColWidthService, service.Name, service.Description)
-	}
-}
-
-func (cf *CatalogFormatter) sortServicesByName(services []ServiceInfo) []ServiceInfo {
-	sorted := make([]ServiceInfo, len(services))
-	copy(sorted, services)
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i].Name < sorted[j].Name
-	})
-	return sorted
+	tw.Render()
+	return nil
 }
 
 // FilterCatalogByCategory filters catalog by category

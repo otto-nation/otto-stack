@@ -2,6 +2,7 @@ package base
 
 import (
 	"context"
+	"io"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/spf13/cobra"
@@ -15,6 +16,7 @@ type Output interface {
 	Info(msg string, args ...any)
 	Header(msg string, args ...any)
 	Muted(msg string, args ...any)
+	Writer() io.Writer
 }
 
 // BaseCommand provides common dependencies for command handlers

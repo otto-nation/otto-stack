@@ -33,7 +33,7 @@ func (vf *ValidationFormatter) FormatTable(result ValidationResult) error {
 	tw.SetOutputMirror(vf.writer)
 	tw.SetStyle(table.StyleLight)
 
-	tw.AppendHeader(table.Row{"Type", "Field", "Message"})
+	tw.AppendHeader(table.Row{HeaderType, HeaderField, HeaderMessage})
 
 	for _, issue := range result.Errors {
 		tw.AppendRow(table.Row{"ERROR", issue.Field, issue.Message})
@@ -70,7 +70,7 @@ func (hf *HealthFormatter) FormatTable(report HealthReport, options Options) err
 	tw.SetOutputMirror(hf.writer)
 	tw.SetStyle(table.StyleLight)
 
-	tw.AppendHeader(table.Row{"Check", "Status", "Message"})
+	tw.AppendHeader(table.Row{HeaderCheck, HeaderStatus, HeaderMessage})
 
 	for _, check := range report.Checks {
 		tw.AppendRow(table.Row{
@@ -123,7 +123,7 @@ func (vf *VersionFormatter) FormatTable(info VersionInfo, options Options) error
 	tw.SetOutputMirror(vf.writer)
 	tw.SetStyle(table.StyleLight)
 
-	tw.AppendHeader(table.Row{"Component", "Version", "Platform"})
+	tw.AppendHeader(table.Row{HeaderComponent, HeaderVersion, HeaderPlatform})
 	tw.AppendRow(table.Row{"Otto Stack", info.Version, info.Platform})
 
 	tw.Render()

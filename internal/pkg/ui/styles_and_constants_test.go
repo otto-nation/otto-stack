@@ -39,15 +39,6 @@ func TestUIConstants(t *testing.T) {
 		assert.Greater(t, UIPadding, 0)
 		assert.Greater(t, SpinnerIntervalMilliseconds, 0)
 	})
-
-	t.Run("validates status constants", func(t *testing.T) {
-		assert.NotEmpty(t, StatusHeaderService)
-		assert.NotEmpty(t, StatusHeaderProvidedBy)
-		assert.NotEmpty(t, StatusHeaderState)
-		assert.NotEmpty(t, StatusHeaderHealth)
-		assert.NotEmpty(t, StatusSeparator)
-		assert.NotEmpty(t, StatusSeparatorWithProvider)
-	})
 }
 
 func TestStyleFunctions(t *testing.T) {

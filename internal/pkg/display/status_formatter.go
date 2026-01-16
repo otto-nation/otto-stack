@@ -68,20 +68,20 @@ func (sf *StatusFormatter) formatFull(services []ServiceStatus, options Options)
 }
 
 func (sf *StatusFormatter) buildCompactHeaders(hasProvider bool) table.Row {
-	headers := table.Row{ui.StatusHeaderService}
+	headers := table.Row{HeaderService}
 	if hasProvider {
-		headers = append(headers, ui.StatusHeaderProvidedBy)
+		headers = append(headers, HeaderProvidedBy)
 	}
-	headers = append(headers, ui.StatusHeaderState, ui.StatusHeaderHealth)
+	headers = append(headers, HeaderState, HeaderHealth)
 	return headers
 }
 
 func (sf *StatusFormatter) buildFullHeaders(hasProvider bool) table.Row {
-	headers := table.Row{ui.StatusHeaderService}
+	headers := table.Row{HeaderService}
 	if hasProvider {
-		headers = append(headers, ui.StatusHeaderProvidedBy)
+		headers = append(headers, HeaderProvidedBy)
 	}
-	headers = append(headers, ui.StatusHeaderState, ui.StatusHeaderHealth, ui.StatusHeaderUptime, ui.StatusHeaderPorts, ui.StatusHeaderUpdated)
+	headers = append(headers, HeaderState, HeaderHealth, HeaderUptime, HeaderPorts, HeaderUpdated)
 	return headers
 }
 

@@ -4,6 +4,8 @@ package utility
 
 import (
 	"context"
+	"io"
+	"os"
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -22,6 +24,7 @@ func (m *MockOutput) Warning(msg string, args ...any) {}
 func (m *MockOutput) Info(msg string, args ...any)    {}
 func (m *MockOutput) Header(msg string, args ...any)  {}
 func (m *MockOutput) Muted(msg string, args ...any)   {}
+func (m *MockOutput) Writer() io.Writer               { return os.Stdout }
 
 func TestWebInterfacesHandler_ExecutionWithConstants(t *testing.T) {
 	handler := NewWebInterfacesHandler()
