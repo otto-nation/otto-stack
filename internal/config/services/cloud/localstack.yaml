@@ -57,6 +57,17 @@ init_service:
         # Setup environment variables
         export AWS_ACCOUNT_ID=000000000000
 
+        # Wait for LocalStack to be ready
+        echo "Waiting for LocalStack to be ready..."
+        for i in {1..30}; do
+          if awscli sts get-caller-identity >/dev/null 2>&1; then
+            echo "LocalStack is ready!"
+            break
+          fi
+          echo "Waiting... ($i/30)"
+          sleep 2
+        done
+
         # Create SNS topics
         {{range .topics}}
         awscli sns create-topic --name {{.name}}
