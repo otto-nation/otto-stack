@@ -12,7 +12,7 @@ const (
 
 	DockerComposeFileName     = "docker-compose.yml"
 	DockerComposeFileNameYaml = "docker-compose.yaml"
-	DockerComposeFilePath     = pkgCore.OttoStackDir + "/" + DockerComposeFileName
+	DockerComposeFilePath     = pkgCore.OttoStackDir + "/" + pkgCore.GeneratedDir + "/" + DockerComposeFileName
 
 	FlagPrefix = "--"
 )
