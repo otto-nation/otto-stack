@@ -67,9 +67,6 @@ configuration_schema:
       description: Database user
 
 documentation:
-  examples:
-    - mysql -h localhost -u root -p -e "SELECT version();"
-    - spring.datasource.url=jdbc:mysql://localhost:3306/my_app_dev
   usage_notes: MySQL database for relational data storage. Alternative to PostgreSQL.
   links:
     - https://dev.mysql.com/doc/

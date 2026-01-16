@@ -90,8 +90,8 @@ init_container:
         {{range .databases}}
         CREATE DATABASE IF NOT EXISTS {{.name}};
         {{end}}
-        
-        -- Create schemas if specified  
+
+        -- Create schemas if specified
         {{range .schemas}}
         CREATE SCHEMA IF NOT EXISTS {{.name}};
         {{end}}
@@ -117,9 +117,6 @@ configuration_schema:
       description: Database user
 
 documentation:
-  examples:
-    - psql -h localhost -U postgres -c "SELECT version();"
-    - spring.datasource.url=jdbc:postgresql://localhost:5432/my_app_dev
   usage_notes: Ideal for structured data and transactional workloads. Use overrides to set custom database/user.
   links:
     - https://www.postgresql.org/docs/

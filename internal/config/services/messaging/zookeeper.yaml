@@ -27,8 +27,6 @@ service:
       - coordination
 
 documentation:
-  examples:
-    - echo 'ruok' | nc localhost 2181
   usage_notes: Zookeeper provides coordination services for Kafka and other distributed systems
   links:
     - https://zookeeper.apache.org/doc/current/

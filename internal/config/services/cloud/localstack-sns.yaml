@@ -42,8 +42,6 @@ configuration_schema:
         required: ["name"]
 
 documentation:
-  examples:
-    - aws --endpoint-url=http://localhost:4566 sns list-topics
   usage_notes: SNS pub/sub notification service emulation. Can integrate with SQS for subscriptions.
   links:
     - https://docs.localstack.cloud/user-guide/aws/sns/

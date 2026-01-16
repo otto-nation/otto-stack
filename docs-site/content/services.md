@@ -52,16 +52,6 @@ password: password
 user: root
 ```
 
-#### Examples
-
-```bash
-mysql -h localhost -u root -p -e "SELECT version();"
-```
-
-```bash
-spring.datasource.url=jdbc:mysql://localhost:3306/my_app_dev
-```
-
 #### Use Cases
 
 - Primary application database
@@ -105,16 +95,6 @@ Database user
 database: local_dev
 password: password
 user: postgres
-```
-
-#### Examples
-
-```bash
-psql -h localhost -U postgres -c "SELECT version();"
-```
-
-```bash
-spring.datasource.url=jdbc:postgresql://localhost:5432/my_app_dev
 ```
 
 #### Use Cases
@@ -166,16 +146,6 @@ max_memory: 256m
 databases: 16
 ```
 
-#### Examples
-
-```bash
-redis-cli -h localhost -p 6379 ping
-```
-
-```bash
-spring.data.redis.host=localhost
-```
-
 #### Use Cases
 
 - Session storage
@@ -221,16 +191,6 @@ topics:
     replication_factor: 1
 ```
 
-#### Examples
-
-```bash
-kafka-console-producer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --topic test-topic
-```
-
-```bash
-kafka-console-consumer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092} --topic test-topic --from-beginning
-```
-
 #### Use Cases
 
 - Event streaming and processing
@@ -249,12 +209,6 @@ kafka-console-consumer --bootstrap-server ${KAFKA_HOST:-localhost}:${KAFKA_PORT:
 
 Apache Kafka broker for event streaming and messaging
 
-#### Examples
-
-```bash
-kafka-broker-api-versions --bootstrap-server localhost:9099
-```
-
 #### Use Cases
 
 - Event-driven microservices architecture
@@ -271,12 +225,6 @@ kafka-broker-api-versions --bootstrap-server localhost:9099
 
 Web UI for Kafka cluster management and topic browsing
 
-#### Examples
-
-```bash
-curl -f http://localhost:8099/actuator/health
-```
-
 #### Use Cases
 
 - Topic management and browsing
@@ -292,12 +240,6 @@ curl -f http://localhost:8099/actuator/health
 ### zookeeper
 
 Apache Zookeeper coordination service for distributed systems
-
-#### Examples
-
-```bash
-echo 'ruok' | nc localhost 2181
-```
 
 #### Use Cases
 
@@ -426,12 +368,6 @@ topics:
   - name: example-name
 ```
 
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 sns list-topics
-```
-
 #### Use Cases
 
 - Pub/sub messaging patterns
@@ -466,6 +402,8 @@ SQS queues to create
 
 - **max_receive_count** (`integer`) = `3`: Max receive count before moving to DLQ
 
+- **subscription** (`object`) _required_
+
 ##### Example Configuration
 
 ```yaml
@@ -474,12 +412,6 @@ queues:
     visibility_timeout: 30
     dead_letter_queue: example-dead_letter_queue
     max_receive_count: 3
-```
-
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 sqs list-queues
 ```
 
 #### Use Cases
@@ -532,12 +464,6 @@ storage:
   type: memory
 ```
 
-#### Examples
-
-```bash
-curl -f http://localhost:16686/
-```
-
 #### Use Cases
 
 - Distributed tracing
@@ -576,12 +502,6 @@ Prometheus scrape configurations
 scrape_configs:
   - job_name: example-job_name
     scrape_interval: 15s
-```
-
-#### Examples
-
-```bash
-curl http://localhost:9090/metrics
 ```
 
 #### Use Cases

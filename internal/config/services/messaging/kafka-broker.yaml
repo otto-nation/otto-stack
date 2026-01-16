@@ -37,8 +37,6 @@ service:
       - streaming
 
 documentation:
-  examples:
-    - kafka-broker-api-versions --bootstrap-server localhost:9099
   usage_notes: Kafka broker handles message storage and delivery. Requires Zookeeper for coordination.
   links:
     - https://kafka.apache.org/documentation/
