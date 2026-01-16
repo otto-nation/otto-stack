@@ -1,0 +1,174 @@
+# Otto Stack Messages
+# Organized by domain for easy maintenance and future i18n support
+# To add i18n: rename to messages/en.yaml and add messages/es.yaml, etc.
+
+help:
+  app_description: "A powerful development stack management tool for streamlined local development automation"
+
+process:
+  initializing: "Initializing Otto Stack"
+  starting: "Starting Otto Stack"
+  stopping: "Stopping Otto Stack"
+  generating_env: "Generating environment file..."
+  generating_compose: "Generating docker-compose.yml..."
+
+dry_run:
+  showing_what_would_happen: "Dry run mode - showing what would happen without executing"
+  would_start_services: "Would start services: %s"
+  would_stop_services: "Would stop services: %s"
+  would_restart_services: "Would restart services: %s"
+  would_use_config: "Would use config: %s"
+  would_clean: "Would clean: %s"
+
+non_interactive:
+  mode_requires_config: "Non-interactive mode requires explicit configuration - interactive setup required"
+  skipping_confirmation: "Skipping confirmation in non-interactive mode"
+
+web_interfaces:
+  available: "Available"
+  not_available: "Not Available"
+  no_interfaces_found: "No web interfaces found for the specified services"
+
+success:
+  init: "otto stack initialized successfully!"
+  start: "otto stack started successfully"
+  latest_version: "✅ You are running the latest version"
+  all_checks_passed: "All checks passed! Your %s is healthy."
+  config_valid: "✅ Configuration is valid"
+  created_file: "Created %s"
+  updated_gitignore: "Updated .gitignore with otto-stack entries"
+  version_compliance_enforced: "✅ Version compliance enforced"
+  no_updates_available: "✅ No updates available"
+  notification_config_updated: "✅ Notification config updated"
+  notifications_suppressed: "✅ Notifications suppressed for %v"
+  version_compliance_satisfied: "✅ Version compliance satisfied"
+  no_version_drift: "✅ No version drift detected"
+  generated_files: "Generated %s and %s"
+
+validation:
+  failed: "validation failed: %w"
+  directory_failed: "directory validation failed: %w"
+  config_failed: "❌ Configuration validation failed with %d errors:"
+  warnings: "⚠️  %d warnings:"
+  required_tool_unavailable: "required tool '%s' is not available"
+  project_name_empty: "project name cannot be empty"
+  project_name_too_short: "project name must be at least 2 characters long"
+  project_name_too_long: "project name must be less than 50 characters"
+  project_name_invalid_chars: "project name can only contain letters, numbers, hyphens, and underscores"
+  project_name_invalid_start: "project name cannot start with a hyphen or underscore"
+  no_services_selected: "at least one service must be selected"
+  duplicate_service: "duplicate service '%s' found"
+  invalid_service: "invalid service '%s': %w"
+  conflicting_file_exists: "conflicting file '%s' already exists. Please remove or rename it before initializing"
+
+conflicts:
+  header: "Service Conflicts"
+  not_implemented: "Conflict detection not yet implemented"
+
+dependencies:
+  header: "Service Dependencies"
+  none_found: "No service dependencies found"
+
+version:
+  checking_updates: "🔍 Checking for Updates"
+  current_info: "Current version: %s"
+  update_info: "To update:"
+  install_script: "  • Using install script: curl -fsSL https://raw.githubusercontent.com/%s/%s/main/scripts/install.sh | bash"
+  manual_download: "  • Manual download: https://github.com/%s/%s/releases/latest"
+  release_info: "Release: %s"
+  version_label: "Version: %s"
+  build_date: "Build Date: %s"
+  git_commit: "Git Commit: %s"
+  go_version: "Go Version: %s"
+  platform: "Platform: %s/%s"
+  update_available: "⚠️  Update available: %s → %s"
+  invalid_version: "invalid version format"
+
+doctor:
+  some_issues: "Some issues found. Please address them above."
+  health_check_failed: "health check failed"
+  health_check_header: "🩺 %s Health Check"
+  checking_docker: "Checking Docker installation..."
+  docker_not_found: "Docker not found"
+  docker_install_help: "Install Docker: %s"
+  docker_daemon_not_running: "Docker daemon not running"
+  docker_start_help: "Start Docker daemon"
+  docker_available: "Docker is available and running"
+  checking_docker_compose: "Checking Docker Compose..."
+  docker_compose_not_found: "Docker Compose not found"
+  docker_compose_integrated: "Docker Compose is now integrated into Docker CLI"
+  docker_compose_update: "Update Docker to get 'docker compose' command"
+  docker_compose_available: "Docker Compose is available"
+  checking_project_init: "Checking project initialization..."
+  project_not_initialized: "Project not initialized"
+  run_init_help: "Run '%s' to initialize"
+  project_initialized: "Project is initialized"
+  checking_config: "Checking configuration validity..."
+  config_dir_missing: "Configuration directory missing"
+  docker_compose_missing: "Docker compose file missing"
+  config_incomplete: "Configuration is incomplete"
+  config_valid: "Configuration is valid"
+
+services:
+  select: "Select %s services:"
+  no_description: "No description available"
+
+init:
+  summary: "Initialization Summary:"
+  project_summary: "  Project: %s"
+  services_summary: "  Services: %s"
+  validation_summary: "  Validation: %s"
+  advanced_summary: "  Advanced: %s"
+  going_back: "Going back to service selection..."
+  cancelled: "Initialization cancelled."
+  next_steps: "Next steps:"
+  step_review_config: "1. Review configuration in %s/%s"
+  step_start_stack: "2. Start your stack: %s up"
+  step_check_status: "3. Check status: %s status"
+
+warnings:
+  update_available: "🔔 Update available: %s → %s (%s)"
+  not_git_repository: "Not in a git repository. Consider running 'git init' first."
+  failed_gitignore: "Failed to update .gitignore: %v"
+  failed_readme: "Failed to create README: %v"
+
+notifications:
+  config_header: "Notification Configuration:"
+  enabled: "  Enabled:         %t"
+  frequency: "  Frequency:       %s"
+  min_severity: "  Min Severity:    %s"
+  auto_check: "  Auto Check:      %t"
+  show_prerelease: "  Show Prerelease: %t"
+  last_check: "  Last Check:      %s"
+  suppressed_until: "  Suppressed Until: %s"
+
+errors:
+  not_initialized: "project not initialized, run 'otto-stack init' first"
+  failed_load_config: "failed to load configuration: %w"
+  failed_create_docker_client: "failed to create Docker client: %w"
+  failed_check_updates: "failed to check for updates: %w"
+  failed_resolve_services: "failed to resolve services: %w"
+  failed_get_service_status: "failed to get service status: %w"
+  requires_service_and_command: "exec requires a service name and command"
+  version_compliance_failed: "version compliance check failed"
+
+stack:
+  failed_load_config: "failed to load config: %w"
+  failed_load_base_config: "failed to load base config: %w"
+  failed_load_local_config: "failed to load local config: %w"
+  failed_parse_config: "failed to parse config: %w"
+  failed_create_docker_client: "failed to create docker client: %w"
+  failed_resolve_services: "failed to resolve services: %w"
+  failed_get_service_status: "failed to get service status: %w"
+  failed_stop_services: "failed to stop services: %w"
+  failed_start_services: "failed to start services: %w"
+
+# Lifecycle messages (currently in constants.go)
+lifecycle:
+  cleaning: "Cleaning up..."
+  stopping: "Stopping services..."
+  starting: "Starting services..."
+  restarting: "Restarting services..."
+  restart_success: "Services restarted successfully"
+  logs: "Fetching logs..."
+  status: "Checking status..."

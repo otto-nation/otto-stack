@@ -23,7 +23,7 @@ func NewDownHandler() *DownHandler {
 
 // Handle executes the down command
 func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	base.Output.Header(core.MsgStopping)
+	base.Output.Header(core.MsgLifecycle_stopping)
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
 	if err != nil {

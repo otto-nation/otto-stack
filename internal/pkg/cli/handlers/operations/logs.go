@@ -22,7 +22,7 @@ func NewLogsHandler() *LogsHandler {
 
 // Handle executes the logs command
 func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	base.Output.Header(core.MsgLogs)
+	base.Output.Header(core.MsgLifecycle_logs)
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
 	if err != nil {

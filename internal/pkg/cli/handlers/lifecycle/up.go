@@ -24,7 +24,7 @@ func NewUpHandler() *UpHandler {
 
 // Handle executes the up command
 func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	base.Output.Header("%s", core.MsgStarting)
+	base.Output.Header("%s", core.MsgLifecycle_starting)
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
 	if err != nil {

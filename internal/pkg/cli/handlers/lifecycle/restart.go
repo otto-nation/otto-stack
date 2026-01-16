@@ -25,7 +25,7 @@ func NewRestartHandler() *RestartHandler {
 
 // Handle executes the restart command
 func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	base.Output.Header(core.MsgRestarting)
+	base.Output.Header(core.MsgLifecycle_restarting)
 
 	ciFlags := ci.GetFlags(cmd)
 	if ciFlags.DryRun {
@@ -60,7 +60,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return err
 	}
 
-	base.Output.Success(core.MsgRestartSuccess)
+	base.Output.Success(core.MsgLifecycle_restart_success)
 	return nil
 }
 

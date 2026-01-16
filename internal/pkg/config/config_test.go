@@ -24,7 +24,7 @@ func TestLoadCommandConfig(t *testing.T) {
 		require.NoError(t, err)
 
 		// Should contain expected top-level keys
-		expectedKeys := []string{"commands", "global", "messages"}
+		expectedKeys := []string{"commands", "global"}
 		for _, key := range expectedKeys {
 			assert.Contains(t, config, key, "Config should contain %s section", key)
 		}

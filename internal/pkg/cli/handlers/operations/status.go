@@ -36,7 +36,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
-		base.Output.Header(core.MsgStatus)
+		base.Output.Header(core.MsgLifecycle_status)
 	}
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)

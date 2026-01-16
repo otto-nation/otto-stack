@@ -11,7 +11,7 @@ toc: true
 
 # otto-stack CLI Reference
 
-Development stack management tool
+A powerful development stack management tool for streamlined local development automation
 
 ## Command Categories
 

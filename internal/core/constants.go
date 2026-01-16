@@ -53,17 +53,6 @@ const (
 	ActionBack    = "back"
 )
 
-// Messages
-const (
-	MsgCleaning       = "Cleaning up..."
-	MsgStopping       = "Stopping services..."
-	MsgStarting       = "Starting services..."
-	MsgRestarting     = "Restarting services..."
-	MsgRestartSuccess = "Services restarted successfully"
-	MsgLogs           = "Fetching logs..."
-	MsgStatus         = "Checking status..."
-)
-
 // Prompts
 const (
 	PromptProjectName = "Enter project name"

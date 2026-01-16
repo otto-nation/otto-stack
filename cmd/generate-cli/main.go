@@ -14,6 +14,7 @@ import (
 
 const (
 	CommandsYAMLPath     = "internal/config/commands.yaml"
+	MessagesYAMLPath     = "internal/config/messages.yaml"
 	CoreTemplateFilePath = "cmd/generate-cli/templates/core.tmpl"
 	CLICommandsTemplate  = "cmd/generate-cli/templates/cli.tmpl"
 	CoreGeneratedPath    = "internal/core/constants_generated.go"
@@ -114,11 +115,23 @@ func loadCommandConfig() (map[string]any, error) {
 	return codegen.LoadYAMLConfig(CommandsYAMLPath)
 }
 
+func loadMessagesConfig() (map[string]any, error) {
+	return codegen.LoadYAMLConfig(MessagesYAMLPath)
+}
+
 func generateCoreConstants() error {
 	rawConfig, err := loadCommandConfig()
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "load raw config", err)
+		return pkgerrors.NewServiceError("generator", "load commands config", err)
 	}
+
+	messagesConfig, err := loadMessagesConfig()
+	if err != nil {
+		return pkgerrors.NewServiceError("generator", "load messages config", err)
+	}
+
+	// Merge messages into rawConfig for template
+	rawConfig[KeyMessages] = messagesConfig
 
 	tmpl, err := codegen.ParseTemplate(CoreTemplateFilePath, CoreTemplateName)
 	if err != nil {
