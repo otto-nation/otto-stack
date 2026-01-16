@@ -6,8 +6,8 @@ description: >-
 lead: >-
   Streamline your local development with powerful CLI tools and automated
   service management
-date: "2025-10-01"
-lastmod: "2026-01-15"
+date: '2025-10-01'
+lastmod: '2026-01-16'
 draft: false
 weight: 50
 toc: true
@@ -47,7 +47,6 @@ chmod +x install.sh
 #### Manual Installation
 
 **macOS/Linux:**
-
 ```bash
 # Download the latest release
 curl -L -o otto-stack "https://github.com/otto-nation/otto-stack/releases/latest/download/otto-stack-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
@@ -56,7 +55,6 @@ sudo mv otto-stack /usr/local/bin/
 ```
 
 **Windows:**
-
 ```powershell
 # Download from releases page
 # https://github.com/otto-nation/otto-stack/releases/latest
@@ -72,7 +70,6 @@ curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts
 #### Package Managers
 
 **Homebrew (macOS):**
-
 ```bash
 # Coming soon
 brew install otto-nation/tap/otto-stack
@@ -97,23 +94,22 @@ otto-stack up
 
 ## Documentation
 
-- **[Setup & Installation](setup.md)**
-- **[Usage Guide](usage.md)**
-- **[Services Guide](services.md)**
-- **[Configuration](configuration.md)**
-- **[CLI Reference](cli-reference.md)**
-- **[Scripts Reference](scripts.md)**
-- **[Contributing](contributing.md)**
+- **[Setup & Installation](/setup)**
+- **[Usage Guide](/usage)**
+- **[Services Guide](/services)**
+- **[Configuration](/configuration)**
+- **[CLI Reference](/cli-reference)**
+- **[Contributing](/contributing)**
 
 ## Get Started
 
-1. **[Complete installation guide](setup.md)**
-2. **[Learn basic usage](usage.md)**
-3. **[Explore available services](services.md)**
+1. **[Complete installation guide](/setup)**
+2. **[Learn basic usage](/usage)**
+3. **[Explore available services](/services)**
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](contributing.md) for details.
+We welcome contributions! Please see our [Contributing Guide](/contributing) for details.
 
 ## License
 
