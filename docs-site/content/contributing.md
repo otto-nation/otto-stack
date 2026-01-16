@@ -2,8 +2,8 @@
 title: Contributing
 description: Guide for contributing to otto-stack development
 lead: Learn how to contribute to otto-stack development
-date: '2025-10-01'
-lastmod: '2026-01-16'
+date: "2025-10-01"
+lastmod: "2026-01-16"
 draft: false
 weight: 60
 toc: true
@@ -55,6 +55,7 @@ task test
 4. Test with `task docs-serve`
 
 **Service categories:**
+
 - `database/` - Databases (postgres, mysql)
 - `cache/` - Caching (redis)
 - `messaging/` - Message queues (kafka)
@@ -64,6 +65,7 @@ task test
 ### Documentation Changes
 
 **Auto-generated** (regenerated from source, don't edit):
+
 - `docs-site/content/cli-reference.md` - From CLI commands
 - `docs-site/content/services.md` - From service YAML files
 - `docs-site/content/configuration.md` - From service schemas
@@ -71,12 +73,14 @@ task test
 - `docs-site/content/contributing.md` - From root CONTRIBUTING.md
 
 **Manual** (edit directly):
+
 - `docs-site/content/setup.md` - Installation instructions
 - `docs-site/content/usage.md` - Usage examples
 - `docs-site/content/troubleshooting.md` - Common issues
 - Other custom documentation pages
 
 **To regenerate documentation:**
+
 ```bash
 # Full regeneration
 task docs
@@ -110,6 +114,7 @@ type(scope): description
 **Types**: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`
 
 **Examples:**
+
 - `feat(services): add MySQL service`
 - `fix(cli): resolve network creation issue`
 - `docs: update setup instructions`
@@ -123,6 +128,7 @@ type(scope): description
 ## Code Review
 
 We review for:
+
 - Code quality and tests
 - Documentation updates
 - Breaking changes

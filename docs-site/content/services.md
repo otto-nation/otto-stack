@@ -348,12 +348,6 @@ tables:
     write_capacity: 5
 ```
 
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 dynamodb list-tables
-```
-
 #### Use Cases
 
 - NoSQL database testing
@@ -393,12 +387,6 @@ buckets:
   - name: example-name
     versioning: false
     public_read: false
-```
-
-#### Examples
-
-```bash
-aws --endpoint-url=http://localhost:4566 s3 ls
 ```
 
 #### Use Cases

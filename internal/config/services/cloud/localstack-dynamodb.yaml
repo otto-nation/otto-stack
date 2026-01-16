@@ -43,8 +43,6 @@ configuration_schema:
         required: ["name", "hash_key"]
 
 documentation:
-  examples:
-    - aws --endpoint-url=http://localhost:4566 dynamodb list-tables
   usage_notes: DynamoDB NoSQL database emulation for local development
   links:
     - https://docs.localstack.cloud/user-guide/aws/dynamodb/

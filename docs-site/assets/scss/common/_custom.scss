@@ -49,6 +49,21 @@ a {
   backdrop-filter: blur(10px);
   border-bottom: 1px solid $border-color;
   transition: background-color 0.3s ease;
+  z-index: 1030 !important;
+}
+
+// Mobile menu dropdown
+.navbar-collapse {
+  z-index: 1031 !important;
+
+  @media (max-width: 991px) {
+    position: relative;
+    background: $navbar-bg;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  }
 }
 
 .navbar-brand {
@@ -74,6 +89,13 @@ a {
   .navbar {
     background: $navbar-bg-dark !important;
     border-bottom: 1px solid $border-color-dark;
+  }
+
+  .navbar-collapse {
+    @media (max-width: 991px) {
+      background: $navbar-bg-dark;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
   }
 
   .navbar-brand {

@@ -2,8 +2,8 @@
 title: CLI Reference
 description: Complete command reference for otto-stack CLI
 lead: Comprehensive reference for all otto-stack CLI commands and their usage
-date: '2025-10-01'
-lastmod: '2026-01-16'
+date: "2025-10-01"
+lastmod: "2026-01-16"
 draft: false
 weight: 50
 toc: true
@@ -57,16 +57,19 @@ with their configured dependencies and health checks.
 ```bash
 otto-stack up
 ```
+
 Start all configured services
 
 ```bash
 otto-stack up postgres redis
 ```
+
 Start specific services
 
 ```bash
 otto-stack up --detach --build
 ```
+
 Build images and start services in background
 
 **Flags:**
@@ -102,21 +105,25 @@ are removed but volumes are preserved. Use --volumes to also remove data.
 ```bash
 otto-stack down
 ```
+
 Stop all running services
 
 ```bash
 otto-stack down postgres redis
 ```
+
 Stop specific services
 
 ```bash
 otto-stack down --volumes
 ```
+
 Stop services and remove volumes
 
 ```bash
 otto-stack down --timeout 5
 ```
+
 Stop services with custom timeout
 
 **Flags:**
@@ -148,16 +155,19 @@ by up, but more efficient for quick restarts.
 ```bash
 otto-stack restart
 ```
+
 Restart all services
 
 ```bash
 otto-stack restart postgres
 ```
+
 Restart a specific service
 
 ```bash
 otto-stack restart --timeout 5
 ```
+
 Restart with custom timeout
 
 **Flags:**
@@ -184,26 +194,31 @@ output formats and real-time monitoring.
 ```bash
 otto-stack status
 ```
+
 Show status of all services
 
 ```bash
 otto-stack status postgres redis
 ```
+
 Show status of specific services
 
 ```bash
 otto-stack status --format json
 ```
+
 Output status in JSON format
 
 ```bash
 otto-stack status --watch
 ```
+
 Watch for status changes in real-time
 
 ```bash
 otto-stack status --filter running
 ```
+
 Show only running services
 
 **Flags:**
@@ -237,21 +252,25 @@ color-coded for easy identification.
 ```bash
 otto-stack logs
 ```
+
 Show logs from all services
 
 ```bash
 otto-stack logs postgres redis
 ```
+
 Show logs from specific services
 
 ```bash
 otto-stack logs --follow postgres
 ```
+
 Follow logs from postgres in real-time
 
 ```bash
 otto-stack logs --tail 100 --since 1h
 ```
+
 Show last 100 lines from the past hour
 
 **Flags:**
@@ -286,16 +305,19 @@ service configurations.
 ```bash
 otto-stack doctor
 ```
+
 Run health checks on all services
 
 ```bash
 otto-stack doctor postgres
 ```
+
 Diagnose a specific service
 
 ```bash
 otto-stack doctor --fix
 ```
+
 Attempt to fix detected issues
 
 **Flags:**
@@ -325,16 +347,19 @@ non-interactive modes.
 ```bash
 otto-stack exec postgres psql -U postgres
 ```
+
 Connect to PostgreSQL with psql
 
 ```bash
 otto-stack exec redis redis-cli
 ```
+
 Connect to Redis CLI
 
 ```bash
 otto-stack exec postgres bash
 ```
+
 Open bash shell in postgres container
 
 **Flags:**
@@ -368,16 +393,19 @@ based on service configuration.
 ```bash
 otto-stack connect postgres
 ```
+
 Connect to PostgreSQL database
 
 ```bash
 otto-stack connect redis
 ```
+
 Connect to Redis CLI
 
 ```bash
 otto-stack connect mysql
 ```
+
 Connect to MySQL database
 
 **Flags:**
@@ -410,16 +438,19 @@ a clean development environment.
 ```bash
 otto-stack cleanup
 ```
+
 Interactive cleanup with confirmations
 
 ```bash
 otto-stack cleanup --all --force
 ```
+
 Clean up everything without prompts
 
 ```bash
 otto-stack cleanup --dry-run
 ```
+
 Preview what would be cleaned up
 
 **Flags:**
@@ -454,16 +485,19 @@ necessary configuration files.
 ```bash
 otto-stack init
 ```
+
 Interactive project initialization (recommended)
 
 ```bash
 otto-stack init --project-name myproject --services postgres,redis
 ```
+
 Non-interactive setup with specific project name and services
 
 ```bash
 otto-stack init --force
 ```
+
 Overwrite existing configuration
 
 **Flags:**
@@ -489,16 +523,19 @@ management interfaces.
 ```bash
 otto-stack web-interfaces
 ```
+
 Show all web interfaces for running services
 
 ```bash
 otto-stack web-interfaces localstack
 ```
+
 Show interfaces for specific service
 
 ```bash
 otto-stack web-interfaces --all
 ```
+
 Show interfaces for all enabled services
 
 **Flags:**
@@ -522,21 +559,25 @@ dependencies for easy discovery and selection.
 ```bash
 otto-stack services
 ```
+
 List all services grouped by category
 
 ```bash
 otto-stack services --category database
 ```
+
 List services in database category
 
 ```bash
 otto-stack services --category cache
 ```
+
 List cache services
 
 ```bash
 otto-stack services --format table
 ```
+
 List services in table format
 
 **Flags:**
@@ -561,11 +602,13 @@ relationships and startup sequences.
 ```bash
 otto-stack deps kafka-ui
 ```
+
 Show dependencies for kafka-ui service
 
 ```bash
 otto-stack deps postgres
 ```
+
 Show dependencies for postgres service
 
 **Related Commands:** [`services`](#services), [`conflicts`](#conflicts), [`up`](#up)
@@ -585,11 +628,13 @@ and incompatible service combinations.
 ```bash
 otto-stack conflicts postgres mysql
 ```
+
 Check if postgres and mysql conflict
 
 ```bash
 otto-stack conflicts postgres redis kafka-broker
 ```
+
 Check conflicts between multiple services
 
 **Related Commands:** [`services`](#services), [`deps`](#deps), [`up`](#up)
@@ -609,16 +654,19 @@ configuration inconsistencies.
 ```bash
 otto-stack validate
 ```
+
 Validate all configuration files
 
 ```bash
 otto-stack validate otto-stack-config.yaml
 ```
+
 Validate specific configuration file
 
 ```bash
 otto-stack validate --strict
 ```
+
 Use strict validation rules
 
 **Flags:**
@@ -643,16 +691,19 @@ Git commit, and platform information. Can check for available updates.
 ```bash
 otto-stack version
 ```
+
 Show basic version information
 
 ```bash
 otto-stack version --full
 ```
+
 Show detailed build information
 
 ```bash
 otto-stack version --check-updates
 ```
+
 Check for available updates
 
 **Flags:**
@@ -660,4 +711,3 @@ Check for available updates
 - `--full` (`bool`): Show detailed version information (default: `false`)
 - `--check-updates` (`bool`): Check for available updates (default: `false`)
 - `--format` (`string`): Output format (text, json, yaml) (default: `text`)
-

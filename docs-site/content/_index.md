@@ -6,8 +6,8 @@ description: >-
 lead: >-
   Streamline your local development with powerful CLI tools and automated
   service management
-date: '2025-10-01'
-lastmod: '2026-01-16'
+date: "2025-10-01"
+lastmod: "2026-01-16"
 draft: false
 weight: 50
 toc: true
@@ -47,6 +47,7 @@ chmod +x install.sh
 #### Manual Installation
 
 **macOS/Linux:**
+
 ```bash
 # Download the latest release
 curl -L -o otto-stack "https://github.com/otto-nation/otto-stack/releases/latest/download/otto-stack-$(uname -s | tr '[:upper:]' '[:lower:]')-$(uname -m)"
@@ -55,6 +56,7 @@ sudo mv otto-stack /usr/local/bin/
 ```
 
 **Windows:**
+
 ```powershell
 # Download from releases page
 # https://github.com/otto-nation/otto-stack/releases/latest
@@ -70,6 +72,7 @@ curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts
 #### Package Managers
 
 **Homebrew (macOS):**
+
 ```bash
 # Coming soon
 brew install otto-nation/tap/otto-stack
@@ -99,6 +102,7 @@ otto-stack up
 - **[Services Guide](/services)**
 - **[Configuration](/configuration)**
 - **[CLI Reference](/cli-reference)**
+- **[Scripts Reference](/scripts)**
 - **[Contributing](/contributing)**
 
 ## Get Started

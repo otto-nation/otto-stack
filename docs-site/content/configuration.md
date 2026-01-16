@@ -2,8 +2,8 @@
 title: Configuration Guide
 description: Complete guide to configuring otto-stack services
 lead: Learn how to configure services for your specific needs
-date: '2025-10-01'
-lastmod: '2026-01-16'
+date: "2025-10-01"
+lastmod: "2026-01-16"
 draft: false
 weight: 25
 toc: true
@@ -51,7 +51,6 @@ The `stack` section defines which services to enable:
 ## Available Services
 
 Otto-stack supports the following services:
-
 
 - **jaeger** - Jaeger distributed tracing system for monitoring and troubleshooting microservices
 
@@ -112,7 +111,6 @@ service_configuration:
     topics:
       - events
       - notifications
-
 ```
 
 For more configuration examples and service-specific options, see the [Services Guide](services.md).

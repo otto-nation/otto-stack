@@ -49,27 +49,44 @@ init_service:
     AWS_ENDPOINT_URL: http://localstack:4566
   scripts:
     - content: |
-        # Create SQS queues
-        {{range .queues}}
-        docker run --rm --network=$DOCKER_NETWORK -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 $DOCKER_IMAGE sqs create-queue --queue-name {{.name}} --endpoint-url=${AWS_ENDPOINT_URL}
-        {{end}}
+        # Setup alias
+        alias awscli="docker run --rm --network=$DOCKER_NETWORK -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 $DOCKER_IMAGE"
+
+        # Setup environment variables
+        export AWS_ACCOUNT_ID=000000000000
 
         # Create SNS topics
         {{range .topics}}
-        docker run --rm --network=$DOCKER_NETWORK -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 $DOCKER_IMAGE sns create-topic --name {{.name}} --endpoint-url=${AWS_ENDPOINT_URL}
+        awscli sns create-topic --name {{.name}} --endpoint-url=${AWS_ENDPOINT_URL}
+        {{end}}
+
+        # Create SQS queues
+        {{range .queues}}
+        awscli sqs create-queue --queue-name {{.name}} --endpoint-url=${AWS_ENDPOINT_URL}
+
+        # Create Subscription
+        subscriptionArn=$(awscli sns subscribe \
+          --topic-arn arn:aws:sns:${AWS_DEFAULT_REGION}:${AWS_ACCOUNT_ID}:{{.topic}} \
+          --protocol sqs \
+          --notification-endpoint arn:aws:sqs:${AWS_DEFAULT_REGION}:${AWS_ACCOUNT_ID}:{{.name}} \
+          | jq -r '.SubscriptionArn')
+
+        # Set Subscription Attributes
+        awscli sns set-subscription-attributes \
+          --subscription-arn $subscriptionArn \
+          --attribute-name RawMessageDelivery \
+          --attribute-value {{.rawMessageDelivery}} \
         {{end}}
 
         # Create S3 buckets
         {{range .buckets}}
-        docker run --rm --network=$DOCKER_NETWORK -e AWS_ACCESS_KEY_ID=test -e AWS_SECRET_ACCESS_KEY=test -e AWS_DEFAULT_REGION=us-east-1 $DOCKER_IMAGE s3 mb s3://{{.name}} --endpoint-url=${AWS_ENDPOINT_URL}
+        awscli s3 mb s3://{{.name}} --endpoint-url=${AWS_ENDPOINT_URL}
         {{end}}
   container:
     depends_on_service: true
     timeout: "30s"
 
 documentation:
-  examples:
-    - aws --endpoint-url=http://localhost:4566 s3 ls
   usage_notes: Core LocalStack service providing AWS API emulation for local development. Web dashboard requires LocalStack Pro license.
   links:
     - https://docs.localstack.cloud/
