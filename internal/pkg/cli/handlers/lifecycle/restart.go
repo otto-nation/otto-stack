@@ -56,10 +56,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return pkgerrors.NewServiceError("stack", "resolve services", err)
 	}
 
-	// Get verbose flag
-	verbose := base.GetVerbose(cmd)
-
-	if err := h.restartServices(ctx, setup, serviceConfigs, flags, verbose); err != nil {
+	if err := h.restartServices(ctx, setup, serviceConfigs, flags); err != nil {
 		return err
 	}
 
@@ -68,15 +65,12 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 }
 
 // restartServices performs the stop and start operations using new stack service
-func (h *RestartHandler) restartServices(ctx context.Context, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, flags *core.RestartFlags, verbose bool) error {
+func (h *RestartHandler) restartServices(ctx context.Context, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, flags *core.RestartFlags) error {
 	// Create stack service
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
 		return pkgerrors.NewServiceError("stack", "create service", err)
 	}
-
-	// Set verbose mode
-	stackService.SetVerbose(verbose)
 
 	// Stop services
 	stopRequest := services.StopRequest{

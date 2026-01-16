@@ -31,12 +31,8 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	// Get verbose flag
-	verbose := base.GetVerbose(cmd)
-
 	// Create command and middleware chain
 	logsCommand := NewServiceCommand(core.CommandLogs, h.stateManager)
-	logsCommand.SetVerbose(verbose)
 	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
 
 	handler := command.NewHandler(logsCommand, loggingMiddleware, validationMiddleware)

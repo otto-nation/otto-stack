@@ -40,12 +40,8 @@ func (h *ConnectHandler) GetRequiredFlags() []string {
 
 // Handle executes the connect command
 func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Get verbose flag
-	verbose := base.GetVerbose(cmd)
-
 	// Create command and middleware chain
 	connectCommand := NewServiceCommand(core.CommandConnect, h.stateManager)
-	connectCommand.SetVerbose(verbose)
 	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
 
 	handler := command.NewHandler(connectCommand, loggingMiddleware, validationMiddleware)

@@ -27,12 +27,8 @@ func NewExecHandler() *ExecHandler {
 
 // Handle executes the exec command
 func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// Get verbose flag
-	verbose := base.GetVerbose(cmd)
-
 	// Create command and middleware chain
 	execCommand := NewServiceCommand(core.CommandExec, h.stateManager)
-	execCommand.SetVerbose(verbose)
 	validationMiddleware, loggingMiddleware := CreateStandardMiddlewareChain()
 
 	handler := command.NewHandler(execCommand, loggingMiddleware, validationMiddleware)

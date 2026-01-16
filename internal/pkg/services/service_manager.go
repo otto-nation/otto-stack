@@ -33,7 +33,6 @@ type Service struct {
 	project         ProjectLoader
 	DockerClient    *docker.Client // Exposed for direct access
 	logger          *slog.Logger
-	verbose         bool // Enable verbose logging
 }
 
 // ServiceInterface defines the interface for service operations
@@ -52,13 +51,7 @@ func NewServiceWithDependencies(compose api.Compose, characteristics Characteris
 		project:         project,
 		DockerClient:    dockerClient,
 		logger:          logger.GetLogger(),
-		verbose:         false,
 	}
-}
-
-// SetVerbose enables or disables verbose logging
-func (s *Service) SetVerbose(verbose bool) {
-	s.verbose = verbose
 }
 
 // ResolveUpServices resolves service names and returns their configs with dependencies
@@ -180,19 +173,17 @@ func NewService(compose api.Compose, characteristics CharacteristicsResolver, pr
 		characteristics: characteristics,
 		project:         project,
 		DockerClient:    dockerClient,
-		verbose:         false,
+		logger:          logger.GetLogger(),
 	}, nil
 }
 
 // Start starts services with automatic characteristics resolution
 func (s *Service) Start(ctx context.Context, req StartRequest) error {
-	if s.verbose {
-		s.logger.Debug("Starting services",
-			"project", req.Project,
-			"serviceCount", len(req.ServiceConfigs),
-			"build", req.Build,
-			"forceRecreate", req.ForceRecreate)
-	}
+	s.logger.Debug("Starting services",
+		"project", req.Project,
+		"serviceCount", len(req.ServiceConfigs),
+		"build", req.Build,
+		"forceRecreate", req.ForceRecreate)
 
 	// Load and validate service configs from .otto-stack/service-configs/
 	req.ServiceConfigs = s.loadAndValidateServiceConfigs(req.ServiceConfigs)
@@ -203,9 +194,7 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 		return pkgerrors.NewServiceError("project", "load", err)
 	}
 
-	if s.verbose {
-		s.logger.Debug("Project loaded successfully", "project", req.Project)
-	}
+	s.logger.Debug("Project loaded successfully", "project", req.Project)
 
 	// Resolve characteristics to options and convert to SDK format
 	options := s.characteristics.ResolveUpOptions(req.Characteristics, req.ServiceConfigs, docker.UpOptions{
@@ -221,9 +210,7 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 		return pkgerrors.NewServiceError("project", "start", err)
 	}
 
-	if s.verbose {
-		s.logger.Debug("Services started successfully")
-	}
+	s.logger.Debug("Services started successfully")
 
 	// Execute local init scripts for services that have them
 	if err := s.executeLocalInitScripts(ctx, req.ServiceConfigs, req.Project); err != nil {
@@ -235,6 +222,7 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 
 // executeLocalInitScripts executes local init scripts for all services that have them
 func (s *Service) executeLocalInitScripts(ctx context.Context, serviceConfigs []servicetypes.ServiceConfig, projectName string) error {
+	s.logger.Debug("Executing local init scripts for services")
 	for _, config := range serviceConfigs {
 		if s.hasLocalInitScripts(config) {
 			if err := s.executeServiceInitScripts(ctx, config, serviceConfigs, projectName); err != nil {
@@ -249,17 +237,14 @@ func (s *Service) executeLocalInitScripts(ctx context.Context, serviceConfigs []
 func (s *Service) hasLocalInitScripts(config servicetypes.ServiceConfig) bool {
 	hasInit := config.InitService != nil && config.InitService.Enabled && config.InitService.Mode == "local"
 
-	// Log verbose information about init service configuration
-	if s.verbose {
-		if config.InitService == nil {
-			s.logger.Debug("Service has no InitService configuration", "service", config.Name)
-		} else {
-			s.logger.Debug("Service InitService configuration",
-				"service", config.Name,
-				"enabled", config.InitService.Enabled,
-				"mode", config.InitService.Mode,
-				"hasScripts", len(config.InitService.Scripts) > 0)
-		}
+	// Log debug information about init service configuration
+	if config.InitService == nil {
+		s.logger.Debug("Service has no InitService configuration", "service", config.Name)
+	} else {
+		s.logger.Debug("Service InitService configuration",
+			"service", config.Name,
+			"enabled", config.InitService.Enabled,
+			"mode", config.InitService.Mode)
 	}
 
 	return hasInit
@@ -312,21 +297,24 @@ func (s *Service) processScriptTemplate(scriptContent string, config servicetype
 	return buf.String(), nil
 }
 
-// collectTemplateData collects template data from dependent services
+// collectTemplateData collects template data from enabled services that depend on this service
 func (s *Service) collectTemplateData(config servicetypes.ServiceConfig, allConfigs []servicetypes.ServiceConfig) map[string]any {
 	templateData := make(map[string]any)
 
+	// Collect data from services that depend on the current service (config.Name)
 	for _, serviceConfig := range allConfigs {
-		if s.dependsOn(serviceConfig, config.Name) {
+		if s.serviceDependsOn(serviceConfig, config.Name) {
 			s.addConfigData(templateData, serviceConfig)
 		}
 	}
 
+	s.logger.Debug("Collected template data", "data", templateData)
+
 	return templateData
 }
 
-// dependsOn checks if serviceConfig depends on the given service name
-func (s *Service) dependsOn(serviceConfig servicetypes.ServiceConfig, serviceName string) bool {
+// serviceDependsOn checks if serviceConfig depends on the given service name
+func (s *Service) serviceDependsOn(serviceConfig servicetypes.ServiceConfig, serviceName string) bool {
 	if serviceConfig.Service.Dependencies.Required != nil {
 		return slices.Contains(serviceConfig.Service.Dependencies.Required, serviceName)
 	}
@@ -343,26 +331,18 @@ func (s *Service) addConfigData(templateData map[string]any, serviceConfig servi
 }
 
 func (s *Service) processServiceField(templateData map[string]any, field reflect.Value) {
-	if !s.isValidConfigField(field) {
+	if field.Kind() != reflect.Pointer || field.IsNil() {
 		return
 	}
 
 	structValue := field.Elem()
 	structType := structValue.Type()
 
-	if !s.isGeneratedConfigStruct(structType) {
+	if !strings.HasSuffix(structType.Name(), "Config") {
 		return
 	}
 
 	s.extractFieldsFromStruct(templateData, structValue, structType)
-}
-
-func (s *Service) isValidConfigField(field reflect.Value) bool {
-	return field.Kind() == reflect.Ptr && !field.IsNil()
-}
-
-func (s *Service) isGeneratedConfigStruct(structType reflect.Type) bool {
-	return strings.Contains(structType.PkgPath(), "/generated")
 }
 
 func (s *Service) extractFieldsFromStruct(templateData map[string]any, structValue reflect.Value, structType reflect.Type) {
@@ -403,12 +383,16 @@ func (s *Service) loadAndValidateServiceConfigs(serviceConfigs []servicetypes.Se
 		configData, err := loadServiceConfigFile(config.Name)
 		if err != nil {
 			// File doesn't exist - that's OK, not all services need config files
+			s.logger.Debug("No config file for service", "service", config.Name)
 			enrichedConfigs = append(enrichedConfigs, config)
 			continue
 		}
 
+		s.logger.Debug("Loaded config file", "service", config.Name, "data", configData)
+
 		// Merge config data into ServiceConfig struct
 		enrichedConfig := mergeConfigIntoStruct(config, configData)
+		s.logger.Debug("Merged config", "service", config.Name, "enrichedConfig", enrichedConfig)
 		enrichedConfigs = append(enrichedConfigs, enrichedConfig)
 	}
 
@@ -469,6 +453,7 @@ func mergeFieldFromConfigData(field reflect.Value, configData map[string]any) {
 		}
 
 		if data, exists := configData[yamlTag]; exists {
+			logger.GetLogger().Debug("Assigning field data", "field", yamlTag, "data", data)
 			assignConfigFieldData(field, structType, j, data)
 			break
 		}
@@ -532,12 +517,10 @@ func (s *Service) executeScript(ctx context.Context, scriptContent string, env m
 
 // Stop stops services with automatic characteristics resolution
 func (s *Service) Stop(ctx context.Context, req StopRequest) error {
-	if s.verbose {
-		s.logger.Debug("Stopping services",
-			"project", req.Project,
-			"remove", req.Remove,
-			"serviceCount", len(req.ServiceConfigs))
-	}
+	s.logger.Debug("Stopping services",
+		"project", req.Project,
+		"remove", req.Remove,
+		"serviceCount", len(req.ServiceConfigs))
 
 	// Load project
 	project, err := s.project.Load(req.Project)
