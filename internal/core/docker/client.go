@@ -275,7 +275,7 @@ func (c *Client) GetServiceStatus(ctx context.Context, project string, services 
 		}
 
 		status.State = cont.State
-		status.Health = getHealthStatus(cont.State, cont.Status)
+		status.Health = getHealthStatus(cont.Status)
 
 		// Get detailed container info
 		details, err := c.cli.ContainerInspect(ctx, cont.ID)
@@ -312,20 +312,14 @@ func extractPorts(portMap nat.PortMap) []string {
 }
 
 // getHealthStatus determines health status from container state and status
-func getHealthStatus(state, status string) string {
+func getHealthStatus(status string) string {
 	if strings.Contains(status, HealthStatusHealthy) {
 		return HealthStatusHealthy
 	}
 	if strings.Contains(status, HealthStatusUnhealthy) {
 		return HealthStatusUnhealthy
 	}
-	if state == "running" {
-		return HealthStatusRunning
-	}
-	if state == "exited" {
-		return HealthStatusStopped
-	}
-	return HealthStatusUnknown
+	return "n/a"
 }
 
 // mapToEnvSlice converts a map to environment variable slice

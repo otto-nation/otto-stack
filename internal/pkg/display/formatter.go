@@ -22,7 +22,7 @@ const (
 	ColWidthState          = 12
 	ColWidthHealth         = 12
 	ColWidthUptime         = 8
-	ColWidthPorts          = 12
+	ColWidthPorts          = 15
 	ColWidthUpdated        = 10
 	ColWidthCategory       = 15
 	ColWidthDescription    = 20

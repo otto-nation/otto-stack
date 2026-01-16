@@ -76,6 +76,18 @@ func TestClient_GetServiceStatus_Unit(t *testing.T) {
 				},
 			}, nil
 		},
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+			return types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					ID:      containerID,
+					Created: "2024-01-01T00:00:00Z",
+					State: &types.ContainerState{
+						StartedAt: "2024-01-01T00:00:01Z",
+					},
+				},
+				NetworkSettings: &types.NetworkSettings{},
+			}, nil
+		},
 	}
 
 	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())

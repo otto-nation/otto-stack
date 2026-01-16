@@ -3,6 +3,9 @@ package display
 import (
 	"fmt"
 	"io"
+
+	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
 
 // StatusFormatter handles service status formatting
@@ -29,15 +32,101 @@ func (sf *StatusFormatter) FormatTable(services []ServiceStatus, options Options
 
 func (sf *StatusFormatter) formatCompact(services []ServiceStatus) error {
 	hasProvider := sf.hasProviders(services)
+	headers, widths := sf.buildCompactLayout(hasProvider)
 
-	headers, widths := sf.getCompactLayout(hasProvider)
 	sf.table.WriteHeader(headers, widths)
-
 	for _, service := range services {
-		values := sf.getCompactValues(service, hasProvider)
+		values := sf.buildCompactValues(service, hasProvider)
 		sf.table.WriteRow(values, widths)
 	}
 	return nil
+}
+
+func (sf *StatusFormatter) formatFull(services []ServiceStatus, options Options) error {
+	hasProvider := sf.hasProviders(services)
+	headers, widths := sf.buildFullLayout(hasProvider)
+
+	sf.table.WriteHeader(headers, widths)
+	for _, service := range services {
+		values := sf.buildFullValues(service, hasProvider)
+		sf.table.WriteRow(values, widths)
+	}
+
+	if options.ShowSummary {
+		sf.formatResourceSummary(services)
+	}
+	return nil
+}
+
+func (sf *StatusFormatter) buildCompactLayout(hasProvider bool) ([]string, []int) {
+	headers := []string{ui.StatusHeaderService}
+	widths := []int{ColWidthServiceCompact}
+
+	if hasProvider {
+		headers = append(headers, ui.StatusHeaderProvidedBy)
+		widths = append(widths, ColWidthProvider)
+	}
+
+	headers = append(headers, ui.StatusHeaderState, ui.StatusHeaderHealth)
+	widths = append(widths, ColWidthState, ColWidthHealth)
+
+	return headers, widths
+}
+
+func (sf *StatusFormatter) buildFullLayout(hasProvider bool) ([]string, []int) {
+	headers := []string{ui.StatusHeaderService}
+	widths := []int{ColWidthService}
+
+	if hasProvider {
+		headers = append(headers, ui.StatusHeaderProvidedBy)
+		widths = append(widths, ColWidthProvider)
+	}
+
+	headers = append(headers, ui.StatusHeaderState, ui.StatusHeaderHealth, ui.StatusHeaderUptime, ui.StatusHeaderPorts, ui.StatusHeaderUpdated)
+	widths = append(widths, ColWidthState, ColWidthHealth, ColWidthUptime, ColWidthPorts, ColWidthUpdated)
+
+	return headers, widths
+}
+
+func (sf *StatusFormatter) buildCompactValues(service ServiceStatus, hasProvider bool) []string {
+	values := []string{service.Name}
+
+	if hasProvider {
+		provider := service.Provider
+		if provider == "" {
+			provider = "n/a"
+		}
+		values = append(values, provider)
+	}
+
+	values = append(values,
+		sf.getIcon(service.State)+service.State,
+		sf.getIcon(service.Health)+service.Health,
+	)
+
+	return values
+}
+
+func (sf *StatusFormatter) buildFullValues(service ServiceStatus, hasProvider bool) []string {
+	values := []string{service.Name}
+
+	if hasProvider {
+		provider := service.Provider
+		if provider == "" {
+			provider = "n/a"
+		}
+		values = append(values, provider)
+	}
+
+	values = append(values,
+		sf.getIcon(service.State)+service.State,
+		sf.getIcon(service.Health)+service.Health,
+		sf.table.FormatDuration(service.Uptime),
+		sf.table.FormatPorts(service.Ports),
+		service.UpdatedAt.Format("15:04:05"),
+	)
+
+	return values
 }
 
 func (sf *StatusFormatter) hasProviders(services []ServiceStatus) bool {
@@ -47,56 +136,6 @@ func (sf *StatusFormatter) hasProviders(services []ServiceStatus) bool {
 		}
 	}
 	return false
-}
-
-func (sf *StatusFormatter) getCompactLayout(hasProvider bool) ([]string, []int) {
-	if hasProvider {
-		return []string{"Service", "Provided By", "State", "Health"},
-			[]int{ColWidthServiceCompact, ColWidthProvider, ColWidthState, ColWidthHealth}
-	}
-	return []string{"Service", "State", "Health"},
-		[]int{ColWidthServiceCompact, ColWidthState, ColWidthHealth}
-}
-
-func (sf *StatusFormatter) getCompactValues(service ServiceStatus, hasProvider bool) []string {
-	baseValues := []string{
-		service.Name,
-		sf.getStateIcon(service.State) + service.State,
-		sf.getHealthIcon(service.Health) + service.Health,
-	}
-
-	if hasProvider {
-		provider := service.Provider
-		if provider == "" {
-			provider = "n/a"
-		}
-		return []string{service.Name, provider, baseValues[1], baseValues[2]}
-	}
-	return baseValues
-}
-
-func (sf *StatusFormatter) formatFull(services []ServiceStatus, options Options) error {
-	headers := []string{"Service", "State", "Health", "Uptime", "Ports", "Updated"}
-	widths := []int{ColWidthService, ColWidthState, ColWidthHealth, ColWidthUptime, ColWidthPorts, ColWidthUpdated}
-
-	sf.table.WriteHeader(headers, widths)
-
-	for _, service := range services {
-		values := []string{
-			service.Name,
-			sf.getStateIcon(service.State) + service.State,
-			sf.getHealthIcon(service.Health) + service.Health,
-			sf.table.FormatDuration(service.Uptime),
-			sf.table.FormatPorts(service.Ports),
-			service.UpdatedAt.Format("15:04:05"),
-		}
-		sf.table.WriteRow(values, widths)
-	}
-
-	if options.ShowSummary {
-		sf.formatResourceSummary(services)
-	}
-	return nil
 }
 
 func (sf *StatusFormatter) formatResourceSummary(services []ServiceStatus) {
@@ -119,28 +158,19 @@ func (sf *StatusFormatter) createSummary(services []ServiceStatus) map[string]in
 	return summary
 }
 
-func (sf *StatusFormatter) getStateIcon(state string) string {
+func (sf *StatusFormatter) getIcon(state string) string {
 	switch state {
-	case "running":
-		return "✓ "
-	case "stopped":
-		return "✗ "
-	case "starting":
-		return "⟳ "
+	case docker.HealthStatusRunning:
+		return ui.IconSuccess + " "
+	case docker.HealthStatusHealthy:
+		return ui.IconHealthy + " "
+	case docker.HealthStatusStopped:
+		return ui.IconError + " "
+	case docker.HealthUnhealthy:
+		return ui.IconUnhealthy + " "
+	case docker.HealthStarting:
+		return ui.IconStarting + " "
 	default:
-		return "? "
-	}
-}
-
-func (sf *StatusFormatter) getHealthIcon(health string) string {
-	switch health {
-	case "healthy":
-		return "✓ "
-	case "unhealthy":
-		return "✗ "
-	case "starting":
-		return "⟳ "
-	default:
-		return "? "
+		return ui.IconUnknown + " "
 	}
 }

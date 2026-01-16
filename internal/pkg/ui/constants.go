@@ -3,11 +3,15 @@ package ui
 // UI constants
 const (
 	IconSuccess                 = "✅"
+	IconHealthy                 = "🟢"
 	IconError                   = "❌"
+	IconUnhealthy               = "🔴"
 	IconWarning                 = "⚠️"
 	IconInfo                    = "ℹ️"
 	IconBox                     = "📦"
 	IconHeader                  = "🚀"
+	IconStarting                = "🔄"
+	IconUnknown                 = "❓"
 	ColorGreen                  = "\033[32m"
 	ColorRed                    = "\033[31m"
 	ColorYellow                 = "\033[33m"
@@ -36,6 +40,9 @@ const (
 	StatusHeaderProvidedBy      = "PROVIDED BY"
 	StatusHeaderState           = "STATE"
 	StatusHeaderHealth          = "HEALTH"
+	StatusHeaderUptime          = "UPTIME"
+	StatusHeaderPorts           = "PORTS"
+	StatusHeaderUpdated         = "UPDATED"
 	StatusSeparator             = "---------------------------------------------"
 	StatusSeparatorWithProvider = "----------------------------------------------------------"
 )
