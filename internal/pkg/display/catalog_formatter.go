@@ -5,39 +5,35 @@ import (
 	"io"
 	"sort"
 	"strings"
+
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 // CatalogFormatter handles service catalog formatting
 type CatalogFormatter struct {
 	writer io.Writer
-	table  *TableFormatter
 }
 
 // NewCatalogFormatter creates a new catalog formatter
 func NewCatalogFormatter(writer io.Writer) *CatalogFormatter {
-	return &CatalogFormatter{
-		writer: writer,
-		table:  NewTableFormatter(writer),
-	}
+	return &CatalogFormatter{writer: writer}
 }
 
 // FormatTable formats catalog as a table
 func (cf *CatalogFormatter) FormatTable(catalog ServiceCatalog) error {
-	headers := []string{"Service", "Category", "Description"}
-	widths := []int{ColWidthService, ColWidthCategory, ColWidthDescription}
+	tw := table.NewWriter()
+	tw.SetOutputMirror(cf.writer)
+	tw.SetStyle(table.StyleLight)
 
-	cf.table.WriteHeader(headers, widths)
-	cf.writeTableRows(catalog, widths)
-	return nil
-}
-
-func (cf *CatalogFormatter) writeTableRows(catalog ServiceCatalog, widths []int) {
+	tw.AppendHeader(table.Row{"Service", "Category", "Description"})
 	for category, services := range catalog.Categories {
 		for _, service := range services {
-			values := []string{service.Name, category, service.Description}
-			cf.table.WriteRow(values, widths)
+			tw.AppendRow(table.Row{service.Name, category, service.Description})
 		}
 	}
+
+	tw.Render()
+	return nil
 }
 
 // FormatGrouped formats catalog grouped by category
@@ -70,7 +66,7 @@ func (cf *CatalogFormatter) formatCategory(index int, category string, services 
 
 func (cf *CatalogFormatter) writeCategoryHeader(category string) {
 	_, _ = fmt.Fprintf(cf.writer, "%s:\n", strings.ToUpper(category))
-	cf.table.WriteSeparator(TableWidthCatalog)
+	_, _ = fmt.Fprintln(cf.writer, strings.Repeat("-", TableWidthCatalog))
 }
 
 func (cf *CatalogFormatter) writeSortedServices(services []ServiceInfo) {

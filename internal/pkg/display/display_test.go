@@ -160,5 +160,9 @@ func TestFormatter_FormatStatus_Compact(t *testing.T) {
 
 	output_str := buf.String()
 	lines := strings.Split(strings.TrimSpace(output_str), "\n")
-	assert.Len(t, lines, 3) // Header, separator, data
+	// go-pretty renders with borders: top, header, separator, data, bottom = 5 lines
+	assert.Len(t, lines, 5)
+	assert.Contains(t, output_str, "postgres")
+	assert.Contains(t, output_str, "running")
+	assert.Contains(t, output_str, "healthy")
 }

@@ -3,7 +3,10 @@ package display
 import (
 	"fmt"
 	"io"
+	"strings"
+	"time"
 
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
@@ -11,15 +14,11 @@ import (
 // StatusFormatter handles service status formatting
 type StatusFormatter struct {
 	writer io.Writer
-	table  *TableFormatter
 }
 
 // NewStatusFormatter creates a new status formatter
 func NewStatusFormatter(writer io.Writer) *StatusFormatter {
-	return &StatusFormatter{
-		writer: writer,
-		table:  NewTableFormatter(writer),
-	}
+	return &StatusFormatter{writer: writer}
 }
 
 // FormatTable formats services as a table
@@ -32,25 +31,35 @@ func (sf *StatusFormatter) FormatTable(services []ServiceStatus, options Options
 
 func (sf *StatusFormatter) formatCompact(services []ServiceStatus) error {
 	hasProvider := sf.hasProviders(services)
-	headers, widths := sf.buildCompactLayout(hasProvider)
+	tw := table.NewWriter()
+	tw.SetOutputMirror(sf.writer)
+	tw.SetStyle(table.StyleLight)
 
-	sf.table.WriteHeader(headers, widths)
+	headers := sf.buildCompactHeaders(hasProvider)
+	tw.AppendHeader(headers)
+
 	for _, service := range services {
-		values := sf.buildCompactValues(service, hasProvider)
-		sf.table.WriteRow(values, widths)
+		tw.AppendRow(sf.buildCompactRow(service, hasProvider))
 	}
+
+	tw.Render()
 	return nil
 }
 
 func (sf *StatusFormatter) formatFull(services []ServiceStatus, options Options) error {
 	hasProvider := sf.hasProviders(services)
-	headers, widths := sf.buildFullLayout(hasProvider)
+	tw := table.NewWriter()
+	tw.SetOutputMirror(sf.writer)
+	tw.SetStyle(table.StyleLight)
 
-	sf.table.WriteHeader(headers, widths)
+	headers := sf.buildFullHeaders(hasProvider)
+	tw.AppendHeader(headers)
+
 	for _, service := range services {
-		values := sf.buildFullValues(service, hasProvider)
-		sf.table.WriteRow(values, widths)
+		tw.AppendRow(sf.buildFullRow(service, hasProvider))
 	}
+
+	tw.Render()
 
 	if options.ShowSummary {
 		sf.formatResourceSummary(services)
@@ -58,75 +67,57 @@ func (sf *StatusFormatter) formatFull(services []ServiceStatus, options Options)
 	return nil
 }
 
-func (sf *StatusFormatter) buildCompactLayout(hasProvider bool) ([]string, []int) {
-	headers := []string{ui.StatusHeaderService}
-	widths := []int{ColWidthServiceCompact}
-
+func (sf *StatusFormatter) buildCompactHeaders(hasProvider bool) table.Row {
+	headers := table.Row{ui.StatusHeaderService}
 	if hasProvider {
 		headers = append(headers, ui.StatusHeaderProvidedBy)
-		widths = append(widths, ColWidthProvider)
 	}
-
 	headers = append(headers, ui.StatusHeaderState, ui.StatusHeaderHealth)
-	widths = append(widths, ColWidthState, ColWidthHealth)
-
-	return headers, widths
+	return headers
 }
 
-func (sf *StatusFormatter) buildFullLayout(hasProvider bool) ([]string, []int) {
-	headers := []string{ui.StatusHeaderService}
-	widths := []int{ColWidthService}
-
+func (sf *StatusFormatter) buildFullHeaders(hasProvider bool) table.Row {
+	headers := table.Row{ui.StatusHeaderService}
 	if hasProvider {
 		headers = append(headers, ui.StatusHeaderProvidedBy)
-		widths = append(widths, ColWidthProvider)
 	}
-
 	headers = append(headers, ui.StatusHeaderState, ui.StatusHeaderHealth, ui.StatusHeaderUptime, ui.StatusHeaderPorts, ui.StatusHeaderUpdated)
-	widths = append(widths, ColWidthState, ColWidthHealth, ColWidthUptime, ColWidthPorts, ColWidthUpdated)
-
-	return headers, widths
+	return headers
 }
 
-func (sf *StatusFormatter) buildCompactValues(service ServiceStatus, hasProvider bool) []string {
-	values := []string{service.Name}
-
+func (sf *StatusFormatter) buildCompactRow(service ServiceStatus, hasProvider bool) table.Row {
+	row := table.Row{service.Name}
 	if hasProvider {
 		provider := service.Provider
 		if provider == "" {
 			provider = "n/a"
 		}
-		values = append(values, provider)
+		row = append(row, provider)
 	}
-
-	values = append(values,
+	row = append(row,
 		sf.getIcon(service.State)+service.State,
 		sf.getIcon(service.Health)+service.Health,
 	)
-
-	return values
+	return row
 }
 
-func (sf *StatusFormatter) buildFullValues(service ServiceStatus, hasProvider bool) []string {
-	values := []string{service.Name}
-
+func (sf *StatusFormatter) buildFullRow(service ServiceStatus, hasProvider bool) table.Row {
+	row := table.Row{service.Name}
 	if hasProvider {
 		provider := service.Provider
 		if provider == "" {
 			provider = "n/a"
 		}
-		values = append(values, provider)
+		row = append(row, provider)
 	}
-
-	values = append(values,
+	row = append(row,
 		sf.getIcon(service.State)+service.State,
 		sf.getIcon(service.Health)+service.Health,
-		sf.table.FormatDuration(service.Uptime),
-		sf.table.FormatPorts(service.Ports),
+		sf.formatDuration(service.Uptime),
+		sf.formatPorts(service.Ports),
 		service.UpdatedAt.Format("15:04:05"),
 	)
-
-	return values
+	return row
 }
 
 func (sf *StatusFormatter) hasProviders(services []ServiceStatus) bool {
@@ -173,4 +164,27 @@ func (sf *StatusFormatter) getIcon(state string) string {
 	default:
 		return ui.IconUnknown + " "
 	}
+}
+
+func (sf *StatusFormatter) formatDuration(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	}
+	if d < HoursPerDay*time.Hour {
+		return fmt.Sprintf("%dh", int(d.Hours()))
+	}
+	return fmt.Sprintf("%dd", int(d.Hours())/HoursPerDay)
+}
+
+func (sf *StatusFormatter) formatPorts(ports []string) string {
+	if len(ports) == 0 {
+		return "-"
+	}
+	if len(ports) <= MaxPortsDisplay {
+		return strings.Join(ports, ",")
+	}
+	return strings.Join(ports[:MaxPortsDisplay], ",") + "..."
 }
