@@ -13,13 +13,14 @@ import (
 )
 
 const (
-	CommandsYAMLPath     = "internal/config/commands.yaml"
-	MessagesYAMLPath     = "internal/config/messages.yaml"
-	CoreTemplateFilePath = "cmd/generate-cli/templates/core.tmpl"
-	CLICommandsTemplate  = "cmd/generate-cli/templates/cli.tmpl"
-	CoreGeneratedPath    = "internal/core/constants_generated.go"
-	CLICommandsPath      = "internal/pkg/cli/cli_generated.go"
-	CoreTemplateName     = "core"
+	CommandsYAMLPath         = "internal/config/commands.yaml"
+	MessagesYAMLPath         = "internal/config/messages.yaml"
+	CoreTemplateFilePath     = "cmd/generate-cli/templates/core.tmpl"
+	CLICommandsTemplate      = "cmd/generate-cli/templates/cli.tmpl"
+	RegisterTemplateFilePath = "cmd/generate-cli/templates/register.tmpl"
+	CoreGeneratedPath        = "internal/core/constants_generated.go"
+	CLICommandsPath          = "internal/pkg/cli/cli_generated.go"
+	CoreTemplateName         = "core"
 )
 
 const (
@@ -32,6 +33,10 @@ const (
 	KeyValidation  = "validation"
 	KeyType        = "type"
 	KeyDescription = "description"
+	KeyCategories  = "categories"
+	KeyPersistent  = "persistent"
+	KeyConditional = "conditional"
+	KeyRequired    = "required"
 )
 
 const (
@@ -62,6 +67,17 @@ const (
 	CaseTTY   = "tty"
 	CaseURL   = "url"
 	CaseAPI   = "api"
+)
+
+const (
+	// Built-in commands
+	CommandHelp = "help"
+)
+
+const (
+	// Handler registration paths
+	HandlerBasePath     = "internal/pkg/cli/handlers"
+	RegisterGenFileName = "register_generated.go"
 )
 
 type commandData struct {
@@ -104,6 +120,11 @@ func main() {
 
 	if err := generateCLICommands(rawConfig); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate CLI commands: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := generateHandlerRegistrations(rawConfig); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to generate handler registrations: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -324,7 +345,7 @@ func createFlagField(flagName string, flagData any) flagField {
 		return flagField{}
 	}
 
-	flagType := getStringValue(flag["type"])
+	flagType := getStringValue(flag[KeyType])
 	if flagType == "" {
 		flagType = defaultFlagType
 	}
@@ -346,28 +367,28 @@ func getCommands(rawConfig map[string]any) map[string]any {
 }
 
 func getMessages(rawConfig map[string]any) map[string]any {
-	if messages, ok := rawConfig["messages"].(map[string]any); ok {
+	if messages, ok := rawConfig[KeyMessages].(map[string]any); ok {
 		return messages
 	}
 	return make(map[string]any)
 }
 
 func getIcons(rawConfig map[string]any) map[string]any {
-	if icons, ok := rawConfig["icons"].(map[string]any); ok {
+	if icons, ok := rawConfig[KeyIcons].(map[string]any); ok {
 		return icons
 	}
 	return make(map[string]any)
 }
 
 func getGlobal(rawConfig map[string]any) map[string]any {
-	if global, ok := rawConfig["global"].(map[string]any); ok {
+	if global, ok := rawConfig[KeyGlobal].(map[string]any); ok {
 		return global
 	}
 	return make(map[string]any)
 }
 
 func getFlags(cmd map[string]any) map[string]any {
-	if flags, ok := cmd["flags"].(map[string]any); ok {
+	if flags, ok := cmd[KeyFlags].(map[string]any); ok {
 		return flags
 	}
 	return make(map[string]any)
@@ -418,15 +439,15 @@ func addCommandFlags(rawConfig map[string]any, flagNames map[string]bool) {
 
 func addGlobalFlags(rawConfig map[string]any, flagNames map[string]bool) {
 	global := getGlobal(rawConfig)
-	if flags, ok := global["flags"].(map[string]any); ok {
+	if flags, ok := global[KeyFlags].(map[string]any); ok {
 		// Add persistent flags
-		if persistent, ok := flags["persistent"].(map[string]any); ok {
+		if persistent, ok := flags[KeyPersistent].(map[string]any); ok {
 			for flagName := range persistent {
 				flagNames[flagName] = true
 			}
 		}
 		// Add conditional flags
-		if conditional, ok := flags["conditional"].(map[string]any); ok {
+		if conditional, ok := flags[KeyConditional].(map[string]any); ok {
 			for flagName := range conditional {
 				flagNames[flagName] = true
 			}
@@ -478,13 +499,13 @@ func collectValidationOptions(rawConfig map[string]any) []validationOption {
 
 func createValidationOption(key string, data any) validationOption {
 	dataMap := getCategoryMap(data)
-	desc := getStringValue(dataMap["description"])
+	desc := getStringValue(dataMap[KeyDescription])
 	if desc == "" {
 		return validationOption{}
 	}
 
 	required := false
-	if reqVal, ok := dataMap["required"].(bool); ok {
+	if reqVal, ok := dataMap[KeyRequired].(bool); ok {
 		required = reqVal
 	}
 
@@ -492,7 +513,7 @@ func createValidationOption(key string, data any) validationOption {
 }
 
 func getValidation(rawConfig map[string]any) map[string]any {
-	if validation, ok := rawConfig["validation"].(map[string]any); ok {
+	if validation, ok := rawConfig[KeyValidation].(map[string]any); ok {
 		return validation
 	}
 	return make(map[string]any)
@@ -538,27 +559,109 @@ func generateCLICommands(rawConfig map[string]any) error {
 }
 
 func getCommandCategory(rawConfig map[string]any, cmdName string) string {
-	categories, ok := rawConfig["categories"].(map[string]any)
-	if !ok {
-		return ""
-	}
+	categories := getCategories(rawConfig)
 
 	for catName, catData := range categories {
-		catMap, ok := catData.(map[string]any)
-		if !ok {
-			continue
-		}
-
-		commands, ok := catMap["commands"].([]any)
-		if !ok {
-			continue
-		}
+		catMap := getCategoryMap(catData)
+		commands := getCategoryCommandList(catMap)
 
 		for _, cmd := range commands {
-			if cmdStr, ok := cmd.(string); ok && cmdStr == cmdName {
+			if cmdStr := getStringValue(cmd); cmdStr == cmdName {
 				return catName
 			}
 		}
 	}
 	return ""
+}
+
+type handlerRegistrationData struct {
+	Package  string
+	Commands []handlerCommand
+}
+
+type handlerCommand struct {
+	ConstName   string
+	HandlerName string
+}
+
+func generateHandlerRegistrations(rawConfig map[string]any) error {
+	categories := getCategories(rawConfig)
+	if len(categories) == 0 {
+		return pkgerrors.NewServiceError("generator", "load categories", fmt.Errorf("no categories found in config"))
+	}
+
+	tmpl, err := template.ParseFiles(RegisterTemplateFilePath)
+	if err != nil {
+		return pkgerrors.NewServiceError("generator", "parse register template", err)
+	}
+
+	for categoryName, catData := range categories {
+		if err := generateCategoryRegistration(tmpl, categoryName, catData); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func generateCategoryRegistration(tmpl *template.Template, categoryName string, catData any) error {
+	commands := extractCategoryCommands(catData)
+	if len(commands) == 0 {
+		return nil
+	}
+
+	data := handlerRegistrationData{
+		Package:  categoryName,
+		Commands: commands,
+	}
+
+	outputPath := filepath.Join(HandlerBasePath, categoryName, RegisterGenFileName)
+	file, err := os.Create(outputPath)
+	if err != nil {
+		if err := codegen.EnsureDir(filepath.Dir(outputPath)); err != nil {
+			return pkgerrors.NewServiceError("generator", "create directory", err)
+		}
+		file, err = os.Create(outputPath)
+		if err != nil {
+			return pkgerrors.NewServiceError("generator", "create register file", err)
+		}
+	}
+	defer func() { _ = file.Close() }()
+
+	return tmpl.Execute(file, data)
+}
+
+func extractCategoryCommands(catData any) []handlerCommand {
+	var handlerCommands []handlerCommand
+	catMap := getCategoryMap(catData)
+	commands := getCategoryCommandList(catMap)
+
+	for _, cmd := range commands {
+		if cmdStr := getStringValue(cmd); cmdStr != "" && !isBuiltInCommand(cmdStr) {
+			handlerCommands = append(handlerCommands, handlerCommand{
+				ConstName:   toPascalCase(cmdStr),
+				HandlerName: toPascalCase(cmdStr),
+			})
+		}
+	}
+
+	return handlerCommands
+}
+
+func getCategories(rawConfig map[string]any) map[string]any {
+	if categories, ok := rawConfig[KeyCategories].(map[string]any); ok {
+		return categories
+	}
+	return make(map[string]any)
+}
+
+func getCategoryCommandList(catMap map[string]any) []any {
+	if commands, ok := catMap[KeyCommands].([]any); ok {
+		return commands
+	}
+	return []any{}
+}
+
+func isBuiltInCommand(cmd string) bool {
+	return cmd == CommandHelp
 }
