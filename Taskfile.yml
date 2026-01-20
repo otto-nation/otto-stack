@@ -40,6 +40,30 @@ tasks:
       - task: build
 
   # ============================================================================
+  # SETUP
+  # ============================================================================
+  setup:
+    desc: "🔧 Install all dependencies (Go modules + npm packages)"
+    deps: [setup:go, setup:npm]
+    silent: true
+    cmds:
+      - echo "✅ All dependencies installed"
+
+  setup:go:
+    desc: "📦 Install Go dependencies"
+    silent: true
+    cmds:
+      - echo "📦 Installing Go dependencies..."
+      - go mod download
+
+  setup:npm:
+    desc: "📦 Install npm dependencies"
+    silent: true
+    cmds:
+      - echo "📦 Installing npm dependencies..."
+      - cd docs-site && npm install
+
+  # ============================================================================
   # GENERATE
   # ============================================================================
   generate:
@@ -80,6 +104,7 @@ tasks:
 
   generate:docs:
     desc: "📚 Generate documentation"
+    deps: [setup:npm]
     sources:
       - "internal/config/schema.yaml"
       - "internal/config/services/**/*.yaml"
