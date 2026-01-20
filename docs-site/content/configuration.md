@@ -36,39 +36,54 @@ After running `otto-stack init`, you'll have:
 
 ```yaml
 project:
-  name: "my-app"
-  type: "docker"
-
+  name: my-app
 stack:
   enabled:
     - postgres
     - redis
-
 validation:
-  options:
-    config-syntax: true
-    docker: true
-    service-definitions: true
+  skip_warnings: false
+  allow_multiple_databases: false
+advanced:
+  auto_start: false
+  pull_latest_images: false
+  cleanup_on_recreate: false
+version_config:
+  required_version: ">=1.0.0"
 ```
 
-### Project Section
+### Project
 
-- **name** (required): Project identifier
-- **type** (optional): Project type (docker, web, api, microservice)
+Project configuration settings
 
-### Stack Section
+- **name**: Project name
 
-- **enabled**: Array of service names to run
+### Stack
 
-See [Services Guide](services.md) for available services.
+Stack service configuration
 
-### Validation Section
+- **enabled**: List of enabled services
 
-Control validation checks:
+### Validation
 
-- **config-syntax**: Validate YAML syntax
-- **docker**: Check Docker availability
-- **service-definitions**: Validate service configs
+Validation and safety settings
+
+- **skip_warnings**: Skip validation warnings during startup
+- **allow_multiple_databases**: Allow multiple database services
+
+### Advanced
+
+Advanced operational settings
+
+- **auto_start**: Start services automatically after setup
+- **pull_latest_images**: Pull latest Docker images
+- **cleanup_on_recreate**: Keep data when recreating services
+
+### Version Config
+
+Version management and update settings
+
+- **required_version**: Required otto-stack version
 
 ## Service Configuration
 
@@ -77,15 +92,16 @@ Services are configured through environment variables. Otto-stack generates `.ot
 **Example `.env.generated`:**
 
 ```bash
-# POSTGRES
+# # POSTGRES
+DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@${POSTGRES_HOST:-localhost}:${POSTGRES_PORT:-5432}/${POSTGRES_DB:-local_dev}
+PGHOST=${POSTGRES_HOST:-localhost}
 POSTGRES_DB=${POSTGRES_DB:-local_dev}
-POSTGRES_USER=${POSTGRES_USER:-postgres}
-POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-POSTGRES_PORT=${POSTGRES_PORT:-5432}
-
+POSTGRES_HOST=${POSTGRES_HOST:-localhost}
 # REDIS
+REDIS_HOST=${REDIS_HOST:-localhost}
 REDIS_PASSWORD=${REDIS_PASSWORD:-password}
 REDIS_PORT=${REDIS_PORT:-6379}
+REDIS_URL=redis://:${REDIS_PASSWORD:-password}@${REDIS_HOST:-localhost}:${REDIS_PORT:-6379}
 ```
 
 ### Customizing Services
@@ -93,12 +109,12 @@ REDIS_PORT=${REDIS_PORT:-6379}
 Create a `.env` file in your project root to override defaults:
 
 ```bash
-# .env
-POSTGRES_DB=my_custom_db
-POSTGRES_PASSWORD=secure_password
-POSTGRES_PORT=5433
-
-REDIS_PASSWORD=redis_secure
+# Postgres
+DATABASE_URL=my_custom_value
+PGHOST=my_custom_value
+# Redis
+REDIS_HOST=my_custom_value
+REDIS_PASSWORD=my_custom_value
 ```
 
 These values will be used by Docker Compose when starting services.
@@ -123,14 +139,12 @@ These are informational and don't affect service behavior. Configuration happens
 ```yaml
 project:
   name: my-fullstack-app
-  type: web
-
+  type: docker
 stack:
   enabled:
     - postgres
     - redis
     - kafka
-
 validation:
   options:
     config-syntax: true
@@ -140,15 +154,12 @@ validation:
 **`.env` (your customizations):**
 
 ```bash
-# Database
-POSTGRES_DB=production_db
-POSTGRES_PASSWORD=super_secure_password
-
-# Cache
-REDIS_PASSWORD=redis_secure_password
-
-# Messaging
-KAFKA_HEAP_OPTS=-Xmx512M -Xms256M
+# Postgres
+DATABASE_URL=production_value
+PGHOST=production_value
+# Redis
+REDIS_HOST=production_value
+REDIS_PASSWORD=production_value
 ```
 
 ## Next Steps

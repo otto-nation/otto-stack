@@ -44,7 +44,7 @@ tasks:
   # ============================================================================
   generate:
     desc: "🔧 Generate code from YAML configs"
-    deps: [generate:cli, generate:services]
+    deps: [generate:cli, generate:services, generate:docs]
     silent: true
     cmds:
       - gofmt -w $(find internal -name '*_generated.go')
@@ -77,6 +77,21 @@ tasks:
     cmds:
       - echo "🔧 Running generate-services..."
       - go run ./cmd/generate-services
+
+  generate:docs:
+    desc: "📚 Generate documentation"
+    sources:
+      - "internal/config/schema.yaml"
+      - "internal/config/services/**/*.yaml"
+      - "docs-site/generators/**/*.js"
+      - "docs-site/templates/**/*.md"
+    generates:
+      - "docs-site/content/configuration.md"
+      - "docs-site/content/cli-reference.md"
+    silent: true
+    cmds:
+      - echo "📚 Generating documentation..."
+      - cd docs-site && npm run docs:generate
 
   # ============================================================================
   # BUILD
@@ -758,18 +773,15 @@ tasks:
   # DOCUMENTATION
   # ============================================================================
   docs:
-    desc: "📚 Generate documentation"
-    deps: [build]
+    desc: "📚 Generate and serve documentation"
+    deps: [generate:docs]
     silent: true
     cmds:
-      - echo "📚 Generating documentation..."
-      - echo "📝 Generating Hugo documentation..."
-      - cd docs-site && npm run docs:generate
       - echo "✅ Documentation generated"
 
   docs-serve:
     desc: "🌐 Serve documentation locally"
-    deps: [build]
+    deps: [generate:docs]
     silent: true
     cmds:
       - echo "🌐 Starting documentation server..."

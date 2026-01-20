@@ -105,6 +105,7 @@ otto-stack status
 Otto-stack creates configuration files during initialization:
 
 **Main config** (`.otto-stack/config.yaml`):
+
 ```yaml
 project:
   name: my-app
