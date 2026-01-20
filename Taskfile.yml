@@ -83,7 +83,7 @@ tasks:
   # ============================================================================
   build:
     desc: "🔨 Build the Go binary for current platform"
-    deps: [sync-go-version, lint:go]
+    deps: [sync-go-version, generate, lint:go]
     sources:
       - "**/*.go"
       - "go.mod"
