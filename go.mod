@@ -5,7 +5,7 @@ go 1.24.11
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/briandowns/spinner v1.23.2
-	github.com/compose-spec/compose-go/v2 v2.10.0
+	github.com/compose-spec/compose-go/v2 v2.10.1
 	github.com/docker/cli v28.5.2+incompatible
 	github.com/docker/compose/v5 v5.0.1
 	github.com/docker/docker v28.5.2+incompatible
