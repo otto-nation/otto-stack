@@ -34,6 +34,15 @@ jobs:
         with:
           install-task: "true"
 
+      - name: Verify generated files are up to date
+        run: |
+          git diff --exit-code || {
+            echo "❌ Generated files are out of date"
+            echo "Run 'task generate' and commit the changes"
+            git diff --name-only
+            exit 1
+          }
+
       - name: Validate Go modules
         run: |
           go mod tidy

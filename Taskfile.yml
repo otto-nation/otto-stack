@@ -68,10 +68,11 @@ tasks:
   # ============================================================================
   generate:
     desc: "🔧 Generate code from YAML configs"
-    deps: [generate:cli, generate:services, generate:docs]
+    deps: [generate:cli, generate:services]
     silent: true
     cmds:
       - gofmt -w $(find internal -name '*_generated.go')
+      - task: generate:docs
       - echo "✅ Generated code from YAML configs"
 
   generate:cli:
