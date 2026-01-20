@@ -1,6 +1,7 @@
 name: prometheus-service
 description: Prometheus metrics collection and monitoring system
 service_type: container
+shareable: true
 
 environment:
   PROMETHEUS_HOST: ${PROMETHEUS_HOST:-localhost}

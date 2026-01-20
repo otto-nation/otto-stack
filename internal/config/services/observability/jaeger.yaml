@@ -1,6 +1,7 @@
 name: jaeger
 description: Jaeger distributed tracing system for monitoring and troubleshooting microservices
 service_type: container
+shareable: true
 
 environment:
   JAEGER_COLLECTOR_PORT: ${JAEGER_COLLECTOR_PORT:-13133}

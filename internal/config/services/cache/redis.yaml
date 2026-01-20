@@ -1,6 +1,7 @@
 name: redis
 description: Redis in-memory data store for caching and session storage
 service_type: container
+shareable: true
 
 environment:
   REDIS_HOST: ${REDIS_HOST:-localhost}

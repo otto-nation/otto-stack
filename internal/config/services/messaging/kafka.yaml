@@ -1,6 +1,7 @@
 name: kafka
 description: Complete Apache Kafka messaging platform with UI and topic management
 service_type: composite
+shareable: false
 
 service:
   dependencies:
