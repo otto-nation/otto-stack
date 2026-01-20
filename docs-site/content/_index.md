@@ -7,7 +7,7 @@ lead: >-
   Streamline your local development with powerful CLI tools and automated
   service management
 date: "2025-10-01"
-lastmod: "2026-01-16"
+lastmod: "2026-01-20"
 draft: false
 weight: 50
 toc: true
@@ -98,7 +98,6 @@ otto-stack up
 ## Documentation
 
 - **[Setup & Installation](/setup)**
-- **[Usage Guide](/usage)**
 - **[Services Guide](/services)**
 - **[Configuration](/configuration)**
 - **[CLI Reference](/cli-reference)**
@@ -108,8 +107,7 @@ otto-stack up
 ## Get Started
 
 1. **[Complete installation guide](/setup)**
-2. **[Learn basic usage](/usage)**
-3. **[Explore available services](/services)**
+2. **[Explore available services](/services)**
 
 ## Contributing
 

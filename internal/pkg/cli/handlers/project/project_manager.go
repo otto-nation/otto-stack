@@ -98,11 +98,11 @@ func (pm *ProjectManager) generateInitialComposeFiles(serviceConfigs []types.Ser
 
 // generateEnvFile generates the .env file
 func (pm *ProjectManager) generateEnvFile(serviceConfigs []types.ServiceConfig, projectName string, base *base.BaseCommand) error {
-	if err := env.GenerateFile(projectName, serviceConfigs, core.EnvGeneratedFileName); err != nil {
+	if err := env.GenerateFile(projectName, serviceConfigs, core.EnvGeneratedFilePath); err != nil {
 		return err
 	}
 
-	base.Output.Success("Created environment file: %s", core.EnvGeneratedFileName)
+	base.Output.Success("Created environment file: %s", core.EnvGeneratedFilePath)
 	return nil
 }
 

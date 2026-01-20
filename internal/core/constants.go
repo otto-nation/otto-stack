@@ -38,6 +38,7 @@ const (
 // File names
 const (
 	EnvGeneratedFileName = ".env.generated"
+	EnvGeneratedFilePath = OttoStackDir + "/" + GeneratedDir + "/" + EnvGeneratedFileName
 	ReadmeFileName       = "README.md"
 	GitIgnoreFileName    = ".gitignore"
 )

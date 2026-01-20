@@ -16,9 +16,6 @@ outputs:
   go-version-file:
     description: "The path to the Go version file"
     value: ${{ steps.get-version.outputs.version-file }}
-  cache-hit:
-    description: "A boolean value to indicate if a cache was hit"
-    value: ${{ steps.cache.outputs.cache-hit }}
 
 runs:
   using: "composite"
@@ -37,22 +34,9 @@ runs:
       with:
         go-version: ${{ steps.get-version.outputs.version }}
         check-latest: ${{ inputs.check-latest }}
+        cache: ${{ inputs.cache }}
       env:
         GOTOOLCHAIN: local
-
-    - name: Setup Go module cache
-      id: cache
-      if: inputs.cache == 'true'
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ steps.get-version.outputs.version }}-${{ github.job }}-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-go-${{ steps.get-version.outputs.version }}-${{ github.job }}-
-          ${{ runner.os }}-go-${{ steps.get-version.outputs.version }}-
-          ${{ runner.os }}-go-
 
     - name: Verify Go installation
       shell: bash

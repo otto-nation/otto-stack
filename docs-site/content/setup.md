@@ -102,21 +102,39 @@ otto-stack status
 
 ## ⚙️ Configuration
 
-Otto-stack creates `otto-stack-config.yaml` during initialization:
+Otto-stack creates configuration files during initialization:
+
+**Main config** (`.otto-stack/config.yaml`):
 
 ```yaml
-# Basic configuration
-services:
-  - postgres
-  - redis
+project:
+  name: my-app
+  type: docker
 
-service_configuration:
-  postgres:
-    database: my_app_dev
-    password: password
-  redis:
-    password: password
+stack:
+  enabled:
+    - postgres
+    - redis
 ```
+
+**Environment variables** (`.env.generated`):
+
+Shows available configuration options with defaults:
+
+```bash
+POSTGRES_DB=${POSTGRES_DB:-local_dev}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+REDIS_PASSWORD=${REDIS_PASSWORD:-password}
+```
+
+Create a `.env` file to customize:
+
+```bash
+POSTGRES_DB=my_custom_db
+POSTGRES_PASSWORD=secure_password
+```
+
+See [Configuration Guide](configuration.md) for details.
 
 ## 🔧 Verification
 
@@ -141,9 +159,9 @@ curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts
 
 ## 📚 Next Steps
 
-- **[Usage Guide](usage.md)** - Learn basic commands and workflows
-- **[Services Guide](services.md)** - Available services and configuration
-- **[Configuration](configuration.md)** - Detailed configuration options
+- **[Configuration](configuration.md)** - Configure your development stack
+- **[Services Guide](services.md)** - Available services and options
+- **[CLI Reference](cli-reference.md)** - Complete command reference
 - **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
 
 ## 🆘 Need Help?
