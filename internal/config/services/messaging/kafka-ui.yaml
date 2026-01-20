@@ -1,6 +1,7 @@
 name: kafka-ui
 description: Web UI for Kafka cluster management and topic browsing
 service_type: container
+shareable: true
 
 environment:
   KAFKA_UI_HOST: ${KAFKA_UI_HOST:-localhost}

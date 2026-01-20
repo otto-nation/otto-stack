@@ -1,6 +1,7 @@
 name: kafka-broker
 description: Apache Kafka broker for event streaming and messaging
 service_type: container
+shareable: true
 
 environment:
   KAFKA_BOOTSTRAP_SERVERS: ${KAFKA_HOST:-localhost}:${KAFKA_PORT:-9092}

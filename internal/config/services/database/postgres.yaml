@@ -1,6 +1,7 @@
 name: postgres
 description: PostgreSQL relational database for persistent data storage
 service_type: container
+shareable: true
 
 service:
   characteristics:
