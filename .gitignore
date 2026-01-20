@@ -172,3 +172,4 @@ otto-stack/data/
 otto-stack/logs/
 otto-stack/tmp/
 otto-stack/scripts/
+.task/*-timestamp

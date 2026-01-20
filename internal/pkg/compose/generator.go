@@ -5,10 +5,11 @@ import (
 	"log/slog"
 	"maps"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/core"
-	dockerConstants "github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/filesystem"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
@@ -44,11 +45,11 @@ func (g *Generator) buildComposeStructure(serviceConfigs []types.ServiceConfig) 
 	}
 
 	return map[string]any{
-		dockerConstants.ComposeFieldServices: services,
-		dockerConstants.ComposeFieldNetworks: map[string]any{
-			dockerConstants.DefaultNetworkName: map[string]any{
-				dockerConstants.ComposeFieldName:   g.projectName + dockerConstants.NetworkNameSuffix,
-				dockerConstants.ComposeFieldLabels: g.buildOttoLabels("network"),
+		docker.ComposeFieldServices: services,
+		docker.ComposeFieldNetworks: map[string]any{
+			docker.DefaultNetworkName: map[string]any{
+				docker.ComposeFieldName:   g.projectName + docker.NetworkNameSuffix,
+				docker.ComposeFieldLabels: g.buildOttoLabels("network"),
 			},
 		},
 	}, nil
@@ -123,11 +124,11 @@ func (g *Generator) buildService(config *types.ServiceConfig) map[string]any {
 // createBaseService creates the base service configuration
 func (g *Generator) createBaseService(config *types.ServiceConfig) map[string]any {
 	service := map[string]any{
-		dockerConstants.ComposeFieldImage: config.Container.Image,
+		docker.ComposeFieldImage: config.Container.Image,
 	}
 
 	if len(config.Container.Entrypoint) > 0 {
-		service[dockerConstants.ComposeFieldEntrypoint] = config.Container.Entrypoint
+		service[docker.ComposeFieldEntrypoint] = config.Container.Entrypoint
 	}
 
 	return service
@@ -143,11 +144,11 @@ func (g *Generator) addServicePorts(service map[string]any, config *types.Servic
 	for _, port := range config.Container.Ports {
 		portStr := fmt.Sprintf("%s:%s", g.resolveEnvVar(port.External), port.Internal)
 		if port.Protocol != "" && port.Protocol != "tcp" {
-			portStr += dockerConstants.ProtocolSeparator + port.Protocol
+			portStr += docker.ProtocolSeparator + port.Protocol
 		}
 		ports = append(ports, portStr)
 	}
-	service[dockerConstants.ComposeFieldPorts] = ports
+	service[docker.ComposeFieldPorts] = ports
 }
 
 // resolveEnvVar resolves environment variables in the format ${VAR:-default}
@@ -172,7 +173,7 @@ func (g *Generator) resolveEnvVar(value string) string {
 func (g *Generator) addServiceEnvironment(service map[string]any, config *types.ServiceConfig) {
 	envVars := g.mergeEnvironmentVariables(config)
 	if len(envVars) > 0 {
-		service[dockerConstants.ComposeFieldEnvironment] = envVars
+		service[docker.ComposeFieldEnvironment] = envVars
 	}
 }
 
@@ -199,25 +200,25 @@ func (g *Generator) addServiceVolumes(service map[string]any, config *types.Serv
 	for _, vol := range config.Container.Volumes {
 		volStr := fmt.Sprintf("%s:%s", vol.Name, vol.Mount)
 		if vol.ReadOnly {
-			volStr += dockerConstants.VolumeReadOnlySuffix
+			volStr += docker.VolumeReadOnlySuffix
 		}
 		volumes = append(volumes, volStr)
 	}
-	service[dockerConstants.ComposeFieldVolumes] = volumes
+	service[docker.ComposeFieldVolumes] = volumes
 }
 
 // addServiceConfiguration adds basic service configuration options
 func (g *Generator) addServiceConfiguration(service map[string]any, config *types.ServiceConfig) {
 	if config.Container.Restart != "" {
-		service[dockerConstants.ComposeFieldRestart] = string(config.Container.Restart)
+		service[docker.ComposeFieldRestart] = string(config.Container.Restart)
 	}
 
 	if len(config.Container.Command) > 0 {
-		service[dockerConstants.ComposeFieldCommand] = config.Container.Command
+		service[docker.ComposeFieldCommand] = config.Container.Command
 	}
 
 	if config.Container.MemoryLimit != "" {
-		service[dockerConstants.ComposeFieldMemLimit] = config.Container.MemoryLimit
+		service[docker.ComposeFieldMemLimit] = config.Container.MemoryLimit
 	}
 }
 
@@ -231,42 +232,42 @@ func (g *Generator) addServiceHealthCheck(service map[string]any, config *types.
 	g.logger.Debug("Adding healthcheck", "service", config.Name, "test", config.Container.HealthCheck.Test)
 
 	healthCheck := map[string]any{
-		dockerConstants.HealthCheckFieldTest: config.Container.HealthCheck.Test,
+		docker.HealthCheckFieldTest: config.Container.HealthCheck.Test,
 	}
 
 	g.addHealthCheckTiming(healthCheck, config.Container.HealthCheck)
-	service[dockerConstants.ComposeFieldHealthCheck] = healthCheck
+	service[docker.ComposeFieldHealthCheck] = healthCheck
 }
 
 // addHealthCheckTiming adds timing configuration to health check
 func (g *Generator) addHealthCheckTiming(healthCheck map[string]any, hc *types.HealthCheckSpec) {
 	if hc.Interval > 0 {
-		healthCheck[dockerConstants.HealthCheckFieldInterval] = hc.Interval.String()
+		healthCheck[docker.HealthCheckFieldInterval] = hc.Interval.String()
 	}
 	if hc.Timeout > 0 {
-		healthCheck[dockerConstants.HealthCheckFieldTimeout] = hc.Timeout.String()
+		healthCheck[docker.HealthCheckFieldTimeout] = hc.Timeout.String()
 	}
 	if hc.Retries > 0 {
-		healthCheck[dockerConstants.HealthCheckFieldRetries] = hc.Retries
+		healthCheck[docker.HealthCheckFieldRetries] = hc.Retries
 	}
 	if hc.StartPeriod > 0 {
-		healthCheck[dockerConstants.HealthCheckFieldStartPeriod] = hc.StartPeriod.String()
+		healthCheck[docker.HealthCheckFieldStartPeriod] = hc.StartPeriod.String()
 	}
 }
 
 // addServiceLabels adds Otto Stack labels to the service
 func (g *Generator) addServiceLabels(service map[string]any, config *types.ServiceConfig) {
-	service[dockerConstants.ComposeFieldLabels] = g.buildOttoLabels(config.Name)
+	service[docker.ComposeFieldLabels] = g.buildOttoLabels(config.Name)
 }
 
 // buildOttoLabels creates Otto Stack management labels
 func (g *Generator) buildOttoLabels(serviceName string) map[string]string {
 	return map[string]string{
-		dockerConstants.LabelOttoManaged:     "true",
-		dockerConstants.LabelOttoProject:     g.projectName,
-		dockerConstants.LabelOttoService:     serviceName,
-		dockerConstants.LabelOttoVersion:     "dev",
-		dockerConstants.LabelOttoSharingMode: "isolated",
+		docker.LabelOttoManaged:     "true",
+		docker.LabelOttoProject:     g.projectName,
+		docker.LabelOttoService:     serviceName,
+		docker.LabelOttoVersion:     "dev",
+		docker.LabelOttoSharingMode: "isolated",
 	}
 }
 
@@ -305,5 +306,5 @@ func (g *Generator) GenerateFromServiceConfigs(serviceConfigs []types.ServiceCon
 		return err
 	}
 
-	return g.WriteComposeFile(content, core.OttoStackDir)
+	return g.WriteComposeFile(content, filepath.Dir(docker.DockerComposeFilePath))
 }

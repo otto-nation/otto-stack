@@ -1,50 +1,74 @@
 # Configuration Guide
 
-Otto-stack uses a single configuration file `otto-stack-config.yaml` to define your entire development stack.
+Otto-stack uses `.otto-stack/config.yaml` to define your development stack.
 
-## Configuration File Structure
+## File Structure
 
-```yaml
-{{{structureExample}}}
+After running `otto-stack init`, you'll have:
+
+```
+{{{fileStructure}}}
 ```
 
-## Configuration Sections
+## Main Configuration
 
-### Project Configuration
+**`.otto-stack/config.yaml`:**
 
-The `project` section defines basic project metadata:
+```yaml
+{{{configStructure}}}
+```
 
-- **name** (required): Your project name
-
-### Stack Configuration
-
-The `stack` section defines which services to enable:
-
-- **enabled**: Array of service names to include in your stack
-
-## Available Services
-
-Otto-stack supports the following services:
-
-{{#each serviceList}}
-
-- {{this}}
-  {{/each}}
-
-For detailed information about each service, including configuration options and examples, see the [Services Guide](services.md).
+{{{configSections}}}
 
 ## Service Configuration
 
-Services can be configured in the `service_configuration` section. Each service has its own configuration schema with specific options for customization.
+Services are configured through environment variables. Otto-stack generates `.otto-stack/generated/.env.generated` showing all available variables with defaults:
 
-For complete service configuration details, examples, and available options, refer to the [Services Guide](services.md).
+**Example `.env.generated`:**
+
+```bash
+# {{{serviceConfigExample}}}
+```
+
+### Customizing Services
+
+Create a `.env` file in your project root to override defaults:
+
+```bash
+{{{customEnvExample}}}
+```
+
+These values will be used by Docker Compose when starting services.
+
+## Service Metadata Files
+
+Files in `.otto-stack/services/` contain service metadata:
+
+**`.otto-stack/services/postgres.yml`:**
+
+```yaml
+name: postgres
+description: Configuration for postgres service
+```
+
+These are informational and don't affect service behavior. Configuration happens via environment variables.
 
 ## Complete Example
 
-Here's a complete configuration example with multiple services:
+**`.otto-stack/config.yaml`:**
 
 ```yaml
 {{{completeExample}}}
 ```
 
-For more configuration examples and service-specific options, see the [Services Guide](services.md).
+**`.env` (your customizations):**
+
+```bash
+{{{completeEnvExample}}}
+```
+
+## Next Steps
+
+- **[Services Guide](services.md)** - Available services and environment variables
+- **[CLI Reference](cli-reference.md)** - Command usage
+- **[Troubleshooting](troubleshooting.md)** - Common issues

@@ -40,11 +40,35 @@ tasks:
       - task: build
 
   # ============================================================================
+  # SETUP
+  # ============================================================================
+  setup:
+    desc: "🔧 Install all dependencies (Go modules + npm packages)"
+    deps: [setup:go, setup:npm]
+    silent: true
+    cmds:
+      - echo "✅ All dependencies installed"
+
+  setup:go:
+    desc: "📦 Install Go dependencies"
+    silent: true
+    cmds:
+      - echo "📦 Installing Go dependencies..."
+      - go mod download
+
+  setup:npm:
+    desc: "📦 Install npm dependencies"
+    silent: true
+    cmds:
+      - echo "📦 Installing npm dependencies..."
+      - cd docs-site && npm install
+
+  # ============================================================================
   # GENERATE
   # ============================================================================
   generate:
     desc: "🔧 Generate code from YAML configs"
-    deps: [generate:cli, generate:services]
+    deps: [generate:cli, generate:services, generate:docs]
     silent: true
     cmds:
       - gofmt -w $(find internal -name '*_generated.go')
@@ -77,6 +101,22 @@ tasks:
     cmds:
       - echo "🔧 Running generate-services..."
       - go run ./cmd/generate-services
+
+  generate:docs:
+    desc: "📚 Generate documentation"
+    deps: [setup:npm]
+    sources:
+      - "internal/config/schema.yaml"
+      - "internal/config/services/**/*.yaml"
+      - "docs-site/generators/**/*.js"
+      - "docs-site/templates/**/*.md"
+    generates:
+      - "docs-site/content/configuration.md"
+      - "docs-site/content/cli-reference.md"
+    silent: true
+    cmds:
+      - echo "📚 Generating documentation..."
+      - cd docs-site && npm run docs:generate
 
   # ============================================================================
   # BUILD
@@ -149,15 +189,10 @@ tasks:
     sources:
       - "go.mod"
       - "go.sum"
-      - "**/*.go"
-    generates:
-      - ".task/deps-timestamp"
     silent: true
     cmds:
-      - mkdir -p .task
       - go mod download
       - go mod tidy
-      - touch .task/deps-timestamp
 
   # ============================================================================
   # GIT AUTOMATION
@@ -411,36 +446,8 @@ tasks:
           exit 1
         fi
       - echo "✅ Verifying fixes..."
-      - task: lint
-      - task: validate-homebrew-formula
+      - task: validate
       - echo "✅ Pre-commit checks passed"
-
-  validate-homebrew-formula:
-    desc: "🍺 Validate Homebrew formula syntax and style"
-    sources:
-      - "Formula/otto-stack.rb"
-    generates:
-      - ".task/homebrew-validation-timestamp"
-    silent: true
-    cmds:
-      - mkdir -p .task
-      - |
-        if [ ! -f "Formula/otto-stack.rb" ]; then
-          echo "ℹ️  No Homebrew formula found, skipping validation"
-          touch .task/homebrew-validation-timestamp
-          exit 0
-        fi
-
-        echo "🍺 Validating Homebrew formula..."
-        if ! command -v brew >/dev/null 2>&1; then
-          echo "⚠️  Homebrew not installed, skipping formula validation"
-          touch .task/homebrew-validation-timestamp
-          exit 0
-        fi
-
-        brew style Formula/otto-stack.rb
-        touch .task/homebrew-validation-timestamp
-        echo "✅ Homebrew formula validation passed"
 
   pre-push:
     desc: "🚀 Run all pre-push checks"
@@ -448,28 +455,7 @@ tasks:
     silent: true
     cmds:
       - echo "🚀 Running pre-push checks..."
-      - |
-        # Validate commit message lengths
-        echo "📝 Validating commit messages..."
-        BRANCH=$(git rev-parse --abbrev-ref HEAD)
-        INVALID_COMMITS=$(git log --oneline origin/$BRANCH..HEAD --format="%h %s" 2>/dev/null | while read sha msg; do
-          if [ ${#msg} -gt 72 ]; then
-            echo "$sha: $msg (${#msg} chars)"
-          fi
-        done)
-
-        if [ -n "$INVALID_COMMITS" ]; then
-          echo ""
-          echo "❌ Pre-push failed: Commit headers exceed 72 characters"
-          echo ""
-          echo "Invalid commits:"
-          echo "$INVALID_COMMITS"
-          echo ""
-          echo "🔧 Fix with: git rebase -i origin/$BRANCH"
-          echo "   Then reword the commit messages to be ≤72 characters"
-          exit 1
-        fi
-        echo "✅ All commit messages valid"
+      - task: validate:commits
       - task: docs
       - |
         # Check if docs generation made any changes
@@ -489,67 +475,30 @@ tasks:
       - task: docs-lastmod-update
       - echo "✅ Pre-push checks passed"
 
-  fmt-check:
-    desc: "📝 Check Go code formatting"
-    silent: true
-    cmds:
-      - |
-        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-          echo "❌ Code is not formatted. Run: task fmt"
-          gofmt -s -l .
-          exit 1
-        fi
-        echo "✅ Code formatting OK"
-
-  mod-tidy-check:
-    desc: "📦 Check if go.mod is tidy"
-    silent: true
-    cmds:
-      - go mod tidy
-      - |
-        if ! git diff --exit-code go.mod go.sum; then
-          echo "❌ go.mod/go.sum not tidy. Run: go mod tidy"
-          exit 1
-        fi
-        echo "✅ Go modules are tidy"
-
-  lint-md:
-    desc: "📝 Lint markdown files"
-    silent: true
-    cmds:
-      - echo "📝 Linting markdown files..."
-      - cd docs-site && npm run lint:md
-      - echo "✅ Markdown linting passed"
-
-  docs-sync-check:
-    desc: "📚 Check if documentation is in sync"
-    silent: true
-    cmds:
-      - cd docs-site && npm run docs:generate
-      - |
-        # Check if there are content changes (ignoring timestamp changes in frontmatter)
-        DIFF_OUTPUT=$(git diff docs-site/content/_index.md docs-site/content/reference.md docs-site/content/services.md | grep -v "^[+-]date:" | grep -v "^[+-]lastmod:")
-        if echo "$DIFF_OUTPUT" | grep -q "^[+-]"; then
-          echo "❌ Documentation content out of sync. Run: cd docs-site && npm run docs:generate"
-          echo "$DIFF_OUTPUT"
-          exit 1
-        fi
-        echo "✅ Documentation is in sync"
-
   docs-lastmod-update:
     desc: "🗓️ Update lastmod dates for changed documentation files"
+    sources:
+      - "docs-site/content/**/*.md"
     silent: true
     cmds:
       - ./scripts/update-docs-lastmod.sh
 
   setup-hooks:
     desc: "🪝 Install Git hooks for pre-commit and pre-push checks"
+    sources:
+      - "scripts/setup-hooks.sh"
+      - ".git/hooks/*"
     silent: true
     cmds:
       - ./scripts/setup-hooks.sh
 
   sync-go-version:
     desc: "🔄 Sync Go version across all configuration files"
+    sources:
+      - ".go-version"
+      - ".github/workflows/*.yml"
+      - "Dockerfile"
+      - "go.mod"
     silent: true
     cmds:
       - ./scripts/go-version.sh sync --fix
@@ -557,6 +506,11 @@ tasks:
 
   check-go-version:
     desc: "✅ Check if Go versions are consistent across files"
+    sources:
+      - ".go-version"
+      - ".github/workflows/*.yml"
+      - "Dockerfile"
+      - "go.mod"
     silent: true
     cmds:
       - ./scripts/go-version.sh sync --check
@@ -616,12 +570,9 @@ tasks:
       - ".golangci.yml"
       - "go.mod"
       - "go.sum"
-    generates:
-      - ".task/lint-timestamp"
     silent: true
     cmds:
       - task: lint:docs
-      - touch .task/lint-timestamp
       - echo "✅ All linting checks passed!"
 
   lint:go:
@@ -632,8 +583,6 @@ tasks:
       - ".golangci.yml"
       - "go.mod"
       - "go.sum"
-    generates:
-      - ".task/go-lint-timestamp"
     silent: true
     cmds:
       - mkdir -p .task
@@ -665,11 +614,8 @@ tasks:
       - "docs-site/README.md"
       - "docs-site/.markdownlint.jsonc"
       - "docs-site/.mlc_config.json"
-    generates:
-      - ".task/docs-lint-timestamp"
     silent: true
     cmds:
-      - mkdir -p .task
       - echo "📝 Linting documentation..."
       - |
         cd docs-site
@@ -691,47 +637,28 @@ tasks:
           exit 1
         fi
 
-        cd ..
-        touch .task/docs-lint-timestamp
-
   fmt:
     desc: "✨ Format Go code with gofmt and goimports"
     sources:
       - "**/*.go"
       - "go.mod"
       - "go.sum"
-    generates:
-      - ".task/fmt-timestamp"
     silent: true
     cmds:
-      - mkdir -p .task
       - |
         if [ ! -f $(go env GOPATH)/bin/goimports ]; then
           go install golang.org/x/tools/cmd/goimports@latest > /dev/null 2>&1
         fi
       - go fmt ./... > /dev/null 2>&1
       - $(go env GOPATH)/bin/goimports -w . > /dev/null 2>&1
-      - touch .task/fmt-timestamp
-
-  docs-fmt:
-    desc: "📝 Format documentation"
-    dir: docs-site
-    sources:
-      - "**/*.md"
-      - "package.json"
-    generates:
-      - "../.task/docs-fmt-timestamp"
-    silent: true
-    cmds:
-      - mkdir -p ../.task
-      - echo "📝 Formatting documentation..."
-      - npm run format
-      - touch ../.task/docs-fmt-timestamp
-      - echo "✅ Documentation formatted"
 
   security:
     desc: "🔒 Run security vulnerability scan"
     deps: [deps]
+    sources:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
     silent: true
     cmds:
       - echo "🔒 Running security scan..."
@@ -755,21 +682,87 @@ tasks:
       - echo "✅ Security scan complete"
 
   # ============================================================================
+  # VALIDATION
+  # ============================================================================
+  validate:
+    desc: "✅ Run all validation checks"
+    deps: [validate:code, validate:docs, validate:homebrew]
+    silent: true
+    cmds:
+      - echo "✅ All validation checks passed"
+
+  validate:code:
+    desc: "✅ Validate Go code (lint + test)"
+    silent: true
+    cmds:
+      - echo "🔍 Validating Go code..."
+      - task: lint:go
+      - task: test
+      - echo "✅ Code validation passed"
+
+  validate:docs:
+    desc: "✅ Validate documentation (Hugo build + linting)"
+    deps: [setup:npm]
+    silent: true
+    cmds:
+      - echo "🔍 Validating documentation..."
+      - cd docs-site && hugo --gc --minify --destination public-test
+      - cd docs-site && rm -rf public-test
+      - echo "✅ Hugo build successful"
+      - task: lint:docs
+
+  validate:homebrew:
+    desc: "🍺 Validate Homebrew formula syntax and style"
+    sources:
+      - "Formula/otto-stack.rb"
+    silent: true
+    status:
+      - test ! -f "Formula/otto-stack.rb"
+      - test ! command -v brew >/dev/null 2>&1
+    cmds:
+      - echo "🍺 Validating Homebrew formula..."
+      - ruby -c Formula/otto-stack.rb
+      - echo "✅ Homebrew formula syntax valid"
+
+  validate:commits:
+    desc: "📝 Validate commit message lengths"
+    silent: true
+    cmds:
+      - |
+        echo "📝 Validating commit messages..."
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        INVALID_COMMITS=$(git log --oneline origin/$BRANCH..HEAD --format="%h %s" 2>/dev/null | while read sha msg; do
+          if [ ${#msg} -gt 72 ]; then
+            echo "$sha: $msg (${#msg} chars)"
+          fi
+        done)
+
+        if [ -n "$INVALID_COMMITS" ]; then
+          echo ""
+          echo "❌ Commit headers exceed 72 characters"
+          echo ""
+          echo "Invalid commits:"
+          echo "$INVALID_COMMITS"
+          echo ""
+          echo "🔧 Fix with: git rebase -i origin/$BRANCH"
+          echo "   Then reword the commit messages to be ≤72 characters"
+          exit 1
+        fi
+        echo "✅ All commit messages valid"
+
+  # ============================================================================
   # DOCUMENTATION
   # ============================================================================
   docs:
-    desc: "📚 Generate documentation"
-    deps: [build]
+    desc: "📚 Generate and serve documentation"
+    deps: [generate:docs]
     silent: true
     cmds:
-      - echo "📚 Generating documentation..."
-      - echo "📝 Generating Hugo documentation..."
-      - cd docs-site && npm run docs:generate
       - echo "✅ Documentation generated"
 
   docs-serve:
     desc: "🌐 Serve documentation locally"
-    deps: [build]
+    deps: [generate:docs]
     silent: true
     cmds:
       - echo "🌐 Starting documentation server..."

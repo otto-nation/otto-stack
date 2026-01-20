@@ -104,16 +104,6 @@ Generates release configuration files from central configuration.
 ./scripts/generate-release-configs.sh
 ```
 
-### validate-project.sh
-
-Validates project structure and configuration files.
-
-```bash
-./scripts/validate-project.sh
-```
-
-Checks project structure integrity, configuration validity, and documentation consistency.
-
 ### update-docs-lastmod.sh
 
 Updates documentation modification timestamps.

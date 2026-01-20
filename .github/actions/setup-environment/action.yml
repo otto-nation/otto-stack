@@ -26,6 +26,16 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Clean Go module cache
+      shell: bash
+      run: |
+        # Clean any corrupted cache to prevent tar extraction errors
+        if [ -d "$HOME/go/pkg/mod" ]; then
+          echo "Cleaning Go module cache..."
+          chmod -R u+w "$HOME/go/pkg/mod" 2>/dev/null || true
+          rm -rf "$HOME/go/pkg/mod" 2>/dev/null || true
+        fi
+
     - name: Setup Go
       id: setup-go
       uses: ./.github/actions/setup-go-version

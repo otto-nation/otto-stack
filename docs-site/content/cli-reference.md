@@ -3,7 +3,7 @@ title: CLI Reference
 description: Complete command reference for otto-stack CLI
 lead: Comprehensive reference for all otto-stack CLI commands and their usage
 date: "2025-10-01"
-lastmod: "2026-01-16"
+lastmod: "2026-01-20"
 draft: false
 weight: 50
 toc: true
@@ -19,7 +19,7 @@ A powerful development stack management tool for streamlined local development a
 
 Initialize, validate, and manage project setup
 
-**Commands:** `init`, `validate`, `services`, `deps`, `conflicts`
+**Commands:** `init`, `validate`, `services`, `deps`, `conflicts`, `doctor`
 
 ### 🚀 Service Lifecycle
 
@@ -31,7 +31,7 @@ Start, stop, and manage running services
 
 Monitor, connect to, and manage service data
 
-**Commands:** `status`, `logs`, `doctor`, `exec`, `connect`
+**Commands:** `status`, `logs`, `exec`, `connect`
 
 ### 🛠️ Utility
 

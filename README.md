@@ -80,7 +80,6 @@ otto-stack up
 ## Documentation
 
 - **[Setup & Installation](docs-site/content/setup.md)**
-- **[Usage Guide](docs-site/content/usage.md)**
 - **[Services Guide](docs-site/content/services.md)**
 - **[Configuration](docs-site/content/configuration.md)**
 - **[CLI Reference](docs-site/content/cli-reference.md)**
@@ -90,7 +89,6 @@ otto-stack up
 ## Get Started
 
 1. **[Complete installation guide](docs-site/content/setup.md)**
-2. **[Learn basic usage](docs-site/content/usage.md)**
 3. **[Explore available services](docs-site/content/services.md)**
 
 ## Contributing

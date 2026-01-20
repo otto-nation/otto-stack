@@ -3,7 +3,7 @@ title: Contributing
 description: Guide for contributing to otto-stack development
 lead: Learn how to contribute to otto-stack development
 date: "2025-10-01"
-lastmod: "2026-01-16"
+lastmod: "2026-01-20"
 draft: false
 weight: 60
 toc: true
@@ -75,7 +75,6 @@ task test
 **Manual** (edit directly):
 
 - `docs-site/content/setup.md` - Installation instructions
-- `docs-site/content/usage.md` - Usage examples
 - `docs-site/content/troubleshooting.md` - Common issues
 - Other custom documentation pages
 
