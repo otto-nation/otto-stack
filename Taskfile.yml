@@ -451,36 +451,8 @@ tasks:
           exit 1
         fi
       - echo "✅ Verifying fixes..."
-      - task: lint
-      - task: validate-homebrew-formula
+      - task: validate
       - echo "✅ Pre-commit checks passed"
-
-  validate-homebrew-formula:
-    desc: "🍺 Validate Homebrew formula syntax and style"
-    sources:
-      - "Formula/otto-stack.rb"
-    generates:
-      - ".task/homebrew-validation-timestamp"
-    silent: true
-    cmds:
-      - mkdir -p .task
-      - |
-        if [ ! -f "Formula/otto-stack.rb" ]; then
-          echo "ℹ️  No Homebrew formula found, skipping validation"
-          touch .task/homebrew-validation-timestamp
-          exit 0
-        fi
-
-        echo "🍺 Validating Homebrew formula..."
-        if ! command -v brew >/dev/null 2>&1; then
-          echo "⚠️  Homebrew not installed, skipping formula validation"
-          touch .task/homebrew-validation-timestamp
-          exit 0
-        fi
-
-        brew style Formula/otto-stack.rb
-        touch .task/homebrew-validation-timestamp
-        echo "✅ Homebrew formula validation passed"
 
   pre-push:
     desc: "🚀 Run all pre-push checks"
@@ -488,28 +460,7 @@ tasks:
     silent: true
     cmds:
       - echo "🚀 Running pre-push checks..."
-      - |
-        # Validate commit message lengths
-        echo "📝 Validating commit messages..."
-        BRANCH=$(git rev-parse --abbrev-ref HEAD)
-        INVALID_COMMITS=$(git log --oneline origin/$BRANCH..HEAD --format="%h %s" 2>/dev/null | while read sha msg; do
-          if [ ${#msg} -gt 72 ]; then
-            echo "$sha: $msg (${#msg} chars)"
-          fi
-        done)
-
-        if [ -n "$INVALID_COMMITS" ]; then
-          echo ""
-          echo "❌ Pre-push failed: Commit headers exceed 72 characters"
-          echo ""
-          echo "Invalid commits:"
-          echo "$INVALID_COMMITS"
-          echo ""
-          echo "🔧 Fix with: git rebase -i origin/$BRANCH"
-          echo "   Then reword the commit messages to be ≤72 characters"
-          exit 1
-        fi
-        echo "✅ All commit messages valid"
+      - task: validate:commits
       - task: docs
       - |
         # Check if docs generation made any changes
@@ -793,6 +744,85 @@ tasks:
 
         echo "✅ Basic security checks passed"
       - echo "✅ Security scan complete"
+
+  # ============================================================================
+  # VALIDATION
+  # ============================================================================
+  validate:
+    desc: "✅ Run all validation checks"
+    deps: [validate:code, validate:docs, validate:homebrew]
+    silent: true
+    cmds:
+      - echo "✅ All validation checks passed"
+
+  validate:code:
+    desc: "✅ Validate Go code (lint + test)"
+    silent: true
+    cmds:
+      - echo "🔍 Validating Go code..."
+      - task: lint:go
+      - task: test
+      - echo "✅ Code validation passed"
+
+  validate:docs:
+    desc: "✅ Validate documentation (Hugo build + linting)"
+    deps: [setup:npm]
+    silent: true
+    cmds:
+      - echo "🔍 Validating documentation..."
+      - cd docs-site && hugo --gc --minify --destination public-test
+      - cd docs-site && rm -rf public-test
+      - echo "✅ Hugo build successful"
+      - task: lint:docs
+
+  validate:homebrew:
+    desc: "🍺 Validate Homebrew formula syntax and style"
+    sources:
+      - "Formula/otto-stack.rb"
+    generates:
+      - ".task/homebrew-validation-timestamp"
+    silent: true
+    cmds:
+      - mkdir -p .task
+      - |
+        if [ ! -f "Formula/otto-stack.rb" ]; then
+          echo "ℹ️  No Homebrew formula found, skipping validation"
+          touch .task/homebrew-validation-timestamp
+          exit 0
+        fi
+
+        echo "🍺 Validating Homebrew formula..."
+        if ! command -v brew >/dev/null 2>&1; then
+          echo "⚠️  Homebrew not installed, skipping formula validation"
+          touch .task/homebrew-validation-timestamp
+          exit 0
+        fi
+
+  validate:commits:
+    desc: "📝 Validate commit message lengths"
+    silent: true
+    cmds:
+      - |
+        echo "📝 Validating commit messages..."
+        BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        INVALID_COMMITS=$(git log --oneline origin/$BRANCH..HEAD --format="%h %s" 2>/dev/null | while read sha msg; do
+          if [ ${#msg} -gt 72 ]; then
+            echo "$sha: $msg (${#msg} chars)"
+          fi
+        done)
+
+        if [ -n "$INVALID_COMMITS" ]; then
+          echo ""
+          echo "❌ Commit headers exceed 72 characters"
+          echo ""
+          echo "Invalid commits:"
+          echo "$INVALID_COMMITS"
+          echo ""
+          echo "🔧 Fix with: git rebase -i origin/$BRANCH"
+          echo "   Then reword the commit messages to be ≤72 characters"
+          exit 1
+        fi
+        echo "✅ All commit messages valid"
 
   # ============================================================================
   # DOCUMENTATION

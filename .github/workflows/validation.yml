@@ -52,34 +52,8 @@ jobs:
           hugo-version: ${{ steps.config.outputs.hugo-version }}
           extended: true
 
-      - name: Setup Node.js for documentation tools
-        uses: actions/setup-node@v5
-        with:
-          node-version: ${{ steps.config.outputs.node-version }}
-          cache: "npm"
-          cache-dependency-path: ${{ steps.config.outputs.docs-dir }}/package-lock.json
-
-      - name: Install documentation dependencies
-        working-directory: ${{ steps.config.outputs.docs-dir }}
-        run: |
-          if [ -f package.json ]; then
-            npm ci
-          else
-            echo "No package.json found, skipping npm dependencies"
-          fi
-
-      - name: Run project validation
-        run: ./scripts/validate-project.sh
-
-      - name: Lint markdown files
-        working-directory: ${{ steps.config.outputs.docs-dir }}
-        run: |
-          echo "🔍 Linting markdown files..."
-          if [ -f package.json ]; then
-            npm run lint:md || echo "⚠️ Markdown linting found issues"
-          else
-            echo "⚠️ Markdown linting not configured, skipping"
-          fi
+      - name: Validate documentation
+        run: task validate:docs
 
       - name: Check for broken links
         uses: tcort/github-action-markdown-link-check@v1
