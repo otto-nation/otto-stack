@@ -22,10 +22,6 @@ vars:
   LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/pkg/version.AppVersion={{.VERSION}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildDate={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/version.GitCommit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildBy=taskfile"'
   GOLANGCI_LINT_VERSION: "v2.6.0"
 
-# Global environment variables
-env:
-  CGO_LDFLAGS: "-Wl,-no_warn_duplicate_libraries"
-
 # ============================================================================
 # TASKS
 # ============================================================================
@@ -58,6 +54,11 @@ tasks:
 
   setup:npm:
     desc: "📦 Install npm dependencies"
+    sources:
+      - "docs-site/package.json"
+      - "docs-site/package-lock.json"
+    generates:
+      - "docs-site/node_modules/.package-lock.json"
     silent: true
     cmds:
       - echo "📦 Installing npm dependencies..."
@@ -447,7 +448,7 @@ tasks:
           exit 1
         fi
       - echo "✅ Verifying fixes..."
-      - task: validate
+      - task: lint
       - echo "✅ Pre-commit checks passed"
 
   pre-push:
@@ -694,6 +695,11 @@ tasks:
 
   validate:code:
     desc: "✅ Validate Go code (lint + test)"
+    sources:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - ".golangci.yml"
     silent: true
     cmds:
       - echo "🔍 Validating Go code..."
@@ -704,6 +710,11 @@ tasks:
   validate:docs:
     desc: "✅ Validate documentation (Hugo build + linting)"
     deps: [setup:npm]
+    sources:
+      - "docs-site/content/**/*.md"
+      - "docs-site/config/**/*"
+      - "docs-site/generators/**/*.js"
+      - "docs-site/templates/**/*.md"
     silent: true
     cmds:
       - echo "🔍 Validating documentation..."
