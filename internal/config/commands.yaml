@@ -84,7 +84,7 @@ categories:
     name: "Project Management"
     description: "Initialize, validate, and manage project setup"
     icon: "📁"
-    commands: ["init", "validate", "services", "deps", "conflicts"]
+    commands: ["init", "validate", "services", "deps", "conflicts", "doctor"]
 
   lifecycle:
     name: "Service Lifecycle"
@@ -96,7 +96,7 @@ categories:
     name: "Operations & Data"
     description: "Monitor, connect to, and manage service data"
     icon: "⚙️"
-    commands: ["status", "logs", "doctor", "exec", "connect"]
+    commands: ["status", "logs", "exec", "connect"]
 
   utility:
     name: "Utility"
@@ -106,7 +106,6 @@ categories:
 
 commands:
   up:
-    handler: "lifecycle"
     description: "Start development stack services"
     long_description: |
       Start one or more services in the development stack. Services are started
@@ -155,7 +154,6 @@ commands:
       - "Use --detach to free up your terminal while services run"
 
   down:
-    handler: "lifecycle"
     description: "Stop development stack services"
     long_description: |
       Stop one or more services in the development stack. By default, containers
@@ -199,7 +197,6 @@ commands:
       - "Add --remove-orphans to clean up unused containers"
 
   restart:
-    handler: "lifecycle"
     description: "Restart development stack services"
     long_description: |
       Restart one or more services. This is equivalent to running down followed
@@ -224,7 +221,6 @@ commands:
     related_commands: ["up", "down", "status"]
 
   status:
-    handler: "operations"
     description: "Show status of development stack services"
     long_description: |
       Display comprehensive status information for services including running
@@ -272,7 +268,6 @@ commands:
       - "Use --filter to focus on specific service states"
 
   logs:
-    handler: "operations"
     description: "View logs from services"
     long_description: |
       View and follow logs from one or more services. Supports filtering,
@@ -320,7 +315,6 @@ commands:
       - "Use --timestamps to correlate events across services"
 
   doctor:
-    handler: "project"
     description: "Diagnose and troubleshoot stack health"
     long_description: |
       Run comprehensive health checks on your development stack. Identifies
@@ -350,7 +344,6 @@ commands:
       - "Use --fix to attempt automatic resolution of common issues"
 
   exec:
-    handler: "operations"
     description: "Execute commands in running service containers"
     long_description: |
       Execute commands inside running service containers. Useful for database
@@ -397,7 +390,6 @@ commands:
       - "Combine with --user to run as specific user"
 
   connect:
-    handler: "operations"
     description: "Quick connect to service databases and interfaces"
     long_description: |
       Quickly connect to service databases and management interfaces using
@@ -441,7 +433,6 @@ commands:
       - "Use --read-only for safe data exploration"
 
   cleanup:
-    handler: "lifecycle"
     description: "Clean up unused resources and data"
     long_description: |
       Clean up unused Docker resources, temporary files, and orphaned data
@@ -489,7 +480,6 @@ commands:
       - "Be careful with --volumes as it removes all data"
 
   init:
-    handler: "project"
     description: "Initialize a new otto-stack project interactively"
     long_description: |
       Initialize a new otto-stack project in the current directory with an
@@ -521,7 +511,6 @@ commands:
     related_commands: ["validate"]
 
   web-interfaces:
-    handler: "utility"
     description: "Show web interfaces for running services"
     long_description: |
       Display web interfaces (dashboards, UIs) for running services.
@@ -543,7 +532,6 @@ commands:
     related_commands: ["status", "up"]
 
   services:
-    handler: "project"
     description: "List available services by category"
     long_description: |
       List all available services organized by category (database, cache,
@@ -573,7 +561,6 @@ commands:
     related_commands: ["deps", "conflicts", "init"]
 
   deps:
-    handler: "project"
     description: "Show dependency tree for a service"
     long_description: |
       Display the complete dependency tree for a service, showing all required
@@ -588,7 +575,6 @@ commands:
     related_commands: ["services", "conflicts", "up"]
 
   conflicts:
-    handler: "project"
     description: "Check for conflicts between services"
     long_description: |
       Check if the specified services have any conflicts that would prevent
@@ -603,7 +589,6 @@ commands:
     related_commands: ["services", "deps", "up"]
 
   validate:
-    handler: "project"
     description: "Validate configurations and manifests"
     long_description: |
       Validate otto-stack configurations, service definitions, and YAML
@@ -634,7 +619,6 @@ commands:
     related_commands: ["doctor"]
 
   version:
-    handler: "project"
     description: "Show version information"
     long_description: |
       Display version information for otto-stack including build details,
