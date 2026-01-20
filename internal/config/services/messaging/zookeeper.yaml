@@ -1,6 +1,7 @@
 name: zookeeper
 description: Apache Zookeeper coordination service for distributed systems
 service_type: container
+shareable: true
 
 environment:
   ZOOKEEPER_HOST: ${ZOOKEEPER_HOST:-localhost}

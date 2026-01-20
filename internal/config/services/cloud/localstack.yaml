@@ -2,6 +2,7 @@ name: localstack
 description: LocalStack core AWS service emulator
 hidden: true
 service_type: container
+shareable: true
 
 service:
   characteristics:
