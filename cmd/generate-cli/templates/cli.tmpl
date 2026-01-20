@@ -59,7 +59,7 @@ func BuildRootCommand() *cobra.Command {
 		Short: "{{$cmd.description}}",
 		Long:  `{{$cmd.long_description}}`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			handler := handlers.Get("{{$cmd.handler}}", core.Command{{toPascalCase $name}})
+			handler := handlers.Get("{{getCommandCategory $name}}", core.Command{{toPascalCase $name}})
 			if handler == nil {
 				return fmt.Errorf("handler not found for command: {{$name}}")
 			}

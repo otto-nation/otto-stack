@@ -1,4 +1,4 @@
-package project
+package utility
 
 import (
 	"context"
