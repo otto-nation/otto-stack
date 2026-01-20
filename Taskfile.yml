@@ -189,15 +189,10 @@ tasks:
     sources:
       - "go.mod"
       - "go.sum"
-      - "**/*.go"
-    generates:
-      - ".task/deps-timestamp"
     silent: true
     cmds:
-      - mkdir -p .task
       - go mod download
       - go mod tidy
-      - touch .task/deps-timestamp
 
   # ============================================================================
   # GIT AUTOMATION
@@ -480,67 +475,30 @@ tasks:
       - task: docs-lastmod-update
       - echo "✅ Pre-push checks passed"
 
-  fmt-check:
-    desc: "📝 Check Go code formatting"
-    silent: true
-    cmds:
-      - |
-        if [ "$(gofmt -s -l . | wc -l)" -gt 0 ]; then
-          echo "❌ Code is not formatted. Run: task fmt"
-          gofmt -s -l .
-          exit 1
-        fi
-        echo "✅ Code formatting OK"
-
-  mod-tidy-check:
-    desc: "📦 Check if go.mod is tidy"
-    silent: true
-    cmds:
-      - go mod tidy
-      - |
-        if ! git diff --exit-code go.mod go.sum; then
-          echo "❌ go.mod/go.sum not tidy. Run: go mod tidy"
-          exit 1
-        fi
-        echo "✅ Go modules are tidy"
-
-  lint-md:
-    desc: "📝 Lint markdown files"
-    silent: true
-    cmds:
-      - echo "📝 Linting markdown files..."
-      - cd docs-site && npm run lint:md
-      - echo "✅ Markdown linting passed"
-
-  docs-sync-check:
-    desc: "📚 Check if documentation is in sync"
-    silent: true
-    cmds:
-      - cd docs-site && npm run docs:generate
-      - |
-        # Check if there are content changes (ignoring timestamp changes in frontmatter)
-        DIFF_OUTPUT=$(git diff docs-site/content/_index.md docs-site/content/reference.md docs-site/content/services.md | grep -v "^[+-]date:" | grep -v "^[+-]lastmod:")
-        if echo "$DIFF_OUTPUT" | grep -q "^[+-]"; then
-          echo "❌ Documentation content out of sync. Run: cd docs-site && npm run docs:generate"
-          echo "$DIFF_OUTPUT"
-          exit 1
-        fi
-        echo "✅ Documentation is in sync"
-
   docs-lastmod-update:
     desc: "🗓️ Update lastmod dates for changed documentation files"
+    sources:
+      - "docs-site/content/**/*.md"
     silent: true
     cmds:
       - ./scripts/update-docs-lastmod.sh
 
   setup-hooks:
     desc: "🪝 Install Git hooks for pre-commit and pre-push checks"
+    sources:
+      - "scripts/setup-hooks.sh"
+      - ".git/hooks/*"
     silent: true
     cmds:
       - ./scripts/setup-hooks.sh
 
   sync-go-version:
     desc: "🔄 Sync Go version across all configuration files"
+    sources:
+      - ".go-version"
+      - ".github/workflows/*.yml"
+      - "Dockerfile"
+      - "go.mod"
     silent: true
     cmds:
       - ./scripts/go-version.sh sync --fix
@@ -548,6 +506,11 @@ tasks:
 
   check-go-version:
     desc: "✅ Check if Go versions are consistent across files"
+    sources:
+      - ".go-version"
+      - ".github/workflows/*.yml"
+      - "Dockerfile"
+      - "go.mod"
     silent: true
     cmds:
       - ./scripts/go-version.sh sync --check
@@ -607,12 +570,9 @@ tasks:
       - ".golangci.yml"
       - "go.mod"
       - "go.sum"
-    generates:
-      - ".task/lint-timestamp"
     silent: true
     cmds:
       - task: lint:docs
-      - touch .task/lint-timestamp
       - echo "✅ All linting checks passed!"
 
   lint:go:
@@ -623,8 +583,6 @@ tasks:
       - ".golangci.yml"
       - "go.mod"
       - "go.sum"
-    generates:
-      - ".task/go-lint-timestamp"
     silent: true
     cmds:
       - mkdir -p .task
@@ -656,11 +614,8 @@ tasks:
       - "docs-site/README.md"
       - "docs-site/.markdownlint.jsonc"
       - "docs-site/.mlc_config.json"
-    generates:
-      - ".task/docs-lint-timestamp"
     silent: true
     cmds:
-      - mkdir -p .task
       - echo "📝 Linting documentation..."
       - |
         cd docs-site
@@ -682,47 +637,28 @@ tasks:
           exit 1
         fi
 
-        cd ..
-        touch .task/docs-lint-timestamp
-
   fmt:
     desc: "✨ Format Go code with gofmt and goimports"
     sources:
       - "**/*.go"
       - "go.mod"
       - "go.sum"
-    generates:
-      - ".task/fmt-timestamp"
     silent: true
     cmds:
-      - mkdir -p .task
       - |
         if [ ! -f $(go env GOPATH)/bin/goimports ]; then
           go install golang.org/x/tools/cmd/goimports@latest > /dev/null 2>&1
         fi
       - go fmt ./... > /dev/null 2>&1
       - $(go env GOPATH)/bin/goimports -w . > /dev/null 2>&1
-      - touch .task/fmt-timestamp
-
-  docs-fmt:
-    desc: "📝 Format documentation"
-    dir: docs-site
-    sources:
-      - "**/*.md"
-      - "package.json"
-    generates:
-      - "../.task/docs-fmt-timestamp"
-    silent: true
-    cmds:
-      - mkdir -p ../.task
-      - echo "📝 Formatting documentation..."
-      - npm run format
-      - touch ../.task/docs-fmt-timestamp
-      - echo "✅ Documentation formatted"
 
   security:
     desc: "🔒 Run security vulnerability scan"
     deps: [deps]
+    sources:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
     silent: true
     cmds:
       - echo "🔒 Running security scan..."
@@ -779,24 +715,14 @@ tasks:
     desc: "🍺 Validate Homebrew formula syntax and style"
     sources:
       - "Formula/otto-stack.rb"
-    generates:
-      - ".task/homebrew-validation-timestamp"
     silent: true
+    status:
+      - test ! -f "Formula/otto-stack.rb"
+      - test ! command -v brew >/dev/null 2>&1
     cmds:
-      - mkdir -p .task
-      - |
-        if [ ! -f "Formula/otto-stack.rb" ]; then
-          echo "ℹ️  No Homebrew formula found, skipping validation"
-          touch .task/homebrew-validation-timestamp
-          exit 0
-        fi
-
-        echo "🍺 Validating Homebrew formula..."
-        if ! command -v brew >/dev/null 2>&1; then
-          echo "⚠️  Homebrew not installed, skipping formula validation"
-          touch .task/homebrew-validation-timestamp
-          exit 0
-        fi
+      - echo "🍺 Validating Homebrew formula..."
+      - ruby -c Formula/otto-stack.rb
+      - echo "✅ Homebrew formula syntax valid"
 
   validate:commits:
     desc: "📝 Validate commit message lengths"

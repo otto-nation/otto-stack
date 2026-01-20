@@ -39,8 +39,8 @@ jobs:
           go mod tidy
           git diff --exit-code go.mod go.sum
 
-      - name: Check formatting
-        run: task fmt-check
+      - name: Lint code
+        run: task lint:go
 
       - name: Build binary
         run: task build
