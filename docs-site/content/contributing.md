@@ -75,7 +75,7 @@ task test
 **Manual** (edit directly):
 
 - `docs-site/content/setup.md` - Installation instructions
-- `docs-site/content/usage.md` - Usage examples
+- `docs-site/content/configuration.md` - Configuration guide
 - `docs-site/content/troubleshooting.md` - Common issues
 - Other custom documentation pages
 

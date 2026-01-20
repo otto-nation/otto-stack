@@ -1,9 +1,9 @@
 ---
 title: Configuration Guide
-description: Complete guide to configuring otto-stack services
-lead: Learn how to configure services for your specific needs
+description: Configure your otto-stack development environment
+lead: Learn how to configure your development stack
 date: "2025-10-01"
-lastmod: "2026-01-16"
+lastmod: "2026-01-20"
 draft: false
 weight: 25
 toc: true
@@ -11,106 +11,148 @@ toc: true
 
 # Configuration Guide
 
-Otto-stack uses a single configuration file `otto-stack-config.yaml` to define your entire development stack.
+Otto-stack uses `.otto-stack/config.yaml` to define your development stack.
 
-## Configuration File Structure
+## File Structure
+
+After running `otto-stack init`, you'll have:
+
+```
+.otto-stack/
+├── config.yaml              # Main configuration
+├── generated/
+│   ├── .env.generated       # Available environment variables
+│   └── docker-compose.yml   # Generated Docker Compose
+├── services/                # Service metadata
+│   ├── postgres.yml
+│   └── redis.yml
+├── .gitignore
+└── README.md
+```
+
+## Main Configuration
+
+**`.otto-stack/config.yaml`:**
 
 ```yaml
 project:
   name: "my-app"
+  type: "docker"
 
 stack:
   enabled:
     - postgres
     - redis
-    - kafka
 
-service_configuration:
-  postgres:
-    database: "my_app_db"
-    password: "secure_password"
-  redis:
-    password: "redis_password"
-    max_memory: "512m"
+validation:
+  options:
+    config-syntax: true
+    docker: true
+    service-definitions: true
 ```
 
-## Configuration Sections
+### Project Section
 
-### Project Configuration
+- **name** (required): Project identifier
+- **type** (optional): Project type (docker, web, api, microservice)
 
-The `project` section defines basic project metadata:
+### Stack Section
 
-- **name** (required): Your project name
+- **enabled**: Array of service names to run
 
-### Stack Configuration
+See [Services Guide](services.md) for available services.
 
-The `stack` section defines which services to enable:
+### Validation Section
 
-- **enabled**: Array of service names to include in your stack
+Control validation checks:
 
-## Available Services
-
-Otto-stack supports the following services:
-
-- **jaeger** - Jaeger distributed tracing system for monitoring and troubleshooting microservices
-
-- **kafka** - Complete Apache Kafka messaging platform with UI and topic management
-
-- **kafka-broker** - Apache Kafka broker for event streaming and messaging
-
-- **kafka-ui** - Web UI for Kafka cluster management and topic browsing
-
-- **localstack-dynamodb** - LocalStack DynamoDB NoSQL database emulation
-
-- **localstack-s3** - LocalStack S3 (Simple Storage Service) emulation
-
-- **localstack-sns** - LocalStack SNS (Simple Notification Service) emulation
-
-- **localstack-sqs** - LocalStack SQS (Simple Queue Service) emulation
-
-- **mysql** - MySQL relational database for persistent data storage
-
-- **postgres** - PostgreSQL relational database for persistent data storage
-
-- **prometheus-service** - Prometheus metrics collection and monitoring system
-
-- **redis** - Redis in-memory data store for caching and session storage
-
-- **zookeeper** - Apache Zookeeper coordination service for distributed systems
-
-For detailed information about each service, including configuration options and examples, see the [Services Guide](services.md).
+- **config-syntax**: Validate YAML syntax
+- **docker**: Check Docker availability
+- **service-definitions**: Validate service configs
 
 ## Service Configuration
 
-Services can be configured in the `service_configuration` section. Each service has its own configuration schema with specific options for customization.
+Services are configured through environment variables. Otto-stack generates `.otto-stack/generated/.env.generated` showing all available variables with defaults:
 
-For complete service configuration details, examples, and available options, refer to the [Services Guide](services.md).
+**Example `.env.generated`:**
+
+```bash
+# POSTGRES
+POSTGRES_DB=${POSTGRES_DB:-local_dev}
+POSTGRES_USER=${POSTGRES_USER:-postgres}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+POSTGRES_PORT=${POSTGRES_PORT:-5432}
+
+# REDIS
+REDIS_PASSWORD=${REDIS_PASSWORD:-password}
+REDIS_PORT=${REDIS_PORT:-6379}
+```
+
+### Customizing Services
+
+Create a `.env` file in your project root to override defaults:
+
+```bash
+# .env
+POSTGRES_DB=my_custom_db
+POSTGRES_PASSWORD=secure_password
+POSTGRES_PORT=5433
+
+REDIS_PASSWORD=redis_secure
+```
+
+These values will be used by Docker Compose when starting services.
+
+## Service Metadata Files
+
+Files in `.otto-stack/services/` contain service metadata:
+
+**`.otto-stack/services/postgres.yml`:**
+
+```yaml
+name: postgres
+description: Configuration for postgres service
+```
+
+These are informational and don't affect service behavior. Configuration happens via environment variables.
 
 ## Complete Example
 
-Here's a complete configuration example with multiple services:
+**`.otto-stack/config.yaml`:**
 
 ```yaml
 project:
   name: my-fullstack-app
   type: web
+
 stack:
   enabled:
     - postgres
     - redis
     - kafka
-service_configuration:
-  postgres:
-    database: my_app_db
-    password: secure_password
-    port: 5432
-  redis:
-    password: redis_password
-    max_memory: 512m
-  kafka:
-    topics:
-      - events
-      - notifications
+
+validation:
+  options:
+    config-syntax: true
+    docker: true
 ```
 
-For more configuration examples and service-specific options, see the [Services Guide](services.md).
+**`.env` (your customizations):**
+
+```bash
+# Database
+POSTGRES_DB=production_db
+POSTGRES_PASSWORD=super_secure_password
+
+# Cache
+REDIS_PASSWORD=redis_secure_password
+
+# Messaging
+KAFKA_HEAP_OPTS=-Xmx512M -Xms256M
+```
+
+## Next Steps
+
+- **[Services Guide](services.md)** - Available services and environment variables
+- **[CLI Reference](cli-reference.md)** - Command usage
+- **[Troubleshooting](troubleshooting.md)** - Common issues
