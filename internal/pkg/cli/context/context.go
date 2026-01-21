@@ -1,6 +1,7 @@
 package context
 
 import (
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
@@ -91,12 +92,12 @@ func (b *Builder) WithAdvanced(advanced map[string]bool) *Builder {
 	return b
 }
 
-// WithRuntime sets runtime flags
-func (b *Builder) WithRuntime(force, interactive, dryRun bool) *Builder {
+// WithRuntimeFlags sets runtime flags from InitFlags
+func (b *Builder) WithRuntimeFlags(flags *core.InitFlags, interactive bool) *Builder {
 	b.ctx.Runtime = RuntimeSpec{
-		Force:       force,
+		Force:       flags.Force,
 		Interactive: interactive,
-		DryRun:      dryRun,
+		DryRun:      false,
 	}
 	return b
 }
