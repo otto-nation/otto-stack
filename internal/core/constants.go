@@ -86,6 +86,7 @@ const (
 	ServiceConfigsDir   = "services"
 	GeneratedDir        = "generated"
 	LocalFileExtension  = ".local"
+	SharedRegistryFile  = "containers.yaml"
 )
 
 // Docker command constants
