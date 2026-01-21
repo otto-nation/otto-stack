@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -45,7 +46,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	return h.handleProjectContext(ctx, cmd, args, base, execCtx)
 }
 
-func (h *DownHandler) handleProjectContext(ctx context.Context, _ *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
 	base.Output.Header(core.MsgLifecycle_stopping)
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
@@ -69,7 +70,7 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, _ *cobra.Command
 		return nil
 	}
 
-	if err := h.stopServices(ctx, setup, serviceConfigs, base); err != nil {
+	if err := h.stopServices(ctx, cmd, setup, serviceConfigs, base); err != nil {
 		return err
 	}
 
@@ -130,17 +131,23 @@ func (h *DownHandler) filterOutShared(sharedServices []string, serviceConfigs []
 	return filtered
 }
 
-func (h *DownHandler) stopServices(ctx context.Context, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
+func (h *DownHandler) stopServices(ctx context.Context, cmd *cobra.Command, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
 	service, err := common.NewServiceManager(false)
 	if err != nil {
 		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
 	}
 
+	downFlags, _ := core.ParseDownFlags(cmd)
+
+	timeout := time.Duration(downFlags.Timeout) * time.Second
+
 	stopRequest := services.StopRequest{
 		Project:        setup.Config.Project.Name,
 		ServiceConfigs: serviceConfigs,
 		Remove:         true,
-		RemoveVolumes:  false,
+		RemoveVolumes:  downFlags.Volumes,
+		RemoveOrphans:  downFlags.RemoveOrphans,
+		Timeout:        timeout,
 	}
 
 	if err = service.Stop(ctx, stopRequest); err != nil {

@@ -13,6 +13,8 @@ type UpOptions struct {
 	Build         bool
 	ForceRecreate bool
 	RemoveOrphans bool
+	NoDeps        bool
+	Detach        bool
 	Services      []string
 	Timeout       *time.Duration
 }
@@ -42,7 +44,9 @@ type LogOptions struct {
 // ToSDK converts UpOptions to Docker Compose API options
 func (o UpOptions) ToSDK() api.UpOptions {
 	createOpts := api.CreateOptions{
-		Services: o.Services,
+		Services:      o.Services,
+		RemoveOrphans: o.RemoveOrphans,
+		Timeout:       o.Timeout,
 	}
 	if o.Build {
 		createOpts.Build = &api.BuildOptions{}
@@ -50,15 +54,28 @@ func (o UpOptions) ToSDK() api.UpOptions {
 	if o.ForceRecreate {
 		createOpts.Recreate = api.RecreateForce
 	}
-	return api.UpOptions{Create: createOpts}
+	if o.NoDeps {
+		createOpts.RecreateDependencies = api.RecreateNever
+	}
+
+	startOpts := api.StartOptions{
+		Services: o.Services,
+		Wait:     !o.Detach, // If detached, don't wait
+	}
+
+	return api.UpOptions{
+		Create: createOpts,
+		Start:  startOpts,
+	}
 }
 
 // ToSDK converts DownOptions to Docker Compose API options
 func (o DownOptions) ToSDK() api.DownOptions {
 	return api.DownOptions{
-		Services: o.Services,
-		Volumes:  o.RemoveVolumes,
-		Timeout:  o.Timeout,
+		Services:      o.Services,
+		Volumes:       o.RemoveVolumes,
+		RemoveOrphans: o.RemoveOrphans,
+		Timeout:       o.Timeout,
 	}
 }
 
