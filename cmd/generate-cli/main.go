@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"text/template"
@@ -13,14 +14,17 @@ import (
 )
 
 const (
-	CommandsYAMLPath         = "internal/config/commands.yaml"
-	MessagesYAMLPath         = "internal/config/messages.yaml"
-	CoreTemplateFilePath     = "cmd/generate-cli/templates/core.tmpl"
-	CLICommandsTemplate      = "cmd/generate-cli/templates/cli.tmpl"
-	RegisterTemplateFilePath = "cmd/generate-cli/templates/register.tmpl"
-	CoreGeneratedPath        = "internal/core/constants_generated.go"
-	CLICommandsPath          = "internal/pkg/cli/cli_generated.go"
-	CoreTemplateName         = "core"
+	CommandsYAMLPath               = "internal/config/commands.yaml"
+	MessagesYAMLPath               = "internal/config/messages.yaml"
+	CoreTemplateFilePath           = "cmd/generate-cli/templates/core.tmpl"
+	CLICommandsTemplate            = "cmd/generate-cli/templates/cli.tmpl"
+	RegisterTemplateFilePath       = "cmd/generate-cli/templates/register.tmpl"
+	ValidationTestTemplateFilePath = "cmd/generate-cli/templates/validation_test.tmpl"
+	CoreGeneratedPath              = "internal/core/constants_generated.go"
+	CLICommandsPath                = "internal/pkg/cli/cli_generated.go"
+	ValidationTestGeneratedPath    = "internal/pkg/cli/flags_validation_generated_test.go"
+	HandlersBasePath               = "internal/pkg/cli/handlers"
+	CoreTemplateName               = "core"
 )
 
 const (
@@ -125,6 +129,11 @@ func main() {
 
 	if err := generateHandlerRegistrations(rawConfig); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to generate handler registrations: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := generateFlagValidationTest(rawConfig); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to generate flag validation test: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -664,4 +673,156 @@ func getCategoryCommandList(catMap map[string]any) []any {
 
 func isBuiltInCommand(cmd string) bool {
 	return cmd == CommandHelp
+}
+
+func generateFlagValidationTest(rawConfig map[string]any) error {
+	globalFlags := extractGlobalFlags(rawConfig)
+	commands := buildCommandFlagInfo(rawConfig, globalFlags)
+
+	data := struct {
+		Commands []CommandInfo
+	}{
+		Commands: commands,
+	}
+
+	tmpl, err := template.ParseFiles(ValidationTestTemplateFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to parse template: %w", err)
+	}
+
+	outputFile, err := os.Create(ValidationTestGeneratedPath)
+	if err != nil {
+		return fmt.Errorf("failed to create output file: %w", err)
+	}
+	defer outputFile.Close()
+
+	if err := tmpl.Execute(outputFile, data); err != nil {
+		return fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	return nil
+}
+
+type CommandInfo struct {
+	Name        string
+	HandlerPath string
+	Flags       []string
+}
+
+func extractGlobalFlags(rawConfig map[string]any) map[string]bool {
+	globalFlags := make(map[string]bool)
+
+	globalData, ok := rawConfig[KeyGlobal].(map[string]any)
+	if !ok {
+		return globalFlags
+	}
+
+	flagsData, ok := globalData[KeyFlags].(map[string]any)
+	if !ok {
+		return globalFlags
+	}
+
+	// Get persistent flags
+	if persistent, ok := flagsData[KeyPersistent].(map[string]any); ok {
+		for flagName := range persistent {
+			globalFlags[flagName] = true
+		}
+	}
+
+	// Get conditional flags
+	if conditional, ok := flagsData[KeyConditional].(map[string]any); ok {
+		for flagName := range conditional {
+			globalFlags[flagName] = true
+		}
+	}
+
+	return globalFlags
+}
+
+func buildCommandFlagInfo(rawConfig map[string]any, globalFlags map[string]bool) []CommandInfo {
+	var commands []CommandInfo
+
+	categoriesData, ok := rawConfig[KeyCategories].(map[string]any)
+	if !ok {
+		return commands
+	}
+
+	commandsData, ok := rawConfig[KeyCommands].(map[string]any)
+	if !ok {
+		return commands
+	}
+
+	// Build map of command -> category
+	cmdToCategory := buildCommandCategoryMap(categoriesData)
+
+	// Process each command (sorted for deterministic output)
+	var cmdNames []string
+	for cmdName := range commandsData {
+		cmdNames = append(cmdNames, cmdName)
+	}
+	sort.Strings(cmdNames)
+
+	for _, cmdName := range cmdNames {
+		cmdData := commandsData[cmdName]
+		cmdMap, ok := cmdData.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		category, hasCategory := cmdToCategory[cmdName]
+		if !hasCategory {
+			continue
+		}
+
+		handlerPath := fmt.Sprintf("%s/%s/%s.go", HandlersBasePath, category, cmdName)
+
+		flagsData, ok := cmdMap[KeyFlags].(map[string]any)
+		if !ok || len(flagsData) == 0 {
+			continue
+		}
+
+		flags := extractNonGlobalFlags(flagsData, globalFlags)
+		if len(flags) > 0 {
+			commands = append(commands, CommandInfo{
+				Name:        cmdName,
+				HandlerPath: handlerPath,
+				Flags:       flags,
+			})
+		}
+	}
+
+	return commands
+}
+
+func buildCommandCategoryMap(categoriesData map[string]any) map[string]string {
+	cmdToCategory := make(map[string]string)
+
+	for catName, catData := range categoriesData {
+		catMap, ok := catData.(map[string]any)
+		if !ok {
+			continue
+		}
+
+		cmdList := getCategoryCommandList(catMap)
+		for _, cmd := range cmdList {
+			if cmdStr, ok := cmd.(string); ok {
+				cmdToCategory[cmdStr] = catName
+			}
+		}
+	}
+
+	return cmdToCategory
+}
+
+func extractNonGlobalFlags(flagsData map[string]any, globalFlags map[string]bool) []string {
+	var flags []string
+
+	for flagName := range flagsData {
+		if !globalFlags[flagName] {
+			flags = append(flags, flagName)
+		}
+	}
+
+	sort.Strings(flags) // Sort for deterministic output
+	return flags
 }
