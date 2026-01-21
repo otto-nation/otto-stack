@@ -66,6 +66,12 @@ func (c *ExecutionContext) GetSharedRoot() string {
 	return c.Shared.Root
 }
 
+// SharingConfig defines container sharing configuration
+type SharingConfig struct {
+	Enabled  bool            `yaml:"enabled" json:"enabled"`
+	Services map[string]bool `yaml:"services,omitempty" json:"services,omitempty"`
+}
+
 // NewProjectInfo creates a ProjectInfo from a config directory path
 func NewProjectInfo(configDir string) *ProjectInfo {
 	return &ProjectInfo{

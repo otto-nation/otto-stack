@@ -7,6 +7,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/core"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -111,27 +112,31 @@ func LoadCommandConfigStruct() (*CommandConfig, error) {
 }
 
 // GenerateConfig creates a new otto-stack configuration file
-func GenerateConfig(projectName string, serviceNames []string, validationOptions map[string]bool) ([]byte, error) {
-	if projectName == "" {
+func GenerateConfig(ctx clicontext.Context) ([]byte, error) {
+	if ctx.Project.Name == "" {
 		return nil, pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgProjectNameEmpty, nil)
 	}
 
 	config := Config{
 		Project: ProjectConfig{
-			Name: projectName,
+			Name: ctx.Project.Name,
 			Type: DefaultProjectType,
 		},
 		Stack: StackConfig{
-			Enabled: serviceNames,
-		},
-		Sharing: &SharingConfig{
-			Enabled: true,
+			Enabled: ctx.Services.Names,
 		},
 	}
 
-	if validationOptions != nil {
+	if ctx.Sharing != nil {
+		config.Sharing = &SharingConfig{
+			Enabled:  ctx.Sharing.Enabled,
+			Services: ctx.Sharing.Services,
+		}
+	}
+
+	if ctx.Options.Validation != nil {
 		config.Validation = &ValidationConfig{
-			Options: validationOptions,
+			Options: ctx.Options.Validation,
 		}
 	}
 
