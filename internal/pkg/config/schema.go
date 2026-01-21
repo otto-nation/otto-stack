@@ -6,6 +6,7 @@ import "time"
 type Config struct {
 	Project    ProjectConfig     `yaml:"project" json:"project"`
 	Stack      StackConfig       `yaml:"stack" json:"stack"`
+	Sharing    *SharingConfig    `yaml:"sharing,omitempty" json:"sharing,omitempty"`
 	Validation *ValidationConfig `yaml:"validation,omitempty" json:"validation,omitempty"`
 }
 
@@ -20,6 +21,12 @@ type ProjectConfig struct {
 // StackConfig defines stack-level configuration
 type StackConfig struct {
 	Enabled []string `yaml:"enabled" json:"enabled"`
+}
+
+// SharingConfig defines container sharing configuration
+type SharingConfig struct {
+	Enabled  bool            `yaml:"enabled" json:"enabled"`
+	Services map[string]bool `yaml:"services,omitempty" json:"services,omitempty"`
 }
 
 // ValidationConfig defines validation settings

@@ -3,7 +3,7 @@ title: Configuration Guide
 description: Configure your otto-stack development environment
 lead: Learn how to configure your development stack
 date: "2025-10-01"
-lastmod: "2026-01-20"
+lastmod: "2026-01-21"
 draft: false
 weight: 25
 toc: true
@@ -41,6 +41,8 @@ stack:
   enabled:
     - postgres
     - redis
+sharing:
+  enabled: false
 validation:
   skip_warnings: false
   allow_multiple_databases: false
@@ -63,6 +65,13 @@ Project configuration settings
 Stack service configuration
 
 - **enabled**: List of enabled services
+
+### Sharing
+
+Container sharing configuration
+
+- **enabled**: Enable container sharing across projects
+- **services**: Per-service sharing overrides (service_name: true/false)
 
 ### Validation
 
