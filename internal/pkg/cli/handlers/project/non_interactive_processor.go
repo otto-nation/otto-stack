@@ -16,18 +16,16 @@ type NonInteractiveProcessor struct {
 }
 
 // Process validates and processes flags for non-interactive mode
-func (p *NonInteractiveProcessor) Process(flags any, base *base.BaseCommand) (clicontext.Context, error) {
-	initFlags := flags.(*core.InitFlags)
-
-	if initFlags.Services == "" {
+func (p *NonInteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCommand) (clicontext.Context, error) {
+	if flags.Services == "" {
 		return clicontext.Context{}, pkgerrors.NewValidationError("services", "services flag is required in non-interactive mode", nil)
 	}
 
-	if initFlags.ProjectName == "" {
+	if flags.ProjectName == "" {
 		return clicontext.Context{}, pkgerrors.NewValidationError("project-name", "project name is required in non-interactive mode", nil)
 	}
 
-	serviceNames := parseServices(initFlags.Services)
+	serviceNames := parseServices(flags.Services)
 
 	// Convert service names to ServiceConfigs at entry point
 	serviceConfigs, err := svc.ResolveUpServices(serviceNames, nil)
@@ -39,14 +37,14 @@ func (p *NonInteractiveProcessor) Process(flags any, base *base.BaseCommand) (cl
 		return clicontext.Context{}, err
 	}
 
-	sharingConfig := p.handler.buildSharingConfig(initFlags)
+	sharingConfig := p.handler.buildSharingConfig(flags)
 
 	ctx := clicontext.NewBuilder().
-		WithProject(initFlags.ProjectName, "").
+		WithProject(flags.ProjectName, "").
 		WithServices(serviceNames, serviceConfigs).
 		WithValidation(getDefaultValidation()).
 		WithAdvanced(map[string]bool{}).
-		WithRuntime(initFlags.Force, false, false).
+		WithRuntimeFlags(flags, false).
 		WithSharing(sharingConfig).
 		Build()
 
