@@ -2,14 +2,15 @@ package lifecycle
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 
 	"github.com/spf13/cobra"
@@ -31,7 +32,6 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	ciFlags := ci.GetFlags(cmd)
-
 	if !ciFlags.Quiet {
 		base.Output.Header(core.MsgLifecycle_cleaning)
 	}
@@ -42,30 +42,44 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 	defer cleanup()
 
-	// If --all is specified, enable all cleanup options
-	if flags.All {
-		flags.Volumes = true
-		flags.Images = true
-		flags.Networks = true
+	// Check for orphans (informational only)
+	_ = h.checkOrphans(setup, base, &ciFlags)
+
+	// Execute cleanup based on flags
+	if flags.Orphans {
+		return h.handleOrphanCleanup(setup, base, &ciFlags, flags.Force)
 	}
 
-	// Confirm cleanup unless forced or in non-interactive mode
-	if !flags.Force && !ciFlags.NonInteractive {
-		if !h.confirmCleanup(base) {
-			return nil
-		}
-	}
-
-	// Perform cleanup operations
-	if err := h.performCleanup(ctx, setup, flags, &ciFlags, base); err != nil {
-		return ci.FormatError(ciFlags, fmt.Errorf("cleanup failed: %w", err))
+	if flags.All || flags.Volumes || flags.Images || flags.Networks {
+		return h.handleResourceCleanup(ctx, setup, flags, &ciFlags, base)
 	}
 
 	if !ciFlags.Quiet {
-		base.Output.Success("Cleanup completed successfully")
+		base.Output.Info("No cleanup options specified. Use --help for available options")
+	}
+	return nil
+}
+
+func (h *CleanupHandler) handleOrphanCleanup(setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
+	if err := h.cleanOrphans(setup, base, ciFlags, force); err != nil {
+		return ci.FormatError(*ciFlags, err)
+	}
+	if !ciFlags.Quiet {
+		base.Output.Success(core.MsgOrphan_cleanup_success)
+	}
+	return nil
+}
+
+func (h *CleanupHandler) handleResourceCleanup(ctx context.Context, setup *common.CoreSetup, flags *core.CleanupFlags, ciFlags *ci.Flags, base *base.BaseCommand) error {
+	if flags.All {
+		flags.Volumes, flags.Images, flags.Networks = true, true, true
 	}
 
-	return nil
+	if !flags.Force && !ciFlags.NonInteractive && !h.confirmCleanup(base) {
+		return nil
+	}
+
+	return h.performCleanup(ctx, setup, flags, ciFlags, base)
 }
 
 // performCleanup executes the actual cleanup operations
@@ -73,14 +87,6 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 	projectName := flags.Project
 	if projectName == "" {
 		projectName = setup.Config.Project.Name
-	}
-
-	if !ciFlags.Quiet {
-		if projectName != "" {
-			base.Output.Info("Cleaning up project: %s", projectName)
-		} else {
-			base.Output.Info("Cleaning up all Otto Stack containers")
-		}
 	}
 
 	stackService, err := common.NewServiceManager(false)
@@ -100,12 +106,8 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 		return nil
 	}
 
-	// Remove containers
 	h.removeContainers(ctx, stackService, containers, flags.Force, ciFlags, base)
-
-	// Clean up additional resources
 	h.cleanupResources(ctx, stackService, flags, projectName, ciFlags, base)
-
 	return nil
 }
 
@@ -147,6 +149,89 @@ func (h *CleanupHandler) cleanupResources(ctx context.Context, stackService *ser
 			base.Output.Warning("Failed to remove images: %v", err)
 		}
 	}
+}
+
+// checkOrphans checks for and reports orphaned shared containers
+func (h *CleanupHandler) checkOrphans(_ *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags) error {
+	reg, err := h.getRegistry()
+	if err != nil {
+		return err
+	}
+
+	orphans, err := reg.FindOrphans()
+	if err != nil || len(orphans) == 0 || ciFlags.Quiet {
+		return err
+	}
+
+	base.Output.Warning(core.MsgOrphan_found, len(orphans))
+	for _, orphan := range orphans {
+		base.Output.Info("  - %s (%s)", orphan.Service, orphan.Reason)
+	}
+	base.Output.Info(core.MsgOrphan_run_cleanup_hint)
+	return nil
+}
+
+// cleanOrphans removes orphaned shared containers
+func (h *CleanupHandler) cleanOrphans(_ *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
+	reg, err := h.getRegistry()
+	if err != nil {
+		return err
+	}
+
+	orphans, err := reg.FindOrphans()
+	if err != nil {
+		return err
+	}
+
+	if len(orphans) == 0 {
+		if !ciFlags.Quiet {
+			base.Output.Info(core.MsgOrphan_none_found)
+		}
+		return nil
+	}
+
+	if !force && !ciFlags.NonInteractive && !h.confirmOrphanCleanup(base, orphans) {
+		base.Output.Info(core.MsgOrphan_cleanup_cancelled)
+		return nil
+	}
+
+	cleaned, err := reg.CleanOrphans()
+	if err != nil {
+		return err
+	}
+
+	if !ciFlags.Quiet {
+		base.Output.Success(core.MsgOrphan_removed_from_registry, len(cleaned))
+		for _, service := range cleaned {
+			base.Output.Info("  - %s", service)
+		}
+	}
+
+	return nil
+}
+
+// getRegistry creates a registry manager
+func (h *CleanupHandler) getRegistry() (*registry.Manager, error) {
+	detector, err := clicontext.NewDetector()
+	if err != nil {
+		return nil, err
+	}
+
+	execCtx, err := detector.Detect()
+	if err != nil {
+		return nil, err
+	}
+
+	return registry.NewManager(execCtx.Shared.Root), nil
+}
+
+// confirmOrphanCleanup prompts user to confirm orphan cleanup
+func (h *CleanupHandler) confirmOrphanCleanup(base *base.BaseCommand, orphans []registry.OrphanInfo) bool {
+	base.Output.Warning(core.MsgOrphan_will_remove)
+	for _, orphan := range orphans {
+		base.Output.Info("  - %s", orphan.Service)
+	}
+	return h.confirmCleanup(base)
 }
 
 // ValidateArgs validates the command arguments

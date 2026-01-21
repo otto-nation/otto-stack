@@ -493,6 +493,7 @@ Preview what would be cleaned up
 - `--images` (`bool`): Remove unused images (default: `false`)
 - `--networks` (`bool`): Remove unused networks (default: `false`)
 - `--force`, `-f` (`bool`): Don't prompt for confirmation (default: `false`)
+- `--orphans` (`bool`): Clean up orphaned shared containers (containers with no projects) (default: `false`)
 - `--project`, `-p` (`string`): Clean specific project (if not specified, cleans current project) (default: ``)
 
 **Related Commands:** [`down`](#down), [`doctor`](#doctor)
