@@ -1,7 +1,6 @@
 package config
 
 import (
-	"maps"
 	"os"
 	"path/filepath"
 
@@ -73,26 +72,6 @@ func LoadConfig() (*Config, error) {
 	return mergeConfigs(baseConfig, localConfig), nil
 }
 
-// LoadServiceConfig loads configuration for a specific service
-func LoadServiceConfig(serviceName string) (map[string]any, error) {
-	if serviceName == "" {
-		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgServiceNameEmpty, nil)
-	}
-
-	baseServiceConfig, err := loadServiceConfigFile(serviceName, false)
-	if err != nil {
-		return nil, err
-	}
-
-	localServiceConfig, err := loadServiceConfigFile(serviceName, true)
-	if err != nil {
-		// Local service config is optional
-		return baseServiceConfig, nil
-	}
-
-	return mergeServiceConfigs(baseServiceConfig, localServiceConfig), nil
-}
-
 // LoadCommandConfig loads command configuration from embedded YAML
 func LoadCommandConfig() (map[string]any, error) {
 	var commandConfig map[string]any
@@ -153,11 +132,6 @@ func getLocalConfigPath() string {
 	return filepath.Join(core.OttoStackDir, core.LocalConfigFileName)
 }
 
-// getServiceConfigDir returns the service configs directory path
-func getServiceConfigDir() string {
-	return filepath.Join(core.OttoStackDir, core.ServiceConfigsDir)
-}
-
 // loadBaseConfig loads the main configuration file
 func loadBaseConfig() (*Config, error) {
 	configPath := getConfigPath()
@@ -210,38 +184,3 @@ func mergeConfigs(base, local *Config) *Config {
 }
 
 // loadServiceConfigFile loads service configuration (base or local)
-func loadServiceConfigFile(serviceName string, isLocal bool) (map[string]any, error) {
-	configDir := getServiceConfigDir()
-
-	filename := serviceName
-	configType := ConfigTypeService
-	if isLocal {
-		filename += core.LocalFileExtension
-		configType = ConfigTypeLocalService
-	}
-
-	configPath, err := core.FindYAMLFile(configDir, filename)
-	if err != nil {
-		return nil, pkgerrors.NewConfigErrorf("", ErrServiceNotFound, configType, serviceName)
-	}
-
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var config map[string]any
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, pkgerrors.NewConfigError("", ErrServiceConfigParse, err)
-	}
-
-	return config, nil
-}
-
-// mergeServiceConfigs merges base service config with local overrides
-func mergeServiceConfigs(base, local map[string]any) map[string]any {
-	merged := make(map[string]any)
-	maps.Copy(merged, base)
-	maps.Copy(merged, local) // Local overrides base
-	return merged
-}

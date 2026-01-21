@@ -52,21 +52,6 @@ func OutputResult(flags Flags, result any, exitCode int) {
 	}
 }
 
-// HandleError handles errors in CI-friendly way
-func HandleError(flags Flags, err error) {
-	if flags.JSON {
-		errorResult := map[string]any{
-			"error":     err.Error(),
-			"exit_code": core.ExitError,
-		}
-		_ = json.NewEncoder(os.Stdout).Encode(errorResult)
-	} else if !flags.Quiet {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-	}
-
-	os.Exit(core.ExitError)
-}
-
 // FormatError formats errors for CI output without exiting
 // Use this in handlers that should return errors instead of calling os.Exit()
 func FormatError(flags Flags, err error) error {
