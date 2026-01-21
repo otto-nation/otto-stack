@@ -39,12 +39,15 @@ func (p *NonInteractiveProcessor) Process(flags any, base *base.BaseCommand) (cl
 		return clicontext.Context{}, err
 	}
 
+	sharingConfig := p.handler.buildSharingConfig(initFlags)
+
 	ctx := clicontext.NewBuilder().
 		WithProject(initFlags.ProjectName, "").
 		WithServices(serviceNames, serviceConfigs).
 		WithValidation(getDefaultValidation()).
 		WithAdvanced(map[string]bool{}).
 		WithRuntime(initFlags.Force, false, false).
+		WithSharing(sharingConfig).
 		Build()
 
 	return ctx, nil

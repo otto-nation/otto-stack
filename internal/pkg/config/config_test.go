@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -62,10 +63,12 @@ func TestLoadCommandConfigStruct(t *testing.T) {
 
 func TestGenerateConfig(t *testing.T) {
 	t.Run("generates valid config YAML", func(t *testing.T) {
-		projectName := "test-project"
-		serviceNames := []string{"postgres", "redis"}
+		ctx := clicontext.NewBuilder().
+			WithProject("test-project", "").
+			WithServices([]string{"postgres", "redis"}, nil).
+			Build()
 
-		configBytes, err := GenerateConfig(projectName, serviceNames, nil)
+		configBytes, err := GenerateConfig(ctx)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, configBytes)
 
@@ -75,18 +78,28 @@ func TestGenerateConfig(t *testing.T) {
 		assert.NoError(t, err)
 
 		// Verify content
-		assert.Equal(t, projectName, config.Project.Name)
+		assert.Equal(t, "test-project", config.Project.Name)
 		assert.Equal(t, []string{"postgres", "redis"}, config.Stack.Enabled)
 	})
 
 	t.Run("handles empty project name", func(t *testing.T) {
-		_, err := GenerateConfig("", []string{"postgres"}, nil)
+		ctx := clicontext.NewBuilder().
+			WithProject("", "").
+			WithServices([]string{"postgres"}, nil).
+			Build()
+
+		_, err := GenerateConfig(ctx)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "project name cannot be empty")
 	})
 
 	t.Run("handles empty services list", func(t *testing.T) {
-		configBytes, err := GenerateConfig("test", []string{}, nil)
+		ctx := clicontext.NewBuilder().
+			WithProject("test", "").
+			WithServices([]string{}, nil).
+			Build()
+
+		configBytes, err := GenerateConfig(ctx)
 		assert.NoError(t, err)
 
 		var config Config
@@ -96,7 +109,12 @@ func TestGenerateConfig(t *testing.T) {
 	})
 
 	t.Run("sets project type", func(t *testing.T) {
-		configBytes, err := GenerateConfig("test", []string{"postgres"}, nil)
+		ctx := clicontext.NewBuilder().
+			WithProject("test", "").
+			WithServices([]string{"postgres"}, nil).
+			Build()
+
+		configBytes, err := GenerateConfig(ctx)
 		require.NoError(t, err)
 
 		var config Config

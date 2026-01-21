@@ -62,7 +62,7 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 		return pkgerrors.NewServiceError(ComponentProject, ActionCreateDirectories, err)
 	}
 
-	if err := pm.configManager.CreateConfigFile(projectCtx.Project.Name, projectCtx.Services.Names, projectCtx.Options.Validation, base); err != nil {
+	if err := pm.configManager.CreateConfigFile(projectCtx, base); err != nil {
 		return pkgerrors.NewConfigError("", ActionCreateConfigFile, err)
 	}
 

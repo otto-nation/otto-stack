@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -172,4 +173,32 @@ func (h *InitHandler) GetRequiredFlags() []string {
 // validateProjectName validates a project name
 func (h *InitHandler) validateProjectName(name string) error {
 	return h.validationManager.ValidateProjectName(name)
+}
+
+// buildSharingConfig creates sharing configuration from init flags
+func (h *InitHandler) buildSharingConfig(initFlags *core.InitFlags) *clicontext.SharingSpec {
+	// If --no-shared-containers is set, disable all sharing
+	if initFlags.NoSharedContainers {
+		return &clicontext.SharingSpec{
+			Enabled: false,
+		}
+	}
+
+	sharingSpec := &clicontext.SharingSpec{
+		Enabled:  true,
+		Services: make(map[string]bool),
+	}
+
+	// If --shared-services is specified, parse it
+	if initFlags.SharedServices != "" {
+		//nolint:modernize // SplitSeq requires Go 1.24+
+		for _, svc := range strings.Split(initFlags.SharedServices, ",") {
+			svc = strings.TrimSpace(svc)
+			if svc != "" {
+				sharingSpec.Services[svc] = true
+			}
+		}
+	}
+
+	return sharingSpec
 }
