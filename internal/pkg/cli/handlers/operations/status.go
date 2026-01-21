@@ -54,7 +54,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	return h.handleProjectStatus(ctx, cmd, args, base, execCtx)
 }
 
-func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, _ *clicontext.ExecutionContext) error {
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
@@ -86,7 +86,7 @@ func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Comm
 	return nil
 }
 
-func (h *StatusHandler) handleGlobalStatus(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext, showAll bool) error {
+func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command, _ []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext, showAll bool) error {
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {

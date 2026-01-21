@@ -45,7 +45,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	return h.handleProjectContext(ctx, cmd, args, base, execCtx)
 }
 
-func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *DownHandler) handleProjectContext(ctx context.Context, _ *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
 	base.Output.Header(core.MsgLifecycle_stopping)
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
@@ -154,7 +154,7 @@ func (h *DownHandler) displayStopSuccess(base *base.BaseCommand, setup *common.C
 	}
 }
 
-func (h *DownHandler) handleGlobalContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *DownHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
 	base.Output.Header(core.MsgShared_stopping)
 
 	servicesToStop, err := h.determineServicesToStop(args, execCtx, base)
@@ -234,7 +234,7 @@ func (h *DownHandler) unregisterSharedContainers(servicesToStop []string, execCt
 	return nil
 }
 
-func (h *DownHandler) promptStopShared(base *base.BaseCommand) bool {
+func (h *DownHandler) promptStopShared(_ *base.BaseCommand) bool {
 	var response string
 	fmt.Print("⚠️  Stop shared containers? (y/N): ")
 	_, _ = fmt.Scanln(&response)

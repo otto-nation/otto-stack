@@ -44,7 +44,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	return h.handleProjectContext(ctx, cmd, args, base, execCtx)
 }
 
-func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, _ *clicontext.ExecutionContext) error {
 	base.Output.Header("%s", core.MsgLifecycle_starting)
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
@@ -84,7 +84,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	return nil
 }
 
-func (h *UpHandler) handleGlobalContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *UpHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
 	base.Output.Header(core.MsgShared_starting)
 
 	if len(args) == 0 {
