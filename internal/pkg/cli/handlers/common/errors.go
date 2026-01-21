@@ -3,7 +3,9 @@ package common
 // Stack-specific error constants
 const (
 	// Components
-	ComponentStack = "stack"
+	ComponentStack    = "stack"
+	ComponentService  = "service"
+	ComponentRegistry = "registry"
 
 	// Actions
 	ActionStartServices    = "start services"
@@ -29,13 +31,21 @@ const (
 	ActionBuildContext     = "build context"
 	ActionResolveServices  = "resolve services"
 	ActionFilterServices   = "filter services"
+	ActionLoadService      = "load service"
+	ActionRegister         = "register"
+	ActionUnregister       = "unregister"
+	ActionSaveRegistry     = "save registry"
+	ActionLoadRegistry     = "load registry"
 
 	// Docker operations
 	OpShowLogs        = "show logs"
 	OpListContainers  = "list containers"
 	OpRemoveResources = "remove resources"
 
-	// Messages
+	// Legacy messages (to be removed - use core.Msg* instead)
 	MsgFailedCreateStackService = "failed to create stack service"
 	MsgUnsupportedService       = "unsupported service"
+
+	// Context types
+	ContextGlobal = "global"
 )

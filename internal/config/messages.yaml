@@ -172,3 +172,16 @@ lifecycle:
   restart_success: "Services restarted successfully"
   logs: "Fetching logs..."
   status: "Checking status..."
+
+shared:
+  starting: "Starting shared containers"
+  stopping: "Stopping shared containers"
+  registered: "Shared containers registered"
+  stopped: "Shared containers stopped"
+  no_services_specified: "No services specified. Use 'otto-stack up <service>' to start shared containers"
+  no_containers: "No shared containers to stop"
+  stop_all_prompt: "This will stop ALL shared containers:"
+  will_stop: "The following shared containers will be stopped:"
+  cancelled: "Cancelled"
+  skipping: "Skipping shared containers"
+  no_services_to_stop: "No services to stop"

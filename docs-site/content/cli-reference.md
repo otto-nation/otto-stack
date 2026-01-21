@@ -228,6 +228,7 @@ Show only running services
 - `--quiet` (`bool`): Only show service names and basic status (default: `false`)
 - `--filter` (`string`): Filter services by status (options: `running`, `stopped`, `starting`, `unhealthy`)
 - `--no-trunc` (`bool`): Don't truncate output (default: `false`)
+- `--all` (`bool`): Show status across all projects (including shared containers) (default: `false`)
 
 **Related Commands:** [`logs`](#logs), [`status`](#status)
 
@@ -236,6 +237,7 @@ Show only running services
 - Use --watch to monitor services in real-time
 - Try --format json for programmatic access
 - Use --filter to focus on specific service states
+- Use --all to see shared containers across all projects
 
 ### `logs`
 

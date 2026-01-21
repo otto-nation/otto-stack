@@ -261,11 +261,16 @@ commands:
         type: "bool"
         description: "Don't truncate output"
         default: false
+      all:
+        type: "bool"
+        description: "Show status across all projects (including shared containers)"
+        default: false
     related_commands: ["logs", "status"]
     tips:
       - "Use --watch to monitor services in real-time"
       - "Try --format json for programmatic access"
       - "Use --filter to focus on specific service states"
+      - "Use --all to see shared containers across all projects"
 
   logs:
     description: "View logs from services"
