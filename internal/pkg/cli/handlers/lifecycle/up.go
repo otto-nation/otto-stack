@@ -129,7 +129,7 @@ func (h *UpHandler) registerSharedContainers(serviceConfigs []types.ServiceConfi
 	}
 
 	for _, svc := range serviceConfigs {
-		containerName := common.SharedContainerPrefix + svc.Name
+		containerName := core.SharedContainerPrefix + svc.Name
 		if err := reg.Register(svc.Name, containerName, common.ContextGlobal); err != nil {
 			base.Output.Warning("Failed to register %s: %v", svc.Name, err)
 		}

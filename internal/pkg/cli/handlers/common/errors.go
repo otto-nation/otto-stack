@@ -48,7 +48,4 @@ const (
 
 	// Context types
 	ContextGlobal = "global"
-
-	// Container naming
-	SharedContainerPrefix = "otto-shared-"
 )
