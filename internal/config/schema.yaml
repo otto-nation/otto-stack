@@ -40,6 +40,19 @@ schema:
     default: {}
     description: "Service-specific configuration overrides"
 
+  sharing:
+    type: object
+    description: "Container sharing configuration"
+    properties:
+      enabled:
+        type: boolean
+        default: true
+        description: "Enable container sharing across projects"
+      services:
+        type: object
+        default: {}
+        description: "Per-service sharing overrides (service_name: true/false)"
+
   validation:
     type: object
     description: "Validation and safety settings"

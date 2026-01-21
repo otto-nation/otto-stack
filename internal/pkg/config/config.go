@@ -124,6 +124,9 @@ func GenerateConfig(projectName string, serviceNames []string, validationOptions
 		Stack: StackConfig{
 			Enabled: serviceNames,
 		},
+		Sharing: &SharingConfig{
+			Enabled: true,
+		},
 	}
 
 	if validationOptions != nil {
