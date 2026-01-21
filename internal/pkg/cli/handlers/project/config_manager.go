@@ -9,6 +9,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
@@ -23,8 +24,8 @@ func NewConfigManager() *ConfigManager {
 }
 
 // CreateConfigFile creates the main otto-stack configuration file
-func (cm *ConfigManager) CreateConfigFile(projectName string, originalServiceNames []string, validationOptions map[string]bool, base *base.BaseCommand) error {
-	configBytes, err := config.GenerateConfig(projectName, originalServiceNames, validationOptions)
+func (cm *ConfigManager) CreateConfigFile(ctx clicontext.Context, base *base.BaseCommand) error {
+	configBytes, err := config.GenerateConfig(ctx)
 	if err != nil {
 		return err
 	}

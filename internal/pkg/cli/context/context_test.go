@@ -5,7 +5,6 @@ package context
 import (
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -21,9 +20,9 @@ func TestNewBuilder(t *testing.T) {
 func TestBuilder_FluentAPI(t *testing.T) {
 	ctx := NewBuilder().
 		WithProject("test-project", "/test/path").
-		WithServices([]string{services.ServicePostgres, services.ServiceRedis}, []types.ServiceConfig{
-			{Name: services.ServicePostgres},
-			{Name: services.ServiceRedis},
+		WithServices([]string{"postgres", "redis"}, []types.ServiceConfig{
+			{Name: "postgres"},
+			{Name: "redis"},
 		}).
 		WithValidation(map[string]bool{"docker": true}).
 		WithAdvanced(map[string]bool{"networking": true}).
@@ -32,7 +31,7 @@ func TestBuilder_FluentAPI(t *testing.T) {
 
 	assert.Equal(t, "test-project", ctx.Project.Name)
 	assert.Equal(t, "/test/path", ctx.Project.Path)
-	assert.Equal(t, []string{services.ServicePostgres, services.ServiceRedis}, ctx.Services.Names)
+	assert.Equal(t, []string{"postgres", "redis"}, ctx.Services.Names)
 	assert.Len(t, ctx.Services.Configs, 2)
 	assert.True(t, ctx.Options.Validation["docker"])
 	assert.True(t, ctx.Options.Advanced["networking"])

@@ -11,6 +11,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
@@ -83,9 +84,12 @@ func TestCreateConfigFile(t *testing.T) {
 	err := handler.projectManager.directoryManager.CreateDirectoryStructure()
 	assert.NoError(t, err)
 
-	originalServiceNames := []string{services.ServicePostgres}
-	err = handler.projectManager.configManager.CreateConfigFile(TestProjectName, originalServiceNames, nil,
-		&base.BaseCommand{Output: ui.NewOutput()})
+	ctx := clicontext.NewBuilder().
+		WithProject(TestProjectName, "").
+		WithServices([]string{services.ServicePostgres}, nil).
+		Build()
+
+	err = handler.projectManager.configManager.CreateConfigFile(ctx, &base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	_, err = os.Stat(TestConfigFilePath)

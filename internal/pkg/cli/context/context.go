@@ -10,6 +10,7 @@ type Context struct {
 	Services ServiceSpec
 	Options  OptionSet
 	Runtime  RuntimeSpec
+	Sharing  *SharingSpec
 }
 
 // ProjectSpec contains project-related information
@@ -35,6 +36,12 @@ type RuntimeSpec struct {
 	Force       bool
 	Interactive bool
 	DryRun      bool
+}
+
+// SharingSpec contains container sharing information
+type SharingSpec struct {
+	Enabled  bool
+	Services map[string]bool
 }
 
 // Builder provides fluent API for building Context
@@ -91,6 +98,12 @@ func (b *Builder) WithRuntime(force, interactive, dryRun bool) *Builder {
 		Interactive: interactive,
 		DryRun:      dryRun,
 	}
+	return b
+}
+
+// WithSharing sets sharing configuration
+func (b *Builder) WithSharing(sharing *SharingSpec) *Builder {
+	b.ctx.Sharing = sharing
 	return b
 }
 
