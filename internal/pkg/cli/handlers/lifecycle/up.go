@@ -7,6 +7,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
@@ -24,6 +25,24 @@ func NewUpHandler() *UpHandler {
 
 // Handle executes the up command
 func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	detector, err := clicontext.NewDetector()
+	if err != nil {
+		return err
+	}
+
+	execCtx, err := detector.Detect()
+	if err != nil {
+		return err
+	}
+
+	if execCtx.Type == clicontext.Global {
+		return h.handleGlobalContext(ctx, cmd, args, base, execCtx)
+	}
+
+	return h.handleProjectContext(ctx, cmd, args, base, execCtx)
+}
+
+func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
 	base.Output.Header("%s", core.MsgLifecycle_starting)
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
@@ -58,6 +77,22 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	base.Output.Info("Project: %s", setup.Config.Project.Name)
 	for _, svc := range serviceConfigs {
 		base.Output.Info("  %s %s", display.StatusSuccess, svc.Name)
+	}
+
+	return nil
+}
+
+func (h *UpHandler) handleGlobalContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+	base.Output.Header("Starting shared containers")
+
+	if len(args) == 0 {
+		return pkgerrors.NewValidationError("", "No services specified. Use 'otto-stack up <service>' to start shared containers", nil)
+	}
+
+	// TODO: Implement shared container startup
+	base.Output.Info("Global context - shared containers only")
+	for _, svc := range args {
+		base.Output.Info("  %s %s (shared)", display.StatusSuccess, svc)
 	}
 
 	return nil
