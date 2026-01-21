@@ -89,6 +89,11 @@ const (
 	SharedRegistryFile  = "containers.yaml"
 )
 
+// Container naming constants
+const (
+	SharedContainerPrefix = AppName + "-"
+)
+
 // Docker command constants
 const (
 	DockerCmdPs    = "ps"

@@ -11,10 +11,12 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -33,6 +35,26 @@ func NewStatusHandler() *StatusHandler {
 
 // Handle executes the status command
 func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	detector, err := clicontext.NewDetector()
+	if err != nil {
+		return err
+	}
+
+	execCtx, err := detector.Detect()
+	if err != nil {
+		return err
+	}
+
+	showAll, _ := cmd.Flags().GetBool("all")
+
+	if execCtx.Type == clicontext.Global || showAll {
+		return h.handleGlobalStatus(ctx, cmd, args, base, execCtx, showAll)
+	}
+
+	return h.handleProjectStatus(ctx, cmd, args, base, execCtx)
+}
+
+func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, _ *clicontext.ExecutionContext) error {
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
@@ -61,6 +83,42 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	}
 
 	h.displayStatus(base, cmd, statuses, serviceConfigs)
+	return nil
+}
+
+func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command, _ []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext, showAll bool) error {
+	ciFlags := ci.GetFlags(cmd)
+
+	if !ciFlags.Quiet {
+		if showAll {
+			base.Output.Header("Status (all projects)")
+		} else {
+			base.Output.Header("Shared containers status")
+		}
+	}
+
+	reg := registry.NewManager(execCtx.Shared.Root)
+
+	_, err := reg.Load()
+	if err != nil {
+		return err
+	}
+
+	sharedContainers, err := reg.List()
+	if err != nil {
+		return err
+	}
+
+	if len(sharedContainers) == 0 {
+		base.Output.Info("No shared containers registered")
+		return nil
+	}
+
+	base.Output.Info("Shared containers:")
+	for _, container := range sharedContainers {
+		base.Output.Info("  - %s (used by: %v)", container.Name, container.Projects)
+	}
+
 	return nil
 }
 
