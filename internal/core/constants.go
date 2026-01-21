@@ -80,6 +80,7 @@ const (
 // Otto Stack directory and file constants
 const (
 	OttoStackDir        = ".otto-stack"
+	SharedDir           = "shared"
 	ConfigFileName      = "config.yaml"
 	LocalConfigFileName = "config.local.yaml"
 	ServiceConfigsDir   = "services"
