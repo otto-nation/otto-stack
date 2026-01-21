@@ -1,6 +1,7 @@
 package project
 
 import (
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
@@ -13,7 +14,7 @@ type InteractiveProcessor struct {
 }
 
 // Process runs interactive prompts to gather project details
-func (p *InteractiveProcessor) Process(flags any, base *base.BaseCommand) (clicontext.Context, error) {
+func (p *InteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCommand) (clicontext.Context, error) {
 	projectName, err := p.handler.promptManager.PromptForProjectDetails()
 	if err != nil {
 		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgFailedToGetProjectDetails, err)
@@ -37,7 +38,7 @@ func (p *InteractiveProcessor) Process(flags any, base *base.BaseCommand) (clico
 		WithServices(originalServiceNames, serviceConfigs).
 		WithValidation(validation).
 		WithAdvanced(advanced).
-		WithRuntime(false, true, false).
+		WithRuntimeFlags(flags, true).
 		WithSharing(sharingSpec).
 		Build()
 

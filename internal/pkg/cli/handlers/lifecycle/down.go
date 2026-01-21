@@ -69,7 +69,12 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, _ *cobra.Command
 		return nil
 	}
 
-	return h.stopServices(ctx, setup, serviceConfigs, base)
+	if err := h.stopServices(ctx, setup, serviceConfigs, base); err != nil {
+		return err
+	}
+
+	// Unregister shared containers after stopping
+	return h.unregisterSharedContainersForProject(serviceConfigs, setup.Config.Project.Name, execCtx, base)
 }
 
 func (h *DownHandler) filterSharedIfNeeded(serviceConfigs []types.ServiceConfig, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) ([]types.ServiceConfig, error) {
@@ -210,28 +215,27 @@ func (h *DownHandler) promptStopAll(containers []*registry.ContainerInfo, base *
 }
 
 func (h *DownHandler) unregisterSharedContainers(servicesToStop []string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
-	reg := registry.NewManager(execCtx.Shared.Root)
-	regData, err := reg.Load()
-	if err != nil {
-		return pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionLoadRegistry, err)
-	}
+	return h.unregisterSharedContainersForProject(h.serviceNamesToConfigs(servicesToStop), common.ContextGlobal, execCtx, base)
+}
 
-	for _, svc := range servicesToStop {
-		if err := reg.Unregister(svc, common.ContextGlobal); err != nil {
-			base.Output.Warning("Failed to unregister %s: %v", svc, err)
+func (h *DownHandler) unregisterSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
+	reg := registry.NewManager(execCtx.Shared.Root)
+
+	for _, svc := range serviceConfigs {
+		if err := reg.Unregister(svc.Name, projectName); err != nil {
+			base.Output.Warning("Failed to unregister %s: %v", svc.Name, err)
 		}
 	}
 
-	if err := reg.Save(regData); err != nil {
-		return pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionSaveRegistry, err)
-	}
-
-	base.Output.Success(core.MsgShared_stopped)
-	for _, svc := range servicesToStop {
-		base.Output.Info("  %s %s (shared)", display.StatusSuccess, svc)
-	}
-
 	return nil
+}
+
+func (h *DownHandler) serviceNamesToConfigs(serviceNames []string) []types.ServiceConfig {
+	configs := make([]types.ServiceConfig, len(serviceNames))
+	for i, name := range serviceNames {
+		configs[i] = types.ServiceConfig{Name: name}
+	}
+	return configs
 }
 
 func (h *DownHandler) promptStopShared(_ *base.BaseCommand) bool {

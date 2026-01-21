@@ -5,6 +5,7 @@ package context
 import (
 	"testing"
 
+	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -18,6 +19,8 @@ func TestNewBuilder(t *testing.T) {
 }
 
 func TestBuilder_FluentAPI(t *testing.T) {
+	flags := &core.InitFlags{Force: true}
+
 	ctx := NewBuilder().
 		WithProject("test-project", "/test/path").
 		WithServices([]string{"postgres", "redis"}, []types.ServiceConfig{
@@ -26,7 +29,7 @@ func TestBuilder_FluentAPI(t *testing.T) {
 		}).
 		WithValidation(map[string]bool{"docker": true}).
 		WithAdvanced(map[string]bool{"networking": true}).
-		WithRuntime(true, false, false).
+		WithRuntimeFlags(flags, false).
 		Build()
 
 	assert.Equal(t, "test-project", ctx.Project.Name)

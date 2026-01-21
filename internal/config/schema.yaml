@@ -42,16 +42,16 @@ schema:
 
   sharing:
     type: object
-    description: "Container sharing configuration"
+    description: "Container sharing configuration allows services to be shared across multiple projects, reducing resource usage and startup time"
     properties:
       enabled:
         type: boolean
         default: true
-        description: "Enable container sharing across projects"
+        description: "Enable container sharing across projects. When enabled, containers are prefixed with 'otto-stack-' and tracked in ~/.otto-stack/shared/containers.yaml"
       services:
         type: object
         default: {}
-        description: "Per-service sharing overrides (service_name: true/false)"
+        description: "Per-service sharing overrides (service_name: true/false). If empty, all services are shared when enabled is true"
 
   validation:
     type: object

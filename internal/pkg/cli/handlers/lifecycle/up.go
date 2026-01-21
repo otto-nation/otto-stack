@@ -9,6 +9,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
@@ -44,7 +45,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 	return h.handleProjectContext(ctx, cmd, args, base, execCtx)
 }
 
-func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, _ *clicontext.ExecutionContext) error {
+func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
 	base.Output.Header("%s", core.MsgLifecycle_starting)
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
@@ -56,6 +57,14 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
 		return err
+	}
+
+	// Register shared containers before starting
+	sharedConfigs := h.filterSharedServices(serviceConfigs, setup.Config)
+	if len(sharedConfigs) > 0 {
+		if err := h.registerSharedContainersForProject(sharedConfigs, setup.Config.Project.Name, execCtx, base); err != nil {
+			return err
+		}
 	}
 
 	service, err := common.NewServiceManager(false)
@@ -122,24 +131,40 @@ func (h *UpHandler) loadServiceConfigs(serviceNames []string) ([]types.ServiceCo
 }
 
 func (h *UpHandler) registerSharedContainers(serviceConfigs []types.ServiceConfig, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
+	return h.registerSharedContainersForProject(serviceConfigs, common.ContextGlobal, execCtx, base)
+}
+
+func (h *UpHandler) registerSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
 	reg := registry.NewManager(execCtx.Shared.Root)
-	regData, err := reg.Load()
-	if err != nil {
-		return pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionLoadRegistry, err)
-	}
 
 	for _, svc := range serviceConfigs {
 		containerName := core.SharedContainerPrefix + svc.Name
-		if err := reg.Register(svc.Name, containerName, common.ContextGlobal); err != nil {
+		if err := reg.Register(svc.Name, containerName, projectName); err != nil {
 			base.Output.Warning("Failed to register %s: %v", svc.Name, err)
 		}
 	}
 
-	if err := reg.Save(regData); err != nil {
-		return pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionSaveRegistry, err)
+	return nil
+}
+
+func (h *UpHandler) filterSharedServices(serviceConfigs []types.ServiceConfig, cfg *config.Config) []types.ServiceConfig {
+	if !cfg.Sharing.Enabled {
+		return nil
 	}
 
-	return nil
+	// If no specific services listed, all are shared
+	if len(cfg.Sharing.Services) == 0 {
+		return serviceConfigs
+	}
+
+	// Filter to only services marked as shared
+	var shared []types.ServiceConfig
+	for _, svc := range serviceConfigs {
+		if cfg.Sharing.Services[svc.Name] {
+			shared = append(shared, svc)
+		}
+	}
+	return shared
 }
 
 func (h *UpHandler) displaySuccess(base *base.BaseCommand, serviceConfigs []types.ServiceConfig) {

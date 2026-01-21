@@ -108,15 +108,21 @@ commands:
   up:
     description: "Start development stack services"
     long_description: |
-      Start one or more services in the development stack. Services are started
-      with their configured dependencies and health checks.
+      Start one or more services in the development stack. The command is context-aware:
+      - **In a project directory**: Starts project services (including shared containers)
+      - **Outside a project**: Starts only shared containers (requires service names)
+
+      When sharing is enabled, containers are registered in ~/.otto-stack/shared/containers.yaml
+      to track which projects use them.
     usage: "up [service...]"
     aliases: ["start", "run"]
     examples:
       - command: "otto-stack up"
-        description: "Start all configured services"
+        description: "Start all configured services (in project context)"
       - command: "otto-stack up postgres redis"
         description: "Start specific services"
+      - command: "cd ~ && otto-stack up redis"
+        description: "Start shared containers from global context"
       - command: "otto-stack up --detach --build"
         description: "Build images and start services in background"
     flags:
@@ -152,17 +158,22 @@ commands:
     tips:
       - "Add --build if you've made changes to Dockerfiles"
       - "Use --detach to free up your terminal while services run"
+      - "Shared containers persist across projects when sharing is enabled"
 
   down:
     description: "Stop development stack services"
     long_description: |
-      Stop one or more services in the development stack. By default, containers
-      are removed but volumes are preserved. Use --volumes to also remove data.
+      Stop one or more services in the development stack. The command is context-aware:
+      - **In a project directory**: Stops project services, prompts before stopping shared containers
+      - **Outside a project**: Stops shared containers (requires service names)
+
+      When stopping shared containers, you'll be prompted if they're used by other projects.
+      The registry at ~/.otto-stack/shared/containers.yaml is updated to remove the project.
     usage: "down [service...]"
     aliases: ["stop"]
     examples:
       - command: "otto-stack down"
-        description: "Stop all running services"
+        description: "Stop all running services (prompts for shared containers)"
       - command: "otto-stack down postgres redis"
         description: "Stop specific services"
       - command: "otto-stack down --volumes"
@@ -194,6 +205,7 @@ commands:
     related_commands: ["up", "cleanup", "status"]
     tips:
       - "Use --volumes carefully as it will delete all data"
+      - "Shared containers prompt before stopping if used by other projects"
       - "Add --remove-orphans to clean up unused containers"
 
   restart:
@@ -223,16 +235,18 @@ commands:
   status:
     description: "Show status of development stack services"
     long_description: |
-      Display comprehensive status information for services including running
-      state, health checks, resource usage, and port mappings. Supports multiple
-      output formats and real-time monitoring.
+      Display comprehensive status information for services. The command is context-aware:
+      - **In a project directory**: Shows project services status
+      - **Outside a project**: Use --all flag to see all projects' shared containers
     usage: "status [service...]"
     aliases: ["ps", "ls"]
     examples:
       - command: "otto-stack status"
-        description: "Show status of all services"
+        description: "Show status of all services (in project context)"
       - command: "otto-stack status postgres redis"
         description: "Show status of specific services"
+      - command: "cd ~ && otto-stack status --all"
+        description: "Show all projects' shared containers (global context)"
       - command: "otto-stack status --format json"
         description: "Output status in JSON format"
       - command: "otto-stack status --watch"
