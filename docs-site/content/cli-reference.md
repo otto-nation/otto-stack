@@ -505,6 +505,8 @@ Overwrite existing configuration
 - `--force`, `-f` (`bool`): Overwrite existing files (default: `false`)
 - `--project-name` (`string`): Project name (defaults to current directory name) (default: ``)
 - `--services` (`string`): Comma-separated list of services to include (required for non-interactive mode) (default: ``)
+- `--no-shared-containers` (`bool`): Disable shared containers for all services (default: `false`)
+- `--shared-services` (`string`): Comma-separated list of services to share across projects (e.g., postgres,redis). Overrides global sharing setting for specified services. (default: ``)
 
 **Related Commands:** [`validate`](#validate)
 
