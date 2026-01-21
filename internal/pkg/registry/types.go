@@ -22,3 +22,25 @@ func NewRegistry() *Registry {
 		Containers: make(map[string]*ContainerInfo),
 	}
 }
+
+// OrphanInfo represents an orphaned container
+type OrphanInfo struct {
+	Service   string
+	Container string
+	Reason    string
+}
+
+// FindOrphans returns containers with no active projects
+func (r *Registry) FindOrphans() []OrphanInfo {
+	var orphans []OrphanInfo
+	for service, info := range r.Containers {
+		if len(info.Projects) == 0 {
+			orphans = append(orphans, OrphanInfo{
+				Service:   service,
+				Container: info.Name,
+				Reason:    "no projects using this container",
+			})
+		}
+	}
+	return orphans
+}

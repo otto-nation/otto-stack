@@ -140,6 +140,39 @@ func (m *Manager) IsShared(service string) (bool, error) {
 	return container != nil, nil
 }
 
+// FindOrphans returns containers with no active projects
+func (m *Manager) FindOrphans() ([]OrphanInfo, error) {
+	registry, err := m.Load()
+	if err != nil {
+		return nil, err
+	}
+	return registry.FindOrphans(), nil
+}
+
+// CleanOrphans removes orphaned containers from registry
+func (m *Manager) CleanOrphans() ([]string, error) {
+	registry, err := m.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	var cleaned []string
+	for service, info := range registry.Containers {
+		if len(info.Projects) == 0 {
+			delete(registry.Containers, service)
+			cleaned = append(cleaned, service)
+		}
+	}
+
+	if len(cleaned) > 0 {
+		if err := m.Save(registry); err != nil {
+			return nil, err
+		}
+	}
+
+	return cleaned, nil
+}
+
 // remove removes a value from a string slice
 func remove(slice []string, value string) []string {
 	result := make([]string, 0, len(slice))

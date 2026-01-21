@@ -488,6 +488,10 @@ commands:
         type: "bool"
         description: "Don't prompt for confirmation"
         default: false
+      orphans:
+        type: "bool"
+        description: "Clean up orphaned shared containers (containers with no projects)"
+        default: false
       project:
         short: "p"
         type: "string"

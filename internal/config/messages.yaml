@@ -151,6 +151,7 @@ errors:
   failed_get_service_status: "failed to get service status: %w"
   requires_service_and_command: "exec requires a service name and command"
   version_compliance_failed: "version compliance check failed"
+  no_strategy_found: "no strategy found for execution context"
 
 stack:
   failed_load_config: "failed to load config: %w"
@@ -172,6 +173,15 @@ lifecycle:
   restart_success: "Services restarted successfully"
   logs: "Fetching logs..."
   status: "Checking status..."
+
+orphan:
+  found: "Found %d orphaned shared container(s):"
+  none_found: "No orphaned containers found"
+  will_remove: "The following orphaned containers will be removed:"
+  cleanup_cancelled: "Orphan cleanup cancelled"
+  cleanup_success: "Orphan cleanup completed"
+  removed_from_registry: "Removed %d orphaned container(s) from registry"
+  run_cleanup_hint: "Run 'otto-stack cleanup --orphans' to remove them"
 
 shared:
   starting: "Starting shared containers"
