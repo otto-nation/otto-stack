@@ -160,9 +160,9 @@ func TestDownHandler_Handle(t *testing.T) {
 		ctx := context.Background()
 		args := []string{}
 
-		// Similar to up handler, we expect an error due to missing project config
+		// Down handler now handles global context gracefully (no error expected)
 		err := handler.Handle(ctx, cmd, args, base)
-		assert.Error(t, err, "Expected error due to missing project config in test environment")
+		assert.NoError(t, err, "Down handler should handle global context without error")
 	})
 }
 
