@@ -68,10 +68,40 @@ Stack service configuration
 
 ### Sharing
 
-Container sharing configuration
+Container sharing configuration allows services to be shared across multiple projects, reducing resource usage and startup time.
 
-- **enabled**: Enable container sharing across projects
+- **enabled**: Enable container sharing across projects (default: true)
 - **services**: Per-service sharing overrides (service_name: true/false)
+
+**How it works:**
+
+When sharing is enabled:
+1. Containers are prefixed with `otto-stack-` (e.g., `otto-stack-redis`)
+2. A registry at `~/.otto-stack/shared/containers.yaml` tracks which projects use each shared container
+3. The `down` command prompts before stopping shared containers used by other projects
+4. Shared containers persist across project switches
+
+**Example configurations:**
+
+```yaml
+# Share all services (default)
+sharing:
+  enabled: true
+
+# Share specific services only
+sharing:
+  enabled: true
+  services:
+    postgres: true
+    redis: true
+    kafka: false  # Not shared
+
+# Disable sharing completely
+sharing:
+  enabled: false
+```
+
+**Registry location:** `~/.otto-stack/shared/containers.yaml`
 
 ### Validation
 

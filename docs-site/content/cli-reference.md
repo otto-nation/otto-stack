@@ -45,8 +45,12 @@ Information and development tools
 
 Start development stack services
 
-Start one or more services in the development stack. Services are started
-with their configured dependencies and health checks.
+Start one or more services in the development stack. The command is context-aware:
+- **In a project directory**: Starts project services (including shared containers)
+- **Outside a project**: Starts only shared containers (requires service names)
+
+When sharing is enabled, containers are registered in `~/.otto-stack/shared/containers.yaml`
+to track which projects use them.
 
 **Usage:** `otto-stack up [service...]`
 
@@ -58,7 +62,7 @@ with their configured dependencies and health checks.
 otto-stack up
 ```
 
-Start all configured services
+Start all configured services (in project context)
 
 ```bash
 otto-stack up postgres redis
@@ -67,10 +71,10 @@ otto-stack up postgres redis
 Start specific services
 
 ```bash
-otto-stack up --detach --build
+cd ~ && otto-stack up redis
 ```
 
-Build images and start services in background
+Start shared containers from global context
 
 **Flags:**
 
@@ -88,13 +92,18 @@ Build images and start services in background
 
 - Add --build if you've made changes to Dockerfiles
 - Use --detach to free up your terminal while services run
+- Shared containers persist across projects when sharing is enabled
 
 ### `down`
 
 Stop development stack services
 
-Stop one or more services in the development stack. By default, containers
-are removed but volumes are preserved. Use --volumes to also remove data.
+Stop one or more services in the development stack. The command is context-aware:
+- **In a project directory**: Stops project services, prompts before stopping shared containers
+- **Outside a project**: Stops shared containers (requires service names)
+
+When stopping shared containers, you'll be prompted if they're used by other projects.
+The registry at `~/.otto-stack/shared/containers.yaml` is updated to remove the project.
 
 **Usage:** `otto-stack down [service...]`
 
@@ -106,7 +115,7 @@ are removed but volumes are preserved. Use --volumes to also remove data.
 otto-stack down
 ```
 
-Stop all running services
+Stop all running services (prompts for shared containers)
 
 ```bash
 otto-stack down postgres redis
@@ -119,12 +128,6 @@ otto-stack down --volumes
 ```
 
 Stop services and remove volumes
-
-```bash
-otto-stack down --timeout 5
-```
-
-Stop services with custom timeout
 
 **Flags:**
 
@@ -139,6 +142,7 @@ Stop services with custom timeout
 **Tips:**
 
 - Use --volumes carefully as it will delete all data
+- Shared containers prompt before stopping if used by other projects
 - Add --remove-orphans to clean up unused containers
 
 ### `restart`
@@ -181,9 +185,9 @@ Restart with custom timeout
 
 Show status of development stack services
 
-Display comprehensive status information for services including running
-state, health checks, resource usage, and port mappings. Supports multiple
-output formats and real-time monitoring.
+Display comprehensive status information for services. The command is context-aware:
+- **In a project directory**: Shows project services status
+- **Outside a project**: Use `--all` flag to see all projects' shared containers
 
 **Usage:** `otto-stack status [service...]`
 
@@ -195,7 +199,7 @@ output formats and real-time monitoring.
 otto-stack status
 ```
 
-Show status of all services
+Show status of all services (in project context)
 
 ```bash
 otto-stack status postgres redis
@@ -204,25 +208,20 @@ otto-stack status postgres redis
 Show status of specific services
 
 ```bash
+cd ~ && otto-stack status --all
+```
+
+Show all projects' shared containers (global context)
+
+```bash
 otto-stack status --format json
 ```
 
 Output status in JSON format
 
-```bash
-otto-stack status --watch
-```
-
-Watch for status changes in real-time
-
-```bash
-otto-stack status --filter running
-```
-
-Show only running services
-
 **Flags:**
 
+- `--all` (`bool`): Show all projects' shared containers (global context only) (default: `false`)
 - `--format` (`string`): Output format (table|json|yaml) (default: `table`) (options: `table`, `json`, `yaml`)
 - `--watch` (`bool`): Watch for status changes (default: `false`)
 - `--quiet` (`bool`): Only show service names and basic status (default: `false`)
