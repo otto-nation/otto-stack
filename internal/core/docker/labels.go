@@ -14,6 +14,7 @@ const (
 	LabelOttoService     = "io.otto-stack.service"
 	LabelOttoVersion     = "io.otto-stack.version"
 	LabelOttoSharingMode = "io.otto-stack.sharing-mode"
+	LabelOttoShared      = "io.otto-stack.shared"
 )
 
 // ListOttoContainers returns all containers managed by Otto Stack
