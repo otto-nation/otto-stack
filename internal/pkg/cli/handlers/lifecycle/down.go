@@ -59,32 +59,73 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 		return err
 	}
 
-	// Check for shared containers
-	reg := registry.NewManager(execCtx.Shared.Root)
-
-	_, loadErr := reg.Load()
-	if loadErr != nil {
-		return loadErr
-	}
-
-	var sharedServices []string
-	for _, svc := range serviceConfigs {
-		isShared, err := reg.IsShared(svc.Name)
-		if err == nil && isShared {
-			sharedServices = append(sharedServices, svc.Name)
-		}
-	}
-
-	// Prompt for shared containers
-	if len(sharedServices) > 0 {
-		serviceConfigs = h.handleSharedContainers(base, reg, sharedServices, serviceConfigs)
+	serviceConfigs, err = h.filterSharedIfNeeded(serviceConfigs, execCtx, base)
+	if err != nil {
+		return err
 	}
 
 	if len(serviceConfigs) == 0 {
-		base.Output.Info("No services to stop")
+		base.Output.Info(core.MsgShared_no_services_to_stop)
 		return nil
 	}
 
+	return h.stopServices(ctx, setup, serviceConfigs, base)
+}
+
+func (h *DownHandler) filterSharedIfNeeded(serviceConfigs []types.ServiceConfig, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) ([]types.ServiceConfig, error) {
+	reg := registry.NewManager(execCtx.Shared.Root)
+	_, err := reg.Load()
+	if err != nil {
+		return nil, pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionLoadRegistry, err)
+	}
+
+	sharedServices := h.findSharedServices(serviceConfigs, reg)
+	if len(sharedServices) == 0 {
+		return serviceConfigs, nil
+	}
+
+	return h.promptAndFilterShared(base, reg, sharedServices, serviceConfigs), nil
+}
+
+func (h *DownHandler) findSharedServices(serviceConfigs []types.ServiceConfig, reg *registry.Manager) []string {
+	var shared []string
+	for _, svc := range serviceConfigs {
+		isShared, err := reg.IsShared(svc.Name)
+		if err == nil && isShared {
+			shared = append(shared, svc.Name)
+		}
+	}
+	return shared
+}
+
+func (h *DownHandler) promptAndFilterShared(base *base.BaseCommand, reg *registry.Manager, sharedServices []string, serviceConfigs []types.ServiceConfig) []types.ServiceConfig {
+	base.Output.Warning(core.MsgShared_will_stop)
+	for _, svc := range sharedServices {
+		container, err := reg.Get(svc)
+		if err == nil && container != nil {
+			base.Output.Info("  - %s (used by: %v)", svc, container.Projects)
+		}
+	}
+
+	if !h.promptStopShared(base) {
+		base.Output.Info(core.MsgShared_skipping)
+		return h.filterOutShared(sharedServices, serviceConfigs)
+	}
+
+	return serviceConfigs
+}
+
+func (h *DownHandler) filterOutShared(sharedServices []string, serviceConfigs []types.ServiceConfig) []types.ServiceConfig {
+	var filtered []types.ServiceConfig
+	for _, svc := range serviceConfigs {
+		if !slices.Contains(sharedServices, svc.Name) {
+			filtered = append(filtered, svc)
+		}
+	}
+	return filtered
+}
+
+func (h *DownHandler) stopServices(ctx context.Context, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
 	service, err := common.NewServiceManager(false)
 	if err != nil {
 		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
@@ -101,63 +142,91 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStopServices, err)
 	}
 
+	h.displayStopSuccess(base, setup, serviceConfigs)
+	return nil
+}
+
+func (h *DownHandler) displayStopSuccess(base *base.BaseCommand, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig) {
 	base.Output.Success("Services stopped successfully")
 	base.Output.Info("Project: %s", setup.Config.Project.Name)
 	for _, svc := range serviceConfigs {
 		base.Output.Info("  %s %s", display.StatusSuccess, svc.Name)
 	}
-
-	return nil
 }
 
 func (h *DownHandler) handleGlobalContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
-	base.Output.Header("Stopping shared containers")
+	base.Output.Header(core.MsgShared_stopping)
+
+	servicesToStop, err := h.determineServicesToStop(args, execCtx, base)
+	if err != nil {
+		return err
+	}
+
+	if servicesToStop == nil {
+		return nil
+	}
+
+	return h.unregisterSharedContainers(servicesToStop, execCtx, base)
+}
+
+func (h *DownHandler) determineServicesToStop(args []string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) ([]string, error) {
+	if len(args) > 0 {
+		return args, nil
+	}
 
 	reg := registry.NewManager(execCtx.Shared.Root)
-	regData, loadErr := reg.Load()
-	if loadErr != nil {
-		return loadErr
+	_, err := reg.Load()
+	if err != nil {
+		return nil, pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionLoadRegistry, err)
 	}
 
-	var servicesToStop []string
-	if len(args) == 0 {
-		// Stop all shared containers
-		containers, err := reg.List()
-		if err != nil {
-			return err
-		}
-
-		if len(containers) == 0 {
-			base.Output.Info("No shared containers to stop")
-			return nil
-		}
-
-		base.Output.Warning("This will stop ALL shared containers:")
-		for _, container := range containers {
-			base.Output.Info("  - %s (used by: %v)", container.Name, container.Projects)
-			servicesToStop = append(servicesToStop, container.Name)
-		}
-
-		if !h.promptStopShared(base) {
-			base.Output.Info("Cancelled")
-			return nil
-		}
-	} else {
-		servicesToStop = args
+	containers, err := reg.List()
+	if err != nil {
+		return nil, err
 	}
 
-	// Unregister from global context
+	if len(containers) == 0 {
+		base.Output.Info(core.MsgShared_no_containers)
+		return nil, nil
+	}
+
+	return h.promptStopAll(containers, base), nil
+}
+
+func (h *DownHandler) promptStopAll(containers []*registry.ContainerInfo, base *base.BaseCommand) []string {
+	base.Output.Warning(core.MsgShared_stop_all_prompt)
+	var services []string
+	for _, container := range containers {
+		base.Output.Info("  - %s (used by: %v)", container.Name, container.Projects)
+		services = append(services, container.Name)
+	}
+
+	if !h.promptStopShared(base) {
+		base.Output.Info(core.MsgShared_cancelled)
+		return nil
+	}
+
+	return services
+}
+
+func (h *DownHandler) unregisterSharedContainers(servicesToStop []string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
+	reg := registry.NewManager(execCtx.Shared.Root)
+	regData, err := reg.Load()
+	if err != nil {
+		return pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionLoadRegistry, err)
+	}
+
 	for _, svc := range servicesToStop {
-		if err := reg.Unregister(svc, "global"); err != nil {
+		if err := reg.Unregister(svc, common.ContextGlobal); err != nil {
 			base.Output.Warning("Failed to unregister %s: %v", svc, err)
 		}
 	}
 
 	if err := reg.Save(regData); err != nil {
-		base.Output.Warning("Failed to save registry: %v", err)
+		return pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionSaveRegistry, err)
 	}
 
-	base.Output.Success("Shared containers stopped")
+	base.Output.Success(core.MsgShared_stopped)
 	for _, svc := range servicesToStop {
 		base.Output.Info("  %s %s (shared)", display.StatusSuccess, svc)
 	}
@@ -170,33 +239,6 @@ func (h *DownHandler) promptStopShared(base *base.BaseCommand) bool {
 	fmt.Print("⚠️  Stop shared containers? (y/N): ")
 	_, _ = fmt.Scanln(&response)
 	return response == "y" || response == "Y"
-}
-
-func (h *DownHandler) handleSharedContainers(base *base.BaseCommand, reg *registry.Manager, sharedServices []string, serviceConfigs []types.ServiceConfig) []types.ServiceConfig {
-	base.Output.Warning("The following shared containers will be stopped:")
-	for _, svc := range sharedServices {
-		container, err := reg.Get(svc)
-		if err == nil && container != nil {
-			base.Output.Info("  - %s (used by: %v)", svc, container.Projects)
-		}
-	}
-
-	if !h.promptStopShared(base) {
-		base.Output.Info("Skipping shared containers")
-		return h.filterSharedServices(sharedServices, serviceConfigs)
-	}
-
-	return serviceConfigs
-}
-
-func (h *DownHandler) filterSharedServices(sharedServices []string, serviceConfigs []types.ServiceConfig) []types.ServiceConfig {
-	var filtered []types.ServiceConfig
-	for _, svc := range serviceConfigs {
-		if !slices.Contains(sharedServices, svc.Name) {
-			filtered = append(filtered, svc)
-		}
-	}
-	return filtered
 }
 
 // ValidateArgs validates the command arguments

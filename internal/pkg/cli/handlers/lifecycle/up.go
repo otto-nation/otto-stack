@@ -85,49 +85,68 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 }
 
 func (h *UpHandler) handleGlobalContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
-	base.Output.Header("Starting shared containers")
+	base.Output.Header(core.MsgShared_starting)
 
 	if len(args) == 0 {
-		return pkgerrors.NewValidationError("", "No services specified. Use 'otto-stack up <service>' to start shared containers", nil)
+		return pkgerrors.NewValidationError("", core.MsgShared_no_services_specified, nil)
 	}
 
-	// Resolve service configs
-	serviceUtils := services.NewServiceUtils()
-	var serviceConfigs []types.ServiceConfig
-	for _, serviceName := range args {
-		cfg, err := serviceUtils.LoadServiceConfig(serviceName)
-		if err != nil {
-			return pkgerrors.NewServiceError("service", "load", err)
-		}
-		if cfg != nil {
-			serviceConfigs = append(serviceConfigs, *cfg)
-		}
-	}
-
-	// Register shared containers
-	reg := registry.NewManager(execCtx.Shared.Root)
-	regData, err := reg.Load()
+	serviceConfigs, err := h.loadServiceConfigs(args)
 	if err != nil {
 		return err
 	}
 
+	if err := h.registerSharedContainers(serviceConfigs, execCtx, base); err != nil {
+		return err
+	}
+
+	h.displaySuccess(base, serviceConfigs)
+	return nil
+}
+
+func (h *UpHandler) loadServiceConfigs(serviceNames []string) ([]types.ServiceConfig, error) {
+	serviceUtils := services.NewServiceUtils()
+	var configs []types.ServiceConfig
+
+	for _, name := range serviceNames {
+		cfg, err := serviceUtils.LoadServiceConfig(name)
+		if err != nil {
+			return nil, pkgerrors.NewServiceError(common.ComponentService, common.ActionLoadService, err)
+		}
+		if cfg != nil {
+			configs = append(configs, *cfg)
+		}
+	}
+
+	return configs, nil
+}
+
+func (h *UpHandler) registerSharedContainers(serviceConfigs []types.ServiceConfig, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
+	reg := registry.NewManager(execCtx.Shared.Root)
+	regData, err := reg.Load()
+	if err != nil {
+		return pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionLoadRegistry, err)
+	}
+
 	for _, svc := range serviceConfigs {
-		containerName := "otto-shared-" + svc.Name
-		if err := reg.Register(svc.Name, containerName, "global"); err != nil {
+		containerName := common.SharedContainerPrefix + svc.Name
+		if err := reg.Register(svc.Name, containerName, common.ContextGlobal); err != nil {
 			base.Output.Warning("Failed to register %s: %v", svc.Name, err)
 		}
 	}
 
 	if err := reg.Save(regData); err != nil {
-		base.Output.Warning("Failed to save registry: %v", err)
-	}
-
-	base.Output.Success("Shared containers registered")
-	for _, svc := range serviceConfigs {
-		base.Output.Info("  %s %s (shared)", display.StatusSuccess, svc.Name)
+		return pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionSaveRegistry, err)
 	}
 
 	return nil
+}
+
+func (h *UpHandler) displaySuccess(base *base.BaseCommand, serviceConfigs []types.ServiceConfig) {
+	base.Output.Success(core.MsgShared_registered)
+	for _, svc := range serviceConfigs {
+		base.Output.Info("  %s %s (shared)", display.StatusSuccess, svc.Name)
+	}
 }
 
 // ValidateArgs validates the command arguments
