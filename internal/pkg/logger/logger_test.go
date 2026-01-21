@@ -76,23 +76,7 @@ func TestLoggingFunctions(t *testing.T) {
 	assert.NotPanics(t, func() {
 		Debug("debug message", "key", "value")
 		Info("info message", "key", "value")
-		Warn("warn message", "key", "value")
 		Error("error message", "key", "value")
-	})
-
-	Close()
-}
-
-func TestWith(t *testing.T) {
-	err := Init(DefaultConfig())
-	assert.NoError(t, err)
-
-	logger := With("component", "test")
-	assert.NotNil(t, logger)
-
-	// Test that it doesn't panic
-	assert.NotPanics(t, func() {
-		logger.Info("test message")
 	})
 
 	Close()

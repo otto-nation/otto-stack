@@ -72,17 +72,7 @@ func Info(msg string, args ...any) {
 	GetLogger().Info(msg, args...)
 }
 
-// Warn logs a warning message
-func Warn(msg string, args ...any) {
-	GetLogger().Warn(msg, args...)
-}
-
 // Error logs an error message
 func Error(msg string, args ...any) {
 	GetLogger().Error(msg, args...)
-}
-
-// With returns a logger with the given attributes
-func With(args ...any) *slog.Logger {
-	return GetLogger().With(args...)
 }
