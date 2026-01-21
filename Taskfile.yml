@@ -109,6 +109,7 @@ tasks:
     deps: [setup:npm]
     sources:
       - "internal/config/schema.yaml"
+      - "internal/config/commands.yaml"
       - "internal/config/services/**/*.yaml"
       - "docs-site/generators/**/*.js"
       - "docs-site/templates/**/*.md"
