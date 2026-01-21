@@ -508,6 +508,14 @@ commands:
         type: "string"
         description: "Comma-separated list of services to include (required for non-interactive mode)"
         default: ""
+      no-shared-containers:
+        type: "bool"
+        description: "Disable shared containers for all services"
+        default: false
+      shared-services:
+        type: "string"
+        description: "Comma-separated list of services to share across projects (e.g., postgres,redis). Overrides global sharing setting for specified services."
+        default: ""
     related_commands: ["validate"]
 
   web-interfaces:
