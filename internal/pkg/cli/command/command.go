@@ -3,8 +3,6 @@ package command
 import (
 	"context"
 
-	"github.com/spf13/cobra"
-
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 )
@@ -58,21 +56,4 @@ type nextCommand struct {
 
 func (n *nextCommand) Execute(ctx context.Context, cliCtx clicontext.Context, base *base.BaseCommand) error {
 	return n.handler.executeWithMiddleware(ctx, cliCtx, base, n.index)
-}
-
-// CobraAdapter adapts the command pattern to work with cobra.Command
-type CobraAdapter struct {
-	handler *Handler
-}
-
-// NewCobraAdapter creates a new cobra adapter
-func NewCobraAdapter(handler *Handler) *CobraAdapter {
-	return &CobraAdapter{handler: handler}
-}
-
-// Handle adapts the command pattern to cobra's signature
-func (a *CobraAdapter) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	// For now, create empty context - this will be populated by processors
-	cliCtx := clicontext.Context{}
-	return a.handler.Execute(ctx, cliCtx, base)
 }

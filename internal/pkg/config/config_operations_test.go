@@ -40,19 +40,6 @@ func TestConfig_LoadOperations(t *testing.T) {
 			}
 		}
 	})
-
-	t.Run("load service config", func(t *testing.T) {
-		configs, err := LoadServiceConfig("test-service")
-		// Will likely fail due to missing files but tests the function
-		if err != nil {
-			testhelpers.AssertError(t, err, "LoadServiceConfig should handle missing files")
-		} else {
-			testhelpers.AssertNoError(t, err, "LoadServiceConfig should not error")
-			if configs == nil {
-				t.Error("LoadServiceConfig should return configs")
-			}
-		}
-	})
 }
 
 func TestConfig_PathOperations(t *testing.T) {
@@ -69,14 +56,6 @@ func TestConfig_PathOperations(t *testing.T) {
 		testhelpers.AssertNoError(t, nil, "getLocalConfigPath should not error")
 		if path == "" {
 			t.Error("getLocalConfigPath should return path")
-		}
-	})
-
-	t.Run("get service config dir", func(t *testing.T) {
-		dir := getServiceConfigDir()
-		testhelpers.AssertNoError(t, nil, "getServiceConfigDir should not error")
-		if dir == "" {
-			t.Error("getServiceConfigDir should return directory")
 		}
 	})
 }

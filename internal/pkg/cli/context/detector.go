@@ -72,12 +72,3 @@ func (d *Detector) findProjectRoot() (*ProjectInfo, error) {
 
 	return nil, nil
 }
-
-// DetectContext is a convenience function to detect context
-func DetectContext() (*ExecutionContext, error) {
-	detector, err := NewDetector()
-	if err != nil {
-		return nil, err
-	}
-	return detector.Detect()
-}

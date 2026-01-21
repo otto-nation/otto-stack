@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strings"
 	"time"
 
@@ -115,16 +114,6 @@ func (c *Client) Close() error {
 // GetCli returns the underlying Docker client
 func (c *Client) GetCli() DockerClient {
 	return c.cli
-}
-
-// GetLogger returns the logger
-func (c *Client) GetLogger() *slog.Logger {
-	return c.logger
-}
-
-// GetResources returns the resource manager
-func (c *Client) GetResources() *ResourceManager {
-	return c.resources
 }
 
 // GetComposeManager returns the compose manager
@@ -332,44 +321,3 @@ func mapToEnvSlice(env map[string]string) []string {
 }
 
 // Container status
-func (c *Client) GetDockerServiceStatus(ctx context.Context, project string, services []string) ([]DockerServiceStatus, error) {
-	filter := NewProjectFilter(project)
-	containers, err := c.cli.ContainerList(ctx, container.ListOptions{All: true, Filters: filter})
-	if err != nil {
-		return nil, err
-	}
-
-	var statuses []DockerServiceStatus
-	for _, container := range containers {
-		serviceName := container.Labels[ComposeServiceLabel]
-		if len(services) > 0 && !contains(services, serviceName) {
-			continue
-		}
-
-		status := DockerServiceStatus{
-			Name:   serviceName,
-			State:  DockerServiceState(container.State),
-			Health: c.getContainerHealth(container),
-		}
-		statuses = append(statuses, status)
-	}
-
-	return statuses, nil
-}
-
-func (c *Client) getContainerHealth(cont container.Summary) DockerHealthStatus {
-	switch cont.State {
-	case StateRunning:
-		return DockerHealthStatusHealthy
-	case StateStopped:
-		return DockerHealthStatusUnhealthy
-	case StateStarting:
-		return DockerHealthStatusStarting
-	default:
-		return DockerHealthStatusNone
-	}
-}
-
-func contains(slice []string, item string) bool {
-	return slices.Contains(slice, item)
-}

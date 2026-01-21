@@ -30,24 +30,6 @@ type BuildInfo struct {
 }
 
 // GetBuildInfo returns comprehensive build information
-func GetBuildInfo() *BuildInfo {
-	buildTime, _ := time.Parse(time.RFC3339, BuildDate)
-	if buildTime.IsZero() {
-		buildTime = time.Now()
-	}
-
-	return &BuildInfo{
-		Version:   AppVersion,
-		GitCommit: GitCommit,
-		BuildDate: BuildDate,
-		BuildBy:   BuildBy,
-		GoVersion: runtime.Version(),
-		Platform:  runtime.GOOS,
-		Arch:      runtime.GOARCH,
-		BuildTime: buildTime,
-	}
-}
-
 // GetAppVersion returns the application version string
 func GetAppVersion() string {
 	if AppVersion != DefaultVersion {
@@ -69,41 +51,6 @@ func GetShortVersion() string {
 		return DefaultVersion
 	}
 	return version
-}
-
-// GetFullVersion returns a detailed version string
-func GetFullVersion() string {
-	info := GetBuildInfo()
-	version := info.Version
-	if version == DefaultVersion || version == DevelVersion {
-		version = DefaultVersion
-	}
-
-	result := fmt.Sprintf("%s %s", core.AppName, version)
-	if info.GitCommit == DefaultCommit || info.GitCommit == "" {
-		return result
-	}
-
-	if len(info.GitCommit) > GitCommitHashLength {
-		result += fmt.Sprintf(" (%s)", info.GitCommit[:GitCommitHashLength])
-	} else {
-		result += fmt.Sprintf(" (%s)", info.GitCommit)
-	}
-
-	return result
-}
-
-// GetFormattedBuildInfo returns formatted build information
-func GetFormattedBuildInfo() string {
-	info := GetBuildInfo()
-	return fmt.Sprintf(`Version:    %s
-Git Commit: %s
-Build Date: %s
-Built By:   %s
-Go Version: %s
-Platform:   %s/%s`,
-		info.Version, info.GitCommit, info.BuildDate,
-		info.BuildBy, info.GoVersion, info.Platform, info.Arch)
 }
 
 // IsDevBuild returns true if this is a development build

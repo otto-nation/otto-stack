@@ -459,6 +459,7 @@ tasks:
     cmds:
       - echo "🚀 Running pre-push checks..."
       - task: validate:commits
+      - task: deadcode
       - task: docs
       - |
         # Check if docs generation made any changes
@@ -683,6 +684,58 @@ tasks:
         echo "✅ Basic security checks passed"
       - echo "✅ Security scan complete"
 
+  deadcode:
+    desc: "🔍 Check for unreachable code (informational by default, strict with DEADCODE_STRICT=true)"
+    sources:
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+    silent: true
+    cmds:
+      - echo "🔍 Checking for dead code..."
+      - |
+        # Run deadcode analysis
+        # Note: Deadcode tool reports functions as unreachable if they're only called from:
+        # - Test code (test helpers, mocks, DI constructors)
+        # - Excluded packages (e2e framework, code generators)
+        # - Future features not yet exposed via CLI
+        DEADCODE_OUTPUT=$(go run golang.org/x/tools/cmd/deadcode@latest ./... 2>&1)
+        
+        if [ -n "$DEADCODE_OUTPUT" ]; then
+          # Filter out acceptable dead code:
+          # - test helpers and e2e framework
+          # - code generators (cmd/codegen, cmd/generate-*)
+          # - internal/cli (old CLI code being phased out)
+          FILTERED=$(echo "$DEADCODE_OUTPUT" | \
+            grep -v "test/e2e/framework" | \
+            grep -v "test/testhelpers" | \
+            grep -v "test/testutil" | \
+            grep -v "cmd/codegen" | \
+            grep -v "cmd/generate-services" | \
+            grep -v "internal/cli/root_factory.go" || true)
+          
+          if [ -n "$FILTERED" ]; then
+            DEADCODE_COUNT=$(echo "$FILTERED" | wc -l | tr -d ' ')
+            echo "ℹ️  Found $DEADCODE_COUNT unreachable functions"
+            
+            if [ "${DEADCODE_STRICT:-false}" = "true" ]; then
+              echo ""
+              echo "⚠️  Dead code detected (strict mode):"
+              echo "$FILTERED"
+              echo ""
+              echo "💡 Review DEAD_CODE_AUDIT.md for analysis"
+              exit 1
+            else
+              echo "💡 Run 'DEADCODE_STRICT=true task deadcode' to see details"
+              echo "   Or review DEAD_CODE_AUDIT.md for full analysis"
+            fi
+          else
+            echo "✅ No dead code found"
+          fi
+        else
+          echo "✅ No dead code found"
+        fi
+
   # ============================================================================
   # VALIDATION
   # ============================================================================
@@ -872,6 +925,7 @@ tasks:
       - echo "   lint           - Run all linting checks"
       - echo "   fmt            - Format code"
       - echo "   security       - Security vulnerability scan"
+      - echo "   deadcode       - Check for unreachable code"
       - echo ""
       - echo "📚 Documentation:"
       - echo "   docs           - Generate documentation"

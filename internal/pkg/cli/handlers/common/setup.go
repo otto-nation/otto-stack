@@ -10,11 +10,9 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
-	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
@@ -108,32 +106,6 @@ func mergeProjectConfigs(base, local *config.Config) *config.Config {
 	}
 
 	return &merged
-}
-
-// BuildStackContext builds CLI context from command and args
-func BuildStackContext(cmd *cobra.Command, args []string) (clicontext.Context, error) {
-	// Load project configuration
-	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
-	cfg, err := LoadProjectConfig(configPath)
-	if err != nil {
-		return clicontext.Context{}, err
-	}
-
-	// Resolve service configs from enabled services
-	serviceConfigs, err := services.ResolveUpServices(args, cfg)
-	if err != nil {
-		return clicontext.Context{}, err
-	}
-
-	// Extract service names
-	serviceNames := services.ExtractServiceNames(serviceConfigs)
-
-	// Build context using the builder pattern
-	builder := clicontext.NewBuilder().
-		WithProject(cfg.Project.Name, core.OttoStackDir).
-		WithServices(serviceNames, serviceConfigs)
-
-	return builder.Build(), nil
 }
 
 // ResolveServiceConfigs resolves service configurations from args or enabled services

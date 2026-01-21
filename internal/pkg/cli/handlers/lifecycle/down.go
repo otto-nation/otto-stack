@@ -12,11 +12,11 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
-	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
 
 // DownHandler handles the down command
@@ -162,7 +162,7 @@ func (h *DownHandler) displayStopSuccess(base *base.BaseCommand, setup *common.C
 	base.Output.Success("Services stopped successfully")
 	base.Output.Info("Project: %s", setup.Config.Project.Name)
 	for _, svc := range serviceConfigs {
-		base.Output.Info("  %s %s", display.StatusSuccess, svc.Name)
+		base.Output.Info("  %s %s", ui.IconSuccess, svc.Name)
 	}
 }
 

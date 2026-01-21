@@ -73,14 +73,6 @@ func NewServiceError(service, action string, cause error) *ServiceError {
 }
 
 // NewServiceErrorf creates a new service error with formatted action
-func NewServiceErrorf(service, action, format string, args ...any) *ServiceError {
-	return &ServiceError{
-		Service: service,
-		Action:  fmt.Sprintf(format, args...),
-		Cause:   nil,
-	}
-}
-
 // ConfigError represents a configuration error
 type ConfigError struct {
 	Path    string
@@ -145,10 +137,3 @@ func NewDockerError(operation, container string, cause error) *DockerError {
 }
 
 // NewDockerErrorf creates a new docker error with formatted operation
-func NewDockerErrorf(operation, container, format string, args ...any) *DockerError {
-	return &DockerError{
-		Operation: fmt.Sprintf(format, args...),
-		Container: container,
-		Cause:     nil,
-	}
-}

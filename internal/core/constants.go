@@ -1,8 +1,6 @@
 package core
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 )
 
@@ -124,24 +122,6 @@ const (
 	EnvVarTERM            = "TERM"
 	EnvOttoNonInteractive = "OTTO_NON_INTERACTIVE"
 )
-
-// FindYAMLFile finds a YAML file with the given name in the specified directory
-// It checks for both .yaml and .yml extensions
-func FindYAMLFile(dir, filename string) (string, error) {
-	// Try .yaml first
-	yamlPath := filepath.Join(dir, filename+ExtYAML)
-	if _, err := os.Stat(yamlPath); err == nil {
-		return yamlPath, nil
-	}
-
-	// Try .yml
-	ymlPath := filepath.Join(dir, filename+ExtYML)
-	if _, err := os.Stat(ymlPath); err == nil {
-		return ymlPath, nil
-	}
-
-	return "", fmt.Errorf("YAML file not found: %s", filename)
-}
 
 // IsYAMLFile checks if a filename has a YAML extension
 func IsYAMLFile(filename string) bool {

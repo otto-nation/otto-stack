@@ -1,7 +1,6 @@
 package types
 
 import (
-	"slices"
 	"time"
 )
 
@@ -47,10 +46,6 @@ const (
 	ServiceStateStarting ServiceState = "starting"
 )
 
-func (s ServiceState) IsRunning() bool {
-	return s == ServiceStateRunning
-}
-
 // HealthStatus represents health status
 type HealthStatus string
 
@@ -78,12 +73,3 @@ const (
 	ShellTypeFish       ShellType = "fish"
 	ShellTypePowershell ShellType = "powershell"
 )
-
-func (s ShellType) IsValid() bool {
-	validShells := []string{"bash", "zsh", "fish", "powershell"}
-	return slices.Contains(validShells, string(s))
-}
-
-func AllShellTypeStrings() []string {
-	return []string{"bash", "zsh", "fish", "powershell"}
-}

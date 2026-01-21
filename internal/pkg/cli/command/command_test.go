@@ -9,7 +9,6 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
-	"github.com/otto-nation/otto-stack/test/testhelpers"
 )
 
 // MockCommand for testing
@@ -124,14 +123,4 @@ func TestHandler_MiddlewareChain(t *testing.T) {
 	if !command.executed {
 		t.Error("command was not executed")
 	}
-}
-
-func TestCommand_adapters(t *testing.T) {
-	t.Run("new cobra adapter", func(t *testing.T) {
-		adapter := NewCobraAdapter(nil)
-		testhelpers.AssertNoError(t, nil, "NewCobraAdapter should not error")
-		if adapter == nil {
-			t.Error("NewCobraAdapter should return adapter")
-		}
-	})
 }

@@ -11,11 +11,11 @@ import (
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
-	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 )
 
@@ -99,7 +99,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	base.Output.Success("Services started successfully")
 	base.Output.Info("Project: %s", setup.Config.Project.Name)
 	for _, svc := range serviceConfigs {
-		base.Output.Info("  %s %s", display.StatusSuccess, svc.Name)
+		base.Output.Info("  %s %s", ui.IconSuccess, svc.Name)
 	}
 
 	return nil
@@ -182,7 +182,7 @@ func (h *UpHandler) filterSharedServices(serviceConfigs []types.ServiceConfig, c
 func (h *UpHandler) displaySuccess(base *base.BaseCommand, serviceConfigs []types.ServiceConfig) {
 	base.Output.Success(core.MsgShared_registered)
 	for _, svc := range serviceConfigs {
-		base.Output.Info("  %s %s (shared)", display.StatusSuccess, svc.Name)
+		base.Output.Info("  %s %s (shared)", ui.IconSuccess, svc.Name)
 	}
 }
 
