@@ -24,7 +24,13 @@ class CLIReferenceGenerator {
       toc: true,
     };
 
-    let content = `# otto-stack CLI Reference
+    let content = `<!-- 
+  ⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+  This file is generated from internal/config/commands.yaml
+  To make changes, edit the source file and run: task generate:docs
+-->
+
+# otto-stack CLI Reference
 
 ${commandsYaml.metadata?.description || "A powerful development stack management tool for streamlined local development automation"}
 

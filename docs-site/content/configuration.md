@@ -9,6 +9,13 @@ weight: 25
 toc: true
 ---
 
+<!--
+  ⚠️  PARTIALLY GENERATED FILE
+  - Sections marked with triple braces are auto-generated from internal/config/schema.yaml
+  - Custom content (like "Sharing Configuration Details") is maintained in docs-site/templates/configuration-guide.md
+  - To regenerate, run: task generate:docs
+-->
+
 # Configuration Guide
 
 Otto-stack uses `.otto-stack/config.yaml` to define your development stack.
@@ -68,14 +75,36 @@ Stack service configuration
 
 ### Sharing
 
-Container sharing configuration allows services to be shared across multiple projects, reducing resource usage and startup time.
+Container sharing configuration allows services to be shared across multiple projects, reducing resource usage and startup time
 
-- **enabled**: Enable container sharing across projects (default: true)
-- **services**: Per-service sharing overrides (service_name: true/false)
+- **enabled**: Enable container sharing across projects. When enabled, containers are prefixed with 'otto-stack-' and tracked in ~/.otto-stack/shared/containers.yaml
+- **services**: Per-service sharing overrides (service_name: true/false). If empty, all services are shared when enabled is true
 
-**How it works:**
+### Validation
+
+Validation and safety settings
+
+- **skip_warnings**: Skip validation warnings during startup
+- **allow_multiple_databases**: Allow multiple database services
+
+### Advanced
+
+Advanced operational settings
+
+- **auto_start**: Start services automatically after setup
+- **pull_latest_images**: Pull latest Docker images
+- **cleanup_on_recreate**: Keep data when recreating services
+
+### Version Config
+
+Version management and update settings
+
+- **required_version**: Required otto-stack version
+
+### Sharing Configuration Details
 
 When sharing is enabled:
+
 1. Containers are prefixed with `otto-stack-` (e.g., `otto-stack-redis`)
 2. A registry at `~/.otto-stack/shared/containers.yaml` tracks which projects use each shared container
 3. The `down` command prompts before stopping shared containers used by other projects
@@ -102,27 +131,6 @@ sharing:
 ```
 
 **Registry location:** `~/.otto-stack/shared/containers.yaml`
-
-### Validation
-
-Validation and safety settings
-
-- **skip_warnings**: Skip validation warnings during startup
-- **allow_multiple_databases**: Allow multiple database services
-
-### Advanced
-
-Advanced operational settings
-
-- **auto_start**: Start services automatically after setup
-- **pull_latest_images**: Pull latest Docker images
-- **cleanup_on_recreate**: Keep data when recreating services
-
-### Version Config
-
-Version management and update settings
-
-- **required_version**: Required otto-stack version
 
 ## Service Configuration
 

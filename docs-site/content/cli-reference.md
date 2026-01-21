@@ -9,6 +9,12 @@ weight: 50
 toc: true
 ---
 
+<!--
+  ⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+  This file is generated from internal/config/commands.yaml
+  To make changes, edit the source file and run: task generate:docs
+-->
+
 # otto-stack CLI Reference
 
 A powerful development stack management tool for streamlined local development automation
@@ -46,10 +52,11 @@ Information and development tools
 Start development stack services
 
 Start one or more services in the development stack. The command is context-aware:
+
 - **In a project directory**: Starts project services (including shared containers)
 - **Outside a project**: Starts only shared containers (requires service names)
 
-When sharing is enabled, containers are registered in `~/.otto-stack/shared/containers.yaml`
+When sharing is enabled, containers are registered in ~/.otto-stack/shared/containers.yaml
 to track which projects use them.
 
 **Usage:** `otto-stack up [service...]`
@@ -76,6 +83,12 @@ cd ~ && otto-stack up redis
 
 Start shared containers from global context
 
+```bash
+otto-stack up --detach --build
+```
+
+Build images and start services in background
+
 **Flags:**
 
 - `--detach` (`bool`): Run services in background (detached mode) (default: `false`)
@@ -99,11 +112,12 @@ Start shared containers from global context
 Stop development stack services
 
 Stop one or more services in the development stack. The command is context-aware:
+
 - **In a project directory**: Stops project services, prompts before stopping shared containers
 - **Outside a project**: Stops shared containers (requires service names)
 
 When stopping shared containers, you'll be prompted if they're used by other projects.
-The registry at `~/.otto-stack/shared/containers.yaml` is updated to remove the project.
+The registry at ~/.otto-stack/shared/containers.yaml is updated to remove the project.
 
 **Usage:** `otto-stack down [service...]`
 
@@ -128,6 +142,12 @@ otto-stack down --volumes
 ```
 
 Stop services and remove volumes
+
+```bash
+otto-stack down --timeout 5
+```
+
+Stop services with custom timeout
 
 **Flags:**
 
@@ -186,8 +206,9 @@ Restart with custom timeout
 Show status of development stack services
 
 Display comprehensive status information for services. The command is context-aware:
+
 - **In a project directory**: Shows project services status
-- **Outside a project**: Use `--all` flag to see all projects' shared containers
+- **Outside a project**: Use --all flag to see all projects' shared containers
 
 **Usage:** `otto-stack status [service...]`
 
@@ -219,9 +240,20 @@ otto-stack status --format json
 
 Output status in JSON format
 
+```bash
+otto-stack status --watch
+```
+
+Watch for status changes in real-time
+
+```bash
+otto-stack status --filter running
+```
+
+Show only running services
+
 **Flags:**
 
-- `--all` (`bool`): Show all projects' shared containers (global context only) (default: `false`)
 - `--format` (`string`): Output format (table|json|yaml) (default: `table`) (options: `table`, `json`, `yaml`)
 - `--watch` (`bool`): Watch for status changes (default: `false`)
 - `--quiet` (`bool`): Only show service names and basic status (default: `false`)
