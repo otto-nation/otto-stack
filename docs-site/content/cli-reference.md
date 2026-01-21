@@ -96,8 +96,6 @@ Build images and start services in background
 - `--force-recreate` (`bool`): Recreate containers even if config hasn't changed (default: `false`)
 - `--no-deps` (`bool`): Don't start linked services (default: `false`)
 - `--timeout` (`string`): Timeout for service startup (e.g., 30s, 2m) (default: `30s`)
-- `--resolve-deps` (`bool`): Show dependency resolution tree before starting (default: `false`)
-- `--skip-conflicts` (`bool`): Skip conflict detection (faster startup) (default: `false`)
 
 **Related Commands:** [`down`](#down), [`restart`](#restart), [`status`](#status)
 
@@ -155,7 +153,6 @@ Stop services with custom timeout
 - `--volumes` (`bool`): Remove named volumes and anonymous volumes (default: `false`)
 - `--remove-orphans` (`bool`): Remove containers for services not in compose file (default: `false`)
 - `--timeout` (`int`): Shutdown timeout in seconds (default: `10`)
-- `--remove-images` (`string`): Remove images (all|local) (default: ``) (options: `all`, `local`)
 
 **Related Commands:** [`up`](#up), [`cleanup`](#cleanup), [`status`](#status)
 
@@ -240,34 +237,16 @@ otto-stack status --format json
 
 Output status in JSON format
 
-```bash
-otto-stack status --watch
-```
-
-Watch for status changes in real-time
-
-```bash
-otto-stack status --filter running
-```
-
-Show only running services
-
 **Flags:**
 
 - `--format` (`string`): Output format (table|json|yaml) (default: `table`) (options: `table`, `json`, `yaml`)
-- `--watch` (`bool`): Watch for status changes (default: `false`)
-- `--quiet` (`bool`): Only show service names and basic status (default: `false`)
-- `--filter` (`string`): Filter services by status (options: `running`, `stopped`, `starting`, `unhealthy`)
-- `--no-trunc` (`bool`): Don't truncate output (default: `false`)
 - `--all` (`bool`): Show status across all projects (including shared containers) (default: `false`)
 
 **Related Commands:** [`logs`](#logs), [`status`](#status)
 
 **Tips:**
 
-- Use --watch to monitor services in real-time
 - Try --format json for programmatic access
-- Use --filter to focus on specific service states
 - Use --all to see shared containers across all projects
 
 ### `logs`
@@ -294,34 +273,11 @@ otto-stack logs postgres redis
 
 Show logs from specific services
 
-```bash
-otto-stack logs --follow postgres
-```
-
-Follow logs from postgres in real-time
-
-```bash
-otto-stack logs --tail 100 --since 1h
-```
-
-Show last 100 lines from the past hour
-
-**Flags:**
-
-- `--follow` (`bool`): Follow log output in real-time (default: `false`)
-- `--tail` (`string`): Number of lines to show from end of logs (default: `all`)
-- `--since` (`string`): Show logs since timestamp or relative time (default: ``)
-- `--timestamps` (`bool`): Show timestamps in log output (default: `false`)
-- `--no-color` (`bool`): Disable colored output (default: `false`)
-- `--no-prefix` (`bool`): Don't show service name prefix (default: `false`)
-
 **Related Commands:** [`status`](#status)
 
 **Tips:**
 
-- Use --follow to see logs in real-time
-- Combine --tail and --since for targeted log viewing
-- Use --timestamps to correlate events across services
+- Logs from multiple services are color-coded for identification
 
 ### `doctor`
 

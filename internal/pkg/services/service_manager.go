@@ -131,6 +131,9 @@ type StartRequest struct {
 	ServiceConfigs  []servicetypes.ServiceConfig
 	Build           bool
 	ForceRecreate   bool
+	Detach          bool
+	NoDeps          bool
+	Timeout         time.Duration
 	Characteristics []string
 }
 
@@ -140,6 +143,7 @@ type StopRequest struct {
 	ServiceConfigs  []servicetypes.ServiceConfig
 	Remove          bool // true = down, false = stop
 	RemoveVolumes   bool
+	RemoveOrphans   bool
 	Timeout         time.Duration
 	Characteristics []string
 }
@@ -206,6 +210,9 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 	options := s.characteristics.ResolveUpOptions(req.Characteristics, req.ServiceConfigs, docker.UpOptions{
 		Build:         req.Build,
 		ForceRecreate: req.ForceRecreate,
+		Detach:        req.Detach,
+		NoDeps:        req.NoDeps,
+		Timeout:       &req.Timeout,
 	})
 
 	err = s.compose.Up(ctx, project, options.ToSDK())

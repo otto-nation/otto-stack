@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"context"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -72,12 +73,23 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
 	}
 
+	upFlags, _ := core.ParseUpFlags(cmd)
 	force, _ := cmd.Flags().GetBool(core.FlagForce)
+
+	const defaultTimeout = 30 * time.Second
+	timeout, err := time.ParseDuration(upFlags.Timeout)
+	if err != nil {
+		timeout = defaultTimeout
+	}
+
 	startRequest := services.StartRequest{
 		Project:        setup.Config.Project.Name,
 		ServiceConfigs: serviceConfigs,
-		Build:          force,
-		ForceRecreate:  false,
+		Build:          upFlags.Build || force, // force implies build
+		ForceRecreate:  upFlags.ForceRecreate,
+		Detach:         upFlags.Detach,
+		NoDeps:         upFlags.NoDeps,
+		Timeout:        timeout,
 	}
 
 	if err = service.Start(ctx, startRequest); err != nil {
