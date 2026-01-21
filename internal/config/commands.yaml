@@ -146,14 +146,6 @@ commands:
         type: "string"
         description: "Timeout for service startup (e.g., 30s, 2m)"
         default: "30s"
-      resolve-deps:
-        type: "bool"
-        description: "Show dependency resolution tree before starting"
-        default: false
-      skip-conflicts:
-        type: "bool"
-        description: "Skip conflict detection (faster startup)"
-        default: false
     related_commands: ["down", "restart", "status"]
     tips:
       - "Add --build if you've made changes to Dockerfiles"
@@ -197,11 +189,6 @@ commands:
         type: "int"
         description: "Shutdown timeout in seconds"
         default: 10
-      remove-images:
-        type: "string"
-        description: "Remove images (all|local)"
-        default: ""
-        options: ["all", "local"]
     related_commands: ["up", "cleanup", "status"]
     tips:
       - "Use --volumes carefully as it will delete all data"
@@ -249,41 +236,19 @@ commands:
         description: "Show all projects' shared containers (global context)"
       - command: "otto-stack status --format json"
         description: "Output status in JSON format"
-      - command: "otto-stack status --watch"
-        description: "Watch for status changes in real-time"
-      - command: "otto-stack status --filter running"
-        description: "Show only running services"
     flags:
       format:
         type: "string"
         description: "Output format (table|json|yaml)"
         default: "table"
         options: ["table", "json", "yaml"]
-      watch:
-        type: "bool"
-        description: "Watch for status changes"
-        default: false
-      quiet:
-        type: "bool"
-        description: "Only show service names and basic status"
-        default: false
-      filter:
-        type: "string"
-        description: "Filter services by status"
-        options: ["running", "stopped", "starting", "unhealthy"]
-      no-trunc:
-        type: "bool"
-        description: "Don't truncate output"
-        default: false
       all:
         type: "bool"
         description: "Show status across all projects (including shared containers)"
         default: false
     related_commands: ["logs", "status"]
     tips:
-      - "Use --watch to monitor services in real-time"
       - "Try --format json for programmatic access"
-      - "Use --filter to focus on specific service states"
       - "Use --all to see shared containers across all projects"
 
   logs:
@@ -298,40 +263,10 @@ commands:
         description: "Show logs from all services"
       - command: "otto-stack logs postgres redis"
         description: "Show logs from specific services"
-      - command: "otto-stack logs --follow postgres"
-        description: "Follow logs from postgres in real-time"
-      - command: "otto-stack logs --tail 100 --since 1h"
-        description: "Show last 100 lines from the past hour"
-    flags:
-      follow:
-        type: "bool"
-        description: "Follow log output in real-time"
-        default: false
-      tail:
-        type: "string"
-        description: "Number of lines to show from end of logs"
-        default: "all"
-      since:
-        type: "string"
-        description: "Show logs since timestamp or relative time"
-        default: ""
-      timestamps:
-        type: "bool"
-        description: "Show timestamps in log output"
-        default: false
-      no-color:
-        type: "bool"
-        description: "Disable colored output"
-        default: false
-      no-prefix:
-        type: "bool"
-        description: "Don't show service name prefix"
-        default: false
+    flags: {}
     related_commands: ["status"]
     tips:
-      - "Use --follow to see logs in real-time"
-      - "Combine --tail and --since for targeted log viewing"
-      - "Use --timestamps to correlate events across services"
+      - "Logs from multiple services are color-coded for identification"
 
   doctor:
     description: "Diagnose and troubleshoot stack health"
