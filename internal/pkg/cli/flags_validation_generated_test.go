@@ -17,61 +17,26 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 		handlerPath string
 		flags       []string
 	}{
-		"restart": {
-			handlerPath: "internal/pkg/cli/handlers/lifecycle/restart.go",
+		"cleanup": {
+			handlerPath: "internal/pkg/cli/handlers/lifecycle/cleanup.go",
 			flags: []string{
-				"timeout",
-				"no-deps",
+				"all",
+				"force",
+				"images",
+				"networks",
+				"orphans",
+				"project",
+				"volumes",
 			},
 		},
 		"connect": {
 			handlerPath: "internal/pkg/cli/handlers/operations/connect.go",
 			flags: []string{
 				"database",
-				"user",
 				"host",
 				"port",
 				"read-only",
-			},
-		},
-		"validate": {
-			handlerPath: "internal/pkg/cli/handlers/project/validate.go",
-			flags: []string{
-				"strict",
-				"format",
-				"fix",
-			},
-		},
-		"exec": {
-			handlerPath: "internal/pkg/cli/handlers/operations/exec.go",
-			flags: []string{
-				"interactive",
-				"tty",
-				"detach",
-				"env",
 				"user",
-				"workdir",
-			},
-		},
-		"cleanup": {
-			handlerPath: "internal/pkg/cli/handlers/lifecycle/cleanup.go",
-			flags: []string{
-				"images",
-				"networks",
-				"force",
-				"orphans",
-				"project",
-				"all",
-				"volumes",
-			},
-		},
-		"down": {
-			handlerPath: "internal/pkg/cli/handlers/lifecycle/down.go",
-			flags: []string{
-				"volumes",
-				"remove-orphans",
-				"timeout",
-				"remove",
 			},
 		},
 		"doctor": {
@@ -81,14 +46,41 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 				"format",
 			},
 		},
+		"down": {
+			handlerPath: "internal/pkg/cli/handlers/lifecycle/down.go",
+			flags: []string{
+				"remove",
+				"remove-orphans",
+				"timeout",
+				"volumes",
+			},
+		},
+		"exec": {
+			handlerPath: "internal/pkg/cli/handlers/operations/exec.go",
+			flags: []string{
+				"detach",
+				"env",
+				"interactive",
+				"tty",
+				"user",
+				"workdir",
+			},
+		},
 		"init": {
 			handlerPath: "internal/pkg/cli/handlers/project/init.go",
 			flags: []string{
 				"force",
+				"no-shared-containers",
 				"project-name",
 				"services",
-				"no-shared-containers",
 				"shared-services",
+			},
+		},
+		"restart": {
+			handlerPath: "internal/pkg/cli/handlers/lifecycle/restart.go",
+			flags: []string{
+				"no-deps",
+				"timeout",
 			},
 		},
 		"services": {
@@ -98,11 +90,10 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 				"format",
 			},
 		},
-		"version": {
-			handlerPath: "internal/pkg/cli/handlers/utility/version.go",
+		"status": {
+			handlerPath: "internal/pkg/cli/handlers/operations/status.go",
 			flags: []string{
-				"full",
-				"check-updates",
+				"all",
 				"format",
 			},
 		},
@@ -110,17 +101,26 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 			handlerPath: "internal/pkg/cli/handlers/lifecycle/up.go",
 			flags: []string{
 				"build",
+				"detach",
 				"force-recreate",
 				"no-deps",
 				"timeout",
-				"detach",
 			},
 		},
-		"status": {
-			handlerPath: "internal/pkg/cli/handlers/operations/status.go",
+		"validate": {
+			handlerPath: "internal/pkg/cli/handlers/project/validate.go",
 			flags: []string{
-				"all",
+				"fix",
 				"format",
+				"strict",
+			},
+		},
+		"version": {
+			handlerPath: "internal/pkg/cli/handlers/utility/version.go",
+			flags: []string{
+				"check-updates",
+				"format",
+				"full",
 			},
 		},
 		"web-interfaces": {
