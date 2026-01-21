@@ -11,7 +11,9 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 )
 
@@ -89,10 +91,40 @@ func (h *UpHandler) handleGlobalContext(ctx context.Context, cmd *cobra.Command,
 		return pkgerrors.NewValidationError("", "No services specified. Use 'otto-stack up <service>' to start shared containers", nil)
 	}
 
-	// TODO: Implement shared container startup
-	base.Output.Info("Global context - shared containers only")
-	for _, svc := range args {
-		base.Output.Info("  %s %s (shared)", display.StatusSuccess, svc)
+	// Resolve service configs
+	serviceUtils := services.NewServiceUtils()
+	var serviceConfigs []types.ServiceConfig
+	for _, serviceName := range args {
+		cfg, err := serviceUtils.LoadServiceConfig(serviceName)
+		if err != nil {
+			return pkgerrors.NewServiceError("service", "load", err)
+		}
+		if cfg != nil {
+			serviceConfigs = append(serviceConfigs, *cfg)
+		}
+	}
+
+	// Register shared containers
+	reg := registry.NewManager(execCtx.Shared.Root)
+	regData, err := reg.Load()
+	if err != nil {
+		return err
+	}
+
+	for _, svc := range serviceConfigs {
+		containerName := "otto-shared-" + svc.Name
+		if err := reg.Register(svc.Name, containerName, "global"); err != nil {
+			base.Output.Warning("Failed to register %s: %v", svc.Name, err)
+		}
+	}
+
+	if err := reg.Save(regData); err != nil {
+		base.Output.Warning("Failed to save registry: %v", err)
+	}
+
+	base.Output.Success("Shared containers registered")
+	for _, svc := range serviceConfigs {
+		base.Output.Info("  %s %s (shared)", display.StatusSuccess, svc.Name)
 	}
 
 	return nil

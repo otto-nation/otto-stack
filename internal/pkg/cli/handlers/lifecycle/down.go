@@ -113,17 +113,52 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 func (h *DownHandler) handleGlobalContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
 	base.Output.Header("Stopping shared containers")
 
+	reg := registry.NewManager(execCtx.Shared.Root)
+	regData, loadErr := reg.Load()
+	if loadErr != nil {
+		return loadErr
+	}
+
+	var servicesToStop []string
 	if len(args) == 0 {
-		base.Output.Warning("This will stop ALL shared containers")
+		// Stop all shared containers
+		containers, err := reg.List()
+		if err != nil {
+			return err
+		}
+
+		if len(containers) == 0 {
+			base.Output.Info("No shared containers to stop")
+			return nil
+		}
+
+		base.Output.Warning("This will stop ALL shared containers:")
+		for _, container := range containers {
+			base.Output.Info("  - %s (used by: %v)", container.Name, container.Projects)
+			servicesToStop = append(servicesToStop, container.Name)
+		}
+
 		if !h.promptStopShared(base) {
 			base.Output.Info("Cancelled")
 			return nil
 		}
+	} else {
+		servicesToStop = args
 	}
 
-	// TODO: Implement shared container shutdown
-	base.Output.Info("Global context - stopping shared containers")
-	for _, svc := range args {
+	// Unregister from global context
+	for _, svc := range servicesToStop {
+		if err := reg.Unregister(svc, "global"); err != nil {
+			base.Output.Warning("Failed to unregister %s: %v", svc, err)
+		}
+	}
+
+	if err := reg.Save(regData); err != nil {
+		base.Output.Warning("Failed to save registry: %v", err)
+	}
+
+	base.Output.Success("Shared containers stopped")
+	for _, svc := range servicesToStop {
 		base.Output.Info("  %s %s (shared)", display.StatusSuccess, svc)
 	}
 
