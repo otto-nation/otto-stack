@@ -685,7 +685,7 @@ tasks:
       - echo "✅ Security scan complete"
 
   deadcode:
-    desc: "🔍 Check for unreachable code (informational)"
+    desc: "🔍 Check for unreachable code (informational by default, strict with DEADCODE_STRICT=true)"
     sources:
       - "**/*.go"
       - "go.mod"
@@ -695,6 +695,10 @@ tasks:
       - echo "🔍 Checking for dead code..."
       - |
         # Run deadcode analysis
+        # Note: Deadcode tool reports functions as unreachable if they're only called from:
+        # - Test code (test helpers, mocks, DI constructors)
+        # - Excluded packages (e2e framework, code generators)
+        # - Future features not yet exposed via CLI
         DEADCODE_OUTPUT=$(go run golang.org/x/tools/cmd/deadcode@latest ./... 2>&1)
         
         if [ -n "$DEADCODE_OUTPUT" ]; then
