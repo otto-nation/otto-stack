@@ -35,37 +35,6 @@ type ExecutionContext struct {
 	Shared  *SharedInfo  // Always populated
 }
 
-// IsProject returns true if running in project context
-func (c *ExecutionContext) IsProject() bool {
-	return c.Type == Project
-}
-
-// IsGlobal returns true if running in global context
-func (c *ExecutionContext) IsGlobal() bool {
-	return c.Type == Global
-}
-
-// GetProjectRoot returns the project root or empty string if global
-func (c *ExecutionContext) GetProjectRoot() string {
-	if c.Project != nil {
-		return c.Project.Root
-	}
-	return ""
-}
-
-// GetConfigFile returns the config file path or empty string if global
-func (c *ExecutionContext) GetConfigFile() string {
-	if c.Project != nil {
-		return c.Project.ConfigFile
-	}
-	return ""
-}
-
-// GetSharedRoot returns the shared containers root directory
-func (c *ExecutionContext) GetSharedRoot() string {
-	return c.Shared.Root
-}
-
 // SharingConfig defines container sharing configuration
 type SharingConfig struct {
 	Enabled  bool            `yaml:"enabled" json:"enabled"`

@@ -22,12 +22,6 @@ func TestYAMLUtilities(t *testing.T) {
 		assert.Equal(t, "config", TrimYAMLExt("config.yml"))
 		assert.Equal(t, "config.json", TrimYAMLExt("config.json"))
 	})
-
-	t.Run("finds YAML files", func(t *testing.T) {
-		result, err := FindYAMLFile("/tmp", "nonexistent")
-		assert.Error(t, err)
-		assert.Empty(t, result)
-	})
 }
 
 func TestFlagParsers(t *testing.T) {

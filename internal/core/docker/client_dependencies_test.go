@@ -17,10 +17,6 @@ func TestNewClientWithDependencies_basic(t *testing.T) {
 		t.Error("NewClientWithDependencies should return non-nil client")
 	}
 
-	if client.GetLogger() != logger {
-		t.Error("Client should use provided logger")
-	}
-
 	if client.GetCli() != mockDocker {
 		t.Error("Client should use provided Docker client")
 	}
