@@ -41,7 +41,6 @@ func TestNewClient(t *testing.T) {
 				}
 				require.NotNil(t, client)
 				assert.NotNil(t, client.GetCli())
-				assert.Equal(t, tt.logger, client.GetLogger())
 
 				// Clean up
 				_ = client.Close()
@@ -86,20 +85,6 @@ func TestClient_GetCli(t *testing.T) {
 	})
 }
 
-func TestClient_GetLogger(t *testing.T) {
-	testLogger := logger.GetLogger()
-
-	client, err := NewClient(testLogger)
-	if err != nil {
-		t.Skipf("Docker not available: %v", err)
-	}
-	defer func() { _ = client.Close() }()
-
-	t.Run("get logger", func(t *testing.T) {
-		assert.Equal(t, testLogger, client.GetLogger())
-	})
-}
-
 func TestClient_WithNilLogger(t *testing.T) {
 	client, err := NewClient(nil)
 	if err != nil {
@@ -114,6 +99,5 @@ func TestClient_WithNilLogger(t *testing.T) {
 	t.Run("client works with nil logger", func(t *testing.T) {
 		assert.NotNil(t, client)
 		assert.NotNil(t, client.GetCli())
-		assert.Nil(t, client.GetLogger())
 	})
 }

@@ -120,11 +120,6 @@ const (
 	DockerServiceStateCreated DockerServiceState = StateCreated
 )
 
-// IsRunning returns true if the service is running
-func (s DockerServiceState) IsRunning() bool {
-	return s == DockerServiceStateRunning
-}
-
 // DockerHealthStatus represents the health status of a service
 type DockerHealthStatus string
 

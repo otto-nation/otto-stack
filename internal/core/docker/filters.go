@@ -12,10 +12,3 @@ func NewProjectFilter(projectName string) filters.Args {
 	f.Add("label", fmt.Sprintf("%s=%s", ComposeProjectLabel, projectName))
 	return f
 }
-
-// NewServiceFilter creates a filter for containers belonging to a specific service
-func NewServiceFilter(projectName, serviceName string) filters.Args {
-	f := NewProjectFilter(projectName)
-	f.Add("label", fmt.Sprintf("%s=%s", ComposeServiceLabel, serviceName))
-	return f
-}

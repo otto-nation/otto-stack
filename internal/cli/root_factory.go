@@ -6,7 +6,6 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli"
-	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -23,11 +22,6 @@ func ExecuteFactory() error {
 	rootCmd := cli.BuildRootCommand()
 	cobra.OnInitialize(initConfig)
 	return rootCmd.Execute()
-}
-
-// CreateRootCommand creates the root command using the simplified builder
-func CreateRootCommand() (*cobra.Command, error) {
-	return cli.BuildRootCommand(), nil
 }
 
 // initConfig reads in config file and ENV variables if set
@@ -59,18 +53,4 @@ func configureLogger() {
 	if err := logger.Init(config); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to configure logger: %v\n", err)
 	}
-}
-
-// GetCommandConfig loads and returns the command configuration
-func GetCommandConfig() (map[string]any, error) {
-	return config.LoadCommandConfig()
-}
-
-// ValidateConfig validates the current configuration
-func ValidateConfig() error {
-	if _, err := config.LoadConfig(); err != nil {
-		return fmt.Errorf("configuration validation failed: %w", err)
-	}
-	logger.Info("Configuration is valid")
-	return nil
 }

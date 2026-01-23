@@ -36,12 +36,21 @@ jobs:
 
       - name: Verify generated files are up to date
         run: |
-          git diff --exit-code || {
-            echo "❌ Generated files are out of date"
+          # Check for changes, ignoring lastmod date updates in docs
+          if git diff --name-only | grep -v 'docs-site/content' > /dev/null; then
+            echo "❌ Generated code files are out of date"
             echo "Run 'task generate' and commit the changes"
             git diff --name-only
             exit 1
-          }
+          fi
+          
+          # For docs, check everything except lastmod lines
+          if git diff docs-site/content/ | grep -v '^[+-]lastmod:' | grep '^[+-]' | grep -v '^+++\|^---' > /dev/null; then
+            echo "❌ Generated documentation is out of date"
+            echo "Run 'task generate' and commit the changes"
+            git diff docs-site/content/
+            exit 1
+          fi
 
       - name: Validate Go modules
         run: |
