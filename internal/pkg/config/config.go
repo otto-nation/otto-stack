@@ -73,6 +73,7 @@ func LoadConfig() (*Config, error) {
 }
 
 // LoadCommandConfig loads command configuration from embedded YAML
+// deadcode: used by cmd/generate-cli for CLI code generation
 func LoadCommandConfig() (map[string]any, error) {
 	var commandConfig map[string]any
 	if err := yaml.Unmarshal(config.EmbeddedCommandsYAML, &commandConfig); err != nil {

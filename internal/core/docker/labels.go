@@ -18,6 +18,7 @@ const (
 )
 
 // ListProjectContainers returns containers for a specific project
+// deadcode: used in e2e tests to verify container state
 func (c *Client) ListProjectContainers(ctx context.Context, projectName string) ([]container.Summary, error) {
 	filter := filters.NewArgs()
 	filter.Add("label", fmt.Sprintf("%s=true", LabelOttoManaged))
