@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
@@ -41,9 +42,9 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	// Parse log flags
-	follow, _ := cmd.Flags().GetBool("follow")
-	timestamps, _ := cmd.Flags().GetBool("timestamps")
-	tail, _ := cmd.Flags().GetString("tail")
+	follow, _ := cmd.Flags().GetBool(docker.FlagFollow)
+	timestamps, _ := cmd.Flags().GetBool(docker.FlagTimestamps)
+	tail, _ := cmd.Flags().GetString(docker.FlagTail)
 	if tail == "" {
 		tail = core.DefaultLogTailLines
 	}

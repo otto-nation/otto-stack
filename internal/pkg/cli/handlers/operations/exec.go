@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
@@ -31,10 +32,10 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	serviceName := args[0]
 	command := args[1:]
 
-	user, _ := cmd.Flags().GetString("user")
-	workdir, _ := cmd.Flags().GetString("workdir")
-	interactive, _ := cmd.Flags().GetBool("interactive")
-	tty, _ := cmd.Flags().GetBool("tty")
+	user, _ := cmd.Flags().GetString(docker.FlagUser)
+	workdir, _ := cmd.Flags().GetString(docker.FlagWorkdir)
+	interactive, _ := cmd.Flags().GetBool(docker.FlagInteractive)
+	tty, _ := cmd.Flags().GetBool(docker.FlagTTY)
 
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
