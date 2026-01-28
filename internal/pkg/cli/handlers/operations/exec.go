@@ -7,8 +7,10 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 // ExecHandler handles the exec command
@@ -27,20 +29,30 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 	defer cleanup()
 
-	base.Output.Header("Executing command")
+	serviceName := args[0]
+	command := args[1:]
 
-	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
+	user, _ := cmd.Flags().GetString(docker.FlagUser)
+	workdir, _ := cmd.Flags().GetString(docker.FlagWorkdir)
+	interactive, _ := cmd.Flags().GetBool(docker.FlagInteractive)
+	tty, _ := cmd.Flags().GetBool(docker.FlagTTY)
+
+	stackService, err := common.NewServiceManager(false)
 	if err != nil {
 		return err
 	}
 
-	if len(serviceConfigs) > 0 {
-		base.Output.Info("Service: %s", serviceConfigs[0].Name)
+	req := services.ExecRequest{
+		Project:     setup.Config.Project.Name,
+		Service:     serviceName,
+		Command:     command,
+		User:        user,
+		WorkingDir:  workdir,
+		Interactive: interactive,
+		TTY:         tty,
 	}
-	base.Output.Success("Command executed successfully")
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
 
-	return nil
+	return stackService.Exec(ctx, req)
 }
 
 // ValidateArgs validates the command arguments

@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/core"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
@@ -70,24 +69,6 @@ func LoadConfig() (*Config, error) {
 	}
 
 	return mergeConfigs(baseConfig, localConfig), nil
-}
-
-// LoadCommandConfig loads command configuration from embedded YAML
-func LoadCommandConfig() (map[string]any, error) {
-	var commandConfig map[string]any
-	if err := yaml.Unmarshal(config.EmbeddedCommandsYAML, &commandConfig); err != nil {
-		return nil, pkgerrors.NewConfigError("", ErrCommandConfigParse, err)
-	}
-	return commandConfig, nil
-}
-
-// LoadCommandConfigStruct loads command configuration as struct (for generators)
-func LoadCommandConfigStruct() (*CommandConfig, error) {
-	var commandConfig CommandConfig
-	if err := yaml.Unmarshal(config.EmbeddedCommandsYAML, &commandConfig); err != nil {
-		return nil, pkgerrors.NewConfigError("", ErrCommandConfigParse, err)
-	}
-	return &commandConfig, nil
 }
 
 // GenerateConfig creates a new otto-stack configuration file

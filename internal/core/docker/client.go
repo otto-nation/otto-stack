@@ -76,6 +76,7 @@ type Client struct {
 }
 
 // NewClientWithDependencies creates a client with injected dependencies (for testing)
+// deadcode: used for dependency injection in unit tests
 func NewClientWithDependencies(cli DockerClient, compose *Manager, logger *slog.Logger) *Client {
 	dc := &Client{
 		cli:     cli,
@@ -117,6 +118,7 @@ func (c *Client) GetCli() DockerClient {
 }
 
 // GetComposeManager returns the compose manager
+// deadcode: used for accessing internal state in unit tests
 func (c *Client) GetComposeManager() *Manager {
 	return c.compose
 }
