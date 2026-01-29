@@ -1,6 +1,6 @@
 module github.com/otto-nation/otto-stack
 
-go 1.24.11
+go 1.24.12
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
