@@ -364,6 +364,15 @@ func (s *Service) Cleanup(ctx context.Context, req CleanupRequest) error {
 	return nil
 }
 
+// CheckDockerHealth verifies Docker daemon is running
+func (s *Service) CheckDockerHealth(ctx context.Context) error {
+	_, err := s.DockerClient.GetCli().Info(ctx)
+	if err != nil {
+		return pkgerrors.NewDockerError("check docker health", "", err)
+	}
+	return nil
+}
+
 // GenerateComposeFile generates docker-compose.yml from service configs
 func (s *Service) GenerateComposeFile(projectName string, serviceConfigs []servicetypes.ServiceConfig) error {
 	generator, err := compose.NewGenerator(projectName)
