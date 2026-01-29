@@ -35,6 +35,14 @@ const (
 	FlagBuild         = "build"
 	FlagForceRecreate = "force-recreate"
 	FlagTimeout       = "timeout"
+	FlagUser          = "user"
+	FlagWorkdir       = "workdir"
+	FlagInteractive   = "interactive"
+	FlagTTY           = "tty"
+	FlagFollow        = "follow"
+	FlagTimestamps    = "timestamps"
+	FlagTail          = "tail"
+	FlagAll           = "all"
 )
 
 // Docker labels

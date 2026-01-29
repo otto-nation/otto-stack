@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -13,6 +12,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 	"gopkg.in/yaml.v3"
 )
 
@@ -25,12 +25,12 @@ type CoreSetup struct {
 // SetupCoreCommand provides common setup for handlers that need Docker and config
 func SetupCoreCommand(ctx context.Context, base *base.BaseCommand) (*CoreSetup, func(), error) {
 	// Check if otto-stack is initialized
-	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return nil, nil, errors.New(core.MsgErrors_not_initialized)
+	if err := validation.CheckInitialization(); err != nil {
+		return nil, nil, err
 	}
 
 	// Load project configuration
+	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
 	cfg, err := LoadProjectConfig(configPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf(core.MsgStack_failed_load_config, err)

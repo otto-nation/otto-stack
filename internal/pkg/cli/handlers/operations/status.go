@@ -45,7 +45,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		return err
 	}
 
-	showAll, _ := cmd.Flags().GetBool("all")
+	showAll, _ := cmd.Flags().GetBool(docker.FlagAll)
 
 	if execCtx.Type == clicontext.Global || showAll {
 		return h.handleGlobalStatus(ctx, cmd, args, base, execCtx, showAll)

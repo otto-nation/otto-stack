@@ -265,7 +265,7 @@ func (tl *TestLifecycle) emergencyCleanup() {
 		ctx := context.Background()
 
 		// Clean up containers with our project name
-		if containers, err := dockerClient.ListProjectContainers(ctx, tl.ProjectName); err == nil {
+		if containers, err := dockerClient.ListContainers(ctx, tl.ProjectName); err == nil {
 			for _, container := range containers {
 				_ = dockerClient.RemoveContainer(ctx, container.ID, true) // force remove
 			}

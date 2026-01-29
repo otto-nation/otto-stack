@@ -6,7 +6,6 @@ import (
 	"sort"
 
 	"github.com/otto-nation/otto-stack/cmd/codegen"
-	pkgConfig "github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
 
@@ -27,7 +26,7 @@ type commandData struct {
 
 func main() {
 	// Load commands config
-	commandConfig, err := pkgConfig.LoadCommandConfigStruct()
+	commandConfig, err := codegen.LoadCommandConfigStruct()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to load commands config: %v\n", err)
 		os.Exit(1)

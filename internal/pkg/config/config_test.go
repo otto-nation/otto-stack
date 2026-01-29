@@ -12,55 +12,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestLoadCommandConfig(t *testing.T) {
-	t.Run("loads command config successfully", func(t *testing.T) {
-		config, err := LoadCommandConfig()
-		assert.NoError(t, err)
-		assert.NotNil(t, config)
-		assert.IsType(t, map[string]any{}, config)
-	})
-
-	t.Run("returns valid structure", func(t *testing.T) {
-		config, err := LoadCommandConfig()
-		require.NoError(t, err)
-
-		// Should contain expected top-level keys
-		expectedKeys := []string{"commands", "global"}
-		for _, key := range expectedKeys {
-			assert.Contains(t, config, key, "Config should contain %s section", key)
-		}
-	})
-}
-
-func TestLoadCommandConfigStruct(t *testing.T) {
-	t.Run("loads command config as struct", func(t *testing.T) {
-		config, err := LoadCommandConfigStruct()
-		assert.NoError(t, err)
-		assert.NotNil(t, config)
-		assert.IsType(t, &CommandConfig{}, config)
-	})
-
-	t.Run("populates struct fields", func(t *testing.T) {
-		config, err := LoadCommandConfigStruct()
-		require.NoError(t, err)
-
-		assert.NotNil(t, config.Commands)
-		assert.NotNil(t, config.Global)
-		assert.NotEmpty(t, config.Commands, "Should have at least some commands")
-	})
-
-	t.Run("validates command structure", func(t *testing.T) {
-		config, err := LoadCommandConfigStruct()
-		require.NoError(t, err)
-
-		// Check that commands have required fields
-		for cmdName, cmd := range config.Commands {
-			assert.NotEmpty(t, cmd.Description, "Command %s should have description", cmdName)
-			// Handler and flags are optional
-		}
-	})
-}
-
 func TestGenerateConfig(t *testing.T) {
 	t.Run("generates valid config YAML", func(t *testing.T) {
 		ctx := clicontext.NewBuilder().

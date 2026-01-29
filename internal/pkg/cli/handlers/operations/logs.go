@@ -10,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 // LogsHandler handles the logs command
@@ -35,31 +36,29 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	serviceNames := make([]string, 0, len(serviceConfigs))
-	for _, svc := range serviceConfigs {
-		serviceNames = append(serviceNames, svc.Name)
-	}
-
-	logOptions := docker.LogOptions{
-		Services:   serviceNames,
-		Follow:     true,
-		Timestamps: true,
-		Tail:       core.DefaultLogTailLines,
-	}
-
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
 		return pkgerrors.NewServiceError("stack", "create service", err)
 	}
 
-	manager := stackService.DockerClient.GetComposeManager()
-	consumer := &docker.SimpleLogConsumer{}
-
-	if err := manager.Logs(ctx, setup.Config.Project.Name, consumer, logOptions.ToSDK()); err != nil {
-		return pkgerrors.NewDockerError("show logs", setup.Config.Project.Name, err)
+	// Parse log flags
+	follow, _ := cmd.Flags().GetBool(docker.FlagFollow)
+	timestamps, _ := cmd.Flags().GetBool(docker.FlagTimestamps)
+	tail, _ := cmd.Flags().GetString(docker.FlagTail)
+	if tail == "" {
+		tail = core.DefaultLogTailLines
 	}
 
-	return nil
+	// Use Service.Logs method
+	logReq := services.LogRequest{
+		Project:        setup.Config.Project.Name,
+		ServiceConfigs: serviceConfigs,
+		Follow:         follow,
+		Timestamps:     timestamps,
+		Tail:           tail,
+	}
+
+	return stackService.Logs(ctx, logReq)
 }
 
 // ValidateArgs validates the command arguments
