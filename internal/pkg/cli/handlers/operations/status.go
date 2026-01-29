@@ -17,6 +17,7 @@ import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
 )
@@ -138,7 +139,10 @@ func (h *StatusHandler) getServiceStatuses(ctx context.Context, projectName stri
 		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError("stack", "create service", err))
 	}
 
-	statuses, err := stackService.DockerClient.GetServiceStatus(ctx, projectName, filteredServices)
+	statuses, err := stackService.Status(ctx, services.StatusRequest{
+		Project:  projectName,
+		Services: filteredServices,
+	})
 	if err != nil {
 		return nil, ci.FormatError(*ciFlags, fmt.Errorf(core.MsgStack_failed_get_service_status, err))
 	}
