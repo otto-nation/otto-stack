@@ -49,6 +49,11 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
 	base.Output.Header("%s", core.MsgLifecycle_starting)
 
+	// Validate flags
+	if err := validation.ValidateUpFlags(cmd); err != nil {
+		return err
+	}
+
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
 	if err != nil {
 		return err

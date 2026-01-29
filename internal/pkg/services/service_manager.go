@@ -32,6 +32,7 @@ type ServiceInterface interface {
 }
 
 // NewServiceWithDependencies creates a service with injected dependencies (for testing)
+// deadcode: used for dependency injection in unit tests
 func NewServiceWithDependencies(compose api.Compose, characteristics CharacteristicsResolver, project ProjectLoader, dockerClient *docker.Client) *Service {
 	return &Service{
 		compose:         compose,
