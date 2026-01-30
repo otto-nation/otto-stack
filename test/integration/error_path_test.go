@@ -8,6 +8,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
@@ -84,7 +85,7 @@ func TestFileGenerator_ErrorPaths(t *testing.T) {
 	if err == nil {
 		t.Error("GenerateEnvFile should error with empty project name")
 	}
-	if !strings.Contains(err.Error(), "project name cannot be empty") {
+	if !strings.Contains(err.Error(), messages.ValidationProjectNameEmpty) {
 		t.Errorf("Error should mention empty project name, got: %v", err)
 	}
 }
@@ -164,7 +165,7 @@ func TestFileGenerator_TableDriven(t *testing.T) {
 			services:     []string{services.ServicePostgres},
 			projectName:  "",
 			expectError:  true,
-			errorMessage: "project name cannot be empty",
+			errorMessage: messages.ValidationProjectNameEmpty,
 		},
 		{
 			name:         "single service",

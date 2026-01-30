@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // configService implements ConfigService interface
@@ -38,11 +39,11 @@ func (s *configService) ValidateConfig(cfg *Config) error {
 	}
 
 	if cfg.Project.Name == "" {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "project name is required", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, messages.ValidationProjectNameEmpty, nil)
 	}
 
 	if len(cfg.Stack.Enabled) == 0 {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "stack.enabled", "at least one service must be enabled", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "stack.enabled", messages.ValidationNoServicesSelected, nil)
 	}
 
 	return nil

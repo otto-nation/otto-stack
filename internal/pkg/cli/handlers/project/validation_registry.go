@@ -8,6 +8,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
@@ -23,7 +24,7 @@ var ValidationRegistry = map[string]ValidationFunc{
 
 func validateDocker(h *InitHandler, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
 	if !isCommandAvailable(docker.DockerCmd) {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "docker", "Docker is required but not available", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "docker", messages.ValidationRequiredToolUnavailable, nil)
 	}
 	return nil
 }
@@ -37,7 +38,7 @@ func validateConfigSyntax(h *InitHandler, serviceConfigs []types.ServiceConfig, 
 	conflictingFiles := []string{docker.DockerComposeFileName, docker.DockerComposeFileNameYaml}
 	for _, file := range conflictingFiles {
 		if _, err := os.Stat(file); err == nil {
-			return pkgerrors.NewValidationError(pkgerrors.ErrCodeAlreadyExists, file, "conflicting file exists", nil)
+			return pkgerrors.NewValidationError(pkgerrors.ErrCodeAlreadyExists, file, messages.ValidationConflictingFileExists, nil)
 		}
 	}
 	return nil
@@ -45,13 +46,13 @@ func validateConfigSyntax(h *InitHandler, serviceConfigs []types.ServiceConfig, 
 
 func validateServiceDefinitions(h *InitHandler, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
 	if len(serviceConfigs) == 0 {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "no services selected", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationNoServicesSelected, nil)
 	}
 
 	serviceUtils := services.NewServiceUtils()
 	for _, serviceConfig := range serviceConfigs {
 		if _, err := serviceUtils.LoadServiceConfig(serviceConfig.Name); err != nil {
-			return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, serviceConfig.Name, "invalid service", err)
+			return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, serviceConfig.Name, messages.ValidationInvalidService, err)
 		}
 	}
 	return nil

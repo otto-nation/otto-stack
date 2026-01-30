@@ -16,6 +16,7 @@ import (
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 )
 
@@ -143,7 +144,7 @@ func (h *InitHandler) validateInitFlags(cmd *cobra.Command) error {
 func (h *InitHandler) validateNonInteractiveMode(cmd *cobra.Command, initFlags *core.InitFlags) error {
 	ciFlags := ci.GetFlags(cmd)
 	if ciFlags.NonInteractive && initFlags.Services == "" {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "services are required in non-interactive mode", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationNoServicesSelected, nil)
 	}
 	return nil
 }

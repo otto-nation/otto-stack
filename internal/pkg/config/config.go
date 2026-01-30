@@ -7,6 +7,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"gopkg.in/yaml.v3"
 )
 
@@ -74,7 +75,7 @@ func LoadConfig() (*Config, error) {
 // GenerateConfig creates a new otto-stack configuration file
 func GenerateConfig(ctx clicontext.Context) ([]byte, error) {
 	if ctx.Project.Name == "" {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "project name is empty", nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, messages.ValidationProjectNameEmpty, nil)
 	}
 
 	config := Config{

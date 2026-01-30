@@ -69,7 +69,7 @@ tasks:
   # ============================================================================
   generate:
     desc: "🔧 Generate code from YAML configs"
-    deps: [generate:cli, generate:services]
+    deps: [generate:cli, generate:services, generate:messages]
     silent: true
     cmds:
       - gofmt -w $(find internal -name '*_generated.go')
@@ -103,6 +103,19 @@ tasks:
     cmds:
       - echo "🔧 Running generate-services..."
       - go run ./cmd/generate-services
+
+  generate:messages:
+    desc: "🔧 Generate message constants"
+    sources:
+      - "internal/config/messages.yaml"
+      - "cmd/generate-messages/main.go"
+      - "cmd/codegen/generate_messages.go"
+    generates:
+      - "internal/pkg/messages/messages_generated.go"
+    silent: true
+    cmds:
+      - echo "🔧 Running generate-messages..."
+      - go run ./cmd/generate-messages
 
   generate:docs:
     desc: "📚 Generate documentation"

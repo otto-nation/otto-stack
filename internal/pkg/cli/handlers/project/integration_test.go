@@ -43,6 +43,7 @@ func TestHandle_ValidationFailure(t *testing.T) {
 			strings.Contains(err.Error(), "non-interactive mode") ||
 			strings.Contains(err.Error(), "validation") ||
 			strings.Contains(err.Error(), "services are required") ||
+			strings.Contains(err.Error(), "at least one service must be selected") ||
 			strings.Contains(err.Error(), "already initialized"),
 		"Expected validation or initialization error, got: %s", err.Error())
 }

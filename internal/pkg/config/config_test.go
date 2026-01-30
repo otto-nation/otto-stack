@@ -7,6 +7,7 @@ import (
 	"time"
 
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -41,7 +42,7 @@ func TestGenerateConfig(t *testing.T) {
 
 		_, err := GenerateConfig(ctx)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "project name is empty")
+		assert.Contains(t, err.Error(), messages.ValidationProjectNameEmpty)
 	})
 
 	t.Run("handles empty services list", func(t *testing.T) {
