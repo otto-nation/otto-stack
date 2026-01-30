@@ -60,6 +60,7 @@ func TestHandle_DirectoryValidation(t *testing.T) {
 		strings.Contains(err.Error(), "Non-interactive mode requires explicit configuration") ||
 			strings.Contains(err.Error(), "non-interactive mode") ||
 			strings.Contains(err.Error(), "services are required") ||
+			strings.Contains(err.Error(), "at least one service must be selected") ||
 			strings.Contains(err.Error(), "validation") ||
 			strings.Contains(err.Error(), "directory validation failed") ||
 			strings.Contains(err.Error(), docker.DockerComposeFileName) ||
@@ -90,6 +91,7 @@ func TestHandle_AlreadyInitialized(t *testing.T) {
 		strings.Contains(err.Error(), "Non-interactive mode requires explicit configuration") ||
 			strings.Contains(err.Error(), "non-interactive mode") ||
 			strings.Contains(err.Error(), "services are required") ||
+			strings.Contains(err.Error(), "at least one service must be selected") ||
 			strings.Contains(err.Error(), "validation") ||
 			strings.Contains(err.Error(), "already initialized"),
 		"Expected validation or initialization error, got: %s", err.Error())

@@ -10,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
@@ -58,7 +59,7 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 // ValidateArgs validates the command arguments
 func (h *ExecHandler) ValidateArgs(args []string) error {
 	if len(args) < core.MinArgumentCount {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "args", "requires service and command", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "args", messages.ErrorsRequiresServiceAndCommand, nil)
 	}
 	return nil
 }
