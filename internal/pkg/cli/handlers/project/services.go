@@ -44,13 +44,13 @@ func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 func (h *ServicesHandler) loadServices() (map[string][]servicetypes.ServiceConfig, int, error) {
 	manager, err := services.New()
 	if err != nil {
-		return nil, 0, pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
+		return nil, 0, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "operation failed", err)
 	}
 
 	utils := services.NewServiceUtils()
 	servicesByCategory, err := utils.GetServicesByCategory()
 	if err != nil {
-		return nil, 0, pkgerrors.NewServiceError(services.ComponentServices, services.ActionLoadServices, err)
+		return nil, 0, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "operation failed", err)
 	}
 
 	return servicesByCategory, len(manager.GetAllServices()), nil

@@ -84,7 +84,7 @@ func (h *WebInterfacesHandler) getRunningServices(setup *common.CoreSetup, servi
 
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(common.ComponentStack, common.MsgFailedCreateStackService, err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "create stack service", err)
 	}
 
 	statuses, err := stackService.Status(context.Background(), services.StatusRequest{
@@ -92,7 +92,7 @@ func (h *WebInterfacesHandler) getRunningServices(setup *common.CoreSetup, servi
 		Services: serviceNames,
 	})
 	if err != nil {
-		return nil, pkgerrors.NewServiceError("stack", "get service status", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "get service status", err)
 	}
 
 	running := make(map[string]bool)

@@ -41,7 +41,7 @@ func TestGenerateConfig(t *testing.T) {
 
 		_, err := GenerateConfig(ctx)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "project name cannot be empty")
+		assert.Contains(t, err.Error(), "project name is empty")
 	})
 
 	t.Run("handles empty services list", func(t *testing.T) {

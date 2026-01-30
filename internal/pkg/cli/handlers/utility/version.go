@@ -2,11 +2,11 @@ package utility
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/otto-nation/otto-stack/internal/pkg/version"
@@ -70,7 +70,7 @@ func (h *Handler) handleCheckUpdates(_ context.Context, _ *cobra.Command, _ []st
 	checker := version.NewUpdateChecker(currentVersion)
 	release, hasUpdate, err := checker.CheckForUpdates()
 	if err != nil {
-		return fmt.Errorf(core.MsgErrors_failed_check_updates, err)
+		return pkgerrors.New(pkgerrors.ErrCodeOperationFail, "version", "check for updates", err)
 	}
 
 	if !hasUpdate {

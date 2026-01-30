@@ -16,7 +16,7 @@ func ValidateUpArgs(args []string) error {
 func ValidateUpFlags(cmd *cobra.Command) error {
 	flags, err := core.ParseUpFlags(cmd)
 	if err != nil {
-		return pkgerrors.NewValidationError("flags", "parse_flags", err)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "flags", "parse flags", err)
 	}
 
 	// Additional flag validation can be added here

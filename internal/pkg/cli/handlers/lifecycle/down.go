@@ -82,7 +82,7 @@ func (h *DownHandler) filterSharedIfNeeded(serviceConfigs []types.ServiceConfig,
 	reg := registry.NewManager(execCtx.Shared.Root)
 	_, err := reg.Load()
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionLoadRegistry, err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentRegistry, "load registry", err)
 	}
 
 	sharedServices := h.findSharedServices(serviceConfigs, reg)
@@ -134,7 +134,7 @@ func (h *DownHandler) filterOutShared(sharedServices []string, serviceConfigs []
 func (h *DownHandler) stopServices(ctx context.Context, cmd *cobra.Command, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
 	service, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "stop services", err)
 	}
 
 	downFlags, _ := core.ParseDownFlags(cmd)
@@ -151,7 +151,7 @@ func (h *DownHandler) stopServices(ctx context.Context, cmd *cobra.Command, setu
 	}
 
 	if err = service.Stop(ctx, stopRequest); err != nil {
-		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStopServices, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "stop services", err)
 	}
 
 	h.displayStopSuccess(base, setup, serviceConfigs)
@@ -189,7 +189,7 @@ func (h *DownHandler) determineServicesToStop(args []string, execCtx *clicontext
 	reg := registry.NewManager(execCtx.Shared.Root)
 	_, err := reg.Load()
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionLoadRegistry, err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentRegistry, "load registry", err)
 	}
 
 	containers, err := reg.List()
@@ -222,7 +222,7 @@ func (h *DownHandler) promptStopAll(containers []*registry.ContainerInfo, base *
 }
 
 func (h *DownHandler) unregisterSharedContainers(servicesToStop []string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
-	return h.unregisterSharedContainersForProject(h.serviceNamesToConfigs(servicesToStop), common.ContextGlobal, execCtx, base)
+	return h.unregisterSharedContainersForProject(h.serviceNamesToConfigs(servicesToStop), "global", execCtx, base)
 }
 
 func (h *DownHandler) unregisterSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {

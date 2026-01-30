@@ -59,17 +59,17 @@ func NewProjectManager() *ProjectManager {
 // CreateProjectStructure creates the complete project structure
 func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, base *base.BaseCommand) error {
 	if err := pm.directoryManager.CreateDirectoryStructure(); err != nil {
-		return pkgerrors.NewServiceError(ComponentProject, ActionCreateDirectories, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "create directories", err)
 	}
 
 	if err := pm.configManager.CreateConfigFile(projectCtx, base); err != nil {
-		return pkgerrors.NewConfigError("", ActionCreateConfigFile, err)
+		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", "create config file", err)
 	}
 
 	pm.configManager.GenerateServiceConfigs(projectCtx.Services.Configs, base)
 
 	if err := pm.generateInitialComposeFiles(projectCtx.Services.Configs, projectCtx.Project.Name, projectCtx.Options.Validation, projectCtx.Options.Advanced, base); err != nil {
-		return pkgerrors.NewServiceError(ComponentCompose, ActionGenerateFiles, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", "generate files", err)
 	}
 
 	if err := pm.createGitignoreEntries(base); err != nil {
