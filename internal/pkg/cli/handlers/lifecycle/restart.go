@@ -80,7 +80,7 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *common.Core
 		Timeout:        time.Duration(flags.Timeout) * time.Second,
 	}
 	if err := stackService.Stop(ctx, stopRequest); err != nil {
-		return fmt.Errorf(core.MsgStack_failed_stop_services, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "stop services", err)
 	}
 
 	// Start services
@@ -89,7 +89,7 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *common.Core
 		ServiceConfigs: serviceConfigs,
 	}
 	if err := stackService.Start(ctx, startRequest); err != nil {
-		return fmt.Errorf(core.MsgStack_failed_start_services, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "start services", err)
 	}
 
 	return nil

@@ -75,7 +75,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 
 	service, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, pkgerrors.ErrCodeOperationFail, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "start services", err)
 	}
 
 	upFlags, _ := core.ParseUpFlags(cmd)
@@ -98,7 +98,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	}
 
 	if err = service.Start(ctx, startRequest); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, pkgerrors.ErrCodeOperationFail, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "start services", err)
 	}
 
 	base.Output.Success("Services started successfully")
@@ -137,7 +137,7 @@ func (h *UpHandler) loadServiceConfigs(serviceNames []string) ([]types.ServiceCo
 	for _, name := range serviceNames {
 		cfg, err := serviceUtils.LoadServiceConfig(name)
 		if err != nil {
-			return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentService, pkgerrors.ErrCodeOperationFail, err)
+			return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentService, "load service", err)
 		}
 		if cfg != nil {
 			configs = append(configs, *cfg)

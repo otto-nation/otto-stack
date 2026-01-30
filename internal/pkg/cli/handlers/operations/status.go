@@ -2,7 +2,6 @@ package operations
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -126,7 +125,7 @@ func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command
 func (h *StatusHandler) resolveServices(args []string, setup *common.CoreSetup, ciFlags *ci.Flags) ([]types.ServiceConfig, error) {
 	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
-		return nil, ci.FormatError(*ciFlags, fmt.Errorf(core.MsgStack_failed_resolve_services, err))
+		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "stack", "resolve services", err))
 	}
 	return serviceConfigs, nil
 }
@@ -144,7 +143,7 @@ func (h *StatusHandler) getServiceStatuses(ctx context.Context, projectName stri
 		Services: filteredServices,
 	})
 	if err != nil {
-		return nil, ci.FormatError(*ciFlags, fmt.Errorf(core.MsgStack_failed_get_service_status, err))
+		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "stack", "get service status", err))
 	}
 
 	return statuses, nil
