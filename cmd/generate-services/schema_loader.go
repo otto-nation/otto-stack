@@ -125,14 +125,6 @@ func (s *ServiceSchema) generateEnumConstants() []EnumConstantGroup {
 	return groups
 }
 
-// generateValidationTag generates validator tag for an enum
-func (s *ServiceSchema) generateValidationTag(enumName string) string {
-	if enumDef, exists := s.Enums[enumName]; exists {
-		return "oneof=" + strings.Join(enumDef.Values, " ")
-	}
-	return ""
-}
-
 // generateYAMLKeys generates YAML structure constants
 func (s *ServiceSchema) generateYAMLKeys() YAMLKeysData {
 	data := YAMLKeysData{
