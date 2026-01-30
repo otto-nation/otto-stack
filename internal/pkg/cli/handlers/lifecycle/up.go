@@ -148,7 +148,7 @@ func (h *UpHandler) loadServiceConfigs(serviceNames []string) ([]types.ServiceCo
 }
 
 func (h *UpHandler) registerSharedContainers(serviceConfigs []types.ServiceConfig, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
-	return h.registerSharedContainersForProject(serviceConfigs, common.ContextGlobal, execCtx, base)
+	return h.registerSharedContainersForProject(serviceConfigs, "global", execCtx, base)
 }
 
 func (h *UpHandler) registerSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {

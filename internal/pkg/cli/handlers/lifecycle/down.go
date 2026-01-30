@@ -222,7 +222,7 @@ func (h *DownHandler) promptStopAll(containers []*registry.ContainerInfo, base *
 }
 
 func (h *DownHandler) unregisterSharedContainers(servicesToStop []string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
-	return h.unregisterSharedContainersForProject(h.serviceNamesToConfigs(servicesToStop), common.ContextGlobal, execCtx, base)
+	return h.unregisterSharedContainersForProject(h.serviceNamesToConfigs(servicesToStop), "global", execCtx, base)
 }
 
 func (h *DownHandler) unregisterSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
