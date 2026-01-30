@@ -87,7 +87,10 @@ func (h *WebInterfacesHandler) getRunningServices(setup *common.CoreSetup, servi
 		return nil, pkgerrors.NewServiceError(common.ComponentStack, common.MsgFailedCreateStackService, err)
 	}
 
-	statuses, err := stackService.DockerClient.GetServiceStatus(context.Background(), setup.Config.Project.Name, serviceNames)
+	statuses, err := stackService.Status(context.Background(), services.StatusRequest{
+		Project:  setup.Config.Project.Name,
+		Services: serviceNames,
+	})
 	if err != nil {
 		return nil, pkgerrors.NewServiceError("stack", "get service status", err)
 	}
