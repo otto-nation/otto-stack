@@ -59,7 +59,7 @@ func NewProjectManager() *ProjectManager {
 // CreateProjectStructure creates the complete project structure
 func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, base *base.BaseCommand) error {
 	if err := pm.directoryManager.CreateDirectoryStructure(); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "project", "create directories", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "create directories", err)
 	}
 
 	if err := pm.configManager.CreateConfigFile(projectCtx, base); err != nil {

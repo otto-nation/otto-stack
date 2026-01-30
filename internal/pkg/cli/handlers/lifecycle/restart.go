@@ -53,7 +53,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		serviceConfigs, err = services.ResolveUpServices(setup.Config.Stack.Enabled, setup.Config)
 	}
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "stack", "resolve services", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "resolve services", err)
 	}
 
 	if err := h.restartServices(ctx, setup, serviceConfigs, flags); err != nil {
@@ -69,7 +69,7 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *common.Core
 	// Create stack service
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "stack", "create service", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "create service", err)
 	}
 
 	// Stop services

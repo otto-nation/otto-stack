@@ -125,7 +125,7 @@ func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command
 func (h *StatusHandler) resolveServices(args []string, setup *common.CoreSetup, ciFlags *ci.Flags) ([]types.ServiceConfig, error) {
 	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
-		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "stack", "resolve services", err))
+		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "resolve services", err))
 	}
 	return serviceConfigs, nil
 }
@@ -135,7 +135,7 @@ func (h *StatusHandler) getServiceStatuses(ctx context.Context, projectName stri
 
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "stack", "create service", err))
+		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "create service", err))
 	}
 
 	statuses, err := stackService.Status(ctx, services.StatusRequest{
@@ -143,7 +143,7 @@ func (h *StatusHandler) getServiceStatuses(ctx context.Context, projectName stri
 		Services: filteredServices,
 	})
 	if err != nil {
-		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "stack", "get service status", err))
+		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "get service status", err))
 	}
 
 	return statuses, nil

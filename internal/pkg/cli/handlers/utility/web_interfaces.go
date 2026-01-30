@@ -92,7 +92,7 @@ func (h *WebInterfacesHandler) getRunningServices(setup *common.CoreSetup, servi
 		Services: serviceNames,
 	})
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "stack", "get service status", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "get service status", err)
 	}
 
 	running := make(map[string]bool)
