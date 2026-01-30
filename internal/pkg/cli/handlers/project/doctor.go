@@ -7,6 +7,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
@@ -44,5 +45,5 @@ func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 
 	base.Output.Error(core.MsgDoctor_some_issues)
 	logger.Error("Health checks failed")
-	return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "health", "health check failed", nil)
+	return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "health", messages.DoctorHealthCheckFailed, nil)
 }
