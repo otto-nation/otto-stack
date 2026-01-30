@@ -18,11 +18,11 @@ type NonInteractiveProcessor struct {
 // Process validates and processes flags for non-interactive mode
 func (p *NonInteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCommand) (clicontext.Context, error) {
 	if flags.Services == "" {
-		return clicontext.Context{}, pkgerrors.NewValidationError("services", "services flag is required in non-interactive mode", nil)
+		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "services", "services flag is required in non-interactive mode", nil)
 	}
 
 	if flags.ProjectName == "" {
-		return clicontext.Context{}, pkgerrors.NewValidationError("project-name", "project name is required in non-interactive mode", nil)
+		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "project-name", "project name is required in non-interactive mode", nil)
 	}
 
 	serviceNames := parseServices(flags.Services)

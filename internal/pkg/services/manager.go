@@ -23,7 +23,7 @@ func New() (*Manager, error) {
 	}
 
 	if err := manager.loadServices(); err != nil {
-		return nil, pkgerrors.NewServiceError(ComponentServices, ActionLoadServices, err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "load services", err)
 	}
 
 	return manager, nil
@@ -33,7 +33,7 @@ func New() (*Manager, error) {
 func (m *Manager) GetService(name string) (*servicetypes.ServiceConfig, error) {
 	service, exists := m.services[name]
 	if !exists {
-		return nil, pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "service not found: %s", name)
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service not found: %s", name)
 	}
 	return &service, nil
 }
@@ -48,10 +48,10 @@ func (m *Manager) ValidateServices(serviceNames []string) error {
 	for _, name := range serviceNames {
 		service, exists := m.services[name]
 		if !exists {
-			return pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "unknown service: %s", name)
+			return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "unknown service: %s", name)
 		}
 		if service.Hidden {
-			return pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "service not accessible: %s", name)
+			return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service not accessible: %s", name)
 		}
 	}
 	return nil
@@ -79,12 +79,12 @@ func (m *Manager) BuildConnectCommand(serviceName string, options map[string]str
 // buildConnectCommand builds connection command from management spec
 func (m *Manager) buildConnectCommand(service *servicetypes.ServiceConfig, options map[string]string) ([]string, error) {
 	if service.Service.Management == nil || service.Service.Management.Connect == nil {
-		return nil, pkgerrors.NewConfigErrorf(pkgerrors.FieldServiceName, "no connect operation configured for service: %s", service.Name)
+		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeOperationFail, pkgerrors.FieldServiceName, "no connect operation configured for service: %s", service.Name)
 	}
 
 	connect := service.Service.Management.Connect
 	if len(connect.Command) == 0 {
-		return nil, pkgerrors.NewConfigErrorf(pkgerrors.FieldServiceName, "no connect command configured for service: %s", service.Name)
+		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeOperationFail, pkgerrors.FieldServiceName, "no connect command configured for service: %s", service.Name)
 	}
 
 	cmd := make([]string, len(connect.Command))
@@ -110,7 +110,7 @@ func (m *Manager) buildConnectCommand(service *servicetypes.ServiceConfig, optio
 func (m *Manager) loadServices() error {
 	entries, err := config.EmbeddedServicesFS.ReadDir(EmbeddedServicesDir)
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentServices, ActionReadServicesDirectory, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "read services directory", err)
 	}
 
 	for _, entry := range entries {
@@ -120,7 +120,7 @@ func (m *Manager) loadServices() error {
 
 		category := entry.Name()
 		if err := m.loadCategoryServices(category); err != nil {
-			return pkgerrors.NewServiceError(ComponentServices, ActionLoadCategory, err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "load category", err)
 		}
 	}
 
@@ -132,7 +132,7 @@ func (m *Manager) loadCategoryServices(category string) error {
 	categoryPath := fmt.Sprintf("%s/%s", EmbeddedServicesDir, category)
 	entries, err := config.EmbeddedServicesFS.ReadDir(categoryPath)
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentServices, ActionReadCategoryDirectory, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "read category directory", err)
 	}
 
 	for _, entry := range entries {
@@ -144,7 +144,7 @@ func (m *Manager) loadCategoryServices(category string) error {
 		serviceName := core.TrimYAMLExt(fileName)
 
 		if err := m.loadService(category, serviceName); err != nil {
-			return pkgerrors.NewServiceError(ComponentServices, ActionLoadService, err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "load service", err)
 		}
 	}
 
@@ -159,13 +159,13 @@ func (m *Manager) loadService(category, serviceName string) error {
 		return m.parseService(data, serviceName, category)
 	}
 
-	return pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "service file not found: %s", serviceName)
+	return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service file not found: %s", serviceName)
 }
 
 func (m *Manager) parseService(data []byte, serviceName, category string) error {
 	var service servicetypes.ServiceConfig
 	if err := yaml.Unmarshal(data, &service); err != nil {
-		return pkgerrors.NewConfigError("", ActionParseServiceYAML, err)
+		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, serviceName, "parse service YAML", err)
 	}
 
 	// Set category if not specified in YAML
@@ -196,12 +196,12 @@ func (m *Manager) ExecuteCustomOperation(serviceName, operationName string) ([]s
 	}
 
 	if service.Service.Management == nil || service.Service.Management.Custom == nil {
-		return nil, pkgerrors.NewConfigErrorf(pkgerrors.FieldServiceName, "no custom operations for service: %s", serviceName)
+		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeOperationFail, pkgerrors.FieldServiceName, "no custom operations for service: %s", serviceName)
 	}
 
 	operation, exists := service.Service.Management.Custom[operationName]
 	if !exists {
-		return nil, pkgerrors.NewValidationErrorf("operation", "operation %s not found", operationName)
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, "operation", "operation %s not found", operationName)
 	}
 
 	cmd := make([]string, len(operation.Command))

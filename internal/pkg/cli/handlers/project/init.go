@@ -97,7 +97,7 @@ func (h *InitHandler) setDefaultProjectName(initFlags *core.InitFlags, base *bas
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return pkgerrors.NewValidationError(core.FlagProjectName, "failed to get current directory", err)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "failed to get current directory", err)
 	}
 
 	initFlags.ProjectName = filepath.Base(cwd)
@@ -143,7 +143,7 @@ func (h *InitHandler) validateInitFlags(cmd *cobra.Command) error {
 func (h *InitHandler) validateNonInteractiveMode(cmd *cobra.Command, initFlags *core.InitFlags) error {
 	ciFlags := ci.GetFlags(cmd)
 	if ciFlags.NonInteractive && initFlags.Services == "" {
-		return pkgerrors.NewValidationError(core.FlagServices, "services are required in non-interactive mode", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "services are required in non-interactive mode", nil)
 	}
 	return nil
 }

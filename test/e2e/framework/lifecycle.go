@@ -140,12 +140,12 @@ func (tl *TestLifecycle) AddServiceConfig(serviceName string, config map[string]
 	// Read existing config
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return pkgerrors.NewServiceError("test", "read config file", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "test", "read config file", err)
 	}
 
 	var configData map[string]any
 	if err := yaml.Unmarshal(data, &configData); err != nil {
-		return pkgerrors.NewServiceError("test", "unmarshal config", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "test", "unmarshal config", err)
 	}
 
 	// Add service configuration
@@ -159,11 +159,11 @@ func (tl *TestLifecycle) AddServiceConfig(serviceName string, config map[string]
 	// Write back to file
 	updatedData, err := yaml.Marshal(configData)
 	if err != nil {
-		return pkgerrors.NewServiceError("test", "marshal config", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "test", "marshal config", err)
 	}
 
 	if err := os.WriteFile(configPath, updatedData, core.PermReadWrite); err != nil {
-		return pkgerrors.NewServiceError("test", "write config file", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "test", "write config file", err)
 	}
 
 	return nil
@@ -175,18 +175,18 @@ func (tl *TestLifecycle) CreateServiceConfigFile(filename string, config map[str
 
 	// Create service-configs directory if it doesn't exist
 	if err := os.MkdirAll(serviceConfigsDir, core.PermReadWrite); err != nil {
-		return pkgerrors.NewServiceError("test", "create directory", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "test", "create directory", err)
 	}
 
 	// Write service config file
 	configPath := filepath.Join(serviceConfigsDir, filename)
 	configData, err := yaml.Marshal(config)
 	if err != nil {
-		return pkgerrors.NewServiceError("test", "marshal service config", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "test", "marshal service config", err)
 	}
 
 	if err := os.WriteFile(configPath, configData, core.PermReadWrite); err != nil {
-		return pkgerrors.NewServiceError("test", "write service config file", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "test", "write service config file", err)
 	}
 
 	return nil

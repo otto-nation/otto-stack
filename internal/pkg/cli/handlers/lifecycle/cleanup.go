@@ -90,7 +90,7 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(common.ComponentStack, common.MsgFailedCreateStackService, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "create stack service", err)
 	}
 
 	if !ciFlags.Quiet {

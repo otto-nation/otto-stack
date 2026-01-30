@@ -20,7 +20,7 @@ func NewConfigService() ConfigService {
 func (s *configService) LoadConfig() (*Config, error) {
 	cfg, err := LoadConfig()
 	if err != nil {
-		return nil, pkgerrors.NewConfigError("", "failed to load configuration", err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", "failed to load configuration", err)
 	}
 	return cfg, nil
 }
@@ -28,21 +28,21 @@ func (s *configService) LoadConfig() (*Config, error) {
 // SaveConfig saves the project configuration
 func (s *configService) SaveConfig(cfg *Config) error {
 	// For now, return not implemented since there's no SaveConfig in the config package
-	return pkgerrors.NewConfigError("", "save configuration not implemented", nil)
+	return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", "save configuration not implemented", nil)
 }
 
 // ValidateConfig validates the configuration
 func (s *configService) ValidateConfig(cfg *Config) error {
 	if cfg == nil {
-		return pkgerrors.NewValidationError("config", "configuration is nil", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "config", "configuration is nil", nil)
 	}
 
 	if cfg.Project.Name == "" {
-		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, "project name is required", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "project name is required", nil)
 	}
 
 	if len(cfg.Stack.Enabled) == 0 {
-		return pkgerrors.NewValidationError("stack.enabled", "at least one service must be enabled", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "stack.enabled", "at least one service must be enabled", nil)
 	}
 
 	return nil
@@ -51,12 +51,12 @@ func (s *configService) ValidateConfig(cfg *Config) error {
 // GetConfigHash returns a hash of the current configuration
 func (s *configService) GetConfigHash(cfg *Config) (string, error) {
 	if cfg == nil {
-		return "", pkgerrors.NewValidationError("config", "configuration is nil", nil)
+		return "", pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "config", "configuration is nil", nil)
 	}
 
 	data, err := json.Marshal(cfg)
 	if err != nil {
-		return "", pkgerrors.NewConfigError("", "failed to marshal configuration for hashing", err)
+		return "", pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", "failed to marshal configuration for hashing", err)
 	}
 
 	hash := sha256.Sum256(data)

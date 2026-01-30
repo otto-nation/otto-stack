@@ -36,7 +36,7 @@ func NewGenerator(projectName string) (*Generator, error) {
 // buildComposeStructure creates the compose structure from ServiceConfigs
 func (g *Generator) buildComposeStructure(serviceConfigs []types.ServiceConfig) (map[string]any, error) {
 	if g.projectName == "" {
-		return nil, pkgerrors.NewValidationError("input", "project name cannot be empty", nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "input", "project name cannot be empty", nil)
 	}
 
 	services, err := g.buildServicesFromConfigs(serviceConfigs)
@@ -280,7 +280,7 @@ func (g *Generator) BuildComposeData(serviceConfigs []types.ServiceConfig) ([]by
 
 	composeContent, err := yaml.Marshal(composeData)
 	if err != nil {
-		return nil, pkgerrors.NewServiceError("compose", "marshal data", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", "marshal data", err)
 	}
 	return composeContent, nil
 }
@@ -288,12 +288,12 @@ func (g *Generator) BuildComposeData(serviceConfigs []types.ServiceConfig) ([]by
 // WriteComposeFile writes docker-compose content to the specified directory
 func (g *Generator) WriteComposeFile(content []byte, outputDir string) error {
 	if err := filesystem.EnsureDir(outputDir); err != nil {
-		return pkgerrors.NewServiceError("compose", "create directory", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", "create directory", err)
 	}
 
 	filePath := outputDir + "/docker-compose.yml"
 	if err := filesystem.WriteFile(filePath, content, core.PermReadWrite); err != nil {
-		return pkgerrors.NewServiceError("compose", "write file", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", "write file", err)
 	}
 
 	return nil

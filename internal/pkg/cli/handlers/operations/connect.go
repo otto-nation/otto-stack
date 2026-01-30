@@ -21,7 +21,7 @@ func NewConnectHandler() *ConnectHandler {
 // ValidateArgs validates the command arguments
 func (h *ConnectHandler) ValidateArgs(args []string) error {
 	if len(args) < 1 {
-		return pkgerrors.NewValidationError(pkgerrors.FieldServiceName, "service name is required", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service name is required", nil)
 	}
 	return nil
 }

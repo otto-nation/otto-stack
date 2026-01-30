@@ -30,7 +30,7 @@ func (vm *ValidationManager) RunValidations(selectedValidations map[string]bool,
 
 		if isRequired || isSelected {
 			if err := validationFunc(handler, serviceConfigs, base); err != nil {
-				return pkgerrors.NewValidationError(validationKey, "validation failed", err)
+				return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, validationKey, "validation failed", err)
 			}
 		}
 	}
@@ -45,25 +45,25 @@ func (vm *ValidationManager) isRequiredValidation(key string) bool {
 // ValidateProjectName validates a project name
 func (vm *ValidationManager) ValidateProjectName(name string) error {
 	if name == "" {
-		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgProjectNameEmpty, nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "validation failed", nil)
 	}
 
 	if len(name) < core.MinProjectNameLength {
-		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgProjectNameTooShort, nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "validation failed", nil)
 	}
 
 	if len(name) > core.MaxProjectNameLength {
-		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgProjectNameTooLong, nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "validation failed", nil)
 	}
 
 	if name[0] == '-' || name[0] == '_' {
-		return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, core.MsgValidation_project_name_invalid_start, nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, core.MsgValidation_project_name_invalid_start, nil)
 	}
 
 	for _, char := range name {
 		if (char < 'a' || char > 'z') && (char < 'A' || char > 'Z') &&
 			(char < '0' || char > '9') && char != '-' && char != '_' {
-			return pkgerrors.NewValidationError(pkgerrors.FieldProjectName, core.MsgValidation_project_name_invalid_chars, nil)
+			return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, core.MsgValidation_project_name_invalid_chars, nil)
 		}
 	}
 

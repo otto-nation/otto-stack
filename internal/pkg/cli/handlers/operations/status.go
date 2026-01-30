@@ -136,7 +136,7 @@ func (h *StatusHandler) getServiceStatuses(ctx context.Context, projectName stri
 
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError("stack", "create service", err))
+		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "stack", "create service", err))
 	}
 
 	statuses, err := stackService.Status(ctx, services.StatusRequest{

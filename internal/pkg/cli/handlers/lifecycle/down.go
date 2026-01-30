@@ -82,7 +82,7 @@ func (h *DownHandler) filterSharedIfNeeded(serviceConfigs []types.ServiceConfig,
 	reg := registry.NewManager(execCtx.Shared.Root)
 	_, err := reg.Load()
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionLoadRegistry, err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentRegistry, pkgerrors.ErrCodeOperationFail, err)
 	}
 
 	sharedServices := h.findSharedServices(serviceConfigs, reg)
@@ -134,7 +134,7 @@ func (h *DownHandler) filterOutShared(sharedServices []string, serviceConfigs []
 func (h *DownHandler) stopServices(ctx context.Context, cmd *cobra.Command, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
 	service, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, pkgerrors.ErrCodeOperationFail, err)
 	}
 
 	downFlags, _ := core.ParseDownFlags(cmd)
@@ -151,7 +151,7 @@ func (h *DownHandler) stopServices(ctx context.Context, cmd *cobra.Command, setu
 	}
 
 	if err = service.Stop(ctx, stopRequest); err != nil {
-		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStopServices, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, pkgerrors.ErrCodeOperationFail, err)
 	}
 
 	h.displayStopSuccess(base, setup, serviceConfigs)
@@ -189,7 +189,7 @@ func (h *DownHandler) determineServicesToStop(args []string, execCtx *clicontext
 	reg := registry.NewManager(execCtx.Shared.Root)
 	_, err := reg.Load()
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(common.ComponentRegistry, common.ActionLoadRegistry, err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentRegistry, pkgerrors.ErrCodeOperationFail, err)
 	}
 
 	containers, err := reg.List()
