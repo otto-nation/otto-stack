@@ -13,6 +13,7 @@ import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/filesystem"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"gopkg.in/yaml.v3"
 )
@@ -36,7 +37,7 @@ func NewGenerator(projectName string) (*Generator, error) {
 // buildComposeStructure creates the compose structure from ServiceConfigs
 func (g *Generator) buildComposeStructure(serviceConfigs []types.ServiceConfig) (map[string]any, error) {
 	if g.projectName == "" {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "input", "project name cannot be empty", nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "input", messages.ValidationProjectNameEmpty, nil)
 	}
 
 	services, err := g.buildServicesFromConfigs(serviceConfigs)
