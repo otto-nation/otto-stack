@@ -74,11 +74,11 @@ func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, base
 func (ssm *ServiceSelectionManager) selectAndValidateServices(handler *InitHandler) ([]types.ServiceConfig, error) {
 	serviceConfigs, err := ssm.promptManager.PromptForServiceConfigs()
 	if err != nil {
-		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionSelectServices, err)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "validation failed", err)
 	}
 
 	if err := handler.validateServiceConfigs(serviceConfigs); err != nil {
-		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, ActionValidateServices, err)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "validation failed", err)
 	}
 
 	return serviceConfigs, nil
@@ -87,14 +87,14 @@ func (ssm *ServiceSelectionManager) selectAndValidateServices(handler *InitHandl
 func (ssm *ServiceSelectionManager) getAdvancedOptions() (map[string]bool, map[string]bool, error) {
 	validation, advanced, err := ssm.promptManager.PromptForAdvancedOptions()
 	if err != nil {
-		return nil, nil, pkgerrors.NewValidationError(FieldOptions, ActionGetOptions, err)
+		return nil, nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "validation", "validation failed", err)
 	}
 	return validation, advanced, nil
 }
 
 func (ssm *ServiceSelectionManager) runValidationChecks(validation map[string]bool, handler *InitHandler, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
 	if err := ssm.validationManager.RunValidations(validation, handler, serviceConfigs, base); err != nil {
-		return pkgerrors.NewValidationError("validation-check", ActionValidation, err)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "validation-check", "validation failed", err)
 	}
 	return nil
 }
@@ -103,7 +103,7 @@ func (ssm *ServiceSelectionManager) confirmSelection(serviceConfigs []types.Serv
 	serviceNames := svc.ExtractServiceNames(serviceConfigs)
 	action, err := ssm.promptManager.ConfirmInitialization("", serviceNames, validation, advanced, base)
 	if err != nil {
-		return "", pkgerrors.NewValidationError(FieldConfirmation, ActionGetConfirmation, err)
+		return "", pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "validation", "validation failed", err)
 	}
 	return action, nil
 }

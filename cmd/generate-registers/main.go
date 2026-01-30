@@ -62,7 +62,7 @@ func generateRegisterFile(handler string, commands []string) error {
 	outputPath := fmt.Sprintf(GeneratedFilePath, handler)
 	file, err := os.Create(outputPath)
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "create file", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "create file", err)
 	}
 	defer func() { _ = file.Close() }()
 

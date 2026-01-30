@@ -60,7 +60,7 @@ func TestPromptForAdvancedOptions_StructureLogic(t *testing.T) {
 	// Test the validation and advanced option structures
 	validation := map[string]bool{
 		"schema":       true,
-		FieldHealth:    false,
+		"health":       false,
 		"dependencies": true,
 	}
 

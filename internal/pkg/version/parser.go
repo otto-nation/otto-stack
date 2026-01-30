@@ -79,7 +79,7 @@ func (v Version) Compare(other Version) int {
 // ParseVersion parses a version string into a Version struct
 func ParseVersion(versionStr string) (*Version, error) {
 	if versionStr == "" {
-		return nil, pkgerrors.NewValidationError("input", "empty version string", nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", "empty version string", nil)
 	}
 
 	versionStr = strings.TrimSpace(versionStr)

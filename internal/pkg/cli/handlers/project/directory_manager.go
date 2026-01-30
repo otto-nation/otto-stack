@@ -24,7 +24,7 @@ func (dm *DirectoryManager) CreateDirectoryStructure() error {
 
 	for _, dir := range directories {
 		if err := os.MkdirAll(dir, core.PermReadWriteExec); err != nil {
-			return pkgerrors.NewConfigError(dir, MsgFailedToCreateDirectory, err)
+			return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, dir, "write config file", err)
 		}
 	}
 

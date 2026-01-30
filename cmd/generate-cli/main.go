@@ -152,12 +152,12 @@ func loadMessagesConfig() (map[string]any, error) {
 func generateCoreConstants() error {
 	rawConfig, err := loadCommandConfig()
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "load commands config", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "load commands config", err)
 	}
 
 	messagesConfig, err := loadMessagesConfig()
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "load messages config", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "load messages config", err)
 	}
 
 	// Merge messages into rawConfig for template
@@ -172,11 +172,11 @@ func generateCoreConstants() error {
 	if err != nil {
 		// Try creating the directory and retry
 		if err := codegen.EnsureDir(filepath.Dir(CoreGeneratedPath)); err != nil {
-			return pkgerrors.NewServiceError("generator", "create directory", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "create directory", err)
 		}
 		file, err = os.Create(CoreGeneratedPath)
 		if err != nil {
-			return pkgerrors.NewServiceError("generator", "create constants file", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "create constants file", err)
 		}
 	}
 	defer func() { _ = file.Close() }()
@@ -549,17 +549,17 @@ func generateCLICommands(rawConfig map[string]any) error {
 		"getCommandCategory": func(cmdName string) string { return getCommandCategory(rawConfig, cmdName) },
 	}).ParseFiles(CLICommandsTemplate)
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "parse CLI template", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "parse CLI template", err)
 	}
 
 	file, err := os.Create(CLICommandsPath)
 	if err != nil {
 		if err := codegen.EnsureDir(filepath.Dir(CLICommandsPath)); err != nil {
-			return pkgerrors.NewServiceError("generator", "create directory", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "create directory", err)
 		}
 		file, err = os.Create(CLICommandsPath)
 		if err != nil {
-			return pkgerrors.NewServiceError("generator", "create CLI file", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "create CLI file", err)
 		}
 	}
 	defer func() { _ = file.Close() }()
@@ -596,12 +596,12 @@ type handlerCommand struct {
 func generateHandlerRegistrations(rawConfig map[string]any) error {
 	categories := getCategories(rawConfig)
 	if len(categories) == 0 {
-		return pkgerrors.NewServiceError("generator", "load categories", fmt.Errorf("no categories found in config"))
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "load categories", fmt.Errorf("no categories found in config"))
 	}
 
 	tmpl, err := template.ParseFiles(RegisterTemplateFilePath)
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "parse register template", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "parse register template", err)
 	}
 
 	for categoryName, catData := range categories {
@@ -628,11 +628,11 @@ func generateCategoryRegistration(tmpl *template.Template, categoryName string, 
 	file, err := os.Create(outputPath)
 	if err != nil {
 		if err := codegen.EnsureDir(filepath.Dir(outputPath)); err != nil {
-			return pkgerrors.NewServiceError("generator", "create directory", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "create directory", err)
 		}
 		file, err = os.Create(outputPath)
 		if err != nil {
-			return pkgerrors.NewServiceError("generator", "create register file", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "create register file", err)
 		}
 	}
 	defer func() { _ = file.Close() }()

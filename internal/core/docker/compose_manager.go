@@ -21,16 +21,16 @@ type Manager struct {
 func NewManager() (*Manager, error) {
 	dockerCli, err := command.NewDockerCli()
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(ComponentDocker, ActionCreateCLI, err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeInternal, pkgerrors.ComponentDocker, "create CLI", err)
 	}
 
 	if err := dockerCli.Initialize(flags.NewClientOptions()); err != nil {
-		return nil, pkgerrors.NewServiceError(ComponentDocker, ActionInitializeCLI, err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeInternal, pkgerrors.ComponentDocker, "initialize CLI", err)
 	}
 
 	service, err := compose.NewComposeService(dockerCli)
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(ComponentDocker, ActionCreateComposeService, err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeInternal, pkgerrors.ComponentDocker, "create compose service", err)
 	}
 
 	return &Manager{
@@ -85,7 +85,7 @@ func (m *Manager) LoadProject(ctx context.Context, composePath string, projectNa
 		ProjectName: projectName,
 	})
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(ComponentDocker, ActionLoadComposeProject, err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "load compose project", err)
 	}
 
 	return project, nil

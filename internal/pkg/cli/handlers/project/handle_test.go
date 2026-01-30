@@ -58,8 +58,9 @@ func TestHandle_DirectoryValidation(t *testing.T) {
 	// Test should fail due to non-interactive mode requiring config (which is expected behavior)
 	assert.True(t,
 		strings.Contains(err.Error(), "Non-interactive mode requires explicit configuration") ||
-			strings.Contains(err.Error(), "non-interactive mode requires") ||
-			strings.Contains(err.Error(), ActionValidation) ||
+			strings.Contains(err.Error(), "non-interactive mode") ||
+			strings.Contains(err.Error(), "services are required") ||
+			strings.Contains(err.Error(), "validation") ||
 			strings.Contains(err.Error(), "directory validation failed") ||
 			strings.Contains(err.Error(), docker.DockerComposeFileName) ||
 			strings.Contains(err.Error(), "required tool 'docker' is not available"),
@@ -87,8 +88,9 @@ func TestHandle_AlreadyInitialized(t *testing.T) {
 	assert.Error(t, err)
 	assert.True(t,
 		strings.Contains(err.Error(), "Non-interactive mode requires explicit configuration") ||
-			strings.Contains(err.Error(), "non-interactive mode requires") ||
-			strings.Contains(err.Error(), ActionValidation) ||
+			strings.Contains(err.Error(), "non-interactive mode") ||
+			strings.Contains(err.Error(), "services are required") ||
+			strings.Contains(err.Error(), "validation") ||
 			strings.Contains(err.Error(), "already initialized"),
 		"Expected validation or initialization error, got: %s", err.Error())
 }

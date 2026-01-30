@@ -595,18 +595,18 @@ const (
 func generateConstants(serviceConstants *ServiceConstants) error {
 	tmpl, err := template.ParseFiles(TemplateFilePath)
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "parse template", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "parse template", err)
 	}
 
 	file, err := os.Create(GeneratedFilePath)
 	if err != nil {
 		// Try creating the directory and retry
 		if err := codegen.EnsureDir(filepath.Dir(GeneratedFilePath)); err != nil {
-			return pkgerrors.NewServiceError("generator", "create directory", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "create directory", err)
 		}
 		file, err = os.Create(GeneratedFilePath)
 		if err != nil {
-			return pkgerrors.NewServiceError("generator", "create file", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "create file", err)
 		}
 	}
 	defer func() { _ = file.Close() }()
@@ -717,17 +717,17 @@ func generateDockerTypes(schema *ServiceSchema) error {
 
 	tmpl, err := template.ParseFiles(DockerTemplateFilePath)
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "parse docker template", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "parse docker template", err)
 	}
 
 	file, err := os.Create(DockerGeneratedFilePath)
 	if err != nil {
 		if err := codegen.EnsureDir(filepath.Dir(DockerGeneratedFilePath)); err != nil {
-			return pkgerrors.NewServiceError("generator", "create directory", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "create directory", err)
 		}
 		file, err = os.Create(DockerGeneratedFilePath)
 		if err != nil {
-			return pkgerrors.NewServiceError("generator", "create docker types file", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "create docker types file", err)
 		}
 	}
 	defer func() { _ = file.Close() }()
@@ -748,12 +748,12 @@ func generateYAMLKeys(schema *ServiceSchema) error {
 
 	tmpl, err := template.ParseFiles(KeysTemplateFilePath)
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "parse keys template", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "parse keys template", err)
 	}
 
 	file, err := os.Create(KeysGeneratedFilePath)
 	if err != nil {
-		return pkgerrors.NewServiceError("generator", "create keys file", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "create keys file", err)
 	}
 	defer func() { _ = file.Close() }()
 

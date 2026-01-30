@@ -25,7 +25,7 @@ func LoadYAMLConfig(path string) (map[string]any, error) {
 func LoadCommandConfig() (map[string]any, error) {
 	var commandConfig map[string]any
 	if err := yaml.Unmarshal(config.EmbeddedCommandsYAML, &commandConfig); err != nil {
-		return nil, pkgerrors.NewConfigError("", "parse command config", err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, "parse command config", err)
 	}
 	return commandConfig, nil
 }
@@ -61,7 +61,7 @@ type FlagConfig struct {
 func LoadCommandConfigStruct() (*CommandConfig, error) {
 	var commandConfig CommandConfig
 	if err := yaml.Unmarshal(config.EmbeddedCommandsYAML, &commandConfig); err != nil {
-		return nil, pkgerrors.NewConfigError("", "parse command config", err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, "parse command config", err)
 	}
 	return &commandConfig, nil
 }

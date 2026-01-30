@@ -59,7 +59,7 @@ type FlagConfig struct {
 func LoadConfig() (*Config, error) {
 	baseConfig, err := loadBaseConfig()
 	if err != nil {
-		return nil, pkgerrors.NewConfigError("", ErrLoadBaseConfig, err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, "load base config", err)
 	}
 
 	localConfig, err := loadLocalConfig()
@@ -74,7 +74,7 @@ func LoadConfig() (*Config, error) {
 // GenerateConfig creates a new otto-stack configuration file
 func GenerateConfig(ctx clicontext.Context) ([]byte, error) {
 	if ctx.Project.Name == "" {
-		return nil, pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgProjectNameEmpty, nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "project name is empty", nil)
 	}
 
 	config := Config{
@@ -119,12 +119,12 @@ func loadBaseConfig() (*Config, error) {
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return nil, pkgerrors.NewConfigErrorf(configPath, ErrConfigNotFound, configPath)
+		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeNotFound, configPath, "configuration file not found: %s", configPath)
 	}
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, pkgerrors.NewConfigError("", ErrConfigParse, err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, configPath, "parse config", err)
 	}
 
 	return &config, nil
@@ -141,7 +141,7 @@ func loadLocalConfig() (*Config, error) {
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, pkgerrors.NewConfigError("", ErrLocalConfigParse, err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "config.local.yaml", "parse local config", err)
 	}
 
 	return &config, nil

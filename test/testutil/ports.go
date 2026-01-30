@@ -44,7 +44,7 @@ func (pm *PortManager) AllocateServicePorts(services []string) (map[string]int, 
 	for _, service := range services {
 		port, err := pm.AllocatePort()
 		if err != nil {
-			return nil, pkgerrors.NewServiceError("test", "allocate port", err)
+			return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "test", "allocate port", err)
 		}
 		ports[service] = port
 	}

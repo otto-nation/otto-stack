@@ -2,7 +2,6 @@ package operations
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spf13/cobra"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
@@ -58,7 +58,7 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 // ValidateArgs validates the command arguments
 func (h *ExecHandler) ValidateArgs(args []string) error {
 	if len(args) < core.MinArgumentCount {
-		return fmt.Errorf("%s", core.MsgErrors_requires_service_and_command)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "args", "requires service and command", nil)
 	}
 	return nil
 }

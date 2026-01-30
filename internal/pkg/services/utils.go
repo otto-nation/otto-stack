@@ -51,7 +51,7 @@ func (u *ServiceUtils) LoadServiceConfig(serviceName string) (*servicetypes.Serv
 		return nil, err
 	}
 	if service.Hidden {
-		return nil, pkgerrors.NewValidationErrorf(pkgerrors.FieldServiceName, "service not accessible: %s", serviceName)
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service not accessible: %s", serviceName)
 	}
 	return service, nil
 }

@@ -16,7 +16,7 @@ func ParseTemplate(templatePath, templateName string) (*template.Template, error
 		"toPascalCase": ToPascalCase,
 	}).ParseFiles(templatePath)
 	if err != nil {
-		return nil, pkgerrors.NewServiceError("generator", "parse template", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "parse template", err)
 	}
 
 	return tmpl.Lookup(filepath.Base(templatePath)), nil
@@ -45,17 +45,17 @@ func NewTemplateExecutor(templatePath, outputPath string) *TemplateExecutor {
 func (te *TemplateExecutor) ExecuteTemplateWithFuncs(data any, funcMap template.FuncMap) error {
 	tmpl, err := template.New(filepath.Base(te.templatePath)).Funcs(funcMap).ParseFiles(te.templatePath)
 	if err != nil {
-		return pkgerrors.NewConfigError("template", "failed to parse template with functions", err)
+		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "template", "failed to parse template with functions", err)
 	}
 
 	file, err := os.Create(te.outputPath)
 	if err != nil {
-		return pkgerrors.NewConfigError("output", "failed to create output file", err)
+		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "output", "failed to create output file", err)
 	}
 	defer func() { _ = file.Close() }()
 
 	if err := tmpl.Execute(file, data); err != nil {
-		return pkgerrors.NewConfigError("execution", "failed to execute template", err)
+		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "execution", "failed to execute template", err)
 	}
 
 	return nil

@@ -32,7 +32,7 @@ func (cm *ConfigManager) CreateConfigFile(ctx clicontext.Context, base *base.Bas
 
 	configPath := core.OttoStackDir + "/" + core.ConfigFileName
 	if err := os.WriteFile(configPath, configBytes, core.PermReadWrite); err != nil {
-		return pkgerrors.NewConfigError(configPath, MsgFailedToWriteConfigFile, err)
+		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, configPath, "write config file", err)
 	}
 
 	base.Output.Success("Created configuration file: %s", configPath)

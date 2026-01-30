@@ -2,7 +2,6 @@ package common
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/validation"
@@ -33,13 +33,13 @@ func SetupCoreCommand(ctx context.Context, base *base.BaseCommand) (*CoreSetup, 
 	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
 	cfg, err := LoadProjectConfig(configPath)
 	if err != nil {
-		return nil, nil, fmt.Errorf(core.MsgStack_failed_load_config, err)
+		return nil, nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, "load config", err)
 	}
 
 	// Create Docker client
 	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
-		return nil, nil, fmt.Errorf(core.MsgStack_failed_create_docker_client, err)
+		return nil, nil, pkgerrors.New(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "create docker client", err)
 	}
 
 	cleanup := func() {
@@ -57,7 +57,7 @@ func LoadProjectConfig(configPath string) (*config.Config, error) {
 	// Load base config
 	baseConfig, err := loadSingleConfig(configPath)
 	if err != nil {
-		return nil, fmt.Errorf(core.MsgStack_failed_load_base_config, err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, "load base config", err)
 	}
 
 	// Try to load local config
@@ -68,7 +68,7 @@ func LoadProjectConfig(configPath string) (*config.Config, error) {
 		if os.IsNotExist(err) {
 			return baseConfig, nil
 		}
-		return nil, fmt.Errorf(core.MsgStack_failed_load_local_config, err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, "load local config", err)
 	}
 
 	// Merge configs (local overrides base)
@@ -85,7 +85,7 @@ func loadSingleConfig(configPath string) (*config.Config, error) {
 
 	var cfg config.Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, fmt.Errorf(core.MsgStack_failed_parse_config, err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, "parse config", err)
 	}
 
 	return &cfg, nil
@@ -120,7 +120,7 @@ func ResolveServiceConfigs(args []string, setup *CoreSetup) ([]types.ServiceConf
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to resolve services: %w", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "resolve services", err)
 	}
 
 	return serviceConfigs, nil

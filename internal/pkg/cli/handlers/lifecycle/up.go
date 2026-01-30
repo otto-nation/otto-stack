@@ -75,11 +75,11 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 
 	service, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionCreateService, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "start services", err)
 	}
 
 	upFlags, _ := core.ParseUpFlags(cmd)
-	force, _ := cmd.Flags().GetBool(core.FlagForce)
+	force, _ := cmd.Flags().GetBool(pkgerrors.FieldFlags)
 
 	const defaultTimeout = 30 * time.Second
 	timeout, err := time.ParseDuration(upFlags.Timeout)
@@ -98,7 +98,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	}
 
 	if err = service.Start(ctx, startRequest); err != nil {
-		return pkgerrors.NewServiceError(common.ComponentStack, common.ActionStartServices, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "start services", err)
 	}
 
 	base.Output.Success("Services started successfully")
@@ -114,7 +114,7 @@ func (h *UpHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, arg
 	base.Output.Header(core.MsgShared_starting)
 
 	if len(args) == 0 {
-		return pkgerrors.NewValidationError("", core.MsgShared_no_services_specified, nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "no services specified", nil)
 	}
 
 	serviceConfigs, err := h.loadServiceConfigs(args)
@@ -137,7 +137,7 @@ func (h *UpHandler) loadServiceConfigs(serviceNames []string) ([]types.ServiceCo
 	for _, name := range serviceNames {
 		cfg, err := serviceUtils.LoadServiceConfig(name)
 		if err != nil {
-			return nil, pkgerrors.NewServiceError(common.ComponentService, common.ActionLoadService, err)
+			return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentService, "load service", err)
 		}
 		if cfg != nil {
 			configs = append(configs, *cfg)
@@ -148,7 +148,7 @@ func (h *UpHandler) loadServiceConfigs(serviceNames []string) ([]types.ServiceCo
 }
 
 func (h *UpHandler) registerSharedContainers(serviceConfigs []types.ServiceConfig, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
-	return h.registerSharedContainersForProject(serviceConfigs, common.ContextGlobal, execCtx, base)
+	return h.registerSharedContainersForProject(serviceConfigs, "global", execCtx, base)
 }
 
 func (h *UpHandler) registerSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {

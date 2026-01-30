@@ -43,7 +43,7 @@ func (pm *PromptManager) PromptForProjectDetails() (string, error) {
 	// Get current directory name as default project name
 	currentDir, err := filepath.Abs(".")
 	if err != nil {
-		return "", pkgerrors.NewValidationError(pkgerrors.FieldProjectPath, ActionGetCurrentDir, err)
+		return "", pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "validation failed", err)
 	}
 	defaultName := filepath.Base(currentDir)
 
@@ -57,7 +57,7 @@ func (pm *PromptManager) PromptForProjectDetails() (string, error) {
 	if err := survey.AskOne(namePrompt, &projectName, survey.WithValidator(func(ans any) error {
 		return pm.validator.ValidateProjectName(ans.(string))
 	})); err != nil {
-		return "", pkgerrors.NewValidationError(pkgerrors.FieldProjectName, ActionGetProjectName, err)
+		return "", pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "validation failed", err)
 	}
 
 	return projectName, nil
@@ -71,7 +71,7 @@ func (pm *PromptManager) PromptForServiceConfigs() ([]types.ServiceConfig, error
 	}
 
 	if len(categories) == 0 {
-		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgNoServicesAvailable, nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "validation failed", nil)
 	}
 
 	// New approach: Show all services in one list with category labels
@@ -107,7 +107,7 @@ func (pm *PromptManager) askToEnableValidation() (bool, error) {
 
 	var enableValidation bool
 	if err := survey.AskOne(validationPrompt, &enableValidation); err != nil {
-		return false, pkgerrors.NewValidationError(FieldValidation, MsgFailedToGetValidationPreference, err)
+		return false, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "validation", "validation failed", err)
 	}
 	return enableValidation, nil
 }
@@ -139,7 +139,7 @@ func (pm *PromptManager) promptForValidationSelection(validationOptions []string
 	}
 
 	if err := survey.AskOne(validationSelectPrompt, &selectedValidations); err != nil {
-		return nil, pkgerrors.NewValidationError(FieldValidation, MsgFailedToGetValidationOptions, err)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "validation", "validation failed", err)
 	}
 	return selectedValidations, nil
 }
@@ -183,7 +183,7 @@ func (pm *PromptManager) ConfirmInitialization(projectName string, services []st
 
 	var action string
 	if err := survey.AskOne(confirmPrompt, &action); err != nil {
-		return "", pkgerrors.NewValidationError(FieldAction, MsgFailedToGetAction, err)
+		return "", pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "validation", "validation failed", err)
 	}
 
 	return action, nil
@@ -205,7 +205,7 @@ func (pm *PromptManager) selectServicesFromAllCategories(categories map[string][
 	}
 
 	if len(selected) == 0 {
-		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, MsgNoServicesSelected, nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "validation failed", nil)
 	}
 
 	return pm.mapSelectedServices(selected, allServices), nil
@@ -237,7 +237,7 @@ func (pm *PromptManager) promptForServiceSelection(serviceOptions []string) ([]s
 
 	var selected []string
 	if err := survey.AskOne(prompt, &selected); err != nil {
-		return nil, pkgerrors.NewValidationError(pkgerrors.FieldServiceName, "failed to select services", err)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "failed to select services", err)
 	}
 
 	return selected, nil

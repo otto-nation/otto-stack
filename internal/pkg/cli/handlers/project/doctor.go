@@ -44,5 +44,5 @@ func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 
 	base.Output.Error(core.MsgDoctor_some_issues)
 	logger.Error("Health checks failed")
-	return pkgerrors.NewValidationError(FieldHealth, core.MsgDoctor_health_check_failed, nil)
+	return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "health", "health check failed", nil)
 }

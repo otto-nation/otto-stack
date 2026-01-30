@@ -90,12 +90,12 @@ func NewClientWithDependencies(cli DockerClient, compose *Manager, logger *slog.
 func NewClient(logger *slog.Logger) (*Client, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return nil, pkgerrors.NewDockerError("create Docker client", "", err)
+		return nil, pkgerrors.New(pkgerrors.ErrCodeUnavailable, pkgerrors.ComponentDocker, "create Docker client", err)
 	}
 
 	composeManager, err := NewManager()
 	if err != nil {
-		return nil, pkgerrors.NewDockerError("create compose manager", "", err)
+		return nil, pkgerrors.New(pkgerrors.ErrCodeInternal, pkgerrors.ComponentDocker, "create compose manager", err)
 	}
 
 	dc := &Client{
@@ -145,7 +145,7 @@ func (c *Client) ListContainers(ctx context.Context, project string) ([]Containe
 		Filters: filter,
 	})
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(ComponentDocker, "list containers", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "list containers", err)
 	}
 
 	var result []ContainerInfo
@@ -202,12 +202,12 @@ func (c *Client) RunInitContainer(ctx context.Context, name string, config InitC
 
 	resp, err := c.cli.ContainerCreate(ctx, containerConfig, hostConfig, networkConfig, nil, name)
 	if err != nil {
-		return pkgerrors.NewServiceError(ComponentDocker, "create init container", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "create init container", err)
 	}
 
 	// Start container
 	if err := c.cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return pkgerrors.NewServiceError(ComponentDocker, "start init container", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "start init container", err)
 	}
 
 	// Wait for completion

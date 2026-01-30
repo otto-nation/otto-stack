@@ -48,7 +48,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 func (h *DepsHandler) loadServices() (map[string]servicetypes.ServiceConfig, error) {
 	manager, err := services.New()
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(services.ComponentServices, services.ActionCreateManager, err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "create manager", err)
 	}
 	return manager.GetAllServices(), nil
 }

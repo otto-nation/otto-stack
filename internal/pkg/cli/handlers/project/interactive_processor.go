@@ -17,7 +17,7 @@ type InteractiveProcessor struct {
 func (p *InteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCommand) (clicontext.Context, error) {
 	projectName, err := p.handler.promptManager.PromptForProjectDetails()
 	if err != nil {
-		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.FieldProjectName, MsgFailedToGetProjectDetails, err)
+		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "validation failed", err)
 	}
 
 	serviceConfigs, validation, advanced, err := p.handler.serviceSelectionManager.RunWorkflow(p.handler, base)
