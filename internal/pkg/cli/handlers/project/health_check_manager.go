@@ -46,7 +46,7 @@ func (hcm *HealthCheckManager) CheckDocker(base *base.BaseCommand) bool {
 		return false
 	}
 
-	_, err = stackService.DockerClient.GetCli().Info(context.Background())
+	err = stackService.CheckDockerHealth(context.Background())
 	if err != nil {
 		base.Output.Error(core.MsgDoctor_docker_daemon_not_running)
 		base.Output.Info(core.MsgDoctor_docker_start_help)
@@ -120,7 +120,7 @@ func (hcm *HealthCheckManager) hasDockerComposePlugin() bool {
 		return false
 	}
 
-	// Check if compose is available by trying to create a compose service
-	_, err = stackService.DockerClient.GetCli().Info(context.Background())
+	// Check if compose is available by checking Docker health
+	err = stackService.CheckDockerHealth(context.Background())
 	return err == nil
 }

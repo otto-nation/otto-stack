@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/otto-nation/otto-stack/internal/core"
-	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
@@ -94,20 +93,24 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 		return pkgerrors.NewServiceError(common.ComponentStack, common.MsgFailedCreateStackService, err)
 	}
 
-	containers, err := stackService.DockerClient.ListContainers(ctx, projectName)
+	if !ciFlags.Quiet {
+		base.Output.Info("Cleaning up project: %s", projectName)
+	}
+
+	err = stackService.Cleanup(ctx, services.CleanupRequest{
+		Project:       projectName,
+		Force:         flags.Force,
+		RemoveVolumes: flags.Volumes,
+		RemoveImages:  flags.Images,
+	})
 	if err != nil {
-		return pkgerrors.NewDockerError(common.OpListContainers, "", err)
+		return err
 	}
 
-	if len(containers) == 0 {
-		if !ciFlags.Quiet {
-			base.Output.Info("No containers to clean")
-		}
-		return nil
+	if !ciFlags.Quiet {
+		base.Output.Success("Cleanup completed")
 	}
 
-	h.removeContainers(ctx, stackService, containers, flags.Force, ciFlags, base)
-	h.cleanupResources(ctx, stackService, flags, projectName, ciFlags, base)
 	return nil
 }
 
@@ -116,39 +119,6 @@ func (h *CleanupHandler) confirmCleanup(base *base.BaseCommand) bool {
 	base.Output.Warning("This will remove all containers, networks, and volumes")
 	// TODO: Implement proper confirmation with base.Output
 	return true
-}
-
-// removeContainers removes all containers in the list
-func (h *CleanupHandler) removeContainers(ctx context.Context, stackService *services.Service, containers []docker.ContainerInfo, force bool, ciFlags *ci.Flags, base *base.BaseCommand) {
-	for _, container := range containers {
-		if !ciFlags.Quiet {
-			base.Output.Info("Removing container: %s", container.Name)
-		}
-		if err := stackService.DockerClient.RemoveContainer(ctx, container.ID, force); err != nil {
-			base.Output.Warning("Failed to remove container %s: %v", container.Name, err)
-		}
-	}
-}
-
-// cleanupResources cleans up volumes, networks, and images if requested
-func (h *CleanupHandler) cleanupResources(ctx context.Context, stackService *services.Service, flags *core.CleanupFlags, projectName string, ciFlags *ci.Flags, base *base.BaseCommand) {
-	if flags.Volumes {
-		if err := stackService.DockerClient.RemoveResources(ctx, docker.ResourceVolume, projectName); err != nil && !ciFlags.Quiet {
-			base.Output.Warning("Failed to clean volumes: %v", err)
-		}
-	}
-
-	if flags.Networks {
-		if err := stackService.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, projectName); err != nil && !ciFlags.Quiet {
-			base.Output.Warning("Failed to clean networks: %v", err)
-		}
-	}
-
-	if flags.Images {
-		if err := stackService.DockerClient.RemoveResources(ctx, docker.ResourceImage, projectName); err != nil && !ciFlags.Quiet {
-			base.Output.Warning("Failed to remove images: %v", err)
-		}
-	}
 }
 
 // checkOrphans checks for and reports orphaned shared containers

@@ -136,6 +136,20 @@ type StopRequest struct {
 	Characteristics []string
 }
 
+// StatusRequest defines parameters for getting service status
+type StatusRequest struct {
+	Project  string
+	Services []string
+}
+
+// CleanupRequest defines parameters for cleanup operations
+type CleanupRequest struct {
+	Project       string
+	Force         bool
+	RemoveVolumes bool
+	RemoveImages  bool
+}
+
 // ExecRequest defines parameters for executing commands in containers
 type ExecRequest struct {
 	Project     string
@@ -304,6 +318,57 @@ func (s *Service) Exec(ctx context.Context, req ExecRequest) error {
 	_, err = s.compose.Exec(ctx, req.Project, options)
 	if err != nil {
 		return pkgerrors.NewServiceError("project", "exec command", err)
+	}
+	return nil
+}
+
+// Status retrieves status of services
+func (s *Service) Status(ctx context.Context, req StatusRequest) ([]docker.ContainerStatus, error) {
+	return s.DockerClient.GetServiceStatus(ctx, req.Project, req.Services)
+}
+
+// Cleanup removes containers and resources for a project
+func (s *Service) Cleanup(ctx context.Context, req CleanupRequest) error {
+	// List containers
+	containers, err := s.DockerClient.ListContainers(ctx, req.Project)
+	if err != nil {
+		return pkgerrors.NewDockerError("list containers", "", err)
+	}
+
+	// Remove containers
+	for _, container := range containers {
+		if err := s.DockerClient.RemoveContainer(ctx, container.ID, req.Force); err != nil {
+			return pkgerrors.NewDockerError("remove container", container.Name, err)
+		}
+	}
+
+	// Remove volumes if requested
+	if req.RemoveVolumes {
+		if err := s.DockerClient.RemoveResources(ctx, docker.ResourceVolume, req.Project); err != nil {
+			return pkgerrors.NewDockerError("remove volumes", req.Project, err)
+		}
+	}
+
+	// Remove networks
+	if err := s.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, req.Project); err != nil {
+		return pkgerrors.NewDockerError("remove networks", req.Project, err)
+	}
+
+	// Remove images if requested
+	if req.RemoveImages {
+		if err := s.DockerClient.RemoveResources(ctx, docker.ResourceImage, req.Project); err != nil {
+			return pkgerrors.NewDockerError("remove images", req.Project, err)
+		}
+	}
+
+	return nil
+}
+
+// CheckDockerHealth verifies Docker daemon is running
+func (s *Service) CheckDockerHealth(ctx context.Context) error {
+	_, err := s.DockerClient.GetCli().Info(ctx)
+	if err != nil {
+		return pkgerrors.NewDockerError("check docker health", "", err)
 	}
 	return nil
 }
