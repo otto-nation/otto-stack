@@ -86,6 +86,12 @@ version:
   platform: "Platform: %s/%s"
   update_available: "⚠️  Update available: %s → %s"
   invalid_version: "invalid version format"
+  invalid_format: "Invalid version format: %s"
+  invalid_major: "Invalid major version: %s"
+  invalid_minor: "Invalid minor version: %s"
+  invalid_patch: "Invalid patch version: %s"
+  constraint_not_satisfied: "Version %s does not satisfy constraint %s"
+  github_api_error: "GitHub API returned status %d"
 
 doctor:
   some_issues: "Some issues found. Please address them above."
@@ -128,6 +134,10 @@ init:
   step_review_config: "1. Review configuration in %s/%s"
   step_start_stack: "2. Start your stack: %s up"
   step_check_status: "3. Check status: %s status"
+  template_process_failed: "Failed to process template for service %s: %w"
+  config_parse_failed: "Failed to parse init configuration %s: %w"
+  script_execute_failed: "Failed to execute init script for service %s: %w"
+  container_execute_failed: "Failed to execute init container for service %s: %w"
 
 warnings:
   update_available: "🔔 Update available: %s → %s (%s)"
@@ -283,3 +293,6 @@ shared:
   cancelled: "Cancelled"
   skipping: "Skipping shared containers"
   no_services_to_stop: "No services to stop"
+
+middleware:
+  project_already_initialized: "Project already initialized. Use --%s to overwrite"
