@@ -8,6 +8,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // ValidateHandler handles the validate command
@@ -27,7 +28,7 @@ func (h *ValidateHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	// Load configuration
 	_, err := config.LoadConfig()
 	if err != nil {
-		return ci.FormatError(flags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "load configuration", err))
+		return ci.FormatError(flags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsConfigLoadFailed, err))
 	}
 
 	if !flags.Quiet {

@@ -12,6 +12,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // DepsHandler handles the deps command
@@ -48,7 +49,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 func (h *DepsHandler) loadServices() (map[string]servicetypes.ServiceConfig, error) {
 	manager, err := services.New()
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "create manager", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceManagerCreateFailed, err)
 	}
 	return manager.GetAllServices(), nil
 }

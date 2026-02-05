@@ -17,6 +17,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // DownHandler handles the down command
@@ -82,7 +83,7 @@ func (h *DownHandler) filterSharedIfNeeded(serviceConfigs []types.ServiceConfig,
 	reg := registry.NewManager(execCtx.Shared.Root)
 	_, err := reg.Load()
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentRegistry, "load registry", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentRegistry, messages.ErrorsRegistryLoadFailed, err)
 	}
 
 	sharedServices := h.findSharedServices(serviceConfigs, reg)
@@ -134,7 +135,7 @@ func (h *DownHandler) filterOutShared(sharedServices []string, serviceConfigs []
 func (h *DownHandler) stopServices(ctx context.Context, cmd *cobra.Command, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
 	service, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "stop services", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStopFailed, err)
 	}
 
 	downFlags, _ := core.ParseDownFlags(cmd)
@@ -151,7 +152,7 @@ func (h *DownHandler) stopServices(ctx context.Context, cmd *cobra.Command, setu
 	}
 
 	if err = service.Stop(ctx, stopRequest); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "stop services", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStopFailed, err)
 	}
 
 	h.displayStopSuccess(base, setup, serviceConfigs)
@@ -189,7 +190,7 @@ func (h *DownHandler) determineServicesToStop(args []string, execCtx *clicontext
 	reg := registry.NewManager(execCtx.Shared.Root)
 	_, err := reg.Load()
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentRegistry, "load registry", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentRegistry, messages.ErrorsRegistryLoadFailed, err)
 	}
 
 	containers, err := reg.List()

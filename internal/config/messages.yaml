@@ -182,6 +182,7 @@ errors:
   stack_stop_failed: "Failed to stop services: %v"
   stack_resolve_failed: "Failed to resolve services: %v"
   stack_create_failed: "Failed to create stack service: %v"
+  stack_get_status_failed: "Failed to get service status: %v"
   
   # Compose errors
   compose_generate_failed: "Failed to generate docker-compose file: %v"
@@ -196,6 +197,10 @@ errors:
   
   # Registry errors
   registry_load_failed: "Failed to load container registry: %v"
+  
+  # Service operation errors
+  service_operation_failed: "Service operation failed: %v"
+  service_manager_create_failed: "Failed to create service manager: %v"
   
   # Validation errors
   validation_failed: "Validation failed: %v"

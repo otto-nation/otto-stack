@@ -13,6 +13,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // RestartHandler handles the restart command
@@ -53,7 +54,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		serviceConfigs, err = services.ResolveUpServices(setup.Config.Stack.Enabled, setup.Config)
 	}
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "resolve services", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackResolveFailed, err)
 	}
 
 	if err := h.restartServices(ctx, setup, serviceConfigs, flags); err != nil {
@@ -69,7 +70,7 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *common.Core
 	// Create stack service
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "create service", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackCreateFailed, err)
 	}
 
 	// Stop services
@@ -80,7 +81,7 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *common.Core
 		Timeout:        time.Duration(flags.Timeout) * time.Second,
 	}
 	if err := stackService.Stop(ctx, stopRequest); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "stop services", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStopFailed, err)
 	}
 
 	// Start services
@@ -89,7 +90,7 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *common.Core
 		ServiceConfigs: serviceConfigs,
 	}
 	if err := stackService.Start(ctx, startRequest); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "start services", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStartFailed, err)
 	}
 
 	return nil

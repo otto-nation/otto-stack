@@ -12,6 +12,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // ServicesHandler handles the services command
@@ -44,13 +45,13 @@ func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 func (h *ServicesHandler) loadServices() (map[string][]servicetypes.ServiceConfig, int, error) {
 	manager, err := services.New()
 	if err != nil {
-		return nil, 0, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "operation failed", err)
+		return nil, 0, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceOperationFailed, err)
 	}
 
 	utils := services.NewServiceUtils()
 	servicesByCategory, err := utils.GetServicesByCategory()
 	if err != nil {
-		return nil, 0, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "operation failed", err)
+		return nil, 0, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceOperationFailed, err)
 	}
 
 	return servicesByCategory, len(manager.GetAllServices()), nil

@@ -13,6 +13,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 
 	"github.com/spf13/cobra"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // CleanupHandler handles the cleanup command
@@ -90,7 +91,7 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "create stack service", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackCreateFailed, err)
 	}
 
 	if !ciFlags.Quiet {
