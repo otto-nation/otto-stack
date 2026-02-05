@@ -98,7 +98,7 @@ func (h *InitHandler) setDefaultProjectName(initFlags *core.InitFlags, base *bas
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "failed to get current directory", err)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsCurrentDirectoryFailed, err)
 	}
 
 	initFlags.ProjectName = filepath.Base(cwd)

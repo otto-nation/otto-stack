@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 var semverRegex = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z\-\.]+))?(?:\+([0-9A-Za-z\-\.]+))?$`)
@@ -79,7 +80,7 @@ func (v Version) Compare(other Version) int {
 // ParseVersion parses a version string into a Version struct
 func ParseVersion(versionStr string) (*Version, error) {
 	if versionStr == "" {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", "empty version string", nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", messages.ErrorsEmptyVersion, nil)
 	}
 
 	versionStr = strings.TrimSpace(versionStr)

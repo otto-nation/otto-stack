@@ -155,6 +155,52 @@ errors:
   requires_service_and_command: "exec requires a service name and command"
   version_compliance_failed: "version compliance check failed"
   no_strategy_found: "no strategy found for execution context"
+  
+  # Config errors
+  config_not_found: "Configuration file not found: %s. Run 'otto-stack init' to create it."
+  config_parse_failed: "Failed to parse configuration file: %v"
+  config_load_failed: "Failed to load configuration: %v"
+  config_write_failed: "Failed to write configuration file: %v"
+  config_nil: "Configuration is missing or invalid"
+  config_save_not_implemented: "Saving configuration is not yet supported"
+  
+  # Service errors
+  service_not_found: "Service '%s' not found. Run 'otto-stack services' to see available services."
+  service_unknown: "Unknown service: %s"
+  service_not_accessible: "Service '%s' is not accessible in your current configuration"
+  service_file_not_found: "Service definition file not found: %s"
+  service_load_failed: "Failed to load services: %v"
+  service_operation_not_found: "Operation '%s' not found"
+  service_no_connect_operation: "Service '%s' does not have a connect operation configured"
+  
+  # Docker errors
+  docker_client_create_failed: "Failed to create Docker client. Is Docker running?"
+  docker_unavailable: "Docker is not available. Please start Docker and try again."
+  
+  # Stack operation errors
+  stack_start_failed: "Failed to start services: %v"
+  stack_stop_failed: "Failed to stop services: %v"
+  stack_resolve_failed: "Failed to resolve services: %v"
+  stack_create_failed: "Failed to create stack service: %v"
+  
+  # Compose errors
+  compose_generate_failed: "Failed to generate docker-compose file: %v"
+  compose_marshal_failed: "Failed to format docker-compose data: %v"
+  compose_write_failed: "Failed to write docker-compose file: %v"
+  compose_dir_create_failed: "Failed to create compose directory: %v"
+  
+  # Directory/File errors
+  directory_create_failed: "Failed to create directory: %v"
+  file_write_failed: "Failed to write file: %v"
+  current_directory_failed: "Failed to get current directory: %v"
+  
+  # Registry errors
+  registry_load_failed: "Failed to load container registry: %v"
+  
+  # Validation errors
+  validation_failed: "Validation failed: %v"
+  parse_flags_failed: "Failed to parse command flags: %v"
+  empty_version: "Version string cannot be empty"
 
 stack:
   failed_load_config: "failed to load config: %w"

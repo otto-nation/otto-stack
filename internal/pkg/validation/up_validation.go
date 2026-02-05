@@ -4,6 +4,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // ValidateUpArgs validates arguments for the up command
@@ -16,7 +17,7 @@ func ValidateUpArgs(args []string) error {
 func ValidateUpFlags(cmd *cobra.Command) error {
 	flags, err := core.ParseUpFlags(cmd)
 	if err != nil {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "flags", "parse flags", err)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "flags", messages.ErrorsParseFlagsFailed, err)
 	}
 
 	// Additional flag validation can be added here

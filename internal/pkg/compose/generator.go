@@ -281,7 +281,7 @@ func (g *Generator) BuildComposeData(serviceConfigs []types.ServiceConfig) ([]by
 
 	composeContent, err := yaml.Marshal(composeData)
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", "marshal data", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeMarshalFailed, err)
 	}
 	return composeContent, nil
 }
@@ -289,12 +289,12 @@ func (g *Generator) BuildComposeData(serviceConfigs []types.ServiceConfig) ([]by
 // WriteComposeFile writes docker-compose content to the specified directory
 func (g *Generator) WriteComposeFile(content []byte, outputDir string) error {
 	if err := filesystem.EnsureDir(outputDir); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", "create directory", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeDirCreateFailed, err)
 	}
 
 	filePath := outputDir + "/docker-compose.yml"
 	if err := filesystem.WriteFile(filePath, content, core.PermReadWrite); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", "write file", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeWriteFailed, err)
 	}
 
 	return nil

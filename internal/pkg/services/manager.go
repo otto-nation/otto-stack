@@ -9,6 +9,7 @@ import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"gopkg.in/yaml.v3"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // Manager handles all service operations
@@ -23,7 +24,7 @@ func New() (*Manager, error) {
 	}
 
 	if err := manager.loadServices(); err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "load services", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceLoadFailed, err)
 	}
 
 	return manager, nil
@@ -33,7 +34,7 @@ func New() (*Manager, error) {
 func (m *Manager) GetService(name string) (*servicetypes.ServiceConfig, error) {
 	service, exists := m.services[name]
 	if !exists {
-		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service not found: %s", name)
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceNotFound, name)
 	}
 	return &service, nil
 }
@@ -48,10 +49,10 @@ func (m *Manager) ValidateServices(serviceNames []string) error {
 	for _, name := range serviceNames {
 		service, exists := m.services[name]
 		if !exists {
-			return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "unknown service: %s", name)
+			return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceUnknown, name)
 		}
 		if service.Hidden {
-			return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service not accessible: %s", name)
+			return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceNotAccessible, name)
 		}
 	}
 	return nil
@@ -79,7 +80,7 @@ func (m *Manager) BuildConnectCommand(serviceName string, options map[string]str
 // buildConnectCommand builds connection command from management spec
 func (m *Manager) buildConnectCommand(service *servicetypes.ServiceConfig, options map[string]string) ([]string, error) {
 	if service.Service.Management == nil || service.Service.Management.Connect == nil {
-		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeOperationFail, pkgerrors.FieldServiceName, "no connect operation configured for service: %s", service.Name)
+		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeOperationFail, pkgerrors.FieldServiceName, messages.ErrorsServiceNoConnectOperation, service.Name)
 	}
 
 	connect := service.Service.Management.Connect
@@ -159,7 +160,7 @@ func (m *Manager) loadService(category, serviceName string) error {
 		return m.parseService(data, serviceName, category)
 	}
 
-	return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service file not found: %s", serviceName)
+	return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceFileNotFound, serviceName)
 }
 
 func (m *Manager) parseService(data []byte, serviceName, category string) error {
@@ -201,7 +202,7 @@ func (m *Manager) ExecuteCustomOperation(serviceName, operationName string) ([]s
 
 	operation, exists := service.Service.Management.Custom[operationName]
 	if !exists {
-		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, "operation", "operation %s not found", operationName)
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, "operation", messages.ErrorsServiceOperationNotFound, operationName)
 	}
 
 	cmd := make([]string, len(operation.Command))
