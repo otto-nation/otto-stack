@@ -220,6 +220,21 @@ errors:
   stack_compose_generate_failed: "Failed to generate compose file: %v"
   stack_project_load_failed: "Failed to load project: %v"
   stack_services_start_failed: "Failed to start services: %v"
+  stack_project_start_failed: "Failed to start project: %v"
+  stack_project_stop_failed: "Failed to stop project: %v"
+  stack_project_remove_failed: "Failed to remove project: %v"
+  stack_init_scripts_failed: "Failed to execute initialization scripts: %v"
+  stack_get_logs_failed: "Failed to get logs: %v"
+  stack_exec_command_failed: "Failed to execute command: %v"
+  
+  # Config errors (additional)
+  config_marshal_failed: "Failed to process configuration: %v"
+  config_parse_service_failed: "Failed to parse service configuration: %v"
+  
+  # Service configuration errors
+  service_no_connect_command: "Service '%s' does not have a connect command configured"
+  service_no_custom_operations: "Service '%s' does not have custom operations configured"
+  service_selection_failed: "Failed to select services: %v"
   
   # Validation errors
   validation_failed: "Validation failed: %v"

@@ -14,6 +14,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // ErrGoBack is returned when user wants to go back
@@ -237,7 +238,7 @@ func (pm *PromptManager) promptForServiceSelection(serviceOptions []string) ([]s
 
 	var selected []string
 	if err := survey.AskOne(prompt, &selected); err != nil {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "failed to select services", err)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceSelectionFailed, err)
 	}
 
 	return selected, nil

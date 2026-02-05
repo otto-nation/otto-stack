@@ -85,7 +85,7 @@ func (m *Manager) buildConnectCommand(service *servicetypes.ServiceConfig, optio
 
 	connect := service.Service.Management.Connect
 	if len(connect.Command) == 0 {
-		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeOperationFail, pkgerrors.FieldServiceName, "no connect command configured for service: %s", service.Name)
+		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeOperationFail, pkgerrors.FieldServiceName, messages.ErrorsServiceNoConnectCommand, service.Name)
 	}
 
 	cmd := make([]string, len(connect.Command))
@@ -166,7 +166,7 @@ func (m *Manager) loadService(category, serviceName string) error {
 func (m *Manager) parseService(data []byte, serviceName, category string) error {
 	var service servicetypes.ServiceConfig
 	if err := yaml.Unmarshal(data, &service); err != nil {
-		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, serviceName, "parse service YAML", err)
+		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, serviceName, messages.ErrorsConfigParseServiceFailed, err)
 	}
 
 	// Set category if not specified in YAML
@@ -197,7 +197,7 @@ func (m *Manager) ExecuteCustomOperation(serviceName, operationName string) ([]s
 	}
 
 	if service.Service.Management == nil || service.Service.Management.Custom == nil {
-		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeOperationFail, pkgerrors.FieldServiceName, "no custom operations for service: %s", serviceName)
+		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeOperationFail, pkgerrors.FieldServiceName, messages.ErrorsServiceNoCustomOperations, serviceName)
 	}
 
 	operation, exists := service.Service.Management.Custom[operationName]

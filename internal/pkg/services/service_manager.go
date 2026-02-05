@@ -223,14 +223,14 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 		if len(req.ServiceConfigs) > 0 {
 			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackServicesStartFailed, err)
 		}
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "start", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackProjectStartFailed, err)
 	}
 
 	s.logger.Debug("Services started successfully")
 
 	// Execute local init scripts for services that have them
 	if err := s.executeLocalInitScripts(ctx, req.ServiceConfigs, req.Project); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "execute init scripts", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackInitScriptsFailed, err)
 	}
 
 	return nil
@@ -241,7 +241,7 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 func (s *Service) Stop(ctx context.Context, req StopRequest) error {
 	s.logger.Debug("Stopping services",
 		"project", req.Project,
-		"remove", req.Remove,
+		messages.ErrorsStackProjectRemoveFailed, req.Remove,
 		"serviceCount", len(req.ServiceConfigs))
 
 	// Load project
@@ -258,7 +258,7 @@ func (s *Service) Stop(ctx context.Context, req StopRequest) error {
 		})
 		err = s.compose.Down(ctx, project.Name, options.ToSDK())
 		if err != nil {
-			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "remove", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackProjectRemoveFailed, err)
 		}
 		return nil
 	}
@@ -271,9 +271,9 @@ func (s *Service) Stop(ctx context.Context, req StopRequest) error {
 	if err != nil {
 		serviceNames := ExtractServiceNames(req.ServiceConfigs)
 		if len(serviceNames) > 0 {
-			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "stop services", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackStopFailed, err)
 		}
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "stop", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackProjectStopFailed, err)
 	}
 	return nil
 }
@@ -291,7 +291,7 @@ func (s *Service) Logs(ctx context.Context, req LogRequest) error {
 	consumer := &docker.SimpleLogConsumer{}
 	err := s.compose.Logs(ctx, req.Project, consumer, options.ToSDK())
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "get logs", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackGetLogsFailed, err)
 	}
 	return nil
 }
@@ -318,7 +318,7 @@ func (s *Service) Exec(ctx context.Context, req ExecRequest) error {
 
 	_, err = s.compose.Exec(ctx, req.Project, options)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "exec command", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackExecCommandFailed, err)
 	}
 	return nil
 }

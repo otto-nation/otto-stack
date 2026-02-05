@@ -57,7 +57,7 @@ func (s *configService) GetConfigHash(cfg *Config) (string, error) {
 
 	data, err := json.Marshal(cfg)
 	if err != nil {
-		return "", pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", "failed to marshal configuration for hashing", err)
+		return "", pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", messages.ErrorsConfigMarshalFailed, err)
 	}
 
 	hash := sha256.Sum256(data)
