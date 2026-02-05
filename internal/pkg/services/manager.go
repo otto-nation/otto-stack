@@ -111,7 +111,7 @@ func (m *Manager) buildConnectCommand(service *servicetypes.ServiceConfig, optio
 func (m *Manager) loadServices() error {
 	entries, err := config.EmbeddedServicesFS.ReadDir(EmbeddedServicesDir)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "read services directory", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceReadDirectoryFailed, err)
 	}
 
 	for _, entry := range entries {
@@ -121,7 +121,7 @@ func (m *Manager) loadServices() error {
 
 		category := entry.Name()
 		if err := m.loadCategoryServices(category); err != nil {
-			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "load category", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceLoadCategoryFailed, err)
 		}
 	}
 
@@ -133,7 +133,7 @@ func (m *Manager) loadCategoryServices(category string) error {
 	categoryPath := fmt.Sprintf("%s/%s", EmbeddedServicesDir, category)
 	entries, err := config.EmbeddedServicesFS.ReadDir(categoryPath)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "read category directory", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceReadCategoryFailed, err)
 	}
 
 	for _, entry := range entries {
@@ -145,7 +145,7 @@ func (m *Manager) loadCategoryServices(category string) error {
 		serviceName := core.TrimYAMLExt(fileName)
 
 		if err := m.loadService(category, serviceName); err != nil {
-			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "load service", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceLoadFailed, err)
 		}
 	}
 

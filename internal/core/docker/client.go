@@ -15,6 +15,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 type ResourceType string
@@ -145,7 +146,7 @@ func (c *Client) ListContainers(ctx context.Context, project string) ([]Containe
 		Filters: filter,
 	})
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "list containers", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, messages.ErrorsDockerListContainersFailed, err)
 	}
 
 	var result []ContainerInfo
@@ -202,12 +203,12 @@ func (c *Client) RunInitContainer(ctx context.Context, name string, config InitC
 
 	resp, err := c.cli.ContainerCreate(ctx, containerConfig, hostConfig, networkConfig, nil, name)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "create init container", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, messages.ErrorsDockerCreateContainerFailed, err)
 	}
 
 	// Start container
 	if err := c.cli.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "start init container", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, messages.ErrorsDockerStartContainerFailed, err)
 	}
 
 	// Wait for completion

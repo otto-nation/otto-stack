@@ -201,6 +201,25 @@ errors:
   # Service operation errors
   service_operation_failed: "Service operation failed: %v"
   service_manager_create_failed: "Failed to create service manager: %v"
+  service_read_directory_failed: "Failed to read services directory: %v"
+  service_load_category_failed: "Failed to load service category: %v"
+  service_read_category_failed: "Failed to read category directory: %v"
+  
+  # Docker operation errors
+  docker_create_cli_failed: "Failed to create Docker CLI: %v"
+  docker_initialize_cli_failed: "Failed to initialize Docker CLI: %v"
+  docker_create_compose_failed: "Failed to create Docker Compose service: %v"
+  docker_load_project_failed: "Failed to load Docker Compose project: %v"
+  docker_list_containers_failed: "Failed to list Docker containers: %v"
+  docker_create_container_failed: "Failed to create Docker container: %v"
+  docker_start_container_failed: "Failed to start Docker container: %v"
+  
+  # Stack manager errors
+  stack_resolve_services_failed: "Failed to resolve services: %v"
+  stack_docker_client_failed: "Failed to create Docker client: %v"
+  stack_compose_generate_failed: "Failed to generate compose file: %v"
+  stack_project_load_failed: "Failed to load project: %v"
+  stack_services_start_failed: "Failed to start services: %v"
   
   # Validation errors
   validation_failed: "Validation failed: %v"

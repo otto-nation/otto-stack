@@ -12,6 +12,7 @@ import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // Service provides high-level stack operations with automatic characteristics resolution
@@ -58,7 +59,7 @@ func ResolveUpServices(args []string, cfg *config.Config) ([]servicetypes.Servic
 
 	// Validate services exist
 	if err := manager.ValidateServices(serviceNames); err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "resolve_services", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackResolveServicesFailed, err)
 	}
 
 	// Resolve all dependencies recursively
@@ -172,7 +173,7 @@ type LogRequest struct {
 func NewService(compose api.Compose, characteristics CharacteristicsResolver, project ProjectLoader) (*Service, error) {
 	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "create client", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, messages.ErrorsStackDockerClientFailed, err)
 	}
 
 	return &Service{
@@ -197,13 +198,13 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 
 	// Generate docker-compose.yml from service configs
 	if err := s.GenerateComposeFile(req.Project, req.ServiceConfigs); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "generate compose file", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackComposeGenerateFailed, err)
 	}
 
 	// Load project
 	project, err := s.project.Load(req.Project)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "load", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackProjectLoadFailed, err)
 	}
 
 	s.logger.Debug("Project loaded successfully", pkgerrors.ComponentProject, req.Project)
@@ -220,7 +221,7 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 	err = s.compose.Up(ctx, project, options.ToSDK())
 	if err != nil {
 		if len(req.ServiceConfigs) > 0 {
-			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "start services", err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackServicesStartFailed, err)
 		}
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "start", err)
 	}
@@ -246,7 +247,7 @@ func (s *Service) Stop(ctx context.Context, req StopRequest) error {
 	// Load project
 	project, err := s.project.Load(req.Project)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "load", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackProjectLoadFailed, err)
 	}
 
 	if req.Remove {
@@ -300,7 +301,7 @@ func (s *Service) Exec(ctx context.Context, req ExecRequest) error {
 	// Load project
 	project, err := s.project.Load(req.Project)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "load", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackProjectLoadFailed, err)
 	}
 
 	// Use the compose SDK's exec functionality
