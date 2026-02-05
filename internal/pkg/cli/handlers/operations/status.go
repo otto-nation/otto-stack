@@ -92,9 +92,9 @@ func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command
 
 	if !ciFlags.Quiet {
 		if showAll {
-			base.Output.Header("Status (all projects)")
+			base.Output.Header(messages.InfoStatusAllProjects)
 		} else {
-			base.Output.Header("Shared containers status")
+			base.Output.Header(messages.InfoSharedContainersStatus)
 		}
 	}
 
@@ -111,11 +111,11 @@ func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command
 	}
 
 	if len(sharedContainers) == 0 {
-		base.Output.Info("No shared containers registered")
+		base.Output.Info(messages.InfoNoSharedContainers)
 		return nil
 	}
 
-	base.Output.Info("Shared containers:")
+	base.Output.Info(messages.InfoSharedContainers)
 	for _, container := range sharedContainers {
 		base.Output.Info("  - %s (used by: %v)", container.Name, container.Projects)
 	}

@@ -38,7 +38,7 @@ func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	display.RenderTableWithSeparators(base.Output.Writer(), headers, groups)
 
 	base.Output.Info("\nTotal services available: %d", totalCount)
-	base.Output.Success("Services listed successfully")
+	base.Output.Success(messages.SuccessServicesListed)
 	return nil
 }
 

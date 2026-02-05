@@ -32,7 +32,7 @@ func (h *ValidateHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	}
 
 	if !flags.Quiet {
-		base.Output.Success("Configuration is valid")
+		base.Output.Success(messages.SuccessConfigurationValid)
 	}
 
 	return nil

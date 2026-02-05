@@ -55,7 +55,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	if !ciFlags.Quiet {
-		base.Output.Info("No cleanup options specified. Use --help for available options")
+		base.Output.Info(messages.InfoNoCleanupOptions)
 	}
 	return nil
 }
@@ -95,7 +95,7 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 	}
 
 	if !ciFlags.Quiet {
-		base.Output.Info("Cleaning up project: %s", projectName)
+		base.Output.Info(messages.InfoCleaningProject, projectName)
 	}
 
 	err = stackService.Cleanup(ctx, services.CleanupRequest{
@@ -109,7 +109,7 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 	}
 
 	if !ciFlags.Quiet {
-		base.Output.Success("Cleanup completed")
+		base.Output.Success(messages.SuccessCleanupCompleted)
 	}
 
 	return nil
@@ -117,7 +117,7 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 
 // confirmCleanup asks for user confirmation before cleaning
 func (h *CleanupHandler) confirmCleanup(base *base.BaseCommand) bool {
-	base.Output.Warning("This will remove all containers, networks, and volumes")
+	base.Output.Warning(messages.WarningsCleanupWarning)
 	// TODO: Implement proper confirmation with base.Output
 	return true
 }

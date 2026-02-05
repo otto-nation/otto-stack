@@ -160,8 +160,8 @@ func (h *DownHandler) stopServices(ctx context.Context, cmd *cobra.Command, setu
 }
 
 func (h *DownHandler) displayStopSuccess(base *base.BaseCommand, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig) {
-	base.Output.Success("Services stopped successfully")
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
+	base.Output.Success(messages.SuccessServicesStopped)
+	base.Output.Info(messages.InfoProjectInfo, setup.Config.Project.Name)
 	for _, svc := range serviceConfigs {
 		base.Output.Info("  %s %s", ui.IconSuccess, svc.Name)
 	}

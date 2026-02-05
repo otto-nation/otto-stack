@@ -102,8 +102,8 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStartFailed, err)
 	}
 
-	base.Output.Success("Services started successfully")
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
+	base.Output.Success(messages.SuccessServicesStarted)
+	base.Output.Info(messages.InfoProjectInfo, setup.Config.Project.Name)
 	for _, svc := range serviceConfigs {
 		base.Output.Info("  %s %s", ui.IconSuccess, svc.Name)
 	}

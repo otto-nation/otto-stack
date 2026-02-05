@@ -28,7 +28,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	base.Output.Header("%s Service Dependencies", ui.IconInfo)
 
 	if len(args) == 0 {
-		base.Output.Warning("No services specified")
+		base.Output.Warning(messages.InfoNoServicesSpecified)
 		return nil
 	}
 
@@ -42,7 +42,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	headers := []string{display.HeaderService, display.HeaderDependencies}
 	display.RenderTable(base.Output.Writer(), headers, rows)
 
-	base.Output.Success("Dependencies displayed successfully")
+	base.Output.Success(messages.SuccessDependenciesDisplayed)
 	return nil
 }
 

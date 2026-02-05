@@ -161,12 +161,12 @@ func (pm *PromptManager) mapValidationSelections(selectedValidations []string) m
 // ConfirmInitialization shows final confirmation with option to go back
 func (pm *PromptManager) ConfirmInitialization(projectName string, services []string, validation, advanced map[string]bool, base *base.BaseCommand) (string, error) {
 	// Display summary
-	base.Output.Info("Project Configuration Summary:")
+	base.Output.Info(messages.InfoProjectConfigSummary)
 	base.Output.Info("  Project Name: %s", projectName)
 	base.Output.Info("  Services: %s", strings.Join(services, ", "))
 
 	if len(validation) > 0 {
-		base.Output.Info("  Validation Options:")
+		base.Output.Info(messages.InfoValidationOptions)
 		for option := range validation {
 			base.Output.Info("    - %s", option)
 		}

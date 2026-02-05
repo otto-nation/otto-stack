@@ -27,7 +27,7 @@ func (h *ConflictsHandler) Handle(ctx context.Context, cmd *cobra.Command, args 
 	conflicts := h.detectPortConflicts()
 
 	if len(conflicts) == 0 {
-		base.Output.Success("No service conflicts detected")
+		base.Output.Success(messages.SuccessNoConflicts)
 		return nil
 	}
 

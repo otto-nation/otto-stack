@@ -44,6 +44,14 @@ success:
   version_compliance_satisfied: "✅ Version compliance satisfied"
   no_version_drift: "✅ No version drift detected"
   generated_files: "Generated %s and %s"
+  services_started: "Services started successfully"
+  services_stopped: "Services stopped successfully"
+  cleanup_completed: "Cleanup completed"
+  connected: "Connected successfully"
+  dependencies_displayed: "Dependencies displayed successfully"
+  services_listed: "Services listed successfully"
+  no_conflicts: "No service conflicts detected"
+  configuration_valid: "Configuration is valid"
 
 validation:
   failed: "validation failed: %w"
@@ -144,6 +152,20 @@ warnings:
   not_git_repository: "Not in a git repository. Consider running 'git init' first."
   failed_gitignore: "Failed to update .gitignore: %v"
   failed_readme: "Failed to create README: %v"
+  cleanup_warning: "This will remove all containers, networks, and volumes"
+
+info:
+  no_cleanup_options: "No cleanup options specified. Use --help for available options"
+  no_services_specified: "No services specified"
+  no_shared_containers: "No shared containers registered"
+  shared_containers: "Shared containers:"
+  project_config_summary: "Project Configuration Summary:"
+  validation_options: "  Validation Options:"
+  connecting_to_service: "Connecting to service"
+  status_all_projects: "Status (all projects)"
+  shared_containers_status: "Shared containers status"
+  cleaning_project: "Cleaning up project: %s"
+  project_info: "Project: %s"
 
 notifications:
   config_header: "Notification Configuration:"

@@ -40,7 +40,7 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 	defer cleanup()
 
-	base.Output.Header("Connecting to service")
+	base.Output.Header(messages.InfoConnectingToService)
 
 	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
@@ -50,7 +50,7 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	if len(serviceConfigs) > 0 {
 		base.Output.Info("Service: %s", serviceConfigs[0].Name)
 	}
-	base.Output.Success("Connected successfully")
+	base.Output.Success(messages.SuccessConnected)
 	base.Output.Info("Project: %s", setup.Config.Project.Name)
 
 	return nil
