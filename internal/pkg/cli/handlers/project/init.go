@@ -16,8 +16,8 @@ import (
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // InitHandler handles the init command
@@ -98,7 +98,7 @@ func (h *InitHandler) setDefaultProjectName(initFlags *core.InitFlags, base *bas
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "failed to get current directory", err)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsCurrentDirectoryFailed, err)
 	}
 
 	initFlags.ProjectName = filepath.Base(cwd)
@@ -150,15 +150,15 @@ func (h *InitHandler) validateNonInteractiveMode(cmd *cobra.Command, initFlags *
 }
 
 func (h *InitHandler) displaySuccessMessage(_ string, base *base.BaseCommand) {
-	base.Output.Success("%s", core.MsgSuccess_init)
-	base.Output.Info("%s", core.MsgInit_next_steps)
+	base.Output.Success("%s", messages.SuccessInit)
+	base.Output.Info("%s", messages.InitNextSteps)
 	h.displayNextSteps(base)
 }
 
 func (h *InitHandler) displayNextSteps(base *base.BaseCommand) {
-	base.Output.Info(core.MsgInit_step_review_config, core.OttoStackDir, core.ConfigFileName)
-	base.Output.Info(core.MsgInit_step_start_stack, core.AppName)
-	base.Output.Info(core.MsgInit_step_check_status, core.AppName)
+	base.Output.Info(messages.InitStepReviewConfig, core.OttoStackDir, core.ConfigFileName)
+	base.Output.Info(messages.InitStepStartStack, core.AppName)
+	base.Output.Info(messages.InitStepCheckStatus, core.AppName)
 }
 
 // ValidateArgs validates the command arguments

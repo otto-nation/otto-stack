@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
@@ -22,12 +22,12 @@ func NewConflictsHandler() *ConflictsHandler {
 
 // Handle executes the conflicts command
 func (h *ConflictsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	base.Output.Header("%s", core.MsgConflicts_header)
+	base.Output.Header("%s", messages.ConflictsHeader)
 
 	conflicts := h.detectPortConflicts()
 
 	if len(conflicts) == 0 {
-		base.Output.Success("No service conflicts detected")
+		base.Output.Success(messages.SuccessNoConflicts)
 		return nil
 	}
 

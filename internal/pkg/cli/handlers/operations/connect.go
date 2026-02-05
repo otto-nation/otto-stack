@@ -8,6 +8,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // ConnectHandler handles the connect command
@@ -21,7 +22,7 @@ func NewConnectHandler() *ConnectHandler {
 // ValidateArgs validates the command arguments
 func (h *ConnectHandler) ValidateArgs(args []string) error {
 	if len(args) < 1 {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service name is required", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationServiceNameRequired, nil)
 	}
 	return nil
 }
@@ -39,7 +40,7 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 	defer cleanup()
 
-	base.Output.Header("Connecting to service")
+	base.Output.Header(messages.InfoConnectingToService)
 
 	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
@@ -49,7 +50,7 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	if len(serviceConfigs) > 0 {
 		base.Output.Info("Service: %s", serviceConfigs[0].Name)
 	}
-	base.Output.Success("Connected successfully")
+	base.Output.Success(messages.SuccessConnected)
 	base.Output.Info("Project: %s", setup.Config.Project.Name)
 
 	return nil

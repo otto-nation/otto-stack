@@ -12,6 +12,7 @@ import (
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
@@ -32,7 +33,7 @@ func (cm *ConfigManager) CreateConfigFile(ctx clicontext.Context, base *base.Bas
 
 	configPath := core.OttoStackDir + "/" + core.ConfigFileName
 	if err := os.WriteFile(configPath, configBytes, core.PermReadWrite); err != nil {
-		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, configPath, "write config file", err)
+		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, configPath, messages.ErrorsConfigWriteFailed, err)
 	}
 
 	base.Output.Success("Created configuration file: %s", configPath)

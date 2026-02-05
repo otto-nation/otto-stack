@@ -7,6 +7,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/spf13/cobra"
 )
 
@@ -27,11 +28,11 @@ func (h *ValidateHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	// Load configuration
 	_, err := config.LoadConfig()
 	if err != nil {
-		return ci.FormatError(flags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "load configuration", err))
+		return ci.FormatError(flags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsConfigLoadFailed, err))
 	}
 
 	if !flags.Quiet {
-		base.Output.Success("Configuration is valid")
+		base.Output.Success(messages.SuccessConfigurationValid)
 	}
 
 	return nil

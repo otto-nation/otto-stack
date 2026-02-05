@@ -15,6 +15,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
@@ -58,7 +59,7 @@ func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Comm
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
-		base.Output.Header(core.MsgLifecycle_status)
+		base.Output.Header(messages.LifecycleStatus)
 	}
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
@@ -91,9 +92,9 @@ func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command
 
 	if !ciFlags.Quiet {
 		if showAll {
-			base.Output.Header("Status (all projects)")
+			base.Output.Header(messages.InfoStatusAllProjects)
 		} else {
-			base.Output.Header("Shared containers status")
+			base.Output.Header(messages.InfoSharedContainersStatus)
 		}
 	}
 
@@ -110,11 +111,11 @@ func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command
 	}
 
 	if len(sharedContainers) == 0 {
-		base.Output.Info("No shared containers registered")
+		base.Output.Info(messages.InfoNoSharedContainers)
 		return nil
 	}
 
-	base.Output.Info("Shared containers:")
+	base.Output.Info(messages.InfoSharedContainers)
 	for _, container := range sharedContainers {
 		base.Output.Info("  - %s (used by: %v)", container.Name, container.Projects)
 	}
@@ -125,7 +126,7 @@ func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command
 func (h *StatusHandler) resolveServices(args []string, setup *common.CoreSetup, ciFlags *ci.Flags) ([]types.ServiceConfig, error) {
 	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
-		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "resolve services", err))
+		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackResolveFailed, err))
 	}
 	return serviceConfigs, nil
 }
@@ -135,7 +136,7 @@ func (h *StatusHandler) getServiceStatuses(ctx context.Context, projectName stri
 
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "create service", err))
+		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackCreateFailed, err))
 	}
 
 	statuses, err := stackService.Status(ctx, services.StatusRequest{
@@ -143,7 +144,7 @@ func (h *StatusHandler) getServiceStatuses(ctx context.Context, projectName stri
 		Services: filteredServices,
 	})
 	if err != nil {
-		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "get service status", err))
+		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackGetStatusFailed, err))
 	}
 
 	return statuses, nil

@@ -5,6 +5,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
@@ -44,7 +45,7 @@ func (ssm *ServiceSelectionManager) RunWorkflow(handler *InitHandler, base *base
 }
 
 func (ssm *ServiceSelectionManager) logWorkflowStart(base *base.BaseCommand) {
-	base.Output.Header("%s", core.MsgProcess_initializing)
+	base.Output.Header("%s", messages.ProcessInitializing)
 	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
 }
 
@@ -113,10 +114,10 @@ func (ssm *ServiceSelectionManager) handleAction(action string, base *base.BaseC
 	case core.ActionProceed:
 		return true
 	case core.ActionBack:
-		base.Output.Info("%s", core.MsgInit_going_back)
+		base.Output.Info("%s", messages.InitGoingBack)
 		return false
 	default:
-		base.Output.Info("%s", core.MsgInit_cancelled)
+		base.Output.Info("%s", messages.InitCancelled)
 		return false
 	}
 }

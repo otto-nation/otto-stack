@@ -21,7 +21,7 @@ func NewConfigService() ConfigService {
 func (s *configService) LoadConfig() (*Config, error) {
 	cfg, err := LoadConfig()
 	if err != nil {
-		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", "failed to load configuration", err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", messages.ErrorsConfigLoadFailed, err)
 	}
 	return cfg, nil
 }
@@ -29,13 +29,13 @@ func (s *configService) LoadConfig() (*Config, error) {
 // SaveConfig saves the project configuration
 func (s *configService) SaveConfig(cfg *Config) error {
 	// For now, return not implemented since there's no SaveConfig in the config package
-	return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", "save configuration not implemented", nil)
+	return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", messages.ErrorsConfigSaveNotImplemented, nil)
 }
 
 // ValidateConfig validates the configuration
 func (s *configService) ValidateConfig(cfg *Config) error {
 	if cfg == nil {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "config", "configuration is nil", nil)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "config", messages.ErrorsConfigNil, nil)
 	}
 
 	if cfg.Project.Name == "" {
@@ -52,12 +52,12 @@ func (s *configService) ValidateConfig(cfg *Config) error {
 // GetConfigHash returns a hash of the current configuration
 func (s *configService) GetConfigHash(cfg *Config) (string, error) {
 	if cfg == nil {
-		return "", pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "config", "configuration is nil", nil)
+		return "", pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "config", messages.ErrorsConfigNil, nil)
 	}
 
 	data, err := json.Marshal(cfg)
 	if err != nil {
-		return "", pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", "failed to marshal configuration for hashing", err)
+		return "", pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", messages.ErrorsConfigMarshalFailed, err)
 	}
 
 	hash := sha256.Sum256(data)

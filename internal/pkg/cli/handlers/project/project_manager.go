@@ -14,6 +14,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/env"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
@@ -59,17 +60,17 @@ func NewProjectManager() *ProjectManager {
 // CreateProjectStructure creates the complete project structure
 func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, base *base.BaseCommand) error {
 	if err := pm.directoryManager.CreateDirectoryStructure(); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, "create directories", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsDirectoryCreateFailed, err)
 	}
 
 	if err := pm.configManager.CreateConfigFile(projectCtx, base); err != nil {
-		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", "create config file", err)
+		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", messages.ErrorsConfigWriteFailed, err)
 	}
 
 	pm.configManager.GenerateServiceConfigs(projectCtx.Services.Configs, base)
 
 	if err := pm.generateInitialComposeFiles(projectCtx.Services.Configs, projectCtx.Project.Name, projectCtx.Options.Validation, projectCtx.Options.Advanced, base); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", "generate files", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeGenerateFailed, err)
 	}
 
 	if err := pm.createGitignoreEntries(base); err != nil {

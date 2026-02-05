@@ -10,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/validation"
@@ -33,7 +34,7 @@ func SetupCoreCommand(ctx context.Context, base *base.BaseCommand) (*CoreSetup, 
 	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
 	cfg, err := LoadProjectConfig(configPath)
 	if err != nil {
-		return nil, nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, "load config", err)
+		return nil, nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, messages.ErrorsConfigLoadFailed, err)
 	}
 
 	// Create Docker client
@@ -57,7 +58,7 @@ func LoadProjectConfig(configPath string) (*config.Config, error) {
 	// Load base config
 	baseConfig, err := loadSingleConfig(configPath)
 	if err != nil {
-		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, "load base config", err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, messages.ErrorsConfigLoadFailed, err)
 	}
 
 	// Try to load local config
@@ -68,7 +69,7 @@ func LoadProjectConfig(configPath string) (*config.Config, error) {
 		if os.IsNotExist(err) {
 			return baseConfig, nil
 		}
-		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, "load local config", err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, messages.ErrorsConfigLoadFailed, err)
 	}
 
 	// Merge configs (local overrides base)
@@ -85,7 +86,7 @@ func loadSingleConfig(configPath string) (*config.Config, error) {
 
 	var cfg config.Config
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, "parse config", err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, messages.ErrorsConfigParseFailed, err)
 	}
 
 	return &cfg, nil
@@ -120,7 +121,7 @@ func ResolveServiceConfigs(args []string, setup *CoreSetup) ([]types.ServiceConf
 	}
 
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "resolve services", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsStackResolveFailed, err)
 	}
 
 	return serviceConfigs, nil

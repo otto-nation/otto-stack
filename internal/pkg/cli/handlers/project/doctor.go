@@ -8,6 +8,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 )
@@ -31,18 +32,18 @@ func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	verbose, _ := cmd.Flags().GetBool("verbose")
 	logger.Debug("Running doctor command", "verbose", verbose)
 
-	base.Output.Header(core.MsgDoctor_health_check_header, core.AppName)
+	base.Output.Header(messages.DoctorHealthCheckHeader, core.AppName)
 	logger.Info("Starting health checks")
 
 	allGood := h.healthCheckManager.RunAllChecks(base)
 
 	if allGood {
-		base.Output.Success(core.MsgSuccess_all_checks_passed, core.AppName)
+		base.Output.Success(messages.SuccessAllChecksPassed, core.AppName)
 		logger.Info("All health checks passed")
 		return nil
 	}
 
-	base.Output.Error(core.MsgDoctor_some_issues)
+	base.Output.Error(messages.DoctorSomeIssues)
 	logger.Error("Health checks failed")
-	return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "health", "health check failed", nil)
+	return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "health", messages.DoctorHealthCheckFailed, nil)
 }

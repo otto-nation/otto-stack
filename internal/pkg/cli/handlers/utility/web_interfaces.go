@@ -13,6 +13,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
@@ -84,7 +85,7 @@ func (h *WebInterfacesHandler) getRunningServices(setup *common.CoreSetup, servi
 
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "create stack service", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackCreateFailed, err)
 	}
 
 	statuses, err := stackService.Status(context.Background(), services.StatusRequest{
@@ -92,7 +93,7 @@ func (h *WebInterfacesHandler) getRunningServices(setup *common.CoreSetup, servi
 		Services: serviceNames,
 	})
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "get service status", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackGetStatusFailed, err)
 	}
 
 	running := make(map[string]bool)
@@ -148,7 +149,7 @@ func (h *WebInterfacesHandler) outputResults(interfaces []WebInterface, ciFlags 
 	}
 
 	if len(interfaces) == 0 {
-		base.Output.Info(core.MsgWeb_interfaces_no_interfaces_found)
+		base.Output.Info(messages.WebInterfacesNoInterfacesFound)
 		return
 	}
 
@@ -189,9 +190,9 @@ func (h *WebInterfacesHandler) checkStatus(url string) string {
 
 func (h *WebInterfacesHandler) formatStatus(available bool) string {
 	if available {
-		return core.IconHealth_healthy + " " + core.MsgWeb_interfaces_available
+		return core.IconHealth_healthy + " " + messages.WebInterfacesAvailable
 	}
-	return core.IconHealth_unhealthy + " " + core.MsgWeb_interfaces_not_available
+	return core.IconHealth_unhealthy + " " + messages.WebInterfacesNotAvailable
 }
 
 func (h *WebInterfacesHandler) formatStatusFromResponse(statusCode int) string {

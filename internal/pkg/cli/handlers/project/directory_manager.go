@@ -5,6 +5,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // DirectoryManager handles directory creation operations
@@ -24,7 +25,7 @@ func (dm *DirectoryManager) CreateDirectoryStructure() error {
 
 	for _, dir := range directories {
 		if err := os.MkdirAll(dir, core.PermReadWriteExec); err != nil {
-			return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, dir, "write config file", err)
+			return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, dir, messages.ErrorsConfigWriteFailed, err)
 		}
 	}
 
