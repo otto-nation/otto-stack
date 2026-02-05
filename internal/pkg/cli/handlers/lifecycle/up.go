@@ -48,7 +48,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 }
 
 func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
-	base.Output.Header("%s", core.MsgLifecycle_starting)
+	base.Output.Header("%s", messages.LifecycleStarting)
 
 	// Validate flags
 	if err := validation.ValidateUpFlags(cmd); err != nil {
@@ -112,7 +112,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 }
 
 func (h *UpHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
-	base.Output.Header(core.MsgShared_starting)
+	base.Output.Header(messages.SharedStarting)
 
 	if len(args) == 0 {
 		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationNoServicesSelected, nil)
@@ -186,7 +186,7 @@ func (h *UpHandler) filterSharedServices(serviceConfigs []types.ServiceConfig, c
 }
 
 func (h *UpHandler) displaySuccess(base *base.BaseCommand, serviceConfigs []types.ServiceConfig) {
-	base.Output.Success(core.MsgShared_registered)
+	base.Output.Success(messages.SharedRegistered)
 	for _, svc := range serviceConfigs {
 		base.Output.Info("  %s %s (shared)", ui.IconSuccess, svc.Name)
 	}

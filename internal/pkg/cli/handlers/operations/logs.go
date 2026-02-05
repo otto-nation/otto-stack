@@ -10,8 +10,8 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 // LogsHandler handles the logs command
@@ -24,7 +24,7 @@ func NewLogsHandler() *LogsHandler {
 
 // Handle executes the logs command
 func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	base.Output.Header(core.MsgLifecycle_logs)
+	base.Output.Header(messages.LifecycleLogs)
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
 	if err != nil {

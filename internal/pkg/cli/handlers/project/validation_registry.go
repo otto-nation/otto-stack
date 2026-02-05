@@ -60,7 +60,7 @@ func validateServiceDefinitions(h *InitHandler, serviceConfigs []types.ServiceCo
 
 func validateFilePermissions(h *InitHandler, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
 	if _, err := os.Stat(".git"); os.IsNotExist(err) {
-		base.Output.Warning("%s", core.MsgWarnings_not_git_repository)
+		base.Output.Warning("%s", messages.WarningsNotGitRepository)
 	}
 	return nil
 }

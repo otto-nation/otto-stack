@@ -12,8 +12,8 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 
-	"github.com/spf13/cobra"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+	"github.com/spf13/cobra"
 )
 
 // CleanupHandler handles the cleanup command
@@ -33,7 +33,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 
 	ciFlags := ci.GetFlags(cmd)
 	if !ciFlags.Quiet {
-		base.Output.Header(core.MsgLifecycle_cleaning)
+		base.Output.Header(messages.LifecycleCleaning)
 	}
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
@@ -65,7 +65,7 @@ func (h *CleanupHandler) handleOrphanCleanup(setup *common.CoreSetup, base *base
 		return ci.FormatError(*ciFlags, err)
 	}
 	if !ciFlags.Quiet {
-		base.Output.Success(core.MsgOrphan_cleanup_success)
+		base.Output.Success(messages.OrphanCleanupSuccess)
 	}
 	return nil
 }
@@ -134,11 +134,11 @@ func (h *CleanupHandler) checkOrphans(_ *common.CoreSetup, base *base.BaseComman
 		return err
 	}
 
-	base.Output.Warning(core.MsgOrphan_found, len(orphans))
+	base.Output.Warning(messages.OrphanFound, len(orphans))
 	for _, orphan := range orphans {
 		base.Output.Info("  - %s (%s)", orphan.Service, orphan.Reason)
 	}
-	base.Output.Info(core.MsgOrphan_run_cleanup_hint)
+	base.Output.Info(messages.OrphanRunCleanupHint)
 	return nil
 }
 
@@ -156,13 +156,13 @@ func (h *CleanupHandler) cleanOrphans(_ *common.CoreSetup, base *base.BaseComman
 
 	if len(orphans) == 0 {
 		if !ciFlags.Quiet {
-			base.Output.Info(core.MsgOrphan_none_found)
+			base.Output.Info(messages.OrphanNoneFound)
 		}
 		return nil
 	}
 
 	if !force && !ciFlags.NonInteractive && !h.confirmOrphanCleanup(base, orphans) {
-		base.Output.Info(core.MsgOrphan_cleanup_cancelled)
+		base.Output.Info(messages.OrphanCleanupCancelled)
 		return nil
 	}
 
@@ -172,7 +172,7 @@ func (h *CleanupHandler) cleanOrphans(_ *common.CoreSetup, base *base.BaseComman
 	}
 
 	if !ciFlags.Quiet {
-		base.Output.Success(core.MsgOrphan_removed_from_registry, len(cleaned))
+		base.Output.Success(messages.OrphanRemovedFromRegistry, len(cleaned))
 		for _, service := range cleaned {
 			base.Output.Info("  - %s", service)
 		}
@@ -198,7 +198,7 @@ func (h *CleanupHandler) getRegistry() (*registry.Manager, error) {
 
 // confirmOrphanCleanup prompts user to confirm orphan cleanup
 func (h *CleanupHandler) confirmOrphanCleanup(base *base.BaseCommand, orphans []registry.OrphanInfo) bool {
-	base.Output.Warning(core.MsgOrphan_will_remove)
+	base.Output.Warning(messages.OrphanWillRemove)
 	for _, orphan := range orphans {
 		base.Output.Info("  - %s", orphan.Service)
 	}

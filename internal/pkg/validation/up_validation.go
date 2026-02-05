@@ -3,8 +3,8 @@ package validation
 import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-	"github.com/spf13/cobra"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+	"github.com/spf13/cobra"
 )
 
 // ValidateUpArgs validates arguments for the up command

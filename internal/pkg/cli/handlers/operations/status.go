@@ -15,11 +15,11 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
-	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // StatusHandler handles the status command
@@ -59,7 +59,7 @@ func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Comm
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
-		base.Output.Header(core.MsgLifecycle_status)
+		base.Output.Header(messages.LifecycleStatus)
 	}
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)

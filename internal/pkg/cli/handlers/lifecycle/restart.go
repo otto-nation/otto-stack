@@ -10,10 +10,10 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
-	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // RestartHandler handles the restart command
@@ -26,12 +26,12 @@ func NewRestartHandler() *RestartHandler {
 
 // Handle executes the restart command
 func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	base.Output.Header(core.MsgLifecycle_restarting)
+	base.Output.Header(messages.LifecycleRestarting)
 
 	ciFlags := ci.GetFlags(cmd)
 	if ciFlags.DryRun {
-		base.Output.Info("%s", core.MsgDry_run_showing_what_would_happen)
-		base.Output.Info(core.MsgDry_run_would_restart_services, fmt.Sprintf("%v", args))
+		base.Output.Info("%s", messages.DryRunShowingWhatWouldHappen)
+		base.Output.Info(messages.DryRunWouldRestartServices, fmt.Sprintf("%v", args))
 		return nil
 	}
 
@@ -61,7 +61,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return err
 	}
 
-	base.Output.Success(core.MsgLifecycle_restart_success)
+	base.Output.Success(messages.LifecycleRestartSuccess)
 	return nil
 }
 

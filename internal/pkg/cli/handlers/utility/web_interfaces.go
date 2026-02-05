@@ -13,10 +13,10 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
-	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // WebInterfacesHandler handles the web interfaces command
@@ -149,7 +149,7 @@ func (h *WebInterfacesHandler) outputResults(interfaces []WebInterface, ciFlags 
 	}
 
 	if len(interfaces) == 0 {
-		base.Output.Info(core.MsgWeb_interfaces_no_interfaces_found)
+		base.Output.Info(messages.WebInterfacesNoInterfacesFound)
 		return
 	}
 
@@ -190,9 +190,9 @@ func (h *WebInterfacesHandler) checkStatus(url string) string {
 
 func (h *WebInterfacesHandler) formatStatus(available bool) string {
 	if available {
-		return core.IconHealth_healthy + " " + core.MsgWeb_interfaces_available
+		return core.IconHealth_healthy + " " + messages.WebInterfacesAvailable
 	}
-	return core.IconHealth_unhealthy + " " + core.MsgWeb_interfaces_not_available
+	return core.IconHealth_unhealthy + " " + messages.WebInterfacesNotAvailable
 }
 
 func (h *WebInterfacesHandler) formatStatusFromResponse(statusCode int) string {

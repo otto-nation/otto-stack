@@ -2,8 +2,8 @@ package services
 
 import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // ExtractServiceNames extracts service names from ServiceConfigs

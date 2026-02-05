@@ -7,9 +7,9 @@ import (
 	"github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/core"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"gopkg.in/yaml.v3"
-	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // Manager handles all service operations

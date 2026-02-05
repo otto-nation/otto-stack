@@ -13,11 +13,11 @@ import (
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
-	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // DownHandler handles the down command
@@ -48,7 +48,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 }
 
 func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
-	base.Output.Header(core.MsgLifecycle_stopping)
+	base.Output.Header(messages.LifecycleStopping)
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
 	if err != nil {
@@ -67,7 +67,7 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 	}
 
 	if len(serviceConfigs) == 0 {
-		base.Output.Info(core.MsgShared_no_services_to_stop)
+		base.Output.Info(messages.SharedNoServicesToStop)
 		return nil
 	}
 
@@ -106,7 +106,7 @@ func (h *DownHandler) findSharedServices(serviceConfigs []types.ServiceConfig, r
 }
 
 func (h *DownHandler) promptAndFilterShared(base *base.BaseCommand, reg *registry.Manager, sharedServices []string, serviceConfigs []types.ServiceConfig) []types.ServiceConfig {
-	base.Output.Warning(core.MsgShared_will_stop)
+	base.Output.Warning(messages.SharedWillStop)
 	for _, svc := range sharedServices {
 		container, err := reg.Get(svc)
 		if err == nil && container != nil {
@@ -115,7 +115,7 @@ func (h *DownHandler) promptAndFilterShared(base *base.BaseCommand, reg *registr
 	}
 
 	if !h.promptStopShared(base) {
-		base.Output.Info(core.MsgShared_skipping)
+		base.Output.Info(messages.SharedSkipping)
 		return h.filterOutShared(sharedServices, serviceConfigs)
 	}
 
@@ -168,7 +168,7 @@ func (h *DownHandler) displayStopSuccess(base *base.BaseCommand, setup *common.C
 }
 
 func (h *DownHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
-	base.Output.Header(core.MsgShared_stopping)
+	base.Output.Header(messages.SharedStopping)
 
 	servicesToStop, err := h.determineServicesToStop(args, execCtx, base)
 	if err != nil {
@@ -199,7 +199,7 @@ func (h *DownHandler) determineServicesToStop(args []string, execCtx *clicontext
 	}
 
 	if len(containers) == 0 {
-		base.Output.Info(core.MsgShared_no_containers)
+		base.Output.Info(messages.SharedNoContainers)
 		return nil, nil
 	}
 
@@ -207,7 +207,7 @@ func (h *DownHandler) determineServicesToStop(args []string, execCtx *clicontext
 }
 
 func (h *DownHandler) promptStopAll(containers []*registry.ContainerInfo, base *base.BaseCommand) []string {
-	base.Output.Warning(core.MsgShared_stop_all_prompt)
+	base.Output.Warning(messages.SharedStopAllPrompt)
 	var services []string
 	for _, container := range containers {
 		base.Output.Info("  - %s (used by: %v)", container.Name, container.Projects)
@@ -215,7 +215,7 @@ func (h *DownHandler) promptStopAll(containers []*registry.ContainerInfo, base *
 	}
 
 	if !h.promptStopShared(base) {
-		base.Output.Info(core.MsgShared_cancelled)
+		base.Output.Info(messages.SharedCancelled)
 		return nil
 	}
 
