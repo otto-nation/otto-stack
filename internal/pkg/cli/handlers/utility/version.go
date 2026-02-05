@@ -8,6 +8,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/otto-nation/otto-stack/internal/pkg/version"
 	"github.com/spf13/cobra"
@@ -60,11 +61,11 @@ func (h *Handler) Handle(ctx context.Context, cmd *cobra.Command, args []string,
 
 // handleCheckUpdates handles the --check-updates flag
 func (h *Handler) handleCheckUpdates(_ context.Context, _ *cobra.Command, _ []string, _ *base.BaseCommand) error {
-	h.output.Header("%s", core.MsgVersion_checking_updates)
+	h.output.Header("%s", messages.VersionCheckingUpdates)
 
 	// Get current version (this should come from build-time ldflags)
 	currentVersion := h.versionDisplayManager.GetCurrentVersion()
-	h.output.Info(core.MsgVersion_current_info, currentVersion)
+	h.output.Info(messages.VersionCurrentInfo, currentVersion)
 
 	// Check for updates
 	checker := version.NewUpdateChecker(currentVersion)
@@ -74,19 +75,19 @@ func (h *Handler) handleCheckUpdates(_ context.Context, _ *cobra.Command, _ []st
 	}
 
 	if !hasUpdate {
-		h.output.Success("%s", core.MsgSuccess_latest_version)
+		h.output.Success("%s", messages.SuccessLatestVersion)
 		return nil
 	}
 
-	h.output.Warning(core.MsgVersion_update_available, currentVersion, release.TagName)
-	h.output.Info(core.MsgVersion_release_info, release.Name)
+	h.output.Warning(messages.VersionUpdateAvailable, currentVersion, release.TagName)
+	h.output.Info(messages.VersionReleaseInfo, release.Name)
 
 	// Show update instructions
 	h.output.Info("")
-	h.output.Info("%s", core.MsgVersion_update_info)
-	h.output.Info(core.MsgVersion_install_script,
+	h.output.Info("%s", messages.VersionUpdateInfo)
+	h.output.Info(messages.VersionInstallScript,
 		core.GitHubOrg, core.GitHubRepo)
-	h.output.Info(core.MsgVersion_manual_download,
+	h.output.Info(messages.VersionManualDownload,
 		core.GitHubOrg, core.GitHubRepo)
 
 	return nil

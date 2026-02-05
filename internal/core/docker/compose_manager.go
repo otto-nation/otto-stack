@@ -10,6 +10,7 @@ import (
 	"github.com/docker/compose/v5/pkg/api"
 	"github.com/docker/compose/v5/pkg/compose"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // Manager wraps the official Docker Compose SDK
@@ -21,16 +22,16 @@ type Manager struct {
 func NewManager() (*Manager, error) {
 	dockerCli, err := command.NewDockerCli()
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeInternal, pkgerrors.ComponentDocker, "create CLI", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeInternal, pkgerrors.ComponentDocker, messages.ErrorsDockerCreateCliFailed, err)
 	}
 
 	if err := dockerCli.Initialize(flags.NewClientOptions()); err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeInternal, pkgerrors.ComponentDocker, "initialize CLI", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeInternal, pkgerrors.ComponentDocker, messages.ErrorsDockerInitializeCliFailed, err)
 	}
 
 	service, err := compose.NewComposeService(dockerCli)
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeInternal, pkgerrors.ComponentDocker, "create compose service", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeInternal, pkgerrors.ComponentDocker, messages.ErrorsDockerCreateComposeFailed, err)
 	}
 
 	return &Manager{
@@ -85,7 +86,7 @@ func (m *Manager) LoadProject(ctx context.Context, composePath string, projectNa
 		ProjectName: projectName,
 	})
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "load compose project", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, messages.ErrorsDockerLoadProjectFailed, err)
 	}
 
 	return project, nil

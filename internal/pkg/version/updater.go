@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // GitHubRelease represents a GitHub release
@@ -56,7 +58,7 @@ func (u *UpdateChecker) CheckForUpdates() (*GitHubRelease, bool, error) {
 	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, false, fmt.Errorf("GitHub API returned status %d", resp.StatusCode)
+		return nil, false, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "version", messages.VersionGithubApiError, nil)
 	}
 
 	var release GitHubRelease
@@ -125,7 +127,7 @@ func ValidateProjectVersion(projectPath string) error {
 	}
 
 	if !constraint.Satisfies(*currentVersion) {
-		return fmt.Errorf("version %s does not satisfy constraint %s",
+		return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, "version", messages.VersionConstraintNotSatisfied,
 			currentVersion, constraint.Original)
 	}
 

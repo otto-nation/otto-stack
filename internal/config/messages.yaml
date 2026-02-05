@@ -44,6 +44,14 @@ success:
   version_compliance_satisfied: "✅ Version compliance satisfied"
   no_version_drift: "✅ No version drift detected"
   generated_files: "Generated %s and %s"
+  services_started: "Services started successfully"
+  services_stopped: "Services stopped successfully"
+  cleanup_completed: "Cleanup completed"
+  connected: "Connected successfully"
+  dependencies_displayed: "Dependencies displayed successfully"
+  services_listed: "Services listed successfully"
+  no_conflicts: "No service conflicts detected"
+  configuration_valid: "Configuration is valid"
 
 validation:
   failed: "validation failed: %w"
@@ -60,6 +68,9 @@ validation:
   duplicate_service: "duplicate service '%s' found"
   invalid_service: "invalid service '%s': %w"
   conflicting_file_exists: "conflicting file '%s' already exists. Please remove or rename it before initializing"
+  services_required_non_interactive: "services flag is required in non-interactive mode"
+  project_name_required_non_interactive: "project name is required in non-interactive mode"
+  service_name_required: "service name is required"
 
 conflicts:
   header: "Service Conflicts"
@@ -83,6 +94,12 @@ version:
   platform: "Platform: %s/%s"
   update_available: "⚠️  Update available: %s → %s"
   invalid_version: "invalid version format"
+  invalid_format: "Invalid version format: %s"
+  invalid_major: "Invalid major version: %s"
+  invalid_minor: "Invalid minor version: %s"
+  invalid_patch: "Invalid patch version: %s"
+  constraint_not_satisfied: "Version %s does not satisfy constraint %s"
+  github_api_error: "GitHub API returned status %d"
 
 doctor:
   some_issues: "Some issues found. Please address them above."
@@ -125,12 +142,30 @@ init:
   step_review_config: "1. Review configuration in %s/%s"
   step_start_stack: "2. Start your stack: %s up"
   step_check_status: "3. Check status: %s status"
+  template_process_failed: "Failed to process template for service %s: %w"
+  config_parse_failed: "Failed to parse init configuration %s: %w"
+  script_execute_failed: "Failed to execute init script for service %s: %w"
+  container_execute_failed: "Failed to execute init container for service %s: %w"
 
 warnings:
   update_available: "🔔 Update available: %s → %s (%s)"
   not_git_repository: "Not in a git repository. Consider running 'git init' first."
   failed_gitignore: "Failed to update .gitignore: %v"
   failed_readme: "Failed to create README: %v"
+  cleanup_warning: "This will remove all containers, networks, and volumes"
+
+info:
+  no_cleanup_options: "No cleanup options specified. Use --help for available options"
+  no_services_specified: "No services specified"
+  no_shared_containers: "No shared containers registered"
+  shared_containers: "Shared containers:"
+  project_config_summary: "Project Configuration Summary:"
+  validation_options: "  Validation Options:"
+  connecting_to_service: "Connecting to service"
+  status_all_projects: "Status (all projects)"
+  shared_containers_status: "Shared containers status"
+  cleaning_project: "Cleaning up project: %s"
+  project_info: "Project: %s"
 
 notifications:
   config_header: "Notification Configuration:"
@@ -152,6 +187,91 @@ errors:
   requires_service_and_command: "exec requires a service name and command"
   version_compliance_failed: "version compliance check failed"
   no_strategy_found: "no strategy found for execution context"
+  
+  # Config errors
+  config_not_found: "Configuration file not found: %s. Run 'otto-stack init' to create it."
+  config_parse_failed: "Failed to parse configuration file: %v"
+  config_load_failed: "Failed to load configuration: %v"
+  config_write_failed: "Failed to write configuration file: %v"
+  config_nil: "Configuration is missing or invalid"
+  config_save_not_implemented: "Saving configuration is not yet supported"
+  
+  # Service errors
+  service_not_found: "Service '%s' not found. Run 'otto-stack services' to see available services."
+  service_unknown: "Unknown service: %s"
+  service_not_accessible: "Service '%s' is not accessible in your current configuration"
+  service_file_not_found: "Service definition file not found: %s"
+  service_load_failed: "Failed to load services: %v"
+  service_operation_not_found: "Operation '%s' not found"
+  service_no_connect_operation: "Service '%s' does not have a connect operation configured"
+  
+  # Docker errors
+  docker_client_create_failed: "Failed to create Docker client. Is Docker running?"
+  docker_unavailable: "Docker is not available. Please start Docker and try again."
+  
+  # Stack operation errors
+  stack_start_failed: "Failed to start services: %v"
+  stack_stop_failed: "Failed to stop services: %v"
+  stack_resolve_failed: "Failed to resolve services: %v"
+  stack_create_failed: "Failed to create stack service: %v"
+  stack_get_status_failed: "Failed to get service status: %v"
+  
+  # Compose errors
+  compose_generate_failed: "Failed to generate docker-compose file: %v"
+  compose_marshal_failed: "Failed to format docker-compose data: %v"
+  compose_write_failed: "Failed to write docker-compose file: %v"
+  compose_dir_create_failed: "Failed to create compose directory: %v"
+  
+  # Directory/File errors
+  directory_create_failed: "Failed to create directory: %v"
+  file_write_failed: "Failed to write file: %v"
+  current_directory_failed: "Failed to get current directory: %v"
+  
+  # Registry errors
+  registry_load_failed: "Failed to load container registry: %v"
+  
+  # Service operation errors
+  service_operation_failed: "Service operation failed: %v"
+  service_manager_create_failed: "Failed to create service manager: %v"
+  service_read_directory_failed: "Failed to read services directory: %v"
+  service_load_category_failed: "Failed to load service category: %v"
+  service_read_category_failed: "Failed to read category directory: %v"
+  
+  # Docker operation errors
+  docker_create_cli_failed: "Failed to create Docker CLI: %v"
+  docker_initialize_cli_failed: "Failed to initialize Docker CLI: %v"
+  docker_create_compose_failed: "Failed to create Docker Compose service: %v"
+  docker_load_project_failed: "Failed to load Docker Compose project: %v"
+  docker_list_containers_failed: "Failed to list Docker containers: %v"
+  docker_create_container_failed: "Failed to create Docker container: %v"
+  docker_start_container_failed: "Failed to start Docker container: %v"
+  
+  # Stack manager errors
+  stack_resolve_services_failed: "Failed to resolve services: %v"
+  stack_docker_client_failed: "Failed to create Docker client: %v"
+  stack_compose_generate_failed: "Failed to generate compose file: %v"
+  stack_project_load_failed: "Failed to load project: %v"
+  stack_services_start_failed: "Failed to start services: %v"
+  stack_project_start_failed: "Failed to start project: %v"
+  stack_project_stop_failed: "Failed to stop project: %v"
+  stack_project_remove_failed: "Failed to remove project: %v"
+  stack_init_scripts_failed: "Failed to execute initialization scripts: %v"
+  stack_get_logs_failed: "Failed to get logs: %v"
+  stack_exec_command_failed: "Failed to execute command: %v"
+  
+  # Config errors (additional)
+  config_marshal_failed: "Failed to process configuration: %v"
+  config_parse_service_failed: "Failed to parse service configuration: %v"
+  
+  # Service configuration errors
+  service_no_connect_command: "Service '%s' does not have a connect command configured"
+  service_no_custom_operations: "Service '%s' does not have custom operations configured"
+  service_selection_failed: "Failed to select services: %v"
+  
+  # Validation errors
+  validation_failed: "Validation failed: %v"
+  parse_flags_failed: "Failed to parse command flags: %v"
+  empty_version: "Version string cannot be empty"
 
 stack:
   failed_load_config: "failed to load config: %w"
@@ -195,3 +315,6 @@ shared:
   cancelled: "Cancelled"
   skipping: "Skipping shared containers"
   no_services_to_stop: "No services to stop"
+
+middleware:
+  project_already_initialized: "Project already initialized. Use --%s to overwrite"

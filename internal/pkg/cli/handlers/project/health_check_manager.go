@@ -11,6 +11,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // HealthCheckManager handles system health checks
@@ -31,11 +32,11 @@ func (hcm *HealthCheckManager) RunAllChecks(base *base.BaseCommand) bool {
 
 // CheckDocker verifies Docker is available and running
 func (hcm *HealthCheckManager) CheckDocker(base *base.BaseCommand) bool {
-	base.Output.Info(core.MsgDoctor_checking_docker)
+	base.Output.Info(messages.DoctorCheckingDocker)
 
 	if !hcm.isCommandAvailable(docker.DockerCmd) {
-		base.Output.Error(core.MsgDoctor_docker_not_found)
-		base.Output.Info(core.MsgDoctor_docker_install_help, "https://docs.docker.com/get-docker/")
+		base.Output.Error(messages.DoctorDockerNotFound)
+		base.Output.Info(messages.DoctorDockerInstallHelp, "https://docs.docker.com/get-docker/")
 		return false
 	}
 
@@ -48,62 +49,62 @@ func (hcm *HealthCheckManager) CheckDocker(base *base.BaseCommand) bool {
 
 	err = stackService.CheckDockerHealth(context.Background())
 	if err != nil {
-		base.Output.Error(core.MsgDoctor_docker_daemon_not_running)
-		base.Output.Info(core.MsgDoctor_docker_start_help)
+		base.Output.Error(messages.DoctorDockerDaemonNotRunning)
+		base.Output.Info(messages.DoctorDockerStartHelp)
 		return false
 	}
 
-	base.Output.Success(core.MsgDoctor_docker_available)
+	base.Output.Success(messages.DoctorDockerAvailable)
 	return true
 }
 
 // CheckDockerCompose verifies Docker Compose is available
 func (hcm *HealthCheckManager) CheckDockerCompose(base *base.BaseCommand) bool {
-	base.Output.Info(core.MsgDoctor_checking_docker_compose)
+	base.Output.Info(messages.DoctorCheckingDockerCompose)
 
 	if hcm.hasDockerComposePlugin() {
-		base.Output.Success(core.MsgDoctor_docker_compose_available)
+		base.Output.Success(messages.DoctorDockerComposeAvailable)
 		return true
 	}
 
 	// Check if docker compose command is available
 	composeCommand := fmt.Sprintf("%s %s", docker.DockerCmd, docker.DockerComposeCmd)
 	if hcm.isCommandAvailable(composeCommand) {
-		base.Output.Success(core.MsgDoctor_docker_compose_available)
+		base.Output.Success(messages.DoctorDockerComposeAvailable)
 		return true
 	}
 
-	base.Output.Error(core.MsgDoctor_docker_compose_not_found)
-	base.Output.Info(core.MsgDoctor_docker_compose_update)
+	base.Output.Error(messages.DoctorDockerComposeNotFound)
+	base.Output.Info(messages.DoctorDockerComposeUpdate)
 	return false
 }
 
 // CheckProjectInit verifies project is initialized
 func (hcm *HealthCheckManager) CheckProjectInit(base *base.BaseCommand) bool {
-	base.Output.Info(core.MsgDoctor_checking_project_init)
+	base.Output.Info(messages.DoctorCheckingProjectInit)
 
 	if _, err := os.Stat(core.OttoStackDir); os.IsNotExist(err) {
-		base.Output.Error(core.MsgDoctor_project_not_initialized)
-		base.Output.Info(core.MsgDoctor_run_init_help, "otto init")
+		base.Output.Error(messages.DoctorProjectNotInitialized)
+		base.Output.Info(messages.DoctorRunInitHelp, "otto init")
 		return false
 	}
 
-	base.Output.Success(core.MsgDoctor_project_initialized)
+	base.Output.Success(messages.DoctorProjectInitialized)
 	return true
 }
 
 // CheckConfiguration verifies configuration files exist and are valid
 func (hcm *HealthCheckManager) CheckConfiguration(base *base.BaseCommand) bool {
-	base.Output.Info(core.MsgDoctor_checking_config)
+	base.Output.Info(messages.DoctorCheckingConfig)
 
 	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		base.Output.Error(core.MsgDoctor_config_dir_missing)
+		base.Output.Error(messages.DoctorConfigDirMissing)
 		base.Output.Info("   Expected: %s", configPath)
 		return false
 	}
 
-	base.Output.Success(core.MsgDoctor_config_valid)
+	base.Output.Success(messages.DoctorConfigValid)
 	return true
 }
 

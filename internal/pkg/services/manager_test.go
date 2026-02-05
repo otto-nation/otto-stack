@@ -93,7 +93,7 @@ func TestManager_BuildConnectCommand(t *testing.T) {
 		service, err := manager.GetService("nonexistent-service")
 		assert.Error(t, err)
 		assert.Nil(t, service)
-		assert.Contains(t, err.Error(), "service not found")
+		assert.Contains(t, err.Error(), "not found")
 	})
 }
 

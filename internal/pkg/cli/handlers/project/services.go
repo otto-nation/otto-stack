@@ -9,6 +9,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
@@ -37,20 +38,20 @@ func (h *ServicesHandler) Handle(ctx context.Context, cmd *cobra.Command, args [
 	display.RenderTableWithSeparators(base.Output.Writer(), headers, groups)
 
 	base.Output.Info("\nTotal services available: %d", totalCount)
-	base.Output.Success("Services listed successfully")
+	base.Output.Success(messages.SuccessServicesListed)
 	return nil
 }
 
 func (h *ServicesHandler) loadServices() (map[string][]servicetypes.ServiceConfig, int, error) {
 	manager, err := services.New()
 	if err != nil {
-		return nil, 0, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "operation failed", err)
+		return nil, 0, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceOperationFailed, err)
 	}
 
 	utils := services.NewServiceUtils()
 	servicesByCategory, err := utils.GetServicesByCategory()
 	if err != nil {
-		return nil, 0, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "operation failed", err)
+		return nil, 0, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceOperationFailed, err)
 	}
 
 	return servicesByCategory, len(manager.GetAllServices()), nil

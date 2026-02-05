@@ -48,7 +48,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 }
 
 func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
-	base.Output.Header("%s", core.MsgLifecycle_starting)
+	base.Output.Header("%s", messages.LifecycleStarting)
 
 	// Validate flags
 	if err := validation.ValidateUpFlags(cmd); err != nil {
@@ -76,7 +76,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 
 	service, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "start services", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStartFailed, err)
 	}
 
 	upFlags, _ := core.ParseUpFlags(cmd)
@@ -99,11 +99,11 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	}
 
 	if err = service.Start(ctx, startRequest); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "start services", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStartFailed, err)
 	}
 
-	base.Output.Success("Services started successfully")
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
+	base.Output.Success(messages.SuccessServicesStarted)
+	base.Output.Info(messages.InfoProjectInfo, setup.Config.Project.Name)
 	for _, svc := range serviceConfigs {
 		base.Output.Info("  %s %s", ui.IconSuccess, svc.Name)
 	}
@@ -112,7 +112,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 }
 
 func (h *UpHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
-	base.Output.Header(core.MsgShared_starting)
+	base.Output.Header(messages.SharedStarting)
 
 	if len(args) == 0 {
 		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationNoServicesSelected, nil)
@@ -138,7 +138,7 @@ func (h *UpHandler) loadServiceConfigs(serviceNames []string) ([]types.ServiceCo
 	for _, name := range serviceNames {
 		cfg, err := serviceUtils.LoadServiceConfig(name)
 		if err != nil {
-			return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentService, "load service", err)
+			return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentService, messages.ErrorsServiceLoadFailed, err)
 		}
 		if cfg != nil {
 			configs = append(configs, *cfg)
@@ -186,7 +186,7 @@ func (h *UpHandler) filterSharedServices(serviceConfigs []types.ServiceConfig, c
 }
 
 func (h *UpHandler) displaySuccess(base *base.BaseCommand, serviceConfigs []types.ServiceConfig) {
-	base.Output.Success(core.MsgShared_registered)
+	base.Output.Success(messages.SharedRegistered)
 	for _, svc := range serviceConfigs {
 		base.Output.Info("  %s %s (shared)", ui.IconSuccess, svc.Name)
 	}

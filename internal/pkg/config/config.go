@@ -60,7 +60,7 @@ type FlagConfig struct {
 func LoadConfig() (*Config, error) {
 	baseConfig, err := loadBaseConfig()
 	if err != nil {
-		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, "load base config", err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, messages.ErrorsConfigLoadFailed, err)
 	}
 
 	localConfig, err := loadLocalConfig()
@@ -120,12 +120,12 @@ func loadBaseConfig() (*Config, error) {
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeNotFound, configPath, "configuration file not found: %s", configPath)
+		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeNotFound, configPath, messages.ErrorsConfigNotFound, configPath)
 	}
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, configPath, "parse config", err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, configPath, messages.ErrorsConfigParseFailed, err)
 	}
 
 	return &config, nil
@@ -142,7 +142,7 @@ func loadLocalConfig() (*Config, error) {
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "config.local.yaml", "parse local config", err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "config.local.yaml", messages.ErrorsConfigParseFailed, err)
 	}
 
 	return &config, nil

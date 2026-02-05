@@ -27,16 +27,6 @@ const (
 {{range .Flags}}	{{.Name}} = {{.Value}}
 {{end}})
 
-// Message constants
-const (
-{{range .Messages}}	{{.Name}} = {{.Value}}
-{{end}})
-
-// Messages contains all messages from commands.yaml
-var Messages = map[string]string{
-{{range .Messages}}	"{{.Name}}": {{.Value}},
-{{end}}}
-
 // Icon constants
 const (
 {{range .Icons}}	{{.Name}} = {{.Value}}

@@ -7,6 +7,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
@@ -18,11 +19,11 @@ type NonInteractiveProcessor struct {
 // Process validates and processes flags for non-interactive mode
 func (p *NonInteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCommand) (clicontext.Context, error) {
 	if flags.Services == "" {
-		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "services", "services flag is required in non-interactive mode", nil)
+		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "services", messages.ValidationServicesRequiredNonInteractive, nil)
 	}
 
 	if flags.ProjectName == "" {
-		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "project-name", "project name is required in non-interactive mode", nil)
+		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "project-name", messages.ValidationProjectNameRequiredNonInteractive, nil)
 	}
 
 	serviceNames := parseServices(flags.Services)

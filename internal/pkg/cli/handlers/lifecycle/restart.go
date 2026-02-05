@@ -10,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
@@ -25,12 +26,12 @@ func NewRestartHandler() *RestartHandler {
 
 // Handle executes the restart command
 func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	base.Output.Header(core.MsgLifecycle_restarting)
+	base.Output.Header(messages.LifecycleRestarting)
 
 	ciFlags := ci.GetFlags(cmd)
 	if ciFlags.DryRun {
-		base.Output.Info("%s", core.MsgDry_run_showing_what_would_happen)
-		base.Output.Info(core.MsgDry_run_would_restart_services, fmt.Sprintf("%v", args))
+		base.Output.Info("%s", messages.DryRunShowingWhatWouldHappen)
+		base.Output.Info(messages.DryRunWouldRestartServices, fmt.Sprintf("%v", args))
 		return nil
 	}
 
@@ -53,14 +54,14 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		serviceConfigs, err = services.ResolveUpServices(setup.Config.Stack.Enabled, setup.Config)
 	}
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "resolve services", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackResolveFailed, err)
 	}
 
 	if err := h.restartServices(ctx, setup, serviceConfigs, flags); err != nil {
 		return err
 	}
 
-	base.Output.Success(core.MsgLifecycle_restart_success)
+	base.Output.Success(messages.LifecycleRestartSuccess)
 	return nil
 }
 
@@ -69,7 +70,7 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *common.Core
 	// Create stack service
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "create service", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackCreateFailed, err)
 	}
 
 	// Stop services
@@ -80,7 +81,7 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *common.Core
 		Timeout:        time.Duration(flags.Timeout) * time.Second,
 	}
 	if err := stackService.Stop(ctx, stopRequest); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "stop services", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStopFailed, err)
 	}
 
 	// Start services
@@ -89,7 +90,7 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *common.Core
 		ServiceConfigs: serviceConfigs,
 	}
 	if err := stackService.Start(ctx, startRequest); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, "start services", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStartFailed, err)
 	}
 
 	return nil

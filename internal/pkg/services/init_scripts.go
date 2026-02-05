@@ -18,7 +18,9 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
@@ -62,7 +64,7 @@ func (s *Service) executeServiceInitScripts(ctx context.Context, config servicet
 		// Process template variables in script content
 		processedScript, err := s.processScriptTemplate(script.Content, config, allConfigs)
 		if err != nil {
-			return fmt.Errorf("failed to process template for service %s: %w", config.Name, err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, config.Name, messages.InitTemplateProcessFailed, err)
 		}
 
 		// Execute based on mode
@@ -219,7 +221,7 @@ func loadServiceConfigFile(serviceName string) (map[string]any, error) {
 
 	var configData map[string]any
 	if err := yaml.Unmarshal(data, &configData); err != nil {
-		return nil, fmt.Errorf("failed to parse %s: %w", configPath, err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, configPath, messages.InitConfigParseFailed, err)
 	}
 
 	return configData, nil
@@ -319,7 +321,7 @@ func (s *Service) executeScript(ctx context.Context, scriptContent string, env m
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to execute init script for service %s: %w", serviceName, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, serviceName, messages.InitScriptExecuteFailed, err)
 	}
 	return nil
 }
@@ -337,7 +339,7 @@ func (s *Service) executeScriptInContainer(ctx context.Context, scriptContent st
 	// Use docker client to run init container
 	containerName := fmt.Sprintf("%s-init-%d", config.Name, time.Now().Unix())
 	if err := s.DockerClient.RunInitContainer(ctx, containerName, initConfig); err != nil {
-		return fmt.Errorf("failed to execute init container for service %s: %w", config.Name, err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, config.Name, messages.InitContainerExecuteFailed, err)
 	}
 
 	return nil

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 var semverRegex = regexp.MustCompile(`^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z\-\.]+))?(?:\+([0-9A-Za-z\-\.]+))?$`)
@@ -79,7 +80,7 @@ func (v Version) Compare(other Version) int {
 // ParseVersion parses a version string into a Version struct
 func ParseVersion(versionStr string) (*Version, error) {
 	if versionStr == "" {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", "empty version string", nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", messages.ErrorsEmptyVersion, nil)
 	}
 
 	versionStr = strings.TrimSpace(versionStr)
@@ -96,22 +97,22 @@ func ParseVersion(versionStr string) (*Version, error) {
 
 	matches := semverRegex.FindStringSubmatch(versionStr)
 	if matches == nil {
-		return nil, fmt.Errorf("invalid version format: %s", versionStr)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", messages.VersionInvalidFormat, nil)
 	}
 
 	major, err := strconv.Atoi(matches[1])
 	if err != nil {
-		return nil, fmt.Errorf("invalid major version: %s", matches[1])
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", messages.VersionInvalidMajor, nil)
 	}
 
 	minor, err := strconv.Atoi(matches[2])
 	if err != nil {
-		return nil, fmt.Errorf("invalid minor version: %s", matches[2])
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", messages.VersionInvalidMinor, nil)
 	}
 
 	patch, err := strconv.Atoi(matches[3])
 	if err != nil {
-		return nil, fmt.Errorf("invalid patch version: %s", matches[3])
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", messages.VersionInvalidPatch, nil)
 	}
 
 	return &Version{

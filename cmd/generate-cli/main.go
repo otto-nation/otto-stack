@@ -155,14 +155,6 @@ func generateCoreConstants() error {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "load commands config", err)
 	}
 
-	messagesConfig, err := loadMessagesConfig()
-	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "generator", "load messages config", err)
-	}
-
-	// Merge messages into rawConfig for template
-	rawConfig[KeyMessages] = messagesConfig
-
 	tmpl, err := codegen.ParseTemplate(CoreTemplateFilePath, CoreTemplateName)
 	if err != nil {
 		return err
@@ -184,14 +176,12 @@ func generateCoreConstants() error {
 	data := struct {
 		Commands          []constantData
 		Flags             []constantData
-		Messages          []constantData
 		Icons             []constantData
 		CommandsData      []commandData
 		ValidationOptions []validationOption
 	}{
 		Commands:          collectCommandConstants(rawConfig),
 		Flags:             collectFlagsData(rawConfig),
-		Messages:          collectMessagesData(rawConfig),
 		Icons:             collectIconsData(rawConfig),
 		CommandsData:      collectCommandsData(rawConfig),
 		ValidationOptions: collectValidationOptions(rawConfig),

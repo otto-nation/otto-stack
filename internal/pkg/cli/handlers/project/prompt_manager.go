@@ -10,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"golang.org/x/text/cases"
@@ -160,12 +161,12 @@ func (pm *PromptManager) mapValidationSelections(selectedValidations []string) m
 // ConfirmInitialization shows final confirmation with option to go back
 func (pm *PromptManager) ConfirmInitialization(projectName string, services []string, validation, advanced map[string]bool, base *base.BaseCommand) (string, error) {
 	// Display summary
-	base.Output.Info("Project Configuration Summary:")
+	base.Output.Info(messages.InfoProjectConfigSummary)
 	base.Output.Info("  Project Name: %s", projectName)
 	base.Output.Info("  Services: %s", strings.Join(services, ", "))
 
 	if len(validation) > 0 {
-		base.Output.Info("  Validation Options:")
+		base.Output.Info(messages.InfoValidationOptions)
 		for option := range validation {
 			base.Output.Info("    - %s", option)
 		}
@@ -237,7 +238,7 @@ func (pm *PromptManager) promptForServiceSelection(serviceOptions []string) ([]s
 
 	var selected []string
 	if err := survey.AskOne(prompt, &selected); err != nil {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "failed to select services", err)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceSelectionFailed, err)
 	}
 
 	return selected, nil

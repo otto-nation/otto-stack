@@ -3,8 +3,8 @@ package utility
 import (
 	"context"
 
-	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/version"
 	"github.com/spf13/cobra"
 )
@@ -26,11 +26,11 @@ func (h *EnforcementHandler) HandleCheck(ctx context.Context, cmd *cobra.Command
 
 	err := version.ValidateProjectVersion(projectPath)
 	if err != nil {
-		base.Output.Error(core.MsgErrors_version_compliance_failed)
+		base.Output.Error(messages.ErrorsVersionComplianceFailed)
 		return err
 	}
 
-	base.Output.Success(core.MsgSuccess_version_compliance_satisfied)
+	base.Output.Success(messages.SuccessVersionComplianceSatisfied)
 	return nil
 }
 

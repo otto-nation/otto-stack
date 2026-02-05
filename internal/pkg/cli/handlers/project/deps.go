@@ -9,6 +9,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
@@ -27,7 +28,7 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	base.Output.Header("%s Service Dependencies", ui.IconInfo)
 
 	if len(args) == 0 {
-		base.Output.Warning("No services specified")
+		base.Output.Warning(messages.InfoNoServicesSpecified)
 		return nil
 	}
 
@@ -41,14 +42,14 @@ func (h *DepsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	headers := []string{display.HeaderService, display.HeaderDependencies}
 	display.RenderTable(base.Output.Writer(), headers, rows)
 
-	base.Output.Success("Dependencies displayed successfully")
+	base.Output.Success(messages.SuccessDependenciesDisplayed)
 	return nil
 }
 
 func (h *DepsHandler) loadServices() (map[string]servicetypes.ServiceConfig, error) {
 	manager, err := services.New()
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "create manager", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceManagerCreateFailed, err)
 	}
 	return manager.GetAllServices(), nil
 }

@@ -2,14 +2,15 @@ package middleware
 
 import (
 	"context"
-	"fmt"
 	"os"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // ValidationMiddleware validates project state before command execution
@@ -28,7 +29,7 @@ func (m *ValidationMiddleware) Execute(ctx context.Context, cliCtx clicontext.Co
 	}
 
 	if _, err := os.Stat(core.OttoStackDir); err == nil {
-		return fmt.Errorf("project already initialized. Use --%s to overwrite", core.FlagForce)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeAlreadyExists, "project", messages.MiddlewareProjectAlreadyInitialized, nil)
 	}
 
 	return next.Execute(ctx, cliCtx, base)

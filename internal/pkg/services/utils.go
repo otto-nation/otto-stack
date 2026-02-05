@@ -2,6 +2,7 @@ package services
 
 import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
@@ -51,7 +52,7 @@ func (u *ServiceUtils) LoadServiceConfig(serviceName string) (*servicetypes.Serv
 		return nil, err
 	}
 	if service.Hidden {
-		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service not accessible: %s", serviceName)
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceNotAccessible, serviceName)
 	}
 	return service, nil
 }
