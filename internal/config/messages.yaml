@@ -71,6 +71,7 @@ validation:
   services_required_non_interactive: "services flag is required in non-interactive mode"
   project_name_required_non_interactive: "project name is required in non-interactive mode"
   service_name_required: "service name is required"
+  service_not_shareable: "service '%s' is marked as non-shareable and cannot be shared across projects"
 
 conflicts:
   header: "Service Conflicts"

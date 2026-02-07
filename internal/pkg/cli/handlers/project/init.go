@@ -18,6 +18,7 @@ import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // InitHandler handles the init command
@@ -177,12 +178,9 @@ func (h *InitHandler) validateProjectName(name string) error {
 }
 
 // buildSharingConfig creates sharing configuration from init flags
-func (h *InitHandler) buildSharingConfig(initFlags *core.InitFlags) *clicontext.SharingSpec {
-	// If --no-shared-containers is set, disable all sharing
+func (h *InitHandler) buildSharingConfig(initFlags *core.InitFlags, serviceConfigs []types.ServiceConfig) (*clicontext.SharingSpec, error) {
 	if initFlags.NoSharedContainers {
-		return &clicontext.SharingSpec{
-			Enabled: false,
-		}
+		return &clicontext.SharingSpec{Enabled: false}, nil
 	}
 
 	sharingSpec := &clicontext.SharingSpec{
@@ -190,16 +188,37 @@ func (h *InitHandler) buildSharingConfig(initFlags *core.InitFlags) *clicontext.
 		Services: make(map[string]bool),
 	}
 
-	// If --shared-services is specified, parse it
-	if initFlags.SharedServices != "" {
-		//nolint:modernize // SplitSeq requires Go 1.24+
-		for _, svc := range strings.Split(initFlags.SharedServices, ",") {
-			svc = strings.TrimSpace(svc)
-			if svc != "" {
-				sharingSpec.Services[svc] = true
-			}
-		}
+	if initFlags.SharedServices == "" {
+		return sharingSpec, nil
 	}
 
-	return sharingSpec
+	//nolint:modernize // SplitSeq requires Go 1.24+
+	for _, svc := range strings.Split(initFlags.SharedServices, ",") {
+		svc = strings.TrimSpace(svc)
+		if svc == "" {
+			continue
+		}
+
+		if err := h.validateServiceShareable(svc, serviceConfigs); err != nil {
+			return nil, err
+		}
+		sharingSpec.Services[svc] = true
+	}
+
+	return sharingSpec, nil
+}
+
+// validateServiceShareable checks if a service can be shared
+func (h *InitHandler) validateServiceShareable(serviceName string, serviceConfigs []types.ServiceConfig) error {
+	for _, cfg := range serviceConfigs {
+		if cfg.Name == serviceName && !cfg.Shareable {
+			return pkgerrors.NewValidationErrorf(
+				pkgerrors.ErrCodeInvalid,
+				"shared-services",
+				messages.ValidationServiceNotShareable,
+				serviceName,
+			)
+		}
+	}
+	return nil
 }

@@ -11,6 +11,7 @@ type ServiceConfig struct {
 	Description   string                  `yaml:"description" validate:"required,min=1"`
 	Category      string                  `yaml:"category,omitempty"`
 	Hidden        bool                    `yaml:"hidden,omitempty"`
+	Shareable     bool                    `yaml:"shareable,omitempty"`
 	ServiceType   ServiceType       `yaml:"service_type,omitempty"`
 	Environment   map[string]string       `yaml:"environment,omitempty"`
 	Container     ContainerSpec     `yaml:"container,omitempty"`
