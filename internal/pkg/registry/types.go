@@ -30,6 +30,12 @@ type OrphanInfo struct {
 	Reason    string
 }
 
+// ReconcileResult contains the results of a registry reconciliation
+type ReconcileResult struct {
+	Removed []string // Services removed from registry (container doesn't exist)
+	Added   []string // Services added to registry (container exists but not registered)
+}
+
 // FindOrphans returns containers with no active projects
 func (r *Registry) FindOrphans() []OrphanInfo {
 	var orphans []OrphanInfo

@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"slices"
@@ -9,6 +10,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 )
 
 // Manager handles shared container registry operations
@@ -171,6 +173,52 @@ func (m *Manager) CleanOrphans() ([]string, error) {
 	}
 
 	return cleaned, nil
+}
+
+// Reconcile syncs registry with actual Docker container state
+func (m *Manager) Reconcile(ctx context.Context, dockerClient *docker.Client) (*ReconcileResult, error) {
+	registry, err := m.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	result := &ReconcileResult{
+		Removed: []string{},
+		Added:   []string{},
+	}
+
+	// Get all containers with shared prefix
+	containers, err := dockerClient.ListContainers(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	// Build map of existing shared containers
+	existingContainers := make(map[string]bool)
+	for _, cont := range containers {
+		if len(cont.Name) > len(core.SharedContainerPrefix) &&
+			cont.Name[:len(core.SharedContainerPrefix)] == core.SharedContainerPrefix {
+			serviceName := cont.Name[len(core.SharedContainerPrefix):]
+			existingContainers[serviceName] = true
+		}
+	}
+
+	// Remove registry entries for containers that don't exist
+	for service := range registry.Containers {
+		if !existingContainers[service] {
+			delete(registry.Containers, service)
+			result.Removed = append(result.Removed, service)
+		}
+	}
+
+	// Save if changes were made
+	if len(result.Removed) > 0 {
+		if err := m.Save(registry); err != nil {
+			return nil, err
+		}
+	}
+
+	return result, nil
 }
 
 // remove removes a value from a string slice

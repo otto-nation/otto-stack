@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"slices"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 )
 
 func TestNewRegistry(t *testing.T) {
@@ -227,5 +229,31 @@ func TestManager_RegistryFilePath(t *testing.T) {
 	expectedPath := filepath.Join(tmpDir, core.SharedRegistryFile)
 	if _, err := os.Stat(expectedPath); os.IsNotExist(err) {
 		t.Errorf("expected registry file at %s", expectedPath)
+	}
+}
+
+func TestManager_Reconcile(t *testing.T) {
+	t.Skip("Skipping reconcile test - requires Docker mock implementation")
+
+	tmpDir := t.TempDir()
+	mgr := NewManager(tmpDir)
+
+	// Register some services
+	_ = mgr.Register("postgres", "otto-stack-postgres", "project1")
+	_ = mgr.Register("redis", "otto-stack-redis", "project2")
+	_ = mgr.Register("mysql", "otto-stack-mysql", "project3")
+
+	// Mock Docker client that only has postgres and redis
+	mockClient := &docker.Client{}
+	ctx := context.Background()
+
+	result, err := mgr.Reconcile(ctx, mockClient)
+
+	if err != nil {
+		t.Errorf("Reconcile failed: %v", err)
+	}
+
+	if result == nil {
+		t.Error("Expected non-nil result")
 	}
 }

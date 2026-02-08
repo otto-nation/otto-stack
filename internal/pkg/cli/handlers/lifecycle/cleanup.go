@@ -42,6 +42,14 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 	defer cleanup()
 
+	// Reconcile registry with Docker state before checking orphans
+	if err := h.reconcileRegistry(ctx, base, &ciFlags); err != nil {
+		// Log but don't fail - reconciliation is best-effort
+		if !ciFlags.Quiet {
+			base.Output.Warning("Failed to reconcile registry: %v", err)
+		}
+	}
+
 	// Check for orphans (informational only)
 	_ = h.checkOrphans(setup, base, &ciFlags)
 
@@ -194,6 +202,31 @@ func (h *CleanupHandler) getRegistry() (*registry.Manager, error) {
 	}
 
 	return registry.NewManager(execCtx.Shared.Root), nil
+}
+
+// reconcileRegistry syncs registry with actual Docker container state
+func (h *CleanupHandler) reconcileRegistry(ctx context.Context, base *base.BaseCommand, ciFlags *ci.Flags) error {
+	reg, err := h.getRegistry()
+	if err != nil {
+		return err
+	}
+
+	// Get service manager which has Docker client
+	svc, err := common.NewServiceManager(false)
+	if err != nil {
+		return err
+	}
+
+	result, err := reg.Reconcile(ctx, svc.DockerClient)
+	if err != nil {
+		return err
+	}
+
+	if len(result.Removed) > 0 && !ciFlags.Quiet {
+		base.Output.Info("Reconciled registry: removed %d stale entries", len(result.Removed))
+	}
+
+	return nil
 }
 
 // confirmOrphanCleanup prompts user to confirm orphan cleanup
