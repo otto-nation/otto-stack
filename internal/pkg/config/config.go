@@ -8,6 +8,7 @@ import (
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"gopkg.in/yaml.v3"
 )
 
@@ -66,10 +67,17 @@ func LoadConfig() (*Config, error) {
 	localConfig, err := loadLocalConfig()
 	if err != nil {
 		// Local config is optional, just use base
+		if err := validateSharingPolicy(baseConfig); err != nil {
+			return nil, err
+		}
 		return baseConfig, nil
 	}
 
-	return mergeConfigs(baseConfig, localConfig), nil
+	merged := mergeConfigs(baseConfig, localConfig)
+	if err := validateSharingPolicy(merged); err != nil {
+		return nil, err
+	}
+	return merged, nil
 }
 
 // GenerateConfig creates a new otto-stack configuration file
@@ -163,6 +171,60 @@ func mergeConfigs(base, local *Config) *Config {
 	}
 
 	return &merged
+}
+
+// validateSharingPolicy validates that shared services are marked as shareable
+func validateSharingPolicy(cfg *Config) error {
+	if cfg.Sharing == nil || !cfg.Sharing.Enabled || len(cfg.Sharing.Services) == 0 {
+		return nil
+	}
+
+	// Load service configs directly to avoid import cycle
+	for svcName := range cfg.Sharing.Services {
+		svcCfg, err := loadServiceConfig(svcName)
+		if err != nil {
+			continue // Unknown service, skip validation
+		}
+		if !svcCfg.Shareable {
+			return pkgerrors.NewValidationErrorf(
+				pkgerrors.ErrCodeInvalid,
+				"sharing.services",
+				messages.ValidationServiceNotShareable,
+				svcName,
+			)
+		}
+	}
+	return nil
+}
+
+// loadServiceConfig loads a single service configuration
+func loadServiceConfig(serviceName string) (*types.ServiceConfig, error) {
+	// Search for service file in subdirectories
+	var configPath string
+	err := filepath.Walk("internal/config/services", func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && filepath.Base(path) == serviceName+".yaml" {
+			configPath = path
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	if err != nil || configPath == "" {
+		return nil, os.ErrNotExist
+	}
+
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var cfg types.ServiceConfig
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
+		return nil, err
+	}
+	return &cfg, nil
 }
 
 // loadServiceConfigFile loads service configuration (base or local)
