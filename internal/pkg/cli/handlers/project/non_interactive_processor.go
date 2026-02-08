@@ -38,7 +38,10 @@ func (p *NonInteractiveProcessor) Process(flags *core.InitFlags, base *base.Base
 		return clicontext.Context{}, err
 	}
 
-	sharingConfig := p.handler.buildSharingConfig(flags)
+	sharingConfig, err := p.handler.buildSharingConfig(flags, serviceConfigs)
+	if err != nil {
+		return clicontext.Context{}, err
+	}
 
 	ctx := clicontext.NewBuilder().
 		WithProject(flags.ProjectName, "").

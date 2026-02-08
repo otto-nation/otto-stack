@@ -46,6 +46,107 @@ func TestInitHandler_GetRequiredFlags(t *testing.T) {
 	assert.Empty(t, flags)
 }
 
+func TestInitHandler_ValidateServiceShareable(t *testing.T) {
+	handler := NewInitHandler()
+
+	shareableService := types.ServiceConfig{
+		Name:      "postgres",
+		Shareable: true,
+	}
+
+	nonShareableService := types.ServiceConfig{
+		Name:      "kafka",
+		Shareable: false,
+	}
+
+	serviceConfigs := []types.ServiceConfig{shareableService, nonShareableService}
+
+	tests := []struct {
+		name        string
+		serviceName string
+		wantErr     bool
+	}{
+		{"shareable service allowed", "postgres", false},
+		{"non-shareable service rejected", "kafka", true},
+		{"unknown service allowed", "unknown", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := handler.validateServiceShareable(tt.serviceName, serviceConfigs)
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), "non-shareable")
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestInitHandler_BuildSharingConfig(t *testing.T) {
+	handler := NewInitHandler()
+
+	shareableService := types.ServiceConfig{
+		Name:      "postgres",
+		Shareable: true,
+	}
+
+	nonShareableService := types.ServiceConfig{
+		Name:      "kafka",
+		Shareable: false,
+	}
+
+	serviceConfigs := []types.ServiceConfig{shareableService, nonShareableService}
+
+	tests := []struct {
+		name    string
+		flags   *core.InitFlags
+		wantErr bool
+	}{
+		{
+			name: "no shared containers flag",
+			flags: &core.InitFlags{
+				NoSharedContainers: true,
+			},
+			wantErr: false,
+		},
+		{
+			name: "shareable service in shared-services",
+			flags: &core.InitFlags{
+				SharedServices: "postgres",
+			},
+			wantErr: false,
+		},
+		{
+			name: "non-shareable service in shared-services",
+			flags: &core.InitFlags{
+				SharedServices: "kafka",
+			},
+			wantErr: true,
+		},
+		{
+			name: "mixed services",
+			flags: &core.InitFlags{
+				SharedServices: "postgres,kafka",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config, err := handler.buildSharingConfig(tt.flags, serviceConfigs)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, config)
+			}
+		})
+	}
+}
+
 func TestCreateGitignoreEntries_ExistingContent(t *testing.T) {
 	handler := NewInitHandler()
 	cleanup := setupTestDir(t)
