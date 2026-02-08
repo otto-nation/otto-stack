@@ -170,14 +170,20 @@ func (h *UpHandler) filterSharedServices(serviceConfigs []types.ServiceConfig, c
 		return nil
 	}
 
-	// If no specific services listed, all are shared
-	if len(cfg.Sharing.Services) == 0 {
-		return serviceConfigs
-	}
-
-	// Filter to only services marked as shared
 	var shared []types.ServiceConfig
 	for _, svc := range serviceConfigs {
+		// Skip services marked as non-shareable
+		if !svc.Shareable {
+			continue
+		}
+
+		// If no specific services listed, include all shareable services
+		if len(cfg.Sharing.Services) == 0 {
+			shared = append(shared, svc)
+			continue
+		}
+
+		// Include only if explicitly listed in sharing config
 		if cfg.Sharing.Services[svc.Name] {
 			shared = append(shared, svc)
 		}
