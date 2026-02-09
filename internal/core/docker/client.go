@@ -99,14 +99,12 @@ func NewClient(logger *slog.Logger) (*Client, error) {
 		return nil, pkgerrors.New(pkgerrors.ErrCodeInternal, pkgerrors.ComponentDocker, "create compose manager", err)
 	}
 
-	dc := &Client{
-		cli:     NewDockerClientAdapter(cli),
-		logger:  logger,
-		compose: composeManager,
-	}
-	dc.resources = NewResourceManager(dc)
+	return NewClientWithDependencies(NewDockerClientAdapter(cli), composeManager, logger), nil
+}
 
-	return dc, nil
+// GetDockerClient returns the underlying DockerClient interface
+func (c *Client) GetDockerClient() DockerClient {
+	return c.cli
 }
 
 func (c *Client) Close() error {
