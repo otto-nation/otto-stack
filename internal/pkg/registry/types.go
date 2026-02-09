@@ -1,6 +1,10 @@
 package registry
 
-import "time"
+import (
+	"time"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+)
 
 // ContainerInfo represents a shared container in the registry
 type ContainerInfo struct {
@@ -23,11 +27,31 @@ func NewRegistry() *Registry {
 	}
 }
 
+// OrphanSeverity indicates how safe it is to remove an orphan
+type OrphanSeverity string
+
+const (
+	OrphanSeveritySafe     OrphanSeverity = "safe"     // Safe to remove
+	OrphanSeverityWarning  OrphanSeverity = "warning"  // Needs investigation
+	OrphanSeverityCritical OrphanSeverity = "critical" // Running but not registered
+)
+
+// Container states for orphan detection
+const (
+	ContainerStateRunning  = "running"
+	ContainerStateStopped  = "stopped"
+	ContainerStateNotFound = "not_found"
+	ContainerStateUnknown  = "unknown"
+)
+
 // OrphanInfo represents an orphaned container
 type OrphanInfo struct {
-	Service   string
-	Container string
-	Reason    string
+	Service        string
+	Container      string
+	Reason         string
+	Severity       OrphanSeverity
+	ContainerState string   // running, stopped, not_found
+	ProjectsFound  []string // Projects that still reference this
 }
 
 // ReconcileResult contains the results of a registry reconciliation
@@ -36,15 +60,17 @@ type ReconcileResult struct {
 	Added   []string // Services added to registry (container exists but not registered)
 }
 
-// FindOrphans returns containers with no active projects
+// FindOrphans returns containers with no active projects (basic check)
 func (r *Registry) FindOrphans() []OrphanInfo {
 	var orphans []OrphanInfo
 	for service, info := range r.Containers {
 		if len(info.Projects) == 0 {
 			orphans = append(orphans, OrphanInfo{
-				Service:   service,
-				Container: info.Name,
-				Reason:    "no projects using this container",
+				Service:        service,
+				Container:      info.Name,
+				Reason:         messages.OrphanReasonNoProjects,
+				Severity:       OrphanSeveritySafe,
+				ContainerState: ContainerStateUnknown,
 			})
 		}
 	}
