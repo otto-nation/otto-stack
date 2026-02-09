@@ -214,9 +214,7 @@ func (m *Manager) FindOrphansWithChecks(ctx context.Context, dockerClient *docke
 		return nil, err
 	}
 
-	var orphans []OrphanInfo
-
-	// Get all running containers
+	// Get running containers
 	containers, err := dockerClient.ListContainers(ctx, "")
 	if err != nil {
 		return nil, err
@@ -227,23 +225,35 @@ func (m *Manager) FindOrphansWithChecks(ctx context.Context, dockerClient *docke
 		containerMap[c.Name] = true
 	}
 
+	var orphans []OrphanInfo
+
 	// Check registered containers
 	for service, info := range registry.Containers {
-		orphan := OrphanInfo{
-			Service:   service,
-			Container: info.Name,
-		}
-
-		// Check if container exists in Docker
+		// Container not in Docker
 		if !containerMap[info.Name] {
-			orphan.Reason = "container not found in Docker"
-			orphan.Severity = OrphanSeverityWarning
-			orphan.ContainerState = ContainerStateNotFound
-			orphans = append(orphans, orphan)
+			orphans = append(orphans, OrphanInfo{
+				Service:        service,
+				Container:      info.Name,
+				Reason:         "container not found in Docker",
+				Severity:       OrphanSeverityWarning,
+				ContainerState: ContainerStateNotFound,
+			})
 			continue
 		}
 
-		// Check if projects still exist
+		// No projects registered
+		if len(info.Projects) == 0 {
+			orphans = append(orphans, OrphanInfo{
+				Service:        service,
+				Container:      info.Name,
+				Reason:         "no projects using this container",
+				Severity:       OrphanSeveritySafe,
+				ContainerState: ContainerStateRunning,
+			})
+			continue
+		}
+
+		// Check if any projects still exist
 		var existingProjects []string
 		for _, project := range info.Projects {
 			if projectExists(project) {
@@ -251,42 +261,42 @@ func (m *Manager) FindOrphansWithChecks(ctx context.Context, dockerClient *docke
 			}
 		}
 
-		// No projects using it
-		if len(info.Projects) == 0 {
-			orphan.Reason = "no projects using this container"
-			orphan.Severity = OrphanSeveritySafe
-			orphan.ContainerState = ContainerStateRunning
-			orphans = append(orphans, orphan)
-		} else if len(existingProjects) == 0 {
-			// Projects listed but none exist on filesystem
-			orphan.Reason = "all projects deleted from filesystem"
-			orphan.Severity = OrphanSeveritySafe
-			orphan.ContainerState = ContainerStateRunning
-			orphan.ProjectsFound = info.Projects
-			orphans = append(orphans, orphan)
+		if len(existingProjects) == 0 {
+			orphans = append(orphans, OrphanInfo{
+				Service:        service,
+				Container:      info.Name,
+				Reason:         "all projects deleted from filesystem",
+				Severity:       OrphanSeveritySafe,
+				ContainerState: ContainerStateRunning,
+				ProjectsFound:  info.Projects,
+			})
 		} else if len(existingProjects) < len(info.Projects) {
-			// Some projects deleted
-			orphan.Reason = "some projects deleted from filesystem"
-			orphan.Severity = OrphanSeverityWarning
-			orphan.ContainerState = ContainerStateRunning
-			orphan.ProjectsFound = existingProjects
-			orphans = append(orphans, orphan)
+			orphans = append(orphans, OrphanInfo{
+				Service:        service,
+				Container:      info.Name,
+				Reason:         "some projects deleted from filesystem",
+				Severity:       OrphanSeverityWarning,
+				ContainerState: ContainerStateRunning,
+				ProjectsFound:  existingProjects,
+			})
 		}
 	}
 
-	// Check for zombie containers (running but not registered)
+	// Check for zombie containers
 	for _, container := range containers {
-		if isSharedContainer(container.Name) {
-			service := extractServiceName(container.Name)
-			if _, exists := registry.Containers[service]; !exists {
-				orphans = append(orphans, OrphanInfo{
-					Service:        service,
-					Container:      container.Name,
-					Reason:         "container running but not registered",
-					Severity:       OrphanSeverityCritical,
-					ContainerState: ContainerStateRunning,
-				})
-			}
+		if !isSharedContainer(container.Name) {
+			continue
+		}
+
+		service := extractServiceName(container.Name)
+		if _, exists := registry.Containers[service]; !exists {
+			orphans = append(orphans, OrphanInfo{
+				Service:        service,
+				Container:      container.Name,
+				Reason:         "container running but not registered",
+				Severity:       OrphanSeverityCritical,
+				ContainerState: ContainerStateRunning,
+			})
 		}
 	}
 

@@ -132,16 +132,22 @@ func (h *CleanupHandler) confirmCleanup(base *base.BaseCommand) bool {
 
 // checkOrphans checks for and reports orphaned shared containers
 func (h *CleanupHandler) checkOrphans(setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags) error {
+	if ciFlags.Quiet {
+		return nil
+	}
+
 	reg, err := h.getRegistry()
 	if err != nil {
 		return err
 	}
 
-	// Use enhanced detection with Docker checks
-	ctx := context.Background()
-	orphans, err := reg.FindOrphansWithChecks(ctx, setup.DockerClient)
-	if err != nil || len(orphans) == 0 || ciFlags.Quiet {
+	orphans, err := reg.FindOrphansWithChecks(context.Background(), setup.DockerClient)
+	if err != nil {
 		return err
+	}
+
+	if len(orphans) == 0 {
+		return nil
 	}
 
 	// Group by severity
@@ -161,25 +167,25 @@ func (h *CleanupHandler) checkOrphans(setup *common.CoreSetup, base *base.BaseCo
 
 	if len(critical) > 0 {
 		base.Output.Error("  Critical (%d):", len(critical))
-		for _, orphan := range critical {
-			base.Output.Info("    - %s: %s", orphan.Service, orphan.Reason)
+		for _, o := range critical {
+			base.Output.Info("    - %s: %s", o.Service, o.Reason)
 		}
 	}
 
 	if len(warning) > 0 {
 		base.Output.Warning("  Warning (%d):", len(warning))
-		for _, orphan := range warning {
-			base.Output.Info("    - %s: %s", orphan.Service, orphan.Reason)
-			if len(orphan.ProjectsFound) > 0 {
-				base.Output.Info("      Remaining projects: %v", orphan.ProjectsFound)
+		for _, o := range warning {
+			base.Output.Info("    - %s: %s", o.Service, o.Reason)
+			if len(o.ProjectsFound) > 0 {
+				base.Output.Info("      Remaining: %v", o.ProjectsFound)
 			}
 		}
 	}
 
 	if len(safe) > 0 {
 		base.Output.Info("  Safe to remove (%d):", len(safe))
-		for _, orphan := range safe {
-			base.Output.Info("    - %s: %s", orphan.Service, orphan.Reason)
+		for _, o := range safe {
+			base.Output.Info("    - %s: %s", o.Service, o.Reason)
 		}
 	}
 
@@ -194,9 +200,7 @@ func (h *CleanupHandler) cleanOrphans(setup *common.CoreSetup, base *base.BaseCo
 		return err
 	}
 
-	// Use enhanced detection
-	ctx := context.Background()
-	orphans, err := reg.FindOrphansWithChecks(ctx, setup.DockerClient)
+	orphans, err := reg.FindOrphansWithChecks(context.Background(), setup.DockerClient)
 	if err != nil {
 		return err
 	}
