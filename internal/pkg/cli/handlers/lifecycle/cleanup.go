@@ -160,24 +160,24 @@ func (h *CleanupHandler) displayOrphans(base *base.BaseCommand, orphans []regist
 	base.Output.Warning(messages.OrphanFound, len(orphans))
 
 	if len(critical) > 0 {
-		base.Output.Error("  Critical (%d):", len(critical))
+		base.Output.Error(messages.OrphanSeverityCritical, len(critical))
 		for _, o := range critical {
 			base.Output.Info("    - %s: %s", o.Service, o.Reason)
 		}
 	}
 
 	if len(warning) > 0 {
-		base.Output.Warning("  Warning (%d):", len(warning))
+		base.Output.Warning(messages.OrphanSeverityWarning, len(warning))
 		for _, o := range warning {
 			base.Output.Info("    - %s: %s", o.Service, o.Reason)
 			if len(o.ProjectsFound) > 0 {
-				base.Output.Info("      Remaining: %v", o.ProjectsFound)
+				base.Output.Info("      "+messages.OrphanRemainingProjects, o.ProjectsFound)
 			}
 		}
 	}
 
 	if len(safe) > 0 {
-		base.Output.Info("  Safe to remove (%d):", len(safe))
+		base.Output.Info(messages.OrphanSeveritySafe, len(safe))
 		for _, o := range safe {
 			base.Output.Info("    - %s: %s", o.Service, o.Reason)
 		}

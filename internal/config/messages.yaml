@@ -304,6 +304,10 @@ orphan:
   cleanup_success: "Orphan cleanup completed"
   removed_from_registry: "Removed %d orphaned container(s) from registry"
   run_cleanup_hint: "Run 'otto-stack cleanup --orphans' to remove them"
+  severity_critical: "Critical (%d):"
+  severity_warning: "Warning (%d):"
+  severity_safe: "Safe to remove (%d):"
+  remaining_projects: "Remaining: %v"
 
 shared:
   starting: "Starting shared containers"
