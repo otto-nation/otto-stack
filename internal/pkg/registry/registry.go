@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -27,12 +28,29 @@ func NewManager(sharedDir string) *Manager {
 
 // Load reads the registry from disk
 func (m *Manager) Load() (*Registry, error) {
-	data, err := os.ReadFile(m.registryPath)
-	if os.IsNotExist(err) {
-		return NewRegistry(), nil
+	// Open file for reading with lock
+	f, err := os.OpenFile(m.registryPath, os.O_RDONLY|os.O_CREATE, core.PermReadWrite)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return NewRegistry(), nil
+		}
+		return nil, err
 	}
+	defer func() { _ = f.Close() }()
+
+	// Acquire shared lock for reading
+	if err := lockFile(f); err != nil {
+		return nil, err
+	}
+	defer func() { _ = unlockFile(f) }()
+
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(data) == 0 {
+		return NewRegistry(), nil
 	}
 
 	var registry Registry
@@ -54,7 +72,45 @@ func (m *Manager) Save(registry *Registry) error {
 		return err
 	}
 
-	return os.WriteFile(m.registryPath, data, core.PermReadWrite)
+	// Ensure directory exists
+	dir := filepath.Dir(m.registryPath)
+	if err := os.MkdirAll(dir, core.PermReadWriteExec); err != nil {
+		return err
+	}
+
+	// Atomic write: write to temp file, then rename
+	tempPath := m.registryPath + ".tmp"
+	f, err := os.OpenFile(tempPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, core.PermReadWrite)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = os.Remove(tempPath) }() // Clean up temp file on error
+
+	// Acquire exclusive lock
+	if err := lockFile(f); err != nil {
+		_ = f.Close()
+		return err
+	}
+
+	// Write data
+	if _, err := f.Write(data); err != nil {
+		_ = unlockFile(f)
+		_ = f.Close()
+		return err
+	}
+
+	// Sync to disk
+	if err := f.Sync(); err != nil {
+		_ = unlockFile(f)
+		_ = f.Close()
+		return err
+	}
+
+	_ = unlockFile(f)
+	_ = f.Close()
+
+	// Atomic rename
+	return os.Rename(tempPath, m.registryPath)
 }
 
 // Register adds or updates a container in the registry
