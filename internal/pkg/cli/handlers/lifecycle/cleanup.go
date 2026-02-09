@@ -150,18 +150,12 @@ func (h *CleanupHandler) checkOrphans(setup *common.CoreSetup, base *base.BaseCo
 		return nil
 	}
 
-	// Group by severity
-	var safe, warning, critical []registry.OrphanInfo
-	for _, orphan := range orphans {
-		switch orphan.Severity {
-		case registry.OrphanSeveritySafe:
-			safe = append(safe, orphan)
-		case registry.OrphanSeverityWarning:
-			warning = append(warning, orphan)
-		case registry.OrphanSeverityCritical:
-			critical = append(critical, orphan)
-		}
-	}
+	h.displayOrphans(base, orphans)
+	return nil
+}
+
+func (h *CleanupHandler) displayOrphans(base *base.BaseCommand, orphans []registry.OrphanInfo) {
+	safe, warning, critical := h.groupBySeverity(orphans)
 
 	base.Output.Warning(messages.OrphanFound, len(orphans))
 
@@ -190,7 +184,20 @@ func (h *CleanupHandler) checkOrphans(setup *common.CoreSetup, base *base.BaseCo
 	}
 
 	base.Output.Info(messages.OrphanRunCleanupHint)
-	return nil
+}
+
+func (h *CleanupHandler) groupBySeverity(orphans []registry.OrphanInfo) (safe, warning, critical []registry.OrphanInfo) {
+	for _, o := range orphans {
+		switch o.Severity {
+		case registry.OrphanSeveritySafe:
+			safe = append(safe, o)
+		case registry.OrphanSeverityWarning:
+			warning = append(warning, o)
+		case registry.OrphanSeverityCritical:
+			critical = append(critical, o)
+		}
+	}
+	return
 }
 
 // cleanOrphans removes orphaned shared containers
