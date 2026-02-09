@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -47,9 +48,10 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	}
 
 	showAll, _ := cmd.Flags().GetBool(docker.FlagAll)
+	showShared, _ := cmd.Flags().GetBool(docker.FlagShared)
 
-	if execCtx.Type == clicontext.Shared || showAll {
-		return h.handleGlobalStatus(ctx, cmd, args, base, execCtx, showAll)
+	if execCtx.Type == clicontext.Shared || showAll || showShared {
+		return h.handleSharedStatus(ctx, cmd, args, base, execCtx)
 	}
 
 	return h.handleProjectStatus(ctx, cmd, args, base, execCtx)
@@ -87,8 +89,9 @@ func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Comm
 	return nil
 }
 
-func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command, _ []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext, showAll bool) error {
+func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Command, _ []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
 	ciFlags := ci.GetFlags(cmd)
+	showAll, _ := cmd.Flags().GetBool(docker.FlagAll)
 
 	if !ciFlags.Quiet {
 		if showAll {
@@ -99,7 +102,6 @@ func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command
 	}
 
 	reg := registry.NewManager(execCtx.SharedContainers.Root)
-
 	_, err := reg.Load()
 	if err != nil {
 		return err
@@ -115,11 +117,24 @@ func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command
 		return nil
 	}
 
-	base.Output.Info(messages.InfoSharedContainers)
-	for _, container := range sharedContainers {
-		base.Output.Info("  - %s (used by: %v)", container.Name, container.Projects)
+	// Get docker client to check container states
+	dockerClient, err := docker.NewClient(logger.GetLogger())
+	if err != nil {
+		return err
 	}
 
+	// Build display statuses with container state
+	statuses := h.buildSharedStatuses(ctx, sharedContainers, dockerClient)
+
+	if ciFlags.JSON {
+		ci.OutputResult(ciFlags, map[string]any{
+			"shared_containers": statuses,
+			"count":             len(statuses),
+		}, core.ExitSuccess)
+		return nil
+	}
+
+	h.displaySharedStatus(base, statuses)
 	return nil
 }
 
@@ -287,4 +302,63 @@ func filterInitContainers(serviceConfigs []types.ServiceConfig) []string {
 		}
 	}
 	return filtered
+}
+
+func (h *StatusHandler) buildSharedStatuses(ctx context.Context, containers []*registry.ContainerInfo, dockerClient *docker.Client) []display.SharedContainerStatus {
+	statuses := make([]display.SharedContainerStatus, 0, len(containers))
+
+	for _, container := range containers {
+		state := h.getContainerState(ctx, container.Name, dockerClient)
+		statuses = append(statuses, display.SharedContainerStatus{
+			Name:      container.Name,
+			Service:   container.Service,
+			State:     state,
+			Projects:  container.Projects,
+			CreatedAt: container.CreatedAt,
+			UpdatedAt: container.UpdatedAt,
+		})
+	}
+
+	return statuses
+}
+
+func (h *StatusHandler) getContainerState(ctx context.Context, containerName string, dockerClient *docker.Client) string {
+	inspectResp, err := dockerClient.GetDockerClient().ContainerInspect(ctx, containerName)
+	if err != nil {
+		return "not found"
+	}
+	return inspectResp.State.Status
+}
+
+func (h *StatusHandler) displaySharedStatus(base *base.BaseCommand, statuses []display.SharedContainerStatus) {
+	base.Output.Info(messages.InfoSharedContainers)
+	for _, status := range statuses {
+		projectList := "none"
+		if len(status.Projects) > 0 {
+			projectList = formatProjects(status.Projects)
+		}
+		base.Output.Info("  %s (%s)", status.Name, status.Service)
+		base.Output.Info("    State: %s", status.State)
+		base.Output.Info("    Used by: %s", projectList)
+		base.Output.Info("    Created: %s", status.CreatedAt.Format(time.RFC3339))
+		base.Output.Info("    Updated: %s", status.UpdatedAt.Format(time.RFC3339))
+	}
+}
+
+func formatProjects(projects []string) string {
+	if len(projects) == 0 {
+		return "none"
+	}
+	if len(projects) == 1 {
+		return projects[0]
+	}
+
+	var b strings.Builder
+	for i, p := range projects {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(p)
+	}
+	return b.String()
 }

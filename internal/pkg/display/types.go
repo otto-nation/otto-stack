@@ -14,6 +14,16 @@ type ServiceStatus struct {
 	Uptime    time.Duration `json:"uptime" yaml:"uptime"`
 }
 
+// SharedContainerStatus represents the status of a shared container with usage info
+type SharedContainerStatus struct {
+	Name      string    `json:"name" yaml:"name"`
+	Service   string    `json:"service" yaml:"service"`
+	State     string    `json:"state" yaml:"state"`
+	Projects  []string  `json:"projects" yaml:"projects"`
+	CreatedAt time.Time `json:"created_at" yaml:"created_at"`
+	UpdatedAt time.Time `json:"updated_at" yaml:"updated_at"`
+}
+
 // ValidationResult represents validation results
 type ValidationResult struct {
 	Valid    bool              `json:"valid" yaml:"valid"`
