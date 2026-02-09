@@ -168,6 +168,8 @@ info:
   shared_containers_status: "Shared containers status"
   cleaning_project: "Cleaning up project: %s"
   project_info: "Project: %s"
+  service_info: "Service: %s"
+  context_info: "Context: %s"
 
 notifications:
   config_header: "Notification Configuration:"

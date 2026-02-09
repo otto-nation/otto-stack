@@ -71,10 +71,10 @@ func (h *ConnectHandler) handleProjectContext(ctx context.Context, args []string
 	}
 
 	if len(serviceConfigs) > 0 {
-		base.Output.Info("Service: %s", serviceConfigs[0].Name)
+		base.Output.Info(messages.InfoServiceInfo, serviceConfigs[0].Name)
 	}
 	base.Output.Success(messages.SuccessConnected)
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
+	base.Output.Info(messages.InfoProjectInfo, setup.Config.Project.Name)
 
 	return nil
 }
@@ -87,9 +87,9 @@ func (h *ConnectHandler) handleSharedContext(args []string, base *base.BaseComma
 	}
 
 	base.Output.Header(messages.InfoConnectingToService)
-	base.Output.Info("Service: %s", serviceName)
+	base.Output.Info(messages.InfoServiceInfo, serviceName)
 	base.Output.Success(messages.SuccessConnected)
-	base.Output.Info("Context: shared")
+	base.Output.Info(messages.InfoContextInfo, "shared")
 
 	return nil
 }
