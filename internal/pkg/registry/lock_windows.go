@@ -23,6 +23,7 @@ var (
 const (
 	lockfileExclusiveLock   = 0x00000002
 	lockfileFailImmediately = 0x00000001
+	errorLockViolation      = 33
 )
 
 // lockFile acquires an exclusive lock on the file
@@ -40,12 +41,12 @@ func lockFile(f *os.File) error {
 		if r1 != 0 {
 			return nil
 		}
-		if err != syscall.ERROR_LOCK_VIOLATION {
+		if errno, ok := err.(syscall.Errno); !ok || errno != errorLockViolation {
 			return err
 		}
 		time.Sleep(lockDelay)
 	}
-	return syscall.ERROR_LOCK_VIOLATION
+	return syscall.Errno(errorLockViolation)
 }
 
 // unlockFile releases the lock on the file
