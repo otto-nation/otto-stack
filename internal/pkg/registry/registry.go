@@ -198,13 +198,138 @@ func (m *Manager) IsShared(service string) (bool, error) {
 	return container != nil, nil
 }
 
-// FindOrphans returns containers with no active projects
+// FindOrphans returns containers with no active projects (basic check)
 func (m *Manager) FindOrphans() ([]OrphanInfo, error) {
 	registry, err := m.Load()
 	if err != nil {
 		return nil, err
 	}
 	return registry.FindOrphans(), nil
+}
+
+// FindOrphansWithChecks performs enhanced orphan detection with filesystem and Docker checks
+func (m *Manager) FindOrphansWithChecks(ctx context.Context, dockerClient *docker.Client) ([]OrphanInfo, error) {
+	registry, err := m.Load()
+	if err != nil {
+		return nil, err
+	}
+
+	var orphans []OrphanInfo
+
+	// Get all running containers
+	containers, err := dockerClient.ListContainers(ctx, "")
+	if err != nil {
+		return nil, err
+	}
+
+	containerMap := make(map[string]bool)
+	for _, c := range containers {
+		containerMap[c.Name] = true
+	}
+
+	// Check registered containers
+	for service, info := range registry.Containers {
+		orphan := OrphanInfo{
+			Service:   service,
+			Container: info.Name,
+		}
+
+		// Check if container exists in Docker
+		if !containerMap[info.Name] {
+			orphan.Reason = "container not found in Docker"
+			orphan.Severity = OrphanSeverityWarning
+			orphan.ContainerState = ContainerStateNotFound
+			orphans = append(orphans, orphan)
+			continue
+		}
+
+		// Check if projects still exist
+		var existingProjects []string
+		for _, project := range info.Projects {
+			if projectExists(project) {
+				existingProjects = append(existingProjects, project)
+			}
+		}
+
+		// No projects using it
+		if len(info.Projects) == 0 {
+			orphan.Reason = "no projects using this container"
+			orphan.Severity = OrphanSeveritySafe
+			orphan.ContainerState = ContainerStateRunning
+			orphans = append(orphans, orphan)
+		} else if len(existingProjects) == 0 {
+			// Projects listed but none exist on filesystem
+			orphan.Reason = "all projects deleted from filesystem"
+			orphan.Severity = OrphanSeveritySafe
+			orphan.ContainerState = ContainerStateRunning
+			orphan.ProjectsFound = info.Projects
+			orphans = append(orphans, orphan)
+		} else if len(existingProjects) < len(info.Projects) {
+			// Some projects deleted
+			orphan.Reason = "some projects deleted from filesystem"
+			orphan.Severity = OrphanSeverityWarning
+			orphan.ContainerState = ContainerStateRunning
+			orphan.ProjectsFound = existingProjects
+			orphans = append(orphans, orphan)
+		}
+	}
+
+	// Check for zombie containers (running but not registered)
+	for _, container := range containers {
+		if isSharedContainer(container.Name) {
+			service := extractServiceName(container.Name)
+			if _, exists := registry.Containers[service]; !exists {
+				orphans = append(orphans, OrphanInfo{
+					Service:        service,
+					Container:      container.Name,
+					Reason:         "container running but not registered",
+					Severity:       OrphanSeverityCritical,
+					ContainerState: ContainerStateRunning,
+				})
+			}
+		}
+	}
+
+	return orphans, nil
+}
+
+// projectExists checks if a project directory exists
+func projectExists(projectName string) bool {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return false
+	}
+
+	// Check common project locations
+	// This is a heuristic - projects could be anywhere
+	// We check if .otto-stack directory exists in common locations
+	possiblePaths := []string{
+		filepath.Join(homeDir, "projects", projectName, core.OttoStackDir),
+		filepath.Join(homeDir, "dev", projectName, core.OttoStackDir),
+		filepath.Join(homeDir, projectName, core.OttoStackDir),
+	}
+
+	for _, path := range possiblePaths {
+		if _, err := os.Stat(path); err == nil {
+			return true
+		}
+	}
+
+	return false
+}
+
+// isSharedContainer checks if container name matches shared pattern
+func isSharedContainer(name string) bool {
+	return len(name) > len(core.SharedContainerPrefix) &&
+		name[:len(core.SharedContainerPrefix)] == core.SharedContainerPrefix
+}
+
+// extractServiceName extracts service name from container name
+func extractServiceName(containerName string) string {
+	if !isSharedContainer(containerName) {
+		return ""
+	}
+	return containerName[len(core.SharedContainerPrefix):]
 }
 
 // CleanOrphans removes orphaned containers from registry
