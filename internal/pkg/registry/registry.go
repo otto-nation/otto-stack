@@ -2,6 +2,7 @@ package registry
 
 import (
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -43,7 +44,7 @@ func (m *Manager) Load() (*Registry, error) {
 	}
 	defer func() { _ = unlockFile(f) }()
 
-	data, err := os.ReadFile(m.registryPath)
+	data, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}
