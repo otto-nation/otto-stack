@@ -24,6 +24,7 @@ import (
 // InitHandler handles the init command
 type InitHandler struct {
 	forceOverwrite          bool
+	base                    *base.BaseCommand
 	promptManager           *PromptManager
 	validationManager       *ValidationManager
 	projectManager          *ProjectManager
@@ -65,6 +66,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	h.forceOverwrite = initFlags.Force
+	h.base = base
 
 	projectCtx, err := h.processMode(ciFlags, initFlags, base, cmd)
 	if err != nil {
@@ -211,14 +213,22 @@ func (h *InitHandler) buildSharingConfig(initFlags *core.InitFlags, serviceConfi
 // validateServiceShareable checks if a service can be shared
 func (h *InitHandler) validateServiceShareable(serviceName string, serviceConfigs []types.ServiceConfig) error {
 	for _, cfg := range serviceConfigs {
-		if cfg.Name == serviceName && !cfg.Shareable {
-			return pkgerrors.NewValidationErrorf(
-				pkgerrors.ErrCodeInvalid,
-				"shared-services",
-				messages.ValidationServiceNotShareable,
-				serviceName,
-			)
+		if cfg.Name != serviceName {
+			continue
 		}
+		if cfg.Shareable {
+			return nil
+		}
+		if h.forceOverwrite {
+			h.base.Output.Warning(messages.ValidationServiceNotShareableWarning, serviceName)
+			return nil
+		}
+		return pkgerrors.NewValidationErrorf(
+			pkgerrors.ErrCodeInvalid,
+			"shared-services",
+			messages.ValidationServiceNotShareable,
+			serviceName,
+		)
 	}
 	return nil
 }
