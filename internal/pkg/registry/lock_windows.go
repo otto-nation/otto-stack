@@ -34,8 +34,8 @@ func lockFile(f *os.File) error {
 			uintptr(f.Fd()),
 			uintptr(lockfileExclusiveLock|lockfileFailImmediately),
 			0,
-			1,
-			0,
+			0xFFFFFFFF,
+			0xFFFFFFFF,
 			uintptr(unsafe.Pointer(overlapped)),
 		)
 		if r1 != 0 {
@@ -55,8 +55,8 @@ func unlockFile(f *os.File) error {
 	r1, _, err := unlockFileEx.Call(
 		uintptr(f.Fd()),
 		0,
-		1,
-		0,
+		0xFFFFFFFF,
+		0xFFFFFFFF,
 		uintptr(unsafe.Pointer(overlapped)),
 	)
 	if r1 == 0 {
