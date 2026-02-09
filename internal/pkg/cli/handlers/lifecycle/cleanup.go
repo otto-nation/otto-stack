@@ -131,33 +131,94 @@ func (h *CleanupHandler) confirmCleanup(base *base.BaseCommand) bool {
 }
 
 // checkOrphans checks for and reports orphaned shared containers
-func (h *CleanupHandler) checkOrphans(_ *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags) error {
+func (h *CleanupHandler) checkOrphans(setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags) error {
+	if ciFlags.Quiet {
+		return nil
+	}
+
 	reg, err := h.getRegistry()
 	if err != nil {
 		return err
 	}
 
-	orphans, err := reg.FindOrphans()
-	if err != nil || len(orphans) == 0 || ciFlags.Quiet {
+	orphans, err := reg.FindOrphansWithChecks(context.Background(), setup.DockerClient)
+	if err != nil {
 		return err
 	}
 
-	base.Output.Warning(messages.OrphanFound, len(orphans))
-	for _, orphan := range orphans {
-		base.Output.Info("  - %s (%s)", orphan.Service, orphan.Reason)
+	if len(orphans) == 0 {
+		return nil
 	}
-	base.Output.Info(messages.OrphanRunCleanupHint)
+
+	h.displayOrphans(base, orphans)
 	return nil
 }
 
+func (h *CleanupHandler) displayOrphans(base *base.BaseCommand, orphans []registry.OrphanInfo) {
+	safe, warning, critical := h.groupBySeverity(orphans)
+
+	base.Output.Warning(messages.OrphanFound, len(orphans))
+	h.displayCritical(base, critical)
+	h.displayWarning(base, warning)
+	h.displaySafe(base, safe)
+	base.Output.Info(messages.OrphanRunCleanupHint)
+}
+
+func (h *CleanupHandler) displayCritical(base *base.BaseCommand, orphans []registry.OrphanInfo) {
+	if len(orphans) == 0 {
+		return
+	}
+	base.Output.Error(messages.OrphanSeverityCritical, len(orphans))
+	for _, o := range orphans {
+		base.Output.Info("    - %s: %s", o.Service, o.Reason)
+	}
+}
+
+func (h *CleanupHandler) displayWarning(base *base.BaseCommand, orphans []registry.OrphanInfo) {
+	if len(orphans) == 0 {
+		return
+	}
+	base.Output.Warning(messages.OrphanSeverityWarning, len(orphans))
+	for _, o := range orphans {
+		base.Output.Info("    - %s: %s", o.Service, o.Reason)
+		if len(o.ProjectsFound) > 0 {
+			base.Output.Info("      "+messages.OrphanRemainingProjects, o.ProjectsFound)
+		}
+	}
+}
+
+func (h *CleanupHandler) displaySafe(base *base.BaseCommand, orphans []registry.OrphanInfo) {
+	if len(orphans) == 0 {
+		return
+	}
+	base.Output.Info(messages.OrphanSeveritySafe, len(orphans))
+	for _, o := range orphans {
+		base.Output.Info("    - %s: %s", o.Service, o.Reason)
+	}
+}
+
+func (h *CleanupHandler) groupBySeverity(orphans []registry.OrphanInfo) (safe, warning, critical []registry.OrphanInfo) {
+	for _, o := range orphans {
+		switch o.Severity {
+		case registry.OrphanSeveritySafe:
+			safe = append(safe, o)
+		case registry.OrphanSeverityWarning:
+			warning = append(warning, o)
+		case registry.OrphanSeverityCritical:
+			critical = append(critical, o)
+		}
+	}
+	return
+}
+
 // cleanOrphans removes orphaned shared containers
-func (h *CleanupHandler) cleanOrphans(_ *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
+func (h *CleanupHandler) cleanOrphans(setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
 	reg, err := h.getRegistry()
 	if err != nil {
 		return err
 	}
 
-	orphans, err := reg.FindOrphans()
+	orphans, err := reg.FindOrphansWithChecks(context.Background(), setup.DockerClient)
 	if err != nil {
 		return err
 	}

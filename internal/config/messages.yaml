@@ -304,6 +304,15 @@ orphan:
   cleanup_success: "Orphan cleanup completed"
   removed_from_registry: "Removed %d orphaned container(s) from registry"
   run_cleanup_hint: "Run 'otto-stack cleanup --orphans' to remove them"
+  severity_critical: "Critical (%d):"
+  severity_warning: "Warning (%d):"
+  severity_safe: "Safe to remove (%d):"
+  remaining_projects: "Remaining: %v"
+  reason_not_in_docker: "container not found in Docker"
+  reason_no_projects: "no projects using this container"
+  reason_all_projects_deleted: "all projects deleted from filesystem"
+  reason_some_projects_deleted: "some projects deleted from filesystem"
+  reason_not_registered: "container running but not registered"
 
 shared:
   starting: "Starting shared containers"
