@@ -21,6 +21,8 @@ type DockerClient interface {
 	ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error)
 	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *ocispec.Platform, containerName string) (container.CreateResponse, error)
 	ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error
+	ContainerStop(ctx context.Context, containerID string, options container.StopOptions) error
+	ContainerRestart(ctx context.Context, containerID string, options container.StopOptions) error
 	ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error)
 	ContainerLogs(ctx context.Context, container string, options container.LogsOptions) (io.ReadCloser, error)
 	VolumeList(ctx context.Context, options volume.ListOptions) (volume.ListResponse, error)
@@ -62,6 +64,14 @@ func (a *dockerClientAdapter) ContainerCreate(ctx context.Context, config *conta
 
 func (a *dockerClientAdapter) ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error {
 	return a.client.ContainerStart(ctx, containerID, options)
+}
+
+func (a *dockerClientAdapter) ContainerStop(ctx context.Context, containerID string, options container.StopOptions) error {
+	return a.client.ContainerStop(ctx, containerID, options)
+}
+
+func (a *dockerClientAdapter) ContainerRestart(ctx context.Context, containerID string, options container.StopOptions) error {
+	return a.client.ContainerRestart(ctx, containerID, options)
 }
 
 func (a *dockerClientAdapter) ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error) {

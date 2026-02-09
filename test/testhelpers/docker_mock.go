@@ -20,6 +20,8 @@ type MockDockerClient struct {
 	ContainerInspectFunc func(ctx context.Context, containerID string) (types.ContainerJSON, error)
 	ContainerCreateFunc  func(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *ocispec.Platform, containerName string) (container.CreateResponse, error)
 	ContainerStartFunc   func(ctx context.Context, containerID string, options container.StartOptions) error
+	ContainerStopFunc    func(ctx context.Context, containerID string, options container.StopOptions) error
+	ContainerRestartFunc func(ctx context.Context, containerID string, options container.StopOptions) error
 	ContainerWaitFunc    func(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.WaitResponse, <-chan error)
 	ContainerLogsFunc    func(ctx context.Context, container string, options container.LogsOptions) (io.ReadCloser, error)
 	VolumeListFunc       func(ctx context.Context, options volume.ListOptions) (volume.ListResponse, error)
@@ -64,6 +66,20 @@ func (m *MockDockerClient) ContainerCreate(ctx context.Context, config *containe
 func (m *MockDockerClient) ContainerStart(ctx context.Context, containerID string, options container.StartOptions) error {
 	if m.ContainerStartFunc != nil {
 		return m.ContainerStartFunc(ctx, containerID, options)
+	}
+	return nil
+}
+
+func (m *MockDockerClient) ContainerStop(ctx context.Context, containerID string, options container.StopOptions) error {
+	if m.ContainerStopFunc != nil {
+		return m.ContainerStopFunc(ctx, containerID, options)
+	}
+	return nil
+}
+
+func (m *MockDockerClient) ContainerRestart(ctx context.Context, containerID string, options container.StopOptions) error {
+	if m.ContainerRestartFunc != nil {
+		return m.ContainerRestartFunc(ctx, containerID, options)
 	}
 	return nil
 }

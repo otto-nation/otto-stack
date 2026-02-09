@@ -5,12 +5,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
@@ -35,6 +40,26 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return nil
 	}
 
+	execCtx, err := h.detectContext()
+	if err != nil {
+		return err
+	}
+
+	if execCtx.Type == clicontext.Shared {
+		return h.handleSharedContext(ctx, cmd, args, base, execCtx)
+	}
+	return h.handleProjectContext(ctx, cmd, args, base)
+}
+
+func (h *RestartHandler) detectContext() (*clicontext.ExecutionContext, error) {
+	detector, err := clicontext.NewDetector()
+	if err != nil {
+		return nil, err
+	}
+	return detector.Detect()
+}
+
+func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
 	if err != nil {
 		return err
@@ -46,7 +71,6 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return err
 	}
 
-	// Resolve services - inline logic since lifecycle uses different pattern than operations
 	var serviceConfigs []types.ServiceConfig
 	if len(args) > 0 {
 		serviceConfigs, err = services.ResolveUpServices(args, setup.Config)
@@ -62,6 +86,57 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	base.Output.Success(messages.LifecycleRestartSuccess)
+	return nil
+}
+
+func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+	if len(args) == 0 {
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationServiceNameRequired, nil)
+	}
+
+	reg, err := h.loadRegistry(execCtx)
+	if err != nil {
+		return err
+	}
+
+	if err := h.verifyServicesInRegistry(args, reg); err != nil {
+		return err
+	}
+
+	flags, err := core.ParseRestartFlags(cmd)
+	if err != nil {
+		return err
+	}
+
+	dockerClient, err := docker.NewClient(logger.GetLogger())
+	if err != nil {
+		return err
+	}
+
+	timeout := flags.Timeout
+	stopOpts := container.StopOptions{Timeout: &timeout}
+
+	for _, serviceName := range args {
+		if err := dockerClient.GetDockerClient().ContainerRestart(ctx, serviceName, stopOpts); err != nil {
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, fmt.Sprintf("failed to restart %s", serviceName), err)
+		}
+		base.Output.Success("Restarted %s", serviceName)
+	}
+
+	return nil
+}
+
+func (h *RestartHandler) loadRegistry(execCtx *clicontext.ExecutionContext) (*registry.Registry, error) {
+	reg := registry.NewManager(execCtx.SharedContainers.Root)
+	return reg.Load()
+}
+
+func (h *RestartHandler) verifyServicesInRegistry(serviceNames []string, reg *registry.Registry) error {
+	for _, serviceName := range serviceNames {
+		if _, exists := reg.Containers[serviceName]; !exists {
+			return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, fmt.Sprintf(messages.SharedServiceNotInRegistry, serviceName), nil)
+		}
+	}
 	return nil
 }
 
