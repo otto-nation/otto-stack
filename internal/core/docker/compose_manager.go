@@ -104,6 +104,13 @@ func (m *Manager) Stop(ctx context.Context, projectName string, options api.Stop
 	return m.service.Stop(ctx, projectName, options)
 }
 
+// Exec executes a command in a service container
+func (m *Manager) Exec(ctx context.Context, projectName string, options api.RunOptions) (int, error) {
+	slog.Debug("Starting compose exec", "project", projectName, "service", options.Service, "command", options.Command)
+
+	return m.service.Exec(ctx, projectName, options)
+}
+
 type SimpleLogConsumer struct{}
 
 func (s *SimpleLogConsumer) Log(containerName, message string) {

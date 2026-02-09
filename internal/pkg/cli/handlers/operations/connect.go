@@ -2,13 +2,16 @@ package operations
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/cobra"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 )
 
 // ConnectHandler handles the connect command
@@ -34,6 +37,26 @@ func (h *ConnectHandler) GetRequiredFlags() []string {
 
 // Handle executes the connect command
 func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	execCtx, err := h.detectContext()
+	if err != nil {
+		return err
+	}
+
+	if execCtx.Type == clicontext.Shared {
+		return h.handleSharedContext(args, base, execCtx)
+	}
+	return h.handleProjectContext(ctx, args, base)
+}
+
+func (h *ConnectHandler) detectContext() (*clicontext.ExecutionContext, error) {
+	detector, err := clicontext.NewDetector()
+	if err != nil {
+		return nil, err
+	}
+	return detector.Detect()
+}
+
+func (h *ConnectHandler) handleProjectContext(ctx context.Context, args []string, base *base.BaseCommand) error {
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
 	if err != nil {
 		return err
@@ -48,10 +71,38 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	if len(serviceConfigs) > 0 {
-		base.Output.Info("Service: %s", serviceConfigs[0].Name)
+		base.Output.Info(messages.InfoServiceInfo, serviceConfigs[0].Name)
 	}
 	base.Output.Success(messages.SuccessConnected)
-	base.Output.Info("Project: %s", setup.Config.Project.Name)
+	base.Output.Info(messages.InfoProjectInfo, setup.Config.Project.Name)
 
+	return nil
+}
+
+func (h *ConnectHandler) handleSharedContext(args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+	serviceName := args[0]
+
+	if err := h.verifyServiceInRegistry(serviceName, execCtx); err != nil {
+		return err
+	}
+
+	base.Output.Header(messages.InfoConnectingToService)
+	base.Output.Info(messages.InfoServiceInfo, serviceName)
+	base.Output.Success(messages.SuccessConnected)
+	base.Output.Info(messages.InfoContextInfo, "shared")
+
+	return nil
+}
+
+func (h *ConnectHandler) verifyServiceInRegistry(serviceName string, execCtx *clicontext.ExecutionContext) error {
+	reg := registry.NewManager(execCtx.SharedContainers.Root)
+	registryData, err := reg.Load()
+	if err != nil {
+		return err
+	}
+
+	if _, exists := registryData.Containers[serviceName]; !exists {
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, fmt.Sprintf(messages.SharedServiceNotInRegistry, serviceName), nil)
+	}
 	return nil
 }

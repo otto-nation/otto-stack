@@ -168,6 +168,8 @@ info:
   shared_containers_status: "Shared containers status"
   cleaning_project: "Cleaning up project: %s"
   project_info: "Project: %s"
+  service_info: "Service: %s"
+  context_info: "Context: %s"
 
 notifications:
   config_header: "Notification Configuration:"
@@ -317,6 +319,7 @@ orphan:
 shared:
   starting: "Starting shared containers"
   stopping: "Stopping shared containers"
+  service_not_in_registry: "service '%s' not found in shared registry"
   registered: "Shared containers registered"
   stopped: "Shared containers stopped"
   no_services_specified: "No services specified. Use 'otto-stack up <service>' to start shared containers"
