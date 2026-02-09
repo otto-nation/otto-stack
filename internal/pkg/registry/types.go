@@ -1,6 +1,10 @@
 package registry
 
-import "time"
+import (
+	"time"
+
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+)
 
 // ContainerInfo represents a shared container in the registry
 type ContainerInfo struct {
@@ -64,7 +68,7 @@ func (r *Registry) FindOrphans() []OrphanInfo {
 			orphans = append(orphans, OrphanInfo{
 				Service:        service,
 				Container:      info.Name,
-				Reason:         "no projects using this container",
+				Reason:         messages.OrphanReasonNoProjects,
 				Severity:       OrphanSeveritySafe,
 				ContainerState: ContainerStateUnknown,
 			})

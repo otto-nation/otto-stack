@@ -12,6 +12,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // Manager handles shared container registry operations
@@ -254,7 +255,7 @@ func (m *Manager) checkContainer(service string, info *ContainerInfo, containerM
 		return &OrphanInfo{
 			Service:        service,
 			Container:      info.Name,
-			Reason:         "container not found in Docker",
+			Reason:         messages.OrphanReasonNotInDocker,
 			Severity:       OrphanSeverityWarning,
 			ContainerState: ContainerStateNotFound,
 		}
@@ -265,7 +266,7 @@ func (m *Manager) checkContainer(service string, info *ContainerInfo, containerM
 		return &OrphanInfo{
 			Service:        service,
 			Container:      info.Name,
-			Reason:         "no projects using this container",
+			Reason:         messages.OrphanReasonNoProjects,
 			Severity:       OrphanSeveritySafe,
 			ContainerState: ContainerStateRunning,
 		}
@@ -287,7 +288,7 @@ func (m *Manager) checkProjectFilesystem(service string, info *ContainerInfo) *O
 		return &OrphanInfo{
 			Service:        service,
 			Container:      info.Name,
-			Reason:         "all projects deleted from filesystem",
+			Reason:         messages.OrphanReasonAllProjectsDeleted,
 			Severity:       OrphanSeveritySafe,
 			ContainerState: ContainerStateRunning,
 			ProjectsFound:  info.Projects,
@@ -298,7 +299,7 @@ func (m *Manager) checkProjectFilesystem(service string, info *ContainerInfo) *O
 		return &OrphanInfo{
 			Service:        service,
 			Container:      info.Name,
-			Reason:         "some projects deleted from filesystem",
+			Reason:         messages.OrphanReasonSomeProjectsDeleted,
 			Severity:       OrphanSeverityWarning,
 			ContainerState: ContainerStateRunning,
 			ProjectsFound:  existingProjects,
@@ -321,7 +322,7 @@ func (m *Manager) checkZombieContainers(registry *Registry, containers []docker.
 			orphans = append(orphans, OrphanInfo{
 				Service:        service,
 				Container:      container.Name,
-				Reason:         "container running but not registered",
+				Reason:         messages.OrphanReasonNotRegistered,
 				Severity:       OrphanSeverityCritical,
 				ContainerState: ContainerStateRunning,
 			})
