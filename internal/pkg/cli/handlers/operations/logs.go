@@ -2,6 +2,7 @@ package operations
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/cobra"
 
@@ -95,7 +96,7 @@ func (h *LogsHandler) handleSharedContext(ctx context.Context, cmd *cobra.Comman
 	// Verify services exist in registry
 	for _, serviceName := range args {
 		if _, exists := registryData.Containers[serviceName]; !exists {
-			return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service '"+serviceName+"' not found in shared registry", nil)
+			return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, fmt.Sprintf(messages.SharedServiceNotInRegistry, serviceName), nil)
 		}
 	}
 
