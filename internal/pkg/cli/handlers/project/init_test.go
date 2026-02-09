@@ -47,8 +47,6 @@ func TestInitHandler_GetRequiredFlags(t *testing.T) {
 }
 
 func TestInitHandler_ValidateServiceShareable(t *testing.T) {
-	handler := NewInitHandler()
-
 	shareableService := types.ServiceConfig{
 		Name:      "postgres",
 		Shareable: true,
@@ -64,15 +62,21 @@ func TestInitHandler_ValidateServiceShareable(t *testing.T) {
 	tests := []struct {
 		name        string
 		serviceName string
+		force       bool
 		wantErr     bool
 	}{
-		{"shareable service allowed", "postgres", false},
-		{"non-shareable service rejected", "kafka", true},
-		{"unknown service allowed", "unknown", false},
+		{"shareable service allowed", "postgres", false, false},
+		{"non-shareable service rejected", "kafka", false, true},
+		{"non-shareable service allowed with force", "kafka", true, false},
+		{"unknown service allowed", "unknown", false, false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			handler := NewInitHandler()
+			handler.forceOverwrite = tt.force
+			handler.base = &base.BaseCommand{Output: ui.NewOutput()}
+
 			err := handler.validateServiceShareable(tt.serviceName, serviceConfigs)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -85,8 +89,6 @@ func TestInitHandler_ValidateServiceShareable(t *testing.T) {
 }
 
 func TestInitHandler_BuildSharingConfig(t *testing.T) {
-	handler := NewInitHandler()
-
 	shareableService := types.ServiceConfig{
 		Name:      "postgres",
 		Shareable: true,
@@ -126,6 +128,14 @@ func TestInitHandler_BuildSharingConfig(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "non-shareable service with force",
+			flags: &core.InitFlags{
+				SharedServices: "kafka",
+				Force:          true,
+			},
+			wantErr: false,
+		},
+		{
 			name: "mixed services",
 			flags: &core.InitFlags{
 				SharedServices: "postgres,kafka",
@@ -136,6 +146,10 @@ func TestInitHandler_BuildSharingConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			handler := NewInitHandler()
+			handler.forceOverwrite = tt.flags.Force
+			handler.base = &base.BaseCommand{Output: ui.NewOutput()}
+
 			config, err := handler.buildSharingConfig(tt.flags, serviceConfigs)
 			if tt.wantErr {
 				assert.Error(t, err)
