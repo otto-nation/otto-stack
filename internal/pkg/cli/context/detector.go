@@ -28,23 +28,23 @@ func (d *Detector) Detect() (*ExecutionContext, error) {
 		return nil, err
 	}
 
-	shared := &SharedInfo{Root: sharedRoot}
-	projectInfo, err := d.findProjectRoot()
+	sharedContainers := &SharedInfo{Root: sharedRoot}
+	project, err := d.findProjectRoot()
 	if err != nil {
 		return nil, err
 	}
 
-	if projectInfo != nil {
+	if project != nil {
 		return &ExecutionContext{
-			Type:    Project,
-			Project: projectInfo,
-			Shared:  shared,
+			Type:             Project,
+			Project:          project,
+			SharedContainers: sharedContainers,
 		}, nil
 	}
 
 	return &ExecutionContext{
-		Type:   Global,
-		Shared: shared,
+		Type:             Shared,
+		SharedContainers: sharedContainers,
 	}, nil
 }
 

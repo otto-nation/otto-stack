@@ -40,7 +40,7 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		return err
 	}
 
-	if execCtx.Type == clicontext.Global {
+	if execCtx.Type == clicontext.Shared {
 		return h.handleGlobalContext(ctx, cmd, args, base, execCtx)
 	}
 
@@ -153,7 +153,7 @@ func (h *UpHandler) registerSharedContainers(serviceConfigs []types.ServiceConfi
 }
 
 func (h *UpHandler) registerSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
-	reg := registry.NewManager(execCtx.Shared.Root)
+	reg := registry.NewManager(execCtx.SharedContainers.Root)
 
 	for _, svc := range serviceConfigs {
 		containerName := core.SharedContainerPrefix + svc.Name

@@ -48,7 +48,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 
 	showAll, _ := cmd.Flags().GetBool(docker.FlagAll)
 
-	if execCtx.Type == clicontext.Global || showAll {
+	if execCtx.Type == clicontext.Shared || showAll {
 		return h.handleGlobalStatus(ctx, cmd, args, base, execCtx, showAll)
 	}
 
@@ -98,7 +98,7 @@ func (h *StatusHandler) handleGlobalStatus(_ context.Context, cmd *cobra.Command
 		}
 	}
 
-	reg := registry.NewManager(execCtx.Shared.Root)
+	reg := registry.NewManager(execCtx.SharedContainers.Root)
 
 	_, err := reg.Load()
 	if err != nil {

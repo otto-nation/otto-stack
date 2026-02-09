@@ -12,8 +12,8 @@ type ContextType string
 const (
 	// Project context - running inside a project directory
 	Project ContextType = "project"
-	// Global context - running outside any project
-	Global ContextType = "global"
+	// Shared context - managing shared containers
+	Shared ContextType = "shared"
 )
 
 // ProjectInfo contains project-specific information
@@ -30,9 +30,9 @@ type SharedInfo struct {
 
 // ExecutionContext represents the current execution context
 type ExecutionContext struct {
-	Type    ContextType
-	Project *ProjectInfo // nil if Global context
-	Shared  *SharedInfo  // Always populated
+	Type             ContextType
+	Project          *ProjectInfo // nil if Shared context
+	SharedContainers *SharedInfo  // Always populated
 }
 
 // SharingConfig defines container sharing configuration

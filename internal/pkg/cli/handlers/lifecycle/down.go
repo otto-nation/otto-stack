@@ -40,7 +40,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	if execCtx.Type == clicontext.Global {
+	if execCtx.Type == clicontext.Shared {
 		return h.handleGlobalContext(ctx, cmd, args, base, execCtx)
 	}
 
@@ -80,7 +80,7 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 }
 
 func (h *DownHandler) filterSharedIfNeeded(serviceConfigs []types.ServiceConfig, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) ([]types.ServiceConfig, error) {
-	reg := registry.NewManager(execCtx.Shared.Root)
+	reg := registry.NewManager(execCtx.SharedContainers.Root)
 	_, err := reg.Load()
 	if err != nil {
 		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentRegistry, messages.ErrorsRegistryLoadFailed, err)
@@ -187,7 +187,7 @@ func (h *DownHandler) determineServicesToStop(args []string, execCtx *clicontext
 		return args, nil
 	}
 
-	reg := registry.NewManager(execCtx.Shared.Root)
+	reg := registry.NewManager(execCtx.SharedContainers.Root)
 	_, err := reg.Load()
 	if err != nil {
 		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentRegistry, messages.ErrorsRegistryLoadFailed, err)
@@ -227,7 +227,7 @@ func (h *DownHandler) unregisterSharedContainers(servicesToStop []string, execCt
 }
 
 func (h *DownHandler) unregisterSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
-	reg := registry.NewManager(execCtx.Shared.Root)
+	reg := registry.NewManager(execCtx.SharedContainers.Root)
 
 	for _, svc := range serviceConfigs {
 		if err := reg.Unregister(svc.Name, projectName); err != nil {

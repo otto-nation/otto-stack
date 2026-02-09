@@ -201,7 +201,7 @@ func (h *CleanupHandler) getRegistry() (*registry.Manager, error) {
 		return nil, err
 	}
 
-	return registry.NewManager(execCtx.Shared.Root), nil
+	return registry.NewManager(execCtx.SharedContainers.Root), nil
 }
 
 // reconcileRegistry syncs registry with actual Docker container state
