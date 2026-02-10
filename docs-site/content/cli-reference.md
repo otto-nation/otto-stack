@@ -35,9 +35,9 @@ Start, stop, and manage running services
 
 ### ⚙️ Operations & Data
 
-Monitor, connect to, and manage service data
+Monitor and manage service data
 
-**Commands:** `status`, `logs`, `exec`, `connect`
+**Commands:** `status`, `logs`
 
 ### 🛠️ Utility
 
@@ -352,97 +352,6 @@ Attempt to fix detected issues
 
 - Run doctor when services aren't behaving as expected
 - Use --fix to attempt automatic resolution of common issues
-
-### `exec`
-
-Execute commands in running service containers
-
-Execute commands inside running service containers. Useful for database
-operations, debugging, and maintenance tasks. Supports interactive and
-non-interactive modes.
-
-**Usage:** `otto-stack exec <service> <command> [args...]`
-
-**Examples:**
-
-```bash
-otto-stack exec postgres psql -U postgres
-```
-
-Connect to PostgreSQL with psql
-
-```bash
-otto-stack exec redis redis-cli
-```
-
-Connect to Redis CLI
-
-```bash
-otto-stack exec postgres bash
-```
-
-Open bash shell in postgres container
-
-**Flags:**
-
-- `--user`, `-u` (`string`): Username to execute command as (default: ``)
-- `--workdir` (`string`): Working directory for command (default: ``)
-- `--interactive`, `-i` (`bool`): Keep STDIN open (interactive mode) (default: `true`)
-- `--tty` (`bool`): Allocate a pseudo-TTY (default: `true`)
-- `--detach` (`bool`): Run command in background (default: `false`)
-- `--env` (`string`): Set environment variables (comma-separated key=value pairs) (default: ``)
-
-**Related Commands:** [`connect`](#connect), [`logs`](#logs)
-
-**Tips:**
-
-- Use for database maintenance and debugging
-- Combine with --user to run as specific user
-
-### `connect`
-
-Quick connect to service databases and interfaces
-
-Quickly connect to service databases and management interfaces using
-appropriate client tools. Automatically configures connection parameters
-based on service configuration.
-
-**Usage:** `otto-stack connect <service>`
-
-**Examples:**
-
-```bash
-otto-stack connect postgres
-```
-
-Connect to PostgreSQL database
-
-```bash
-otto-stack connect redis
-```
-
-Connect to Redis CLI
-
-```bash
-otto-stack connect mysql
-```
-
-Connect to MySQL database
-
-**Flags:**
-
-- `--database` (`string`): Database name to connect to (default: ``)
-- `--user`, `-u` (`string`): Username for connection (default: ``)
-- `--host`, `-h` (`string`): Host to connect to (default: `localhost`)
-- `--port`, `-p` (`int`): Port to connect to (default: `0`)
-- `--read-only` (`bool`): Connect in read-only mode (default: `false`)
-
-**Related Commands:** [`exec`](#exec), [`status`](#status)
-
-**Tips:**
-
-- Automatically uses correct client tools for each service
-- Use --read-only for safe data exploration
 
 ### `cleanup`
 
