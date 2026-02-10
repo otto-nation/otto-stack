@@ -34,19 +34,22 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	if execCtx.Type == clicontext.Shared {
-		return h.handleSharedContext(ctx, cmd, args, execCtx)
+	switch mode := execCtx.(type) {
+	case *clicontext.ProjectMode:
+		return h.handleProjectContext(ctx, cmd, args, base)
+	case *clicontext.SharedMode:
+		return h.handleSharedContext(ctx, cmd, args, mode)
+	default:
+		return fmt.Errorf("unknown execution mode: %T", execCtx)
 	}
-
-	return h.handleProjectContext(ctx, cmd, args, base)
 }
 
-func (h *LogsHandler) detectContext() (*clicontext.ExecutionContext, error) {
+func (h *LogsHandler) detectContext() (clicontext.ExecutionMode, error) {
 	detector, err := clicontext.NewDetector()
 	if err != nil {
 		return nil, err
 	}
-	return detector.Detect()
+	return detector.DetectContext()
 }
 
 func (h *LogsHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
@@ -77,12 +80,12 @@ func (h *LogsHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 	return stackService.Logs(ctx, logReq)
 }
 
-func (h *LogsHandler) handleSharedContext(ctx context.Context, cmd *cobra.Command, args []string, execCtx *clicontext.ExecutionContext) error {
+func (h *LogsHandler) handleSharedContext(ctx context.Context, cmd *cobra.Command, args []string, mode *clicontext.SharedMode) error {
 	if len(args) == 0 {
 		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationServiceNameRequired, nil)
 	}
 
-	if err := h.verifyServicesInRegistry(args, execCtx); err != nil {
+	if err := h.verifyServicesInRegistry(args, mode); err != nil {
 		return err
 	}
 
@@ -102,8 +105,8 @@ func (h *LogsHandler) handleSharedContext(ctx context.Context, cmd *cobra.Comman
 	return composeManager.Logs(ctx, "shared", consumer, options.ToSDK())
 }
 
-func (h *LogsHandler) verifyServicesInRegistry(serviceNames []string, execCtx *clicontext.ExecutionContext) error {
-	reg := registry.NewManager(execCtx.SharedContainers.Root)
+func (h *LogsHandler) verifyServicesInRegistry(serviceNames []string, mode *clicontext.SharedMode) error {
+	reg := registry.NewManager(mode.Shared.Root)
 	registryData, err := reg.Load()
 	if err != nil {
 		return err

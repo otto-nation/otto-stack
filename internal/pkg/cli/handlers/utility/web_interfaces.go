@@ -56,7 +56,7 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 		return ci.FormatError(ciFlags, err)
 	}
 
-	interfaces, err := h.collectInterfaces(setup, serviceConfigs, flags.All)
+	interfaces, err := h.collectInterfaces(ctx, setup, serviceConfigs, flags.All)
 	if err != nil {
 		return ci.FormatError(ciFlags, err)
 	}
@@ -66,8 +66,8 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 }
 
 // collectInterfaces gathers web interfaces from services
-func (h *WebInterfacesHandler) collectInterfaces(setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, showAll bool) ([]WebInterface, error) {
-	runningServices, err := h.getRunningServices(setup, serviceConfigs, showAll)
+func (h *WebInterfacesHandler) collectInterfaces(ctx context.Context, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, showAll bool) ([]WebInterface, error) {
+	runningServices, err := h.getRunningServices(ctx, setup, serviceConfigs, showAll)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (h *WebInterfacesHandler) collectInterfaces(setup *common.CoreSetup, servic
 }
 
 // getRunningServices gets the status of services if not showing all
-func (h *WebInterfacesHandler) getRunningServices(setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, showAll bool) (map[string]bool, error) {
+func (h *WebInterfacesHandler) getRunningServices(ctx context.Context, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, showAll bool) (map[string]bool, error) {
 	if showAll {
 		return nil, nil
 	}
@@ -88,7 +88,7 @@ func (h *WebInterfacesHandler) getRunningServices(setup *common.CoreSetup, servi
 		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackCreateFailed, err)
 	}
 
-	statuses, err := stackService.Status(context.Background(), services.StatusRequest{
+	statuses, err := stackService.Status(ctx, services.StatusRequest{
 		Project:  setup.Config.Project.Name,
 		Services: serviceNames,
 	})
@@ -157,10 +157,14 @@ func (h *WebInterfacesHandler) outputResults(interfaces []WebInterface, ciFlags 
 }
 
 func (h *WebInterfacesHandler) outputJSON(interfaces []WebInterface, ciFlags ci.Flags) {
-	ci.OutputResult(ciFlags, map[string]any{
-		"interfaces": interfaces,
-		"count":      len(interfaces),
-	}, core.ExitSuccess)
+	output := ci.InterfacesOutput{
+		Interfaces: make([]any, len(interfaces)),
+		Count:      len(interfaces),
+	}
+	for i, iface := range interfaces {
+		output.Interfaces[i] = iface
+	}
+	ci.OutputResult(ciFlags, output, core.ExitSuccess)
 }
 
 // printTable prints interfaces in table format

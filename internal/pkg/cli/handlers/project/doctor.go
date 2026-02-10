@@ -35,7 +35,7 @@ func (h *DoctorHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	base.Output.Header(messages.DoctorHealthCheckHeader, core.AppName)
 	logger.Info("Starting health checks")
 
-	allGood := h.healthCheckManager.RunAllChecks(base)
+	allGood := h.healthCheckManager.RunAllChecks(ctx, base)
 
 	if allGood {
 		base.Output.Success(messages.SuccessAllChecksPassed, core.AppName)

@@ -45,18 +45,22 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return err
 	}
 
-	if execCtx.Type == clicontext.Shared {
-		return h.handleSharedContext(ctx, cmd, args, base, execCtx)
+	switch mode := execCtx.(type) {
+	case *clicontext.ProjectMode:
+		return h.handleProjectContext(ctx, cmd, args, base)
+	case *clicontext.SharedMode:
+		return h.handleSharedContext(ctx, cmd, args, base, mode)
+	default:
+		return fmt.Errorf("unknown execution mode: %T", execCtx)
 	}
-	return h.handleProjectContext(ctx, cmd, args, base)
 }
 
-func (h *RestartHandler) detectContext() (*clicontext.ExecutionContext, error) {
+func (h *RestartHandler) detectContext() (clicontext.ExecutionMode, error) {
 	detector, err := clicontext.NewDetector()
 	if err != nil {
 		return nil, err
 	}
-	return detector.Detect()
+	return detector.DetectContext()
 }
 
 func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
@@ -89,12 +93,12 @@ func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Co
 	return nil
 }
 
-func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, mode *clicontext.SharedMode) error {
 	if len(args) == 0 {
 		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationServiceNameRequired, nil)
 	}
 
-	reg, err := h.loadRegistry(execCtx)
+	reg, err := h.loadRegistry(mode.Shared.Root)
 	if err != nil {
 		return err
 	}
@@ -126,8 +130,8 @@ func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Com
 	return nil
 }
 
-func (h *RestartHandler) loadRegistry(execCtx *clicontext.ExecutionContext) (*registry.Registry, error) {
-	reg := registry.NewManager(execCtx.SharedContainers.Root)
+func (h *RestartHandler) loadRegistry(sharedRoot string) (*registry.Registry, error) {
+	reg := registry.NewManager(sharedRoot)
 	return reg.Load()
 }
 

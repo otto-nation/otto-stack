@@ -23,15 +23,15 @@ func NewHealthCheckManager() *HealthCheckManager {
 }
 
 // RunAllChecks executes all health checks and returns overall status
-func (hcm *HealthCheckManager) RunAllChecks(base *base.BaseCommand) bool {
-	return hcm.CheckDocker(base) &&
+func (hcm *HealthCheckManager) RunAllChecks(ctx context.Context, base *base.BaseCommand) bool {
+	return hcm.CheckDocker(ctx, base) &&
 		hcm.CheckDockerCompose(base) &&
 		hcm.CheckProjectInit(base) &&
 		hcm.CheckConfiguration(base)
 }
 
 // CheckDocker verifies Docker is available and running
-func (hcm *HealthCheckManager) CheckDocker(base *base.BaseCommand) bool {
+func (hcm *HealthCheckManager) CheckDocker(ctx context.Context, base *base.BaseCommand) bool {
 	base.Output.Info(messages.DoctorCheckingDocker)
 
 	if !hcm.isCommandAvailable(docker.DockerCmd) {
@@ -47,7 +47,7 @@ func (hcm *HealthCheckManager) CheckDocker(base *base.BaseCommand) bool {
 		return false
 	}
 
-	err = stackService.CheckDockerHealth(context.Background())
+	err = stackService.CheckDockerHealth(ctx)
 	if err != nil {
 		base.Output.Error(messages.DoctorDockerDaemonNotRunning)
 		base.Output.Info(messages.DoctorDockerStartHelp)

@@ -6,11 +6,9 @@ import (
 	"log/slog"
 	"os"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
-
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
@@ -46,7 +44,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 		return err
 	}
 
-	execCtx, err := detector.Detect()
+	execCtx, err := detector.DetectContext()
 	if err != nil {
 		return err
 	}
@@ -56,17 +54,28 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	projectName, _ := cmd.Flags().GetString(docker.FlagProject)
 
 	if projectName != "" {
-		return h.handleProjectSharedStatus(ctx, cmd, args, base, execCtx, projectName)
+		switch mode := execCtx.(type) {
+		case *clicontext.ProjectMode:
+			return h.handleProjectSharedStatus(ctx, cmd, args, base, mode, projectName)
+		case *clicontext.SharedMode:
+			return h.handleProjectSharedStatus(ctx, cmd, args, base, mode, projectName)
+		}
 	}
 
-	if execCtx.Type == clicontext.Shared || showAll || showShared {
-		return h.handleSharedStatus(ctx, cmd, args, base, execCtx)
+	switch mode := execCtx.(type) {
+	case *clicontext.ProjectMode:
+		if showAll || showShared {
+			return h.handleSharedStatus(ctx, cmd, args, base, mode)
+		}
+		return h.handleProjectStatus(ctx, cmd, args, base)
+	case *clicontext.SharedMode:
+		return h.handleSharedStatus(ctx, cmd, args, base, mode)
+	default:
+		return fmt.Errorf("unknown execution mode: %T", execCtx)
 	}
-
-	return h.handleProjectStatus(ctx, cmd, args, base, execCtx)
 }
 
-func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, _ *clicontext.ExecutionContext) error {
+func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
@@ -98,7 +107,7 @@ func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Comm
 	return nil
 }
 
-func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Command, _ []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Command, _ []string, base *base.BaseCommand, mode clicontext.ExecutionMode) error {
 	ciFlags := ci.GetFlags(cmd)
 	showAll, _ := cmd.Flags().GetBool(docker.FlagAll)
 
@@ -110,7 +119,15 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 		}
 	}
 
-	reg := registry.NewManager(execCtx.SharedContainers.Root)
+	var sharedRoot string
+	switch m := mode.(type) {
+	case *clicontext.ProjectMode:
+		sharedRoot = m.Shared.Root
+	case *clicontext.SharedMode:
+		sharedRoot = m.Shared.Root
+	}
+
+	reg := registry.NewManager(sharedRoot)
 	_, err := reg.Load()
 	if err != nil {
 		return err
@@ -126,13 +143,11 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 		return nil
 	}
 
-	// Get docker client to check container states
-	dockerClient, err := docker.NewClient(logger.GetLogger())
+	dockerClient, err := docker.NewClient(h.logger)
 	if err != nil {
 		return err
 	}
 
-	// Build display statuses with container state
 	statuses := h.buildSharedStatuses(ctx, sharedContainers, dockerClient)
 
 	if ciFlags.JSON {
@@ -147,14 +162,22 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 	return nil
 }
 
-func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobra.Command, _ []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext, projectName string) error {
+func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobra.Command, _ []string, base *base.BaseCommand, mode clicontext.ExecutionMode, projectName string) error {
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
 		base.Output.Header(fmt.Sprintf(messages.InfoSharedContainersForProject, projectName))
 	}
 
-	reg := registry.NewManager(execCtx.SharedContainers.Root)
+	var sharedRoot string
+	switch m := mode.(type) {
+	case *clicontext.ProjectMode:
+		sharedRoot = m.Shared.Root
+	case *clicontext.SharedMode:
+		sharedRoot = m.Shared.Root
+	}
+
+	reg := registry.NewManager(sharedRoot)
 	if _, err := reg.Load(); err != nil {
 		return err
 	}
@@ -164,7 +187,6 @@ func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobr
 		return err
 	}
 
-	// Filter containers used by this project
 	projectContainers := make([]*registry.ContainerInfo, 0, len(containers))
 	for _, container := range containers {
 		if h.containsProject(container.Projects, projectName) {
@@ -225,18 +247,14 @@ func (h *StatusHandler) getServiceStatuses(ctx context.Context, projectName stri
 }
 
 func (h *StatusHandler) outputJSON(ciFlags *ci.Flags, statuses []docker.ContainerStatus) {
-	ci.OutputResult(*ciFlags, display.ServiceStatusResponse{
-		Services: convertToInterfaceSlice(statuses),
+	output := ci.StatusOutput{
+		Services: make([]any, len(statuses)),
 		Count:    len(statuses),
-	}, core.ExitSuccess)
-}
-
-func convertToInterfaceSlice(statuses []docker.ContainerStatus) []any {
-	result := make([]any, len(statuses))
-	for i, s := range statuses {
-		result[i] = s
 	}
-	return result
+	for i, s := range statuses {
+		output.Services[i] = s
+	}
+	ci.OutputResult(*ciFlags, output, core.ExitSuccess)
 }
 
 func (h *StatusHandler) displayStatus(base *base.BaseCommand, cmd *cobra.Command, statuses []docker.ContainerStatus, serviceConfigs []types.ServiceConfig) {
@@ -355,8 +373,8 @@ func buildNotFoundStatus(name, provider string) display.ServiceStatus {
 	return display.ServiceStatus{
 		Name:     name,
 		Provider: provider,
-		State:    messages.InfoStateNotFound,
-		Health:   messages.InfoHealthUnknown,
+		State:    "not found",
+		Health:   "unknown",
 	}
 }
 
@@ -438,15 +456,7 @@ func formatProjects(projects []string) string {
 		const projectsToShow = 2
 		return fmt.Sprintf("%s, %s, +%d more", projects[0], projects[1], len(projects)-projectsToShow)
 	}
-
-	var b strings.Builder
-	for i, p := range projects {
-		if i > 0 {
-			b.WriteString(", ")
-		}
-		b.WriteString(p)
-	}
-	return b.String()
+	return fmt.Sprintf("%s", projects)
 }
 
 func (h *StatusHandler) containsProject(projects []string, projectName string) bool {

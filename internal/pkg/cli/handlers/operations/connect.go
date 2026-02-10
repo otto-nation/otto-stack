@@ -42,18 +42,22 @@ func (h *ConnectHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return err
 	}
 
-	if execCtx.Type == clicontext.Shared {
-		return h.handleSharedContext(args, base, execCtx)
+	switch mode := execCtx.(type) {
+	case *clicontext.ProjectMode:
+		return h.handleProjectContext(ctx, args, base)
+	case *clicontext.SharedMode:
+		return h.handleSharedContext(args, base, mode)
+	default:
+		return fmt.Errorf("unknown execution mode: %T", execCtx)
 	}
-	return h.handleProjectContext(ctx, args, base)
 }
 
-func (h *ConnectHandler) detectContext() (*clicontext.ExecutionContext, error) {
+func (h *ConnectHandler) detectContext() (clicontext.ExecutionMode, error) {
 	detector, err := clicontext.NewDetector()
 	if err != nil {
 		return nil, err
 	}
-	return detector.Detect()
+	return detector.DetectContext()
 }
 
 func (h *ConnectHandler) handleProjectContext(ctx context.Context, args []string, base *base.BaseCommand) error {
@@ -79,10 +83,10 @@ func (h *ConnectHandler) handleProjectContext(ctx context.Context, args []string
 	return nil
 }
 
-func (h *ConnectHandler) handleSharedContext(args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *ConnectHandler) handleSharedContext(args []string, base *base.BaseCommand, mode *clicontext.SharedMode) error {
 	serviceName := args[0]
 
-	if err := h.verifyServiceInRegistry(serviceName, execCtx); err != nil {
+	if err := h.verifyServiceInRegistry(serviceName, mode); err != nil {
 		return err
 	}
 
@@ -94,8 +98,8 @@ func (h *ConnectHandler) handleSharedContext(args []string, base *base.BaseComma
 	return nil
 }
 
-func (h *ConnectHandler) verifyServiceInRegistry(serviceName string, execCtx *clicontext.ExecutionContext) error {
-	reg := registry.NewManager(execCtx.SharedContainers.Root)
+func (h *ConnectHandler) verifyServiceInRegistry(serviceName string, mode *clicontext.SharedMode) error {
+	reg := registry.NewManager(mode.Shared.Root)
 	registryData, err := reg.Load()
 	if err != nil {
 		return err
