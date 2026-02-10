@@ -128,6 +128,11 @@ func (g *Generator) createBaseService(config *types.ServiceConfig) map[string]an
 		docker.ComposeFieldImage: config.Container.Image,
 	}
 
+	// Set container name for shareable services
+	if config.Shareable {
+		service[docker.ComposeFieldContainerName] = docker.SharedContainerPrefix + config.Name
+	}
+
 	if len(config.Container.Entrypoint) > 0 {
 		service[docker.ComposeFieldEntrypoint] = config.Container.Entrypoint
 	}

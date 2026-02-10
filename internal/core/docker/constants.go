@@ -91,19 +91,20 @@ const (
 
 // Docker Compose field names
 const (
-	ComposeFieldServices    = "services"
-	ComposeFieldNetworks    = "networks"
-	ComposeFieldName        = "name"
-	ComposeFieldImage       = "image"
-	ComposeFieldEntrypoint  = "entrypoint"
-	ComposeFieldPorts       = "ports"
-	ComposeFieldEnvironment = "environment"
-	ComposeFieldVolumes     = "volumes"
-	ComposeFieldRestart     = "restart"
-	ComposeFieldCommand     = "command"
-	ComposeFieldMemLimit    = "mem_limit"
-	ComposeFieldHealthCheck = "healthcheck"
-	ComposeFieldLabels      = "labels"
+	ComposeFieldServices      = "services"
+	ComposeFieldNetworks      = "networks"
+	ComposeFieldName          = "name"
+	ComposeFieldImage         = "image"
+	ComposeFieldContainerName = "container_name"
+	ComposeFieldEntrypoint    = "entrypoint"
+	ComposeFieldPorts         = "ports"
+	ComposeFieldEnvironment   = "environment"
+	ComposeFieldVolumes       = "volumes"
+	ComposeFieldRestart       = "restart"
+	ComposeFieldCommand       = "command"
+	ComposeFieldMemLimit      = "mem_limit"
+	ComposeFieldHealthCheck   = "healthcheck"
+	ComposeFieldLabels        = "labels"
 )
 
 // Health check field names
@@ -140,8 +141,9 @@ const (
 
 // Network names
 const (
-	DefaultNetworkName = "default"
-	NetworkNameSuffix  = "-network"
+	DefaultNetworkName    = "default"
+	NetworkNameSuffix     = "-network"
+	SharedContainerPrefix = "otto-stack-"
 )
 
 // Init container images
