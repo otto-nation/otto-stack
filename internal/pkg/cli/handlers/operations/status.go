@@ -166,7 +166,7 @@ func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobr
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
-		base.Output.Header(fmt.Sprintf("Shared containers for project: %s", projectName))
+		base.Output.Header(fmt.Sprintf(messages.InfoSharedContainersForProject, projectName))
 	}
 
 	var sharedRoot string
@@ -195,7 +195,7 @@ func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobr
 	}
 
 	if len(projectContainers) == 0 {
-		base.Output.Info(fmt.Sprintf("No shared containers found for project: %s", projectName))
+		base.Output.Info(fmt.Sprintf(messages.InfoNoSharedContainersForProject, projectName))
 		return nil
 	}
 
@@ -410,7 +410,7 @@ func (h *StatusHandler) buildSharedStatuses(ctx context.Context, containers []*r
 func (h *StatusHandler) getContainerState(ctx context.Context, containerName string, dockerClient *docker.Client) string {
 	inspectResp, err := dockerClient.GetDockerClient().ContainerInspect(ctx, containerName)
 	if err != nil {
-		return "not found"
+		return messages.InfoStateNotFound
 	}
 	return inspectResp.State.Status
 }
@@ -426,10 +426,10 @@ func (h *StatusHandler) displaySharedStatus(base *base.BaseCommand, statuses []d
 	tw.SetStyle(table.StyleLight)
 
 	tw.AppendHeader(table.Row{
-		"Container",
-		"Service",
-		"State",
-		"Used By",
+		messages.InfoHeaderContainer,
+		messages.InfoHeaderService,
+		messages.InfoHeaderState,
+		messages.InfoHeaderUsedBy,
 	})
 
 	for _, status := range statuses {
@@ -446,7 +446,7 @@ func (h *StatusHandler) displaySharedStatus(base *base.BaseCommand, statuses []d
 
 func formatProjects(projects []string) string {
 	if len(projects) == 0 {
-		return "none"
+		return messages.InfoProjectsNone
 	}
 	if len(projects) == 1 {
 		return projects[0]

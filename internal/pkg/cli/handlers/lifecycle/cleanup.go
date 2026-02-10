@@ -51,11 +51,11 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Check for orphans (informational only)
-	_ = h.checkOrphans(setup, base, &ciFlags)
+	_ = h.checkOrphans(ctx, setup, base, &ciFlags)
 
 	// Execute cleanup based on flags
 	if flags.Orphans {
-		return h.handleOrphanCleanup(setup, base, &ciFlags, flags.Force)
+		return h.handleOrphanCleanup(ctx, setup, base, &ciFlags, flags.Force)
 	}
 
 	if flags.All || flags.Volumes || flags.Images || flags.Networks {
@@ -68,8 +68,8 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	return nil
 }
 
-func (h *CleanupHandler) handleOrphanCleanup(setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
-	if err := h.cleanOrphans(setup, base, ciFlags, force); err != nil {
+func (h *CleanupHandler) handleOrphanCleanup(ctx context.Context, setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
+	if err := h.cleanOrphans(ctx, setup, base, ciFlags, force); err != nil {
 		return ci.FormatError(*ciFlags, err)
 	}
 	if !ciFlags.Quiet {
@@ -131,7 +131,7 @@ func (h *CleanupHandler) confirmCleanup(base *base.BaseCommand) bool {
 }
 
 // checkOrphans checks for and reports orphaned shared containers
-func (h *CleanupHandler) checkOrphans(setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags) error {
+func (h *CleanupHandler) checkOrphans(ctx context.Context, setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags) error {
 	if ciFlags.Quiet {
 		return nil
 	}
@@ -141,7 +141,7 @@ func (h *CleanupHandler) checkOrphans(setup *common.CoreSetup, base *base.BaseCo
 		return err
 	}
 
-	orphans, err := reg.FindOrphansWithChecks(context.Background(), setup.DockerClient)
+	orphans, err := reg.FindOrphansWithChecks(ctx, setup.DockerClient)
 	if err != nil {
 		return err
 	}
@@ -212,13 +212,13 @@ func (h *CleanupHandler) groupBySeverity(orphans []registry.OrphanInfo) (safe, w
 }
 
 // cleanOrphans removes orphaned shared containers
-func (h *CleanupHandler) cleanOrphans(setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
+func (h *CleanupHandler) cleanOrphans(ctx context.Context, setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
 	reg, err := h.getRegistry()
 	if err != nil {
 		return err
 	}
 
-	orphans, err := reg.FindOrphansWithChecks(context.Background(), setup.DockerClient)
+	orphans, err := reg.FindOrphansWithChecks(ctx, setup.DockerClient)
 	if err != nil {
 		return err
 	}
