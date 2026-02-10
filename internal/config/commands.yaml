@@ -158,6 +158,8 @@ commands:
       Stop one or more services in the development stack. The command is context-aware:
       - **In a project directory**: Stops project services, prompts before stopping shared containers
       - **Outside a project**: Stops shared containers (requires service names)
+      - **With --shared flag**: Stops all shared containers from any location
+      - **With --all flag**: Stops both project and shared containers
 
       When stopping shared containers, you'll be prompted if they're used by other projects.
       The registry at ~/.otto-stack/shared/containers.yaml is updated to remove the project.
@@ -168,11 +170,23 @@ commands:
         description: "Stop all running services (prompts for shared containers)"
       - command: "otto-stack down postgres redis"
         description: "Stop specific services"
+      - command: "otto-stack down --shared"
+        description: "Stop all shared containers"
+      - command: "otto-stack down --all"
+        description: "Stop both project and shared containers"
       - command: "otto-stack down --volumes"
         description: "Stop services and remove volumes"
       - command: "otto-stack down --timeout 5"
         description: "Stop services with custom timeout"
     flags:
+      shared:
+        type: "bool"
+        description: "Stop all shared containers"
+        default: false
+      all:
+        type: "bool"
+        description: "Stop both project and shared containers"
+        default: false
       remove:
         type: "bool"
         description: "Remove containers (default: false, just stops them)"

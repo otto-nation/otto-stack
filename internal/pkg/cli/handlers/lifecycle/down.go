@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
@@ -40,7 +41,22 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
+	showShared, _ := cmd.Flags().GetBool(docker.FlagShared)
+	showAll, _ := cmd.Flags().GetBool(docker.FlagAll)
+
+	if showShared || showAll {
+		return h.handleGlobalContext(ctx, cmd, args, base, execCtx)
+	}
+
 	if execCtx.Type == clicontext.Shared {
+		return h.handleGlobalContext(ctx, cmd, args, base, execCtx)
+	}
+
+	if showAll {
+		// Stop project services first, then shared
+		if err := h.handleProjectContext(ctx, cmd, args, base, execCtx); err != nil {
+			return err
+		}
 		return h.handleGlobalContext(ctx, cmd, args, base, execCtx)
 	}
 

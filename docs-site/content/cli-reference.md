@@ -3,7 +3,7 @@ title: CLI Reference
 description: Complete command reference for otto-stack CLI
 lead: Comprehensive reference for all otto-stack CLI commands and their usage
 date: "2025-10-01"
-lastmod: "2026-02-09"
+lastmod: "2026-02-10"
 draft: false
 weight: 50
 toc: true
@@ -113,6 +113,8 @@ Stop one or more services in the development stack. The command is context-aware
 
 - **In a project directory**: Stops project services, prompts before stopping shared containers
 - **Outside a project**: Stops shared containers (requires service names)
+- **With --shared flag**: Stops all shared containers from any location
+- **With --all flag**: Stops both project and shared containers
 
 When stopping shared containers, you'll be prompted if they're used by other projects.
 The registry at ~/.otto-stack/shared/containers.yaml is updated to remove the project.
@@ -136,6 +138,18 @@ otto-stack down postgres redis
 Stop specific services
 
 ```bash
+otto-stack down --shared
+```
+
+Stop all shared containers
+
+```bash
+otto-stack down --all
+```
+
+Stop both project and shared containers
+
+```bash
 otto-stack down --volumes
 ```
 
@@ -149,6 +163,8 @@ Stop services with custom timeout
 
 **Flags:**
 
+- `--shared` (`bool`): Stop all shared containers (default: `false`)
+- `--all` (`bool`): Stop both project and shared containers (default: `false`)
 - `--remove` (`bool`): Remove containers (default: false, just stops them) (default: `false`)
 - `--volumes` (`bool`): Remove named volumes and anonymous volumes (default: `false`)
 - `--remove-orphans` (`bool`): Remove containers for services not in compose file (default: `false`)

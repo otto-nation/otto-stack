@@ -49,8 +49,10 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 		"down": {
 			handlerPath: "internal/pkg/cli/handlers/lifecycle/down.go",
 			flags: []string{
+				"all",
 				"remove",
 				"remove-orphans",
+				"shared",
 				"timeout",
 				"volumes",
 			},
