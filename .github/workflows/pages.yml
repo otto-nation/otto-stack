@@ -68,55 +68,15 @@ jobs:
 
           echo "✅ Content structure verified"
 
-      - name: Build CLI for documentation
-        run: |
-          if task build 2>/dev/null; then
-            echo "✅ CLI built successfully"
-          else
-            echo "⚠️ CLI build failed, continuing without CLI docs"
-          fi
-
-      - name: Generate CLI documentation
+      - name: Verify CLI documentation exists
         run: |
           DOCS_DIR="${{ steps.config.outputs.docs-dir }}"
-          BUILD_DIR="${{ steps.config.outputs.build-dir }}"
-          CLI_BINARY="${{ steps.config.outputs.cli-binary }}"
-
-          mkdir -p "$DOCS_DIR/content/cli-reference"
-
-          if [ -f "./$BUILD_DIR/$CLI_BINARY" ] && "./$BUILD_DIR/$CLI_BINARY" --help > /tmp/cli-help.txt 2>&1; then
-            echo "🔍 Generating CLI documentation from built binary..."
-            {
-              echo '---'
-              echo 'title: "CLI Reference"'
-              echo 'description: "Complete command reference for otto-stack CLI"'
-              echo 'weight: 30'
-              echo '---'
-              echo ''
-              echo '# CLI Reference'
-              echo ''
-              echo '```'
-              cat /tmp/cli-help.txt
-              echo '```'
-            } > "$DOCS_DIR/content/cli-reference/index.md"
-            echo "✅ CLI documentation generated from binary"
-          else
-            echo "🔍 Creating CLI reference placeholder..."
-            {
-              echo '---'
-              echo 'title: "CLI Reference"'
-              echo 'description: "Complete command reference for otto-stack CLI"'
-              echo 'weight: 30'
-              echo '---'
-              echo ''
-              echo '# CLI Reference'
-              echo ''
-              echo 'CLI help generation is not yet implemented.'
-              echo ''
-              echo 'Check back soon or [contribute to the project]({{< ref "/contributing" >}}) to help add this feature!'
-            } > "$DOCS_DIR/content/cli-reference/index.md"
-            echo "✅ CLI reference placeholder created"
+          if [ ! -f "$DOCS_DIR/content/cli-reference.md" ]; then
+            echo "❌ CLI reference documentation not found"
+            echo "ℹ️  Run 'task generate:docs' to generate it"
+            exit 1
           fi
+          echo "✅ CLI documentation found"
 
       - name: Setup Pages
         id: pages
