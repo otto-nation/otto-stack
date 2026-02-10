@@ -6,11 +6,11 @@
    main styling is handled by SCSS files in assets/scss/
 */
 
-/* Force purple theme colors immediately */
+/* Force theme colors immediately */
 :root {
-  --bs-primary: #ba94d1;
-  --bs-link-color: #ba94d1;
-  --bs-link-hover-color: #a574be;
+  --bs-primary: $primary-500;
+  --bs-link-color: $primary-500;
+  --bs-link-hover-color: $primary-600;
 }
 
 /* Minimal overrides - SCSS handles the main styling */
@@ -72,11 +72,11 @@ a.btn-primary:active svg {
   stroke: #ffffff !important;
 }
 
-/* Purple links everywhere */
+/* Primary color links */
 a {
-  color: #ba94d1 !important;
+  color: $primary-500 !important;
 }
 
 a:hover {
-  color: #a574be !important;
+  color: $primary-700 !important;
 }

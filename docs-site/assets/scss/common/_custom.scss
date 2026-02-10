@@ -1,11 +1,13 @@
 // ===============================================
-// otto-stack Custom SCSS Styles - Purple Theme
+// otto-stack Custom SCSS Styles
 // ===============================================
-// This file contains custom styles that work with the Doks theme
-// to implement purple color scheme and forced dark backgrounds.
+// This file contains custom styles that work with the Doks theme.
 
 // Import custom variables
 @import "variables-custom";
+
+// Import custom theme overrides
+@import "custom-theme";
 
 // ===============================================
 // GLOBAL OVERRIDES
@@ -19,7 +21,7 @@ body {
     color 0.3s ease;
 }
 
-// Purple theme links for both light and dark modes
+// Theme links for both light and dark modes
 a {
   color: $link-color !important;
   transition: $transition-fast;
@@ -139,7 +141,7 @@ a {
     color: $hero-lead-color !important;
   }
 
-  // Purple gradient overlay for light mode
+  // Gradient overlay for light mode
   &::before {
     content: "";
     position: absolute;
@@ -716,22 +718,22 @@ blockquote {
 // UTILITY CLASSES
 // ===============================================
 
-.text-purple {
+.text-primary {
   color: $primary-700 !important;
 }
 
-.bg-purple-light {
+.bg-primary-light {
   background-color: $primary-100 !important;
 }
 
-.border-purple {
+.border-primary {
   border-color: $primary-300 !important;
 }
 
-.shadow-purple {
+.shadow-primary {
   box-shadow: 0 2px 4px $shadow-color !important;
 }
 
-.rounded-purple {
+.rounded-primary {
   border-radius: $border-radius-md !important;
 }
