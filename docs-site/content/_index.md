@@ -99,21 +99,21 @@ otto-stack up
 
 ## Documentation
 
-- **[Setup & Installation](/setup)**
-- **[Services Guide](/services)**
-- **[Configuration](/configuration)**
-- **[CLI Reference](/cli-reference)**
-- **[Scripts Reference](/scripts)**
-- **[Contributing](/contributing)**
+- **[Setup & Installation](setup/)**
+- **[Services Guide](services/)**
+- **[Configuration](configuration/)**
+- **[CLI Reference](cli-reference/)**
+- **[Scripts Reference](scripts/)**
+- **[Contributing](contributing/)**
 
 ## Get Started
 
-1. **[Complete installation guide](/setup)**
-2. **[Explore available services](/services)**
+1. **[Complete installation guide](setup/)**
+2. **[Explore available services](services/)**
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](/contributing) for details.
+We welcome contributions! Please see our [Contributing Guide](contributing/) for details.
 
 ## License
 
@@ -121,7 +121,7 @@ This project is licensed under the MIT License - see the [LICENSE](https://githu
 
 ## Support
 
-- 📖 [Documentation](/)
+- 📖 [Documentation]({{< ref "/" >}})
 - 🐛 [Issues](https://github.com/otto-nation/otto-stack/issues)
 
 ---
