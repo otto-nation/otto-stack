@@ -33,7 +33,7 @@ class ServicesGuideGenerator {
 
 ${Object.keys(services).length} services available for your development stack.
 
-Each service can be configured through the \`service_configuration\` section in your \`otto-stack-config.yaml\` file. For detailed configuration instructions, see the [Configuration Guide](/configuration).
+Each service can be configured through the \`service_configuration\` section in your \`otto-stack-config.yaml\` file. For detailed configuration instructions, see the [Configuration Guide](configuration/).
 
 `;
 
