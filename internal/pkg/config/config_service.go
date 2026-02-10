@@ -26,12 +26,6 @@ func (s *configService) LoadConfig() (*Config, error) {
 	return cfg, nil
 }
 
-// SaveConfig saves the project configuration
-func (s *configService) SaveConfig(cfg *Config) error {
-	// For now, return not implemented since there's no SaveConfig in the config package
-	return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", messages.ErrorsConfigSaveNotImplemented, nil)
-}
-
 // ValidateConfig validates the configuration
 func (s *configService) ValidateConfig(cfg *Config) error {
 	if cfg == nil {
