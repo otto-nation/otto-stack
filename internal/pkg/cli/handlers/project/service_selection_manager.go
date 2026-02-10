@@ -16,6 +16,14 @@ type ServiceSelectionManager struct {
 	validationManager *ValidationManager
 }
 
+// SelectionResult holds the result of service selection
+type SelectionResult struct {
+	ServiceConfigs []types.ServiceConfig
+	Validation     map[string]bool
+	Advanced       map[string]bool
+	Action         string
+}
+
 // NewServiceSelectionManager creates a new service selection manager
 func NewServiceSelectionManager(promptManager *PromptManager, validationManager *ValidationManager) *ServiceSelectionManager {
 	return &ServiceSelectionManager{
@@ -25,21 +33,21 @@ func NewServiceSelectionManager(promptManager *PromptManager, validationManager 
 }
 
 // RunWorkflow executes the complete service selection workflow
-func (ssm *ServiceSelectionManager) RunWorkflow(handler *InitHandler, base *base.BaseCommand) ([]types.ServiceConfig, map[string]bool, map[string]bool, error) {
+func (ssm *ServiceSelectionManager) RunWorkflow(handler *InitHandler, base *base.BaseCommand) (*SelectionResult, error) {
 	ssm.logWorkflowStart(base)
 
 	for {
-		serviceConfigs, validation, advanced, action, err := ssm.runSelectionCycle(handler, base)
+		result, err := ssm.runSelectionCycle(handler, base)
 		if err != nil {
-			return nil, nil, nil, err
+			return nil, err
 		}
 
-		if shouldProceed := ssm.handleAction(action, base); shouldProceed {
-			return serviceConfigs, validation, advanced, nil
+		if shouldProceed := ssm.handleAction(result.Action, base); shouldProceed {
+			return result, nil
 		}
 
-		if action != core.ActionBack {
-			return nil, nil, nil, nil
+		if result.Action != core.ActionBack {
+			return nil, nil
 		}
 	}
 }
@@ -49,27 +57,32 @@ func (ssm *ServiceSelectionManager) logWorkflowStart(base *base.BaseCommand) {
 	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
 }
 
-func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, base *base.BaseCommand) ([]types.ServiceConfig, map[string]bool, map[string]bool, string, error) {
+func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, base *base.BaseCommand) (*SelectionResult, error) {
 	serviceConfigs, err := ssm.selectAndValidateServices(handler)
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, err
 	}
 
 	validation, advanced, err := ssm.getAdvancedOptions()
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, err
 	}
 
 	if err := ssm.runValidationChecks(validation, handler, serviceConfigs, base); err != nil {
-		return nil, nil, nil, "", err
+		return nil, err
 	}
 
 	action, err := ssm.confirmSelection(serviceConfigs, validation, advanced, base)
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, err
 	}
 
-	return serviceConfigs, validation, advanced, action, nil
+	return &SelectionResult{
+		ServiceConfigs: serviceConfigs,
+		Validation:     validation,
+		Advanced:       advanced,
+		Action:         action,
+	}, nil
 }
 
 func (ssm *ServiceSelectionManager) selectAndValidateServices(handler *InitHandler) ([]types.ServiceConfig, error) {
