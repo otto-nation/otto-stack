@@ -247,10 +247,14 @@ func (h *StatusHandler) getServiceStatuses(ctx context.Context, projectName stri
 }
 
 func (h *StatusHandler) outputJSON(ciFlags *ci.Flags, statuses []docker.ContainerStatus) {
-	ci.OutputResult(*ciFlags, map[string]any{
-		"services": statuses,
-		"count":    len(statuses),
-	}, core.ExitSuccess)
+	output := ci.StatusOutput{
+		Services: make([]any, len(statuses)),
+		Count:    len(statuses),
+	}
+	for i, s := range statuses {
+		output.Services[i] = s
+	}
+	ci.OutputResult(*ciFlags, output, core.ExitSuccess)
 }
 
 func (h *StatusHandler) displayStatus(base *base.BaseCommand, cmd *cobra.Command, statuses []docker.ContainerStatus, serviceConfigs []types.ServiceConfig) {

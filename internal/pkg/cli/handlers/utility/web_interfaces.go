@@ -157,10 +157,14 @@ func (h *WebInterfacesHandler) outputResults(interfaces []WebInterface, ciFlags 
 }
 
 func (h *WebInterfacesHandler) outputJSON(interfaces []WebInterface, ciFlags ci.Flags) {
-	ci.OutputResult(ciFlags, map[string]any{
-		"interfaces": interfaces,
-		"count":      len(interfaces),
-	}, core.ExitSuccess)
+	output := ci.InterfacesOutput{
+		Interfaces: make([]any, len(interfaces)),
+		Count:      len(interfaces),
+	}
+	for i, iface := range interfaces {
+		output.Interfaces[i] = iface
+	}
+	ci.OutputResult(ciFlags, output, core.ExitSuccess)
 }
 
 // printTable prints interfaces in table format
