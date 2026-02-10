@@ -20,13 +20,13 @@ func (p *InteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCom
 		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "validation failed", err)
 	}
 
-	serviceConfigs, validation, advanced, err := p.handler.serviceSelectionManager.RunWorkflow(p.handler, base)
+	result, err := p.handler.serviceSelectionManager.RunWorkflow(p.handler, base)
 	if err != nil {
 		return clicontext.Context{}, err
 	}
 
 	// Extract original service names from configs for interactive mode
-	originalServiceNames := svc.ExtractServiceNames(serviceConfigs)
+	originalServiceNames := svc.ExtractServiceNames(result.ServiceConfigs)
 
 	// For interactive mode, default to sharing enabled
 	sharingSpec := &clicontext.SharingSpec{
@@ -35,9 +35,9 @@ func (p *InteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCom
 
 	ctx := clicontext.NewBuilder().
 		WithProject(projectName, "").
-		WithServices(originalServiceNames, serviceConfigs).
-		WithValidation(validation).
-		WithAdvanced(advanced).
+		WithServices(originalServiceNames, result.ServiceConfigs).
+		WithValidation(result.Validation).
+		WithAdvanced(result.Advanced).
 		WithRuntimeFlags(flags, true).
 		WithSharing(sharingSpec).
 		Build()

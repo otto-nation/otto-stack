@@ -41,6 +41,29 @@ type SharingConfig struct {
 	Services map[string]bool `yaml:"services,omitempty" json:"services,omitempty"`
 }
 
+// ExecutionMode interface for type-safe context discrimination
+type ExecutionMode interface {
+	SharedRoot() string
+	isExecutionMode() // unexported marker prevents external implementation
+}
+
+// ProjectMode for project-scoped operations
+type ProjectMode struct {
+	Project *ProjectInfo
+	Shared  *SharedInfo
+}
+
+func (p *ProjectMode) SharedRoot() string { return p.Shared.Root }
+func (p *ProjectMode) isExecutionMode()   {}
+
+// SharedMode for global shared container operations
+type SharedMode struct {
+	Shared *SharedInfo
+}
+
+func (s *SharedMode) SharedRoot() string { return s.Shared.Root }
+func (s *SharedMode) isExecutionMode()   {}
+
 // NewProjectInfo creates a ProjectInfo from a config directory path
 func NewProjectInfo(configDir string) *ProjectInfo {
 	return &ProjectInfo{

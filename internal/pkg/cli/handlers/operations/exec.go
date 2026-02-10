@@ -33,18 +33,22 @@ func (h *ExecHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	if execCtx.Type == clicontext.Shared {
-		return h.handleSharedContext(ctx, cmd, args, execCtx)
+	switch mode := execCtx.(type) {
+	case *clicontext.ProjectMode:
+		return h.handleProjectContext(ctx, cmd, args, base)
+	case *clicontext.SharedMode:
+		return h.handleSharedContext(ctx, cmd, args, mode)
+	default:
+		return fmt.Errorf("unknown execution mode: %T", execCtx)
 	}
-	return h.handleProjectContext(ctx, cmd, args, base)
 }
 
-func (h *ExecHandler) detectContext() (*clicontext.ExecutionContext, error) {
+func (h *ExecHandler) detectContext() (clicontext.ExecutionMode, error) {
 	detector, err := clicontext.NewDetector()
 	if err != nil {
 		return nil, err
 	}
-	return detector.Detect()
+	return detector.DetectContext()
 }
 
 func (h *ExecHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
@@ -80,11 +84,11 @@ func (h *ExecHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 	return stackService.Exec(ctx, req)
 }
 
-func (h *ExecHandler) handleSharedContext(ctx context.Context, cmd *cobra.Command, args []string, execCtx *clicontext.ExecutionContext) error {
+func (h *ExecHandler) handleSharedContext(ctx context.Context, cmd *cobra.Command, args []string, mode *clicontext.SharedMode) error {
 	serviceName := args[0]
 	command := args[1:]
 
-	if err := h.verifyServiceInRegistry(serviceName, execCtx); err != nil {
+	if err := h.verifyServiceInRegistry(serviceName, mode); err != nil {
 		return err
 	}
 
@@ -112,8 +116,8 @@ func (h *ExecHandler) handleSharedContext(ctx context.Context, cmd *cobra.Comman
 	return err
 }
 
-func (h *ExecHandler) verifyServiceInRegistry(serviceName string, execCtx *clicontext.ExecutionContext) error {
-	reg := registry.NewManager(execCtx.SharedContainers.Root)
+func (h *ExecHandler) verifyServiceInRegistry(serviceName string, mode *clicontext.SharedMode) error {
+	reg := registry.NewManager(mode.Shared.Root)
 	registryData, err := reg.Load()
 	if err != nil {
 		return err

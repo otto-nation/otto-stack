@@ -56,11 +56,11 @@ func OutputResult(flags Flags, result any, exitCode int) {
 // Use this in handlers that should return errors instead of calling os.Exit()
 func FormatError(flags Flags, err error) error {
 	if flags.JSON {
-		errorResult := map[string]any{
-			"error":     err.Error(),
-			"exit_code": core.ExitError,
+		errorOutput := ErrorOutput{
+			Error:    err.Error(),
+			ExitCode: core.ExitError,
 		}
-		_ = json.NewEncoder(os.Stdout).Encode(errorResult)
+		_ = json.NewEncoder(os.Stdout).Encode(errorOutput)
 	} else if !flags.Quiet {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
@@ -68,9 +68,9 @@ func FormatError(flags Flags, err error) error {
 }
 
 func outputJSON(result any, exitCode int) {
-	output := map[string]any{
-		"result":    result,
-		"exit_code": exitCode,
+	output := Output{
+		Result:   result,
+		ExitCode: exitCode,
 	}
 
 	_ = json.NewEncoder(os.Stdout).Encode(output)

@@ -25,7 +25,7 @@ func TestHealthCheckManager_Methods(t *testing.T) {
 			Output: &mockOutput{},
 		}
 
-		result := manager.RunAllChecks(mockBase)
+		result := manager.RunAllChecks(context.Background(), mockBase)
 		assert.IsType(t, false, result)
 	})
 
@@ -35,7 +35,7 @@ func TestHealthCheckManager_Methods(t *testing.T) {
 			Output: &mockOutput{},
 		}
 
-		result := manager.CheckDocker(mockBase)
+		result := manager.CheckDocker(context.Background(), mockBase)
 		assert.IsType(t, false, result)
 	})
 

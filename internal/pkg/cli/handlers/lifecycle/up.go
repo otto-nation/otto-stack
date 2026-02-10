@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -35,19 +36,22 @@ func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []strin
 		return err
 	}
 
-	execCtx, err := detector.Detect()
+	execCtx, err := detector.DetectContext()
 	if err != nil {
 		return err
 	}
 
-	if execCtx.Type == clicontext.Shared {
-		return h.handleGlobalContext(ctx, cmd, args, base, execCtx)
+	switch mode := execCtx.(type) {
+	case *clicontext.ProjectMode:
+		return h.handleProjectContext(ctx, cmd, args, base, mode)
+	case *clicontext.SharedMode:
+		return h.handleGlobalContext(ctx, cmd, args, base, mode)
+	default:
+		return fmt.Errorf("unknown execution mode: %T", execCtx)
 	}
-
-	return h.handleProjectContext(ctx, cmd, args, base, execCtx)
 }
 
-func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ProjectMode) error {
 	base.Output.Header("%s", messages.LifecycleStarting)
 
 	// Validate flags
@@ -69,7 +73,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	// Register shared containers before starting
 	sharedConfigs := h.filterSharedServices(serviceConfigs, setup.Config)
 	if len(sharedConfigs) > 0 {
-		if err := h.registerSharedContainersForProject(sharedConfigs, setup.Config.Project.Name, execCtx, base); err != nil {
+		if err := h.registerSharedContainersForProject(sharedConfigs, setup.Config.Project.Name, execCtx.Shared.Root, base); err != nil {
 			return err
 		}
 	}
@@ -111,7 +115,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	return nil
 }
 
-func (h *UpHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *UpHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.SharedMode) error {
 	base.Output.Header(messages.SharedStarting)
 
 	if len(args) == 0 {
@@ -148,12 +152,12 @@ func (h *UpHandler) loadServiceConfigs(serviceNames []string) ([]types.ServiceCo
 	return configs, nil
 }
 
-func (h *UpHandler) registerSharedContainers(serviceConfigs []types.ServiceConfig, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
-	return h.registerSharedContainersForProject(serviceConfigs, "global", execCtx, base)
+func (h *UpHandler) registerSharedContainers(serviceConfigs []types.ServiceConfig, execCtx *clicontext.SharedMode, base *base.BaseCommand) error {
+	return h.registerSharedContainersForProject(serviceConfigs, "global", execCtx.Shared.Root, base)
 }
 
-func (h *UpHandler) registerSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
-	reg := registry.NewManager(execCtx.SharedContainers.Root)
+func (h *UpHandler) registerSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, sharedRoot string, base *base.BaseCommand) error {
+	reg := registry.NewManager(sharedRoot)
 
 	for _, svc := range serviceConfigs {
 		containerName := core.SharedContainerPrefix + svc.Name
