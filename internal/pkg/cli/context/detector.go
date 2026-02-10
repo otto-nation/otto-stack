@@ -21,6 +21,31 @@ func NewDetector() (*Detector, error) {
 	return &Detector{homeDir: home}, nil
 }
 
+// DetectContext determines the current execution context (interface-based)
+func (d *Detector) DetectContext() (ExecutionMode, error) {
+	sharedRoot := filepath.Join(d.homeDir, core.OttoStackDir, core.SharedDir)
+	if err := os.MkdirAll(sharedRoot, core.PermReadWriteExec); err != nil {
+		return nil, err
+	}
+
+	sharedInfo := &SharedInfo{Root: sharedRoot}
+	project, err := d.findProjectRoot()
+	if err != nil {
+		return nil, err
+	}
+
+	if project != nil {
+		return &ProjectMode{
+			Project: project,
+			Shared:  sharedInfo,
+		}, nil
+	}
+
+	return &SharedMode{
+		Shared: sharedInfo,
+	}, nil
+}
+
 // Detect determines the current execution context
 func (d *Detector) Detect() (*ExecutionContext, error) {
 	sharedRoot := filepath.Join(d.homeDir, core.OttoStackDir, core.SharedDir)

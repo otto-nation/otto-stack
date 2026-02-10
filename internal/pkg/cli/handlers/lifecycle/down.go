@@ -36,7 +36,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return err
 	}
 
-	execCtx, err := detector.Detect()
+	execCtx, err := detector.DetectContext()
 	if err != nil {
 		return err
 	}
@@ -45,25 +45,25 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	showAll, _ := cmd.Flags().GetBool(docker.FlagAll)
 
 	if showShared || showAll {
-		return h.handleGlobalContext(ctx, cmd, args, base, execCtx)
-	}
-
-	if execCtx.Type == clicontext.Shared {
-		return h.handleGlobalContext(ctx, cmd, args, base, execCtx)
-	}
-
-	if showAll {
-		// Stop project services first, then shared
-		if err := h.handleProjectContext(ctx, cmd, args, base, execCtx); err != nil {
-			return err
+		switch mode := execCtx.(type) {
+		case *clicontext.ProjectMode:
+			return h.handleGlobalContext(ctx, cmd, args, base, mode.Shared)
+		case *clicontext.SharedMode:
+			return h.handleGlobalContext(ctx, cmd, args, base, mode.Shared)
 		}
-		return h.handleGlobalContext(ctx, cmd, args, base, execCtx)
 	}
 
-	return h.handleProjectContext(ctx, cmd, args, base, execCtx)
+	switch mode := execCtx.(type) {
+	case *clicontext.ProjectMode:
+		return h.handleProjectContext(ctx, cmd, args, base, mode)
+	case *clicontext.SharedMode:
+		return h.handleGlobalContext(ctx, cmd, args, base, mode.Shared)
+	default:
+		return fmt.Errorf("unknown execution mode: %T", execCtx)
+	}
 }
 
-func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ProjectMode) error {
 	base.Output.Header(messages.LifecycleStopping)
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
@@ -77,7 +77,7 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 		return err
 	}
 
-	serviceConfigs, err = h.filterSharedIfNeeded(serviceConfigs, execCtx, base)
+	serviceConfigs, err = h.filterSharedIfNeeded(serviceConfigs, execCtx.Shared.Root, base)
 	if err != nil {
 		return err
 	}
@@ -92,11 +92,11 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 	}
 
 	// Unregister shared containers after stopping
-	return h.unregisterSharedContainersForProject(serviceConfigs, setup.Config.Project.Name, execCtx, base)
+	return h.unregisterSharedContainersForProject(serviceConfigs, setup.Config.Project.Name, execCtx.Shared.Root, base)
 }
 
-func (h *DownHandler) filterSharedIfNeeded(serviceConfigs []types.ServiceConfig, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) ([]types.ServiceConfig, error) {
-	reg := registry.NewManager(execCtx.SharedContainers.Root)
+func (h *DownHandler) filterSharedIfNeeded(serviceConfigs []types.ServiceConfig, sharedRoot string, base *base.BaseCommand) ([]types.ServiceConfig, error) {
+	reg := registry.NewManager(sharedRoot)
 	_, err := reg.Load()
 	if err != nil {
 		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentRegistry, messages.ErrorsRegistryLoadFailed, err)
@@ -183,10 +183,10 @@ func (h *DownHandler) displayStopSuccess(base *base.BaseCommand, setup *common.C
 	}
 }
 
-func (h *DownHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext) error {
+func (h *DownHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, args []string, base *base.BaseCommand, sharedInfo *clicontext.SharedInfo) error {
 	base.Output.Header(messages.SharedStopping)
 
-	servicesToStop, err := h.determineServicesToStop(args, execCtx, base)
+	servicesToStop, err := h.determineServicesToStop(args, sharedInfo, base)
 	if err != nil {
 		return err
 	}
@@ -195,15 +195,15 @@ func (h *DownHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, a
 		return nil
 	}
 
-	return h.unregisterSharedContainers(servicesToStop, execCtx, base)
+	return h.unregisterSharedContainers(servicesToStop, sharedInfo, base)
 }
 
-func (h *DownHandler) determineServicesToStop(args []string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) ([]string, error) {
+func (h *DownHandler) determineServicesToStop(args []string, sharedInfo *clicontext.SharedInfo, base *base.BaseCommand) ([]string, error) {
 	if len(args) > 0 {
 		return args, nil
 	}
 
-	reg := registry.NewManager(execCtx.SharedContainers.Root)
+	reg := registry.NewManager(sharedInfo.Root)
 	_, err := reg.Load()
 	if err != nil {
 		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentRegistry, messages.ErrorsRegistryLoadFailed, err)
@@ -238,12 +238,12 @@ func (h *DownHandler) promptStopAll(containers []*registry.ContainerInfo, base *
 	return services
 }
 
-func (h *DownHandler) unregisterSharedContainers(servicesToStop []string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
-	return h.unregisterSharedContainersForProject(h.serviceNamesToConfigs(servicesToStop), "global", execCtx, base)
+func (h *DownHandler) unregisterSharedContainers(servicesToStop []string, sharedInfo *clicontext.SharedInfo, base *base.BaseCommand) error {
+	return h.unregisterSharedContainersForProject(h.serviceNamesToConfigs(servicesToStop), "global", sharedInfo.Root, base)
 }
 
-func (h *DownHandler) unregisterSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, execCtx *clicontext.ExecutionContext, base *base.BaseCommand) error {
-	reg := registry.NewManager(execCtx.SharedContainers.Root)
+func (h *DownHandler) unregisterSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, sharedRoot string, base *base.BaseCommand) error {
+	reg := registry.NewManager(sharedRoot)
 
 	for _, svc := range serviceConfigs {
 		if err := reg.Unregister(svc.Name, projectName); err != nil {
