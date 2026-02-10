@@ -336,4 +336,4 @@ shared:
   no_services_to_stop: "No services to stop"
 
 middleware:
-  project_already_initialized: "Project already initialized. Use --%s to overwrite"
+  project_already_initialized: "Project already initialized. Use --force to overwrite"

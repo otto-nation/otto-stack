@@ -17,6 +17,8 @@ toc: true
 
 A powerful development stack management tool built in Go for streamlined local development automation
 
+📚 **[Documentation](https://otto-nation.github.io/otto-stack/)**
+
 ## What is otto-stack?
 
 **otto-stack** is a modern CLI tool that provides quick setup, Docker integration, configuration management, and built-in monitoring for development environments.
