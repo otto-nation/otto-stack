@@ -8,6 +8,9 @@
     },
     {
       "pattern": "^/"
+    },
+    {
+      "pattern": "^[a-z-]+/$"
     }
   ],
   "timeout": "10s",

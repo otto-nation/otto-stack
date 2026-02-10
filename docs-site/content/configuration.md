@@ -211,6 +211,6 @@ REDIS_PASSWORD=production_value
 
 ## Next Steps
 
-- **[Services Guide](/services)** - Available services and environment variables
-- **[CLI Reference](/cli-reference)** - Command usage
-- **[Troubleshooting](/troubleshooting)** - Common issues
+- **[Services Guide](services/)** - Available services and environment variables
+- **[CLI Reference](cli-reference/)** - Command usage
+- **[Troubleshooting](troubleshooting/)** - Common issues

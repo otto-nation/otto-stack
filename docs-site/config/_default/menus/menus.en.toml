@@ -1,32 +1,32 @@
 # Main navigation menu
 [[main]]
   name = "Setup"
-  url = "/setup/"
+  url = "setup/"
   weight = 10
 
 [[main]]
   name = "CLI Reference"
-  url = "/cli-reference/"
+  url = "cli-reference/"
   weight = 20
 
 [[main]]
   name = "Services"
-  url = "/services/"
+  url = "services/"
   weight = 30
 
 [[main]]
   name = "Configuration"
-  url = "/configuration/"
+  url = "configuration/"
   weight = 30
 
 [[main]]
   name = "Contributing"
-  url = "/contributing/"
+  url = "contributing/"
   weight = 40
 
 [[main]]
   name = "Troubleshooting"
-  url = "/troubleshooting/"
+  url = "troubleshooting/"
   weight = 50
 
 # Social menu for footer
@@ -38,5 +38,5 @@
 # Footer menu
 [[footer]]
   name = "Privacy Policy"
-  url = "/privacy/"
+  url = "privacy/"
   weight = 10
