@@ -224,7 +224,8 @@ commands:
     long_description: |
       Display comprehensive status information for services. The command is context-aware:
       - **In a project directory**: Shows project services status
-      - **Outside a project**: Use --all flag to see all projects' shared containers
+      - **Outside a project**: Use --all or --shared flag to see shared containers
+      - **Specific project**: Use --project flag to see what a project uses
     usage: "status [service...]"
     aliases: ["ps", "ls"]
     examples:
@@ -234,6 +235,10 @@ commands:
         description: "Show status of specific services"
       - command: "cd ~ && otto-stack status --all"
         description: "Show all projects' shared containers (global context)"
+      - command: "otto-stack status --shared"
+        description: "Show detailed shared container usage"
+      - command: "otto-stack status --project my-app"
+        description: "Show shared containers used by specific project"
       - command: "otto-stack status --format json"
         description: "Output status in JSON format"
     flags:
@@ -246,10 +251,19 @@ commands:
         type: "bool"
         description: "Show status across all projects (including shared containers)"
         default: false
+      shared:
+        type: "bool"
+        description: "Show detailed shared container usage and metrics"
+        default: false
+      project:
+        type: "string"
+        description: "Show shared containers used by specific project"
+        default: ""
     related_commands: ["logs", "status"]
     tips:
       - "Try --format json for programmatic access"
-      - "Use --all to see shared containers across all projects"
+      - "Use --shared to see detailed container usage metrics"
+      - "Use --project to see what a specific project uses"
 
   logs:
     description: "View logs from services"

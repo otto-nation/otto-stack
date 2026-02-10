@@ -170,6 +170,15 @@ info:
   project_info: "Project: %s"
   service_info: "Service: %s"
   context_info: "Context: %s"
+  header_container: "CONTAINER"
+  header_service: "SERVICE"
+  header_state: "STATE"
+  header_used_by: "USED BY"
+  shared_containers_for_project: "Shared Containers for Project: %s"
+  no_shared_containers_for_project: "No shared containers found for project: %s"
+  state_not_found: "not found"
+  health_unknown: "unknown"
+  projects_none: "none"
 
 notifications:
   config_header: "Notification Configuration:"

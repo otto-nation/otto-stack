@@ -3,7 +3,7 @@ title: CLI Reference
 description: Complete command reference for otto-stack CLI
 lead: Comprehensive reference for all otto-stack CLI commands and their usage
 date: "2025-10-01"
-lastmod: "2026-01-21"
+lastmod: "2026-02-09"
 draft: false
 weight: 50
 toc: true
@@ -205,7 +205,8 @@ Show status of development stack services
 Display comprehensive status information for services. The command is context-aware:
 
 - **In a project directory**: Shows project services status
-- **Outside a project**: Use --all flag to see all projects' shared containers
+- **Outside a project**: Use --all or --shared flag to see shared containers
+- **Specific project**: Use --project flag to see what a project uses
 
 **Usage:** `otto-stack status [service...]`
 
@@ -232,6 +233,18 @@ cd ~ && otto-stack status --all
 Show all projects' shared containers (global context)
 
 ```bash
+otto-stack status --shared
+```
+
+Show detailed shared container usage
+
+```bash
+otto-stack status --project my-app
+```
+
+Show shared containers used by specific project
+
+```bash
 otto-stack status --format json
 ```
 
@@ -241,13 +254,16 @@ Output status in JSON format
 
 - `--format` (`string`): Output format (table|json|yaml) (default: `table`) (options: `table`, `json`, `yaml`)
 - `--all` (`bool`): Show status across all projects (including shared containers) (default: `false`)
+- `--shared` (`bool`): Show detailed shared container usage and metrics (default: `false`)
+- `--project` (`string`): Show shared containers used by specific project (default: ``)
 
 **Related Commands:** [`logs`](#logs), [`status`](#status)
 
 **Tips:**
 
 - Try --format json for programmatic access
-- Use --all to see shared containers across all projects
+- Use --shared to see detailed container usage metrics
+- Use --project to see what a specific project uses
 
 ### `logs`
 

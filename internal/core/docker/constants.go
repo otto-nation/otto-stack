@@ -43,6 +43,8 @@ const (
 	FlagTimestamps    = "timestamps"
 	FlagTail          = "tail"
 	FlagAll           = "all"
+	FlagShared        = "shared"
+	FlagProject       = "project"
 )
 
 // Docker labels
