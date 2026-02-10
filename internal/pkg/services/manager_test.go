@@ -73,27 +73,10 @@ func TestManager_GetDependencies(t *testing.T) {
 			assert.IsType(t, []string{}, deps)
 		}
 	})
-}
-
-func TestManager_BuildConnectCommand(t *testing.T) {
-	manager, err := New()
-	require.NoError(t, err)
-
-	t.Run("builds connect command", func(t *testing.T) {
-		options := map[string]string{"user": "test"}
-		cmd, err := manager.BuildConnectCommand(ServicePostgres, options)
-		if err != nil {
-			assert.Error(t, err)
-		} else {
-			assert.NotNil(t, cmd)
-		}
-	})
 
 	t.Run("returns error when service not found", func(t *testing.T) {
-		service, err := manager.GetService("nonexistent-service")
+		_, err := manager.GetDependencies("nonexistent-service")
 		assert.Error(t, err)
-		assert.Nil(t, service)
-		assert.Contains(t, err.Error(), "not found")
 	})
 }
 

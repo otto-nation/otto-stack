@@ -67,46 +67,6 @@ func (m *Manager) GetDependencies(serviceName string) ([]string, error) {
 	return service.Service.Dependencies.Required, nil
 }
 
-// BuildConnectCommand builds a connection command for a service
-func (m *Manager) BuildConnectCommand(serviceName string, options map[string]string) ([]string, error) {
-	service, err := m.GetService(serviceName)
-	if err != nil {
-		return nil, err
-	}
-
-	return m.buildConnectCommand(service, options)
-}
-
-// buildConnectCommand builds connection command from management spec
-func (m *Manager) buildConnectCommand(service *servicetypes.ServiceConfig, options map[string]string) ([]string, error) {
-	if service.Service.Management == nil || service.Service.Management.Connect == nil {
-		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeOperationFail, pkgerrors.FieldServiceName, messages.ErrorsServiceNoConnectOperation, service.Name)
-	}
-
-	connect := service.Service.Management.Connect
-	if len(connect.Command) == 0 {
-		return nil, pkgerrors.NewConfigErrorf(pkgerrors.ErrCodeOperationFail, pkgerrors.FieldServiceName, messages.ErrorsServiceNoConnectCommand, service.Name)
-	}
-
-	cmd := make([]string, len(connect.Command))
-	copy(cmd, connect.Command)
-
-	// Use default args if no specific args provided
-	if args, exists := connect.Args["default"]; exists {
-		cmd = append(cmd, args...)
-	}
-
-	// Apply any provided options/overrides
-	for key, value := range options {
-		if key == "database" && service.Service.Connection != nil && service.Service.Connection.DBFlag != "" {
-			cmd = append(cmd, service.Service.Connection.DBFlag, value)
-		}
-		// Add more option handling as needed
-	}
-
-	return cmd, nil
-}
-
 // loadServices loads all services from embedded filesystem
 func (m *Manager) loadServices() error {
 	entries, err := config.EmbeddedServicesFS.ReadDir(EmbeddedServicesDir)
