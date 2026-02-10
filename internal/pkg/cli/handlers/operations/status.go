@@ -399,7 +399,7 @@ func (h *StatusHandler) getContainerState(ctx context.Context, containerName str
 
 func (h *StatusHandler) displaySharedStatus(base *base.BaseCommand, statuses []display.SharedContainerStatus) {
 	if len(statuses) == 0 {
-		base.Output.Info("No shared containers found")
+		base.Output.Info(messages.InfoNoSharedContainers)
 		return
 	}
 
@@ -407,7 +407,12 @@ func (h *StatusHandler) displaySharedStatus(base *base.BaseCommand, statuses []d
 	tw.SetOutputMirror(os.Stdout)
 	tw.SetStyle(table.StyleLight)
 
-	tw.AppendHeader(table.Row{"CONTAINER", "SERVICE", "STATE", "USED BY"})
+	tw.AppendHeader(table.Row{
+		messages.InfoHeaderContainer,
+		messages.InfoHeaderService,
+		messages.InfoHeaderState,
+		messages.InfoHeaderUsedBy,
+	})
 
 	for _, status := range statuses {
 		tw.AppendRow(table.Row{

@@ -170,6 +170,10 @@ info:
   project_info: "Project: %s"
   service_info: "Service: %s"
   context_info: "Context: %s"
+  header_container: "CONTAINER"
+  header_service: "SERVICE"
+  header_state: "STATE"
+  header_used_by: "USED BY"
 
 notifications:
   config_header: "Notification Configuration:"
