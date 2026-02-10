@@ -20,7 +20,7 @@ func (p *InteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCom
 		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "validation failed", err)
 	}
 
-	result, err := p.handler.serviceSelectionManager.RunWorkflow(p.handler, base)
+	result, err := p.handler.serviceSelectionManager.RunWorkflow(p.handler, projectName, base)
 	if err != nil {
 		return clicontext.Context{}, err
 	}

@@ -22,6 +22,7 @@ type SelectionResult struct {
 	Validation     map[string]bool
 	Advanced       map[string]bool
 	Action         string
+	ProjectName    string
 }
 
 // NewServiceSelectionManager creates a new service selection manager
@@ -33,11 +34,11 @@ func NewServiceSelectionManager(promptManager *PromptManager, validationManager 
 }
 
 // RunWorkflow executes the complete service selection workflow
-func (ssm *ServiceSelectionManager) RunWorkflow(handler *InitHandler, base *base.BaseCommand) (*SelectionResult, error) {
+func (ssm *ServiceSelectionManager) RunWorkflow(handler *InitHandler, projectName string, base *base.BaseCommand) (*SelectionResult, error) {
 	ssm.logWorkflowStart(base)
 
 	for {
-		result, err := ssm.runSelectionCycle(handler, base)
+		result, err := ssm.runSelectionCycle(handler, projectName, base)
 		if err != nil {
 			return nil, err
 		}
@@ -57,7 +58,7 @@ func (ssm *ServiceSelectionManager) logWorkflowStart(base *base.BaseCommand) {
 	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
 }
 
-func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, base *base.BaseCommand) (*SelectionResult, error) {
+func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, projectName string, base *base.BaseCommand) (*SelectionResult, error) {
 	serviceConfigs, err := ssm.selectAndValidateServices(handler)
 	if err != nil {
 		return nil, err
@@ -72,7 +73,7 @@ func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, base
 		return nil, err
 	}
 
-	action, err := ssm.confirmSelection(serviceConfigs, validation, advanced, base)
+	action, err := ssm.confirmSelection(projectName, serviceConfigs, validation, advanced, base)
 	if err != nil {
 		return nil, err
 	}
@@ -82,6 +83,7 @@ func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, base
 		Validation:     validation,
 		Advanced:       advanced,
 		Action:         action,
+		ProjectName:    projectName,
 	}, nil
 }
 
@@ -113,9 +115,9 @@ func (ssm *ServiceSelectionManager) runValidationChecks(validation map[string]bo
 	return nil
 }
 
-func (ssm *ServiceSelectionManager) confirmSelection(serviceConfigs []types.ServiceConfig, validation, advanced map[string]bool, base *base.BaseCommand) (string, error) {
+func (ssm *ServiceSelectionManager) confirmSelection(projectName string, serviceConfigs []types.ServiceConfig, validation, advanced map[string]bool, base *base.BaseCommand) (string, error) {
 	serviceNames := svc.ExtractServiceNames(serviceConfigs)
-	action, err := ssm.promptManager.ConfirmInitialization("", serviceNames, validation, advanced, base)
+	action, err := ssm.promptManager.ConfirmInitialization(projectName, serviceNames, validation, advanced, base)
 	if err != nil {
 		return "", pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "validation", "validation failed", err)
 	}
