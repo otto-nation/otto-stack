@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jedib0t/go-pretty/v6/table"
+
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
@@ -396,18 +398,27 @@ func (h *StatusHandler) getContainerState(ctx context.Context, containerName str
 }
 
 func (h *StatusHandler) displaySharedStatus(base *base.BaseCommand, statuses []display.SharedContainerStatus) {
-	base.Output.Info(messages.InfoSharedContainers)
-	for _, status := range statuses {
-		projectList := "none"
-		if len(status.Projects) > 0 {
-			projectList = formatProjects(status.Projects)
-		}
-		base.Output.Info("  %s (%s)", status.Name, status.Service)
-		base.Output.Info("    State: %s", status.State)
-		base.Output.Info("    Used by: %s", projectList)
-		base.Output.Info("    Created: %s", status.CreatedAt.Format(time.RFC3339))
-		base.Output.Info("    Updated: %s", status.UpdatedAt.Format(time.RFC3339))
+	if len(statuses) == 0 {
+		base.Output.Info("No shared containers found")
+		return
 	}
+
+	tw := table.NewWriter()
+	tw.SetOutputMirror(os.Stdout)
+	tw.SetStyle(table.StyleLight)
+
+	tw.AppendHeader(table.Row{"CONTAINER", "SERVICE", "STATE", "USED BY"})
+
+	for _, status := range statuses {
+		tw.AppendRow(table.Row{
+			status.Name,
+			status.Service,
+			status.State,
+			formatProjects(status.Projects),
+		})
+	}
+
+	tw.Render()
 }
 
 func formatProjects(projects []string) string {
@@ -416,6 +427,11 @@ func formatProjects(projects []string) string {
 	}
 	if len(projects) == 1 {
 		return projects[0]
+	}
+	const maxShow = 3
+	if len(projects) > maxShow {
+		const projectsToShow = 2
+		return fmt.Sprintf("%s, %s, +%d more", projects[0], projects[1], len(projects)-projectsToShow)
 	}
 
 	var b strings.Builder
