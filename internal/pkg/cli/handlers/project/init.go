@@ -194,8 +194,7 @@ func (h *InitHandler) buildSharingConfig(initFlags *core.InitFlags, serviceConfi
 		return sharingSpec, nil
 	}
 
-	//nolint:modernize // SplitSeq requires Go 1.24+
-	for _, svc := range strings.Split(initFlags.SharedServices, ",") {
+	for svc := range strings.SplitSeq(initFlags.SharedServices, ",") {
 		svc = strings.TrimSpace(svc)
 		if svc == "" {
 			continue
