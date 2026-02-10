@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"context"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
@@ -126,8 +127,18 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 // confirmCleanup asks for user confirmation before cleaning
 func (h *CleanupHandler) confirmCleanup(base *base.BaseCommand) bool {
 	base.Output.Warning(messages.WarningsCleanupWarning)
-	// TODO: Implement proper confirmation with base.Output
-	return true
+
+	prompt := &survey.Confirm{
+		Message: messages.PromptsCleanupConfirm,
+		Default: false,
+	}
+
+	var confirmed bool
+	if err := survey.AskOne(prompt, &confirmed); err != nil {
+		return false
+	}
+
+	return confirmed
 }
 
 // checkOrphans checks for and reports orphaned shared containers
