@@ -358,6 +358,13 @@ tasks:
 
           if [ "$LOCAL" = "$REMOTE" ]; then
             echo "✅ Branch is up to date with remote"
+            # Check if PR already exists
+            if gh pr view --json state 2>/dev/null | grep -q "OPEN"; then
+              echo "ℹ️  PR already exists for this branch"
+              gh pr view
+              exit 0
+            fi
+            # Continue to create PR if none exists
           elif [ "$LOCAL" = "$BASE" ]; then
             echo "⚠️  Remote has commits not in local branch"
             echo "❌ Cannot create PR - please pull first: git pull"

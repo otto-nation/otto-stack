@@ -94,9 +94,9 @@ categories:
 
   operations:
     name: "Operations & Data"
-    description: "Monitor, connect to, and manage service data"
+    description: "Monitor and manage service data"
     icon: "⚙️"
-    commands: ["status", "logs", "exec", "connect"]
+    commands: ["status", "logs"]
 
   utility:
     name: "Utility"
@@ -324,95 +324,6 @@ commands:
     tips:
       - "Run doctor when services aren't behaving as expected"
       - "Use --fix to attempt automatic resolution of common issues"
-
-  exec:
-    description: "Execute commands in running service containers"
-    long_description: |
-      Execute commands inside running service containers. Useful for database
-      operations, debugging, and maintenance tasks. Supports interactive and
-      non-interactive modes.
-    usage: "exec <service> <command> [args...]"
-    examples:
-      - command: "otto-stack exec postgres psql -U postgres"
-        description: "Connect to PostgreSQL with psql"
-      - command: "otto-stack exec redis redis-cli"
-        description: "Connect to Redis CLI"
-      - command: "otto-stack exec postgres bash"
-        description: "Open bash shell in postgres container"
-    flags:
-      user:
-        short: "u"
-        type: "string"
-        description: "Username to execute command as"
-        default: ""
-      workdir:
-        type: "string"
-        description: "Working directory for command"
-        default: ""
-      interactive:
-        short: "i"
-        type: "bool"
-        description: "Keep STDIN open (interactive mode)"
-        default: true
-      tty:
-        type: "bool"
-        description: "Allocate a pseudo-TTY"
-        default: true
-      detach:
-        type: "bool"
-        description: "Run command in background"
-        default: false
-      env:
-        type: "string"
-        description: "Set environment variables (comma-separated key=value pairs)"
-        default: ""
-    related_commands: ["connect", "logs"]
-    tips:
-      - "Use for database maintenance and debugging"
-      - "Combine with --user to run as specific user"
-
-  connect:
-    description: "Quick connect to service databases and interfaces"
-    long_description: |
-      Quickly connect to service databases and management interfaces using
-      appropriate client tools. Automatically configures connection parameters
-      based on service configuration.
-    usage: "connect <service>"
-    examples:
-      - command: "otto-stack connect postgres"
-        description: "Connect to PostgreSQL database"
-      - command: "otto-stack connect redis"
-        description: "Connect to Redis CLI"
-      - command: "otto-stack connect mysql"
-        description: "Connect to MySQL database"
-    flags:
-      database:
-        type: "string"
-        description: "Database name to connect to"
-        default: ""
-      user:
-        short: "u"
-        type: "string"
-        description: "Username for connection"
-        default: ""
-      host:
-        short: "h"
-        type: "string"
-        description: "Host to connect to"
-        default: "localhost"
-      port:
-        short: "p"
-        type: "int"
-        description: "Port to connect to"
-        default: 0
-      read-only:
-        type: "bool"
-        description: "Connect in read-only mode"
-        default: false
-    related_commands: ["exec", "status"]
-    tips:
-      - "Automatically uses correct client tools for each service"
-      - "Use --read-only for safe data exploration"
 
   cleanup:
     description: "Clean up unused resources and data"

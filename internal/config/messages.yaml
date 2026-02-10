@@ -47,7 +47,6 @@ success:
   services_started: "Services started successfully"
   services_stopped: "Services stopped successfully"
   cleanup_completed: "Cleanup completed"
-  connected: "Connected successfully"
   dependencies_displayed: "Dependencies displayed successfully"
   services_listed: "Services listed successfully"
   no_conflicts: "No service conflicts detected"
@@ -163,7 +162,6 @@ info:
   shared_containers: "Shared containers:"
   project_config_summary: "Project Configuration Summary:"
   validation_options: "  Validation Options:"
-  connecting_to_service: "Connecting to service"
   status_all_projects: "Status (all projects)"
   shared_containers_status: "Shared containers status"
   cleaning_project: "Cleaning up project: %s"
@@ -216,7 +214,6 @@ errors:
   service_file_not_found: "Service definition file not found: %s"
   service_load_failed: "Failed to load services: %v"
   service_operation_not_found: "Operation '%s' not found"
-  service_no_connect_operation: "Service '%s' does not have a connect operation configured"
   
   # Docker errors
   docker_client_create_failed: "Failed to create Docker client. Is Docker running?"
@@ -277,7 +274,6 @@ errors:
   config_parse_service_failed: "Failed to parse service configuration: %v"
   
   # Service configuration errors
-  service_no_connect_command: "Service '%s' does not have a connect command configured"
   service_no_custom_operations: "Service '%s' does not have custom operations configured"
   service_selection_failed: "Failed to select services: %v"
   

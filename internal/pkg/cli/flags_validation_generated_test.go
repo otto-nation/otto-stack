@@ -29,16 +29,6 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 				"volumes",
 			},
 		},
-		"connect": {
-			handlerPath: "internal/pkg/cli/handlers/operations/connect.go",
-			flags: []string{
-				"database",
-				"host",
-				"port",
-				"read-only",
-				"user",
-			},
-		},
 		"doctor": {
 			handlerPath: "internal/pkg/cli/handlers/project/doctor.go",
 			flags: []string{
@@ -55,17 +45,6 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 				"shared",
 				"timeout",
 				"volumes",
-			},
-		},
-		"exec": {
-			handlerPath: "internal/pkg/cli/handlers/operations/exec.go",
-			flags: []string{
-				"detach",
-				"env",
-				"interactive",
-				"tty",
-				"user",
-				"workdir",
 			},
 		},
 		"init": {
