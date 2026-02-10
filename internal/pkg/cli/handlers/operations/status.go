@@ -151,7 +151,7 @@ func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobr
 	ciFlags := ci.GetFlags(cmd)
 
 	if !ciFlags.Quiet {
-		base.Output.Header(fmt.Sprintf("Shared Containers for Project: %s", projectName))
+		base.Output.Header(fmt.Sprintf(messages.InfoSharedContainersForProject, projectName))
 	}
 
 	reg := registry.NewManager(execCtx.SharedContainers.Root)
@@ -355,8 +355,8 @@ func buildNotFoundStatus(name, provider string) display.ServiceStatus {
 	return display.ServiceStatus{
 		Name:     name,
 		Provider: provider,
-		State:    "not found",
-		Health:   "unknown",
+		State:    messages.InfoStateNotFound,
+		Health:   messages.InfoHealthUnknown,
 	}
 }
 
@@ -392,7 +392,7 @@ func (h *StatusHandler) buildSharedStatuses(ctx context.Context, containers []*r
 func (h *StatusHandler) getContainerState(ctx context.Context, containerName string, dockerClient *docker.Client) string {
 	inspectResp, err := dockerClient.GetDockerClient().ContainerInspect(ctx, containerName)
 	if err != nil {
-		return "not found"
+		return messages.InfoStateNotFound
 	}
 	return inspectResp.State.Status
 }
@@ -428,7 +428,7 @@ func (h *StatusHandler) displaySharedStatus(base *base.BaseCommand, statuses []d
 
 func formatProjects(projects []string) string {
 	if len(projects) == 0 {
-		return "none"
+		return messages.InfoProjectsNone
 	}
 	if len(projects) == 1 {
 		return projects[0]
