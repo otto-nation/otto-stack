@@ -58,12 +58,6 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	if e.Context != "" {
-		if e.Cause != nil {
-			return fmt.Sprintf("%s: %s: %v", e.Context, e.Message, e.Cause)
-		}
-		return fmt.Sprintf("%s: %s", e.Context, e.Message)
-	}
 	if e.Cause != nil {
 		return fmt.Sprintf("%s: %v", e.Message, e.Cause)
 	}

@@ -50,7 +50,7 @@ func (m *LoggingMiddleware) Execute(ctx context.Context, cliCtx clicontext.Conte
 	err := next.Execute(ctx, cliCtx, base)
 
 	if err != nil {
-		logger.Error("operation_failed", "operation", "init", "error", err)
+		logger.Debug("operation_failed", "operation", "init", "error", err)
 	} else {
 		logger.Info("operation_completed", "operation", "init")
 	}
