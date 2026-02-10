@@ -2,8 +2,10 @@ package operations
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -49,6 +51,11 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 
 	showAll, _ := cmd.Flags().GetBool(docker.FlagAll)
 	showShared, _ := cmd.Flags().GetBool(docker.FlagShared)
+	projectName, _ := cmd.Flags().GetString(docker.FlagProject)
+
+	if projectName != "" {
+		return h.handleProjectSharedStatus(ctx, cmd, args, base, execCtx, projectName)
+	}
 
 	if execCtx.Type == clicontext.Shared || showAll || showShared {
 		return h.handleSharedStatus(ctx, cmd, args, base, execCtx)
@@ -128,6 +135,56 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 
 	if ciFlags.JSON {
 		ci.OutputResult(ciFlags, map[string]any{
+			"shared_containers": statuses,
+			"count":             len(statuses),
+		}, core.ExitSuccess)
+		return nil
+	}
+
+	h.displaySharedStatus(base, statuses)
+	return nil
+}
+
+func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobra.Command, _ []string, base *base.BaseCommand, execCtx *clicontext.ExecutionContext, projectName string) error {
+	ciFlags := ci.GetFlags(cmd)
+
+	if !ciFlags.Quiet {
+		base.Output.Header(fmt.Sprintf("Shared Containers for Project: %s", projectName))
+	}
+
+	reg := registry.NewManager(execCtx.SharedContainers.Root)
+	if _, err := reg.Load(); err != nil {
+		return err
+	}
+
+	containers, err := reg.List()
+	if err != nil {
+		return err
+	}
+
+	// Filter containers used by this project
+	projectContainers := make([]*registry.ContainerInfo, 0, len(containers))
+	for _, container := range containers {
+		if h.containsProject(container.Projects, projectName) {
+			projectContainers = append(projectContainers, container)
+		}
+	}
+
+	if len(projectContainers) == 0 {
+		base.Output.Info(fmt.Sprintf("No shared containers found for project: %s", projectName))
+		return nil
+	}
+
+	dockerClient, err := docker.NewClient(h.logger)
+	if err != nil {
+		return err
+	}
+
+	statuses := h.buildSharedStatuses(ctx, projectContainers, dockerClient)
+
+	if ciFlags.JSON {
+		ci.OutputResult(ciFlags, map[string]any{
+			"project":           projectName,
 			"shared_containers": statuses,
 			"count":             len(statuses),
 		}, core.ExitSuccess)
@@ -361,4 +418,8 @@ func formatProjects(projects []string) string {
 		b.WriteString(p)
 	}
 	return b.String()
+}
+
+func (h *StatusHandler) containsProject(projects []string, projectName string) bool {
+	return slices.Contains(projects, projectName)
 }

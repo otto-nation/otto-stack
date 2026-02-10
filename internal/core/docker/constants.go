@@ -44,6 +44,7 @@ const (
 	FlagTail          = "tail"
 	FlagAll           = "all"
 	FlagShared        = "shared"
+	FlagProject       = "project"
 )
 
 // Docker labels
