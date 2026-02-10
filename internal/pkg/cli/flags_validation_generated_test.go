@@ -95,6 +95,8 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 			flags: []string{
 				"all",
 				"format",
+				"project",
+				"shared",
 			},
 		},
 		"up": {
