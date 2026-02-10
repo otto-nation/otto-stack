@@ -1,5 +1,5 @@
 title = "otto-stack"
-baseURL = "/"
+baseURL = "https://otto-nation.github.io/otto-stack/"
 languageCode = "en-US"
 theme = "doks"
 
