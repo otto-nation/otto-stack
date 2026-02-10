@@ -24,6 +24,25 @@ type SharedContainerStatus struct {
 	UpdatedAt time.Time `json:"updated_at" yaml:"updated_at"`
 }
 
+// SharedStatusResponse represents the response for shared container status queries
+type SharedStatusResponse struct {
+	SharedContainers []SharedContainerStatus `json:"shared_containers" yaml:"shared_containers"`
+	Count            int                     `json:"count" yaml:"count"`
+}
+
+// ProjectSharedStatusResponse represents the response for project-specific shared container queries
+type ProjectSharedStatusResponse struct {
+	Project          string                  `json:"project" yaml:"project"`
+	SharedContainers []SharedContainerStatus `json:"shared_containers" yaml:"shared_containers"`
+	Count            int                     `json:"count" yaml:"count"`
+}
+
+// ServiceStatusResponse represents the response for service status queries
+type ServiceStatusResponse struct {
+	Services []any `json:"services" yaml:"services"`
+	Count    int   `json:"count" yaml:"count"`
+}
+
 // ValidationResult represents validation results
 type ValidationResult struct {
 	Valid    bool              `json:"valid" yaml:"valid"`

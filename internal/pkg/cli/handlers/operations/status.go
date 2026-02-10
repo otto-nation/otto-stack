@@ -134,9 +134,9 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 	statuses := h.buildSharedStatuses(ctx, sharedContainers, dockerClient)
 
 	if ciFlags.JSON {
-		ci.OutputResult(ciFlags, map[string]any{
-			"shared_containers": statuses,
-			"count":             len(statuses),
+		ci.OutputResult(ciFlags, display.SharedStatusResponse{
+			SharedContainers: statuses,
+			Count:            len(statuses),
 		}, core.ExitSuccess)
 		return nil
 	}
@@ -183,10 +183,10 @@ func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobr
 	statuses := h.buildSharedStatuses(ctx, projectContainers, dockerClient)
 
 	if ciFlags.JSON {
-		ci.OutputResult(ciFlags, map[string]any{
-			"project":           projectName,
-			"shared_containers": statuses,
-			"count":             len(statuses),
+		ci.OutputResult(ciFlags, display.ProjectSharedStatusResponse{
+			Project:          projectName,
+			SharedContainers: statuses,
+			Count:            len(statuses),
 		}, core.ExitSuccess)
 		return nil
 	}
@@ -223,10 +223,18 @@ func (h *StatusHandler) getServiceStatuses(ctx context.Context, projectName stri
 }
 
 func (h *StatusHandler) outputJSON(ciFlags *ci.Flags, statuses []docker.ContainerStatus) {
-	ci.OutputResult(*ciFlags, map[string]any{
-		"services": statuses,
-		"count":    len(statuses),
+	ci.OutputResult(*ciFlags, display.ServiceStatusResponse{
+		Services: convertToInterfaceSlice(statuses),
+		Count:    len(statuses),
 	}, core.ExitSuccess)
+}
+
+func convertToInterfaceSlice(statuses []docker.ContainerStatus) []any {
+	result := make([]any, len(statuses))
+	for i, s := range statuses {
+		result[i] = s
+	}
+	return result
 }
 
 func (h *StatusHandler) displayStatus(base *base.BaseCommand, cmd *cobra.Command, statuses []docker.ContainerStatus, serviceConfigs []types.ServiceConfig) {
