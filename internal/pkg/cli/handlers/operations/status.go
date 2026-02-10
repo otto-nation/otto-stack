@@ -173,7 +173,7 @@ func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobr
 	}
 
 	if len(projectContainers) == 0 {
-		base.Output.Info(fmt.Sprintf("No shared containers found for project: %s", projectName))
+		base.Output.Info(fmt.Sprintf(messages.InfoNoSharedContainersForProject, projectName))
 		return nil
 	}
 
