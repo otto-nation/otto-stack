@@ -12,19 +12,21 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
-	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // Manager handles shared container registry operations
 type Manager struct {
-	registryPath string
+	registryPath   string
+	orphanDetector *OrphanDetector
 }
 
 // NewManager creates a new registry manager
 func NewManager(sharedDir string) *Manager {
-	return &Manager{
+	m := &Manager{
 		registryPath: filepath.Join(sharedDir, core.SharedRegistryFile),
 	}
+	m.orphanDetector = NewOrphanDetector(m)
+	return m
 }
 
 // Load reads the registry from disk
@@ -201,160 +203,12 @@ func (m *Manager) IsShared(service string) (bool, error) {
 
 // FindOrphans returns containers with no active projects (basic check)
 func (m *Manager) FindOrphans() ([]OrphanInfo, error) {
-	registry, err := m.Load()
-	if err != nil {
-		return nil, err
-	}
-	return registry.FindOrphans(), nil
+	return m.orphanDetector.FindOrphans()
 }
 
 // FindOrphansWithChecks performs enhanced orphan detection with filesystem and Docker checks
 func (m *Manager) FindOrphansWithChecks(ctx context.Context, dockerClient *docker.Client) ([]OrphanInfo, error) {
-	registry, err := m.Load()
-	if err != nil {
-		return nil, err
-	}
-
-	containers, err := dockerClient.ListContainers(ctx, "")
-	if err != nil {
-		return nil, err
-	}
-
-	containerMap := buildContainerMap(containers)
-
-	var orphans []OrphanInfo
-	orphans = append(orphans, m.checkRegisteredContainers(registry, containerMap)...)
-	orphans = append(orphans, m.checkZombieContainers(registry, containers)...)
-
-	return orphans, nil
-}
-
-func buildContainerMap(containers []docker.ContainerInfo) map[string]bool {
-	m := make(map[string]bool)
-	for _, c := range containers {
-		m[c.Name] = true
-	}
-	return m
-}
-
-func (m *Manager) checkRegisteredContainers(registry *Registry, containerMap map[string]bool) []OrphanInfo {
-	var orphans []OrphanInfo
-
-	for service, info := range registry.Containers {
-		if orphan := m.checkContainer(service, info, containerMap); orphan != nil {
-			orphans = append(orphans, *orphan)
-		}
-	}
-
-	return orphans
-}
-
-func (m *Manager) checkContainer(service string, info *ContainerInfo, containerMap map[string]bool) *OrphanInfo {
-	// Container not in Docker
-	if !containerMap[info.Name] {
-		return &OrphanInfo{
-			Service:        service,
-			Container:      info.Name,
-			Reason:         messages.OrphanReasonNotInDocker,
-			Severity:       OrphanSeverityWarning,
-			ContainerState: ContainerStateNotFound,
-		}
-	}
-
-	// No projects registered
-	if len(info.Projects) == 0 {
-		return &OrphanInfo{
-			Service:        service,
-			Container:      info.Name,
-			Reason:         messages.OrphanReasonNoProjects,
-			Severity:       OrphanSeveritySafe,
-			ContainerState: ContainerStateRunning,
-		}
-	}
-
-	// Check project filesystem
-	return m.checkProjectFilesystem(service, info)
-}
-
-func (m *Manager) checkProjectFilesystem(service string, info *ContainerInfo) *OrphanInfo {
-	var existingProjects []string
-	for _, project := range info.Projects {
-		if projectExists(project) {
-			existingProjects = append(existingProjects, project)
-		}
-	}
-
-	if len(existingProjects) == 0 {
-		return &OrphanInfo{
-			Service:        service,
-			Container:      info.Name,
-			Reason:         messages.OrphanReasonAllProjectsDeleted,
-			Severity:       OrphanSeveritySafe,
-			ContainerState: ContainerStateRunning,
-			ProjectsFound:  info.Projects,
-		}
-	}
-
-	if len(existingProjects) < len(info.Projects) {
-		return &OrphanInfo{
-			Service:        service,
-			Container:      info.Name,
-			Reason:         messages.OrphanReasonSomeProjectsDeleted,
-			Severity:       OrphanSeverityWarning,
-			ContainerState: ContainerStateRunning,
-			ProjectsFound:  existingProjects,
-		}
-	}
-
-	return nil
-}
-
-func (m *Manager) checkZombieContainers(registry *Registry, containers []docker.ContainerInfo) []OrphanInfo {
-	var orphans []OrphanInfo
-
-	for _, container := range containers {
-		if !isSharedContainer(container.Name) {
-			continue
-		}
-
-		service := extractServiceName(container.Name)
-		if _, exists := registry.Containers[service]; !exists {
-			orphans = append(orphans, OrphanInfo{
-				Service:        service,
-				Container:      container.Name,
-				Reason:         messages.OrphanReasonNotRegistered,
-				Severity:       OrphanSeverityCritical,
-				ContainerState: ContainerStateRunning,
-			})
-		}
-	}
-
-	return orphans
-}
-
-// projectExists checks if a project directory exists
-func projectExists(projectName string) bool {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return false
-	}
-
-	// Check common project locations
-	// This is a heuristic - projects could be anywhere
-	// We check if .otto-stack directory exists in common locations
-	possiblePaths := []string{
-		filepath.Join(homeDir, "projects", projectName, core.OttoStackDir),
-		filepath.Join(homeDir, "dev", projectName, core.OttoStackDir),
-		filepath.Join(homeDir, projectName, core.OttoStackDir),
-	}
-
-	for _, path := range possiblePaths {
-		if _, err := os.Stat(path); err == nil {
-			return true
-		}
-	}
-
-	return false
+	return m.orphanDetector.FindOrphansWithChecks(ctx, dockerClient)
 }
 
 // isSharedContainer checks if container name matches shared pattern
