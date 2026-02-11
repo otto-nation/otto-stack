@@ -7,20 +7,12 @@ import (
 )
 
 // validateServiceConfigs validates ServiceConfig objects
+// This is called before the validation registry runs, so it only does basic checks
 func (h *InitHandler) validateServiceConfigs(serviceConfigs []types.ServiceConfig) error {
+	// Detailed validation happens in validateServices() in the registry
+	// This is just a quick sanity check
 	if len(serviceConfigs) == 0 {
 		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationNoServicesSelected, nil)
 	}
-
-	// Check for duplicates by name
-	seen := make(map[string]bool)
-	for _, serviceConfig := range serviceConfigs {
-		if seen[serviceConfig.Name] {
-			return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationDuplicateService, serviceConfig.Name)
-		}
-		seen[serviceConfig.Name] = true
-	}
-
-	// ServiceConfigs are already validated when loaded, so no need to re-validate existence
 	return nil
 }

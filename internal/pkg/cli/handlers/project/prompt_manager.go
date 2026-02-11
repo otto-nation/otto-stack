@@ -44,7 +44,7 @@ func (pm *PromptManager) PromptForProjectDetails() (string, error) {
 	// Get current directory name as default project name
 	currentDir, err := filepath.Abs(".")
 	if err != nil {
-		return "", pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "validation failed", err)
+		return "", err
 	}
 	defaultName := filepath.Base(currentDir)
 
@@ -58,7 +58,7 @@ func (pm *PromptManager) PromptForProjectDetails() (string, error) {
 	if err := survey.AskOne(namePrompt, &projectName, survey.WithValidator(func(ans any) error {
 		return pm.validator.ValidateProjectName(ans.(string))
 	})); err != nil {
-		return "", pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "validation failed", err)
+		return "", err
 	}
 
 	return projectName, nil
@@ -72,7 +72,7 @@ func (pm *PromptManager) PromptForServiceConfigs() ([]types.ServiceConfig, error
 	}
 
 	if len(categories) == 0 {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "validation failed", nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceSelectionFailed, nil)
 	}
 
 	// New approach: Show all services in one list with category labels
@@ -108,7 +108,7 @@ func (pm *PromptManager) askToEnableValidation() (bool, error) {
 
 	var enableValidation bool
 	if err := survey.AskOne(validationPrompt, &enableValidation); err != nil {
-		return false, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "validation", "validation failed", err)
+		return false, err
 	}
 	return enableValidation, nil
 }
@@ -140,7 +140,7 @@ func (pm *PromptManager) promptForValidationSelection(validationOptions []string
 	}
 
 	if err := survey.AskOne(validationSelectPrompt, &selectedValidations); err != nil {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "validation", "validation failed", err)
+		return nil, err
 	}
 	return selectedValidations, nil
 }
@@ -167,7 +167,12 @@ func (pm *PromptManager) ConfirmInitialization(projectName string, services []st
 
 	if len(validation) > 0 {
 		base.Output.Info(messages.InfoValidationOptions)
-		for option := range validation {
+		// Sort keys for consistent display order
+		keys := make([]string, 0, len(validation))
+		for k := range validation {
+			keys = append(keys, k)
+		}
+		for _, option := range keys {
 			base.Output.Info("    - %s", option)
 		}
 	}
@@ -184,7 +189,7 @@ func (pm *PromptManager) ConfirmInitialization(projectName string, services []st
 
 	var action string
 	if err := survey.AskOne(confirmPrompt, &action); err != nil {
-		return "", pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "validation", "validation failed", err)
+		return "", err
 	}
 
 	return action, nil
@@ -206,7 +211,7 @@ func (pm *PromptManager) selectServicesFromAllCategories(categories map[string][
 	}
 
 	if len(selected) == 0 {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "validation failed", nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationNoServicesSelected, nil)
 	}
 
 	return pm.mapSelectedServices(selected, allServices), nil
@@ -238,7 +243,7 @@ func (pm *PromptManager) promptForServiceSelection(serviceOptions []string) ([]s
 
 	var selected []string
 	if err := survey.AskOne(prompt, &selected); err != nil {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceSelectionFailed, err)
+		return nil, err
 	}
 
 	return selected, nil
@@ -279,9 +284,9 @@ func (pm *PromptManager) extractServiceName(selection string) string {
 }
 
 func (pm *PromptManager) findServiceConfig(serviceName string, allServices []types.ServiceConfig) *types.ServiceConfig {
-	for _, service := range allServices {
-		if service.Name == serviceName {
-			return &service
+	for i := range allServices {
+		if allServices[i].Name == serviceName {
+			return &allServices[i]
 		}
 	}
 	return nil

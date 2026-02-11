@@ -4,7 +4,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
-	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
@@ -17,7 +16,7 @@ type InteractiveProcessor struct {
 func (p *InteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCommand) (clicontext.Context, error) {
 	projectName, err := p.handler.promptManager.PromptForProjectDetails()
 	if err != nil {
-		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "validation failed", err)
+		return clicontext.Context{}, err
 	}
 
 	result, err := p.handler.serviceSelectionManager.RunWorkflow(p.handler, projectName, base)
