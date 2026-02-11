@@ -148,7 +148,7 @@ func (m *Manager) ExecuteCustomOperation(serviceName, operationName string) ([]s
 
 	operation, exists := service.Service.Management.Custom[operationName]
 	if !exists {
-		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, "operation", messages.ErrorsServiceOperationNotFound, operationName)
+		return nil, pkgerrors.NewSystemErrorf(pkgerrors.ErrCodeInvalid, messages.ErrorsServiceOperationNotFound, operationName)
 	}
 
 	cmd := make([]string, len(operation.Command))

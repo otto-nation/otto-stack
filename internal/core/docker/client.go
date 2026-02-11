@@ -91,12 +91,12 @@ func NewClientWithDependencies(cli DockerClient, compose *Manager, logger *slog.
 func NewClient(logger *slog.Logger) (*Client, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
-		return nil, pkgerrors.New(pkgerrors.ErrCodeUnavailable, pkgerrors.ComponentDocker, "create Docker client", err)
+		return nil, pkgerrors.NewDockerError(pkgerrors.ErrCodeUnavailable, "create Docker client", err)
 	}
 
 	composeManager, err := NewManager()
 	if err != nil {
-		return nil, pkgerrors.New(pkgerrors.ErrCodeInternal, pkgerrors.ComponentDocker, "create compose manager", err)
+		return nil, pkgerrors.NewDockerError(pkgerrors.ErrCodeInternal, "create compose manager", err)
 	}
 
 	return NewClientWithDependencies(NewDockerClientAdapter(cli), composeManager, logger), nil

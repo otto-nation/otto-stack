@@ -58,7 +58,8 @@ func ResolveUpServices(args []string, cfg *config.Config) ([]servicetypes.Servic
 	}
 
 	// Validate services exist
-	if err := manager.ValidateServices(serviceNames); err != nil {
+	validator := NewValidator()
+	if err := validator.ValidateServiceNames(serviceNames); err != nil {
 		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackResolveServicesFailed, err)
 	}
 
@@ -333,32 +334,32 @@ func (s *Service) Cleanup(ctx context.Context, req CleanupRequest) error {
 	// List containers
 	containers, err := s.DockerClient.ListContainers(ctx, req.Project)
 	if err != nil {
-		return pkgerrors.New(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "list containers", err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "list containers", err)
 	}
 
 	// Remove containers
 	for _, container := range containers {
 		if err := s.DockerClient.RemoveContainer(ctx, container.ID, req.Force); err != nil {
-			return pkgerrors.New(pkgerrors.ErrCodeOperationFail, container.Name, "remove container", err)
+			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "remove container", err)
 		}
 	}
 
 	// Remove volumes if requested
 	if req.RemoveVolumes {
 		if err := s.DockerClient.RemoveResources(ctx, docker.ResourceVolume, req.Project); err != nil {
-			return pkgerrors.New(pkgerrors.ErrCodeOperationFail, req.Project, "remove volumes", err)
+			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "remove volumes", err)
 		}
 	}
 
 	// Remove networks
 	if err := s.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, req.Project); err != nil {
-		return pkgerrors.New(pkgerrors.ErrCodeOperationFail, req.Project, "remove networks", err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "remove networks", err)
 	}
 
 	// Remove images if requested
 	if req.RemoveImages {
 		if err := s.DockerClient.RemoveResources(ctx, docker.ResourceImage, req.Project); err != nil {
-			return pkgerrors.New(pkgerrors.ErrCodeOperationFail, req.Project, "remove images", err)
+			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "remove images", err)
 		}
 	}
 
@@ -369,7 +370,7 @@ func (s *Service) Cleanup(ctx context.Context, req CleanupRequest) error {
 func (s *Service) CheckDockerHealth(ctx context.Context) error {
 	_, err := s.DockerClient.GetCli().Info(ctx)
 	if err != nil {
-		return pkgerrors.New(pkgerrors.ErrCodeUnavailable, pkgerrors.ComponentDocker, "check docker health", err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeUnavailable, "check docker health", err)
 	}
 	return nil
 }

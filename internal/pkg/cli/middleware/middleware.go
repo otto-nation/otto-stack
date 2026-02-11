@@ -29,7 +29,7 @@ func (m *ValidationMiddleware) Execute(ctx context.Context, cliCtx clicontext.Co
 	}
 
 	if _, err := os.Stat(core.OttoStackDir); err == nil {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeAlreadyExists, "project", messages.MiddlewareProjectAlreadyInitialized, nil)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeAlreadyExists, messages.MiddlewareProjectAlreadyInitialized, nil)
 	}
 
 	return next.Execute(ctx, cliCtx, base)

@@ -5,7 +5,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
-	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
@@ -63,7 +63,8 @@ func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, proj
 		return nil, err
 	}
 
-	if err := handler.validateServiceConfigs(serviceConfigs); err != nil {
+	validator := services.NewValidator()
+	if err := validator.ValidateServiceConfigs(serviceConfigs); err != nil {
 		return nil, err
 	}
 
@@ -76,7 +77,7 @@ func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, proj
 		return nil, err
 	}
 
-	serviceNames := svc.ExtractServiceNames(serviceConfigs)
+	serviceNames := services.ExtractServiceNames(serviceConfigs)
 	action, err := ssm.promptManager.ConfirmInitialization(projectName, serviceNames, validation, advanced, base)
 	if err != nil {
 		return nil, err

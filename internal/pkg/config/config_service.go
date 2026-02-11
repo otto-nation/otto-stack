@@ -29,7 +29,7 @@ func (s *configService) LoadConfig() (*Config, error) {
 // ValidateConfig validates the configuration
 func (s *configService) ValidateConfig(cfg *Config) error {
 	if cfg == nil {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "config", messages.ErrorsConfigNil, nil)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeInvalid, messages.ErrorsConfigNil, nil)
 	}
 
 	if cfg.Project.Name == "" {
@@ -37,7 +37,7 @@ func (s *configService) ValidateConfig(cfg *Config) error {
 	}
 
 	if len(cfg.Stack.Enabled) == 0 {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "stack.enabled", messages.ValidationNoServicesSelected, nil)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeInvalid, messages.ValidationNoServicesSelected, nil)
 	}
 
 	return nil
@@ -46,7 +46,7 @@ func (s *configService) ValidateConfig(cfg *Config) error {
 // GetConfigHash returns a hash of the current configuration
 func (s *configService) GetConfigHash(cfg *Config) (string, error) {
 	if cfg == nil {
-		return "", pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "config", messages.ErrorsConfigNil, nil)
+		return "", pkgerrors.NewSystemError(pkgerrors.ErrCodeInvalid, messages.ErrorsConfigNil, nil)
 	}
 
 	data, err := json.Marshal(cfg)

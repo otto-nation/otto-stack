@@ -71,7 +71,7 @@ func (h *Handler) handleCheckUpdates(_ context.Context, _ *cobra.Command, _ []st
 	checker := version.NewUpdateChecker(currentVersion)
 	release, hasUpdate, err := checker.CheckForUpdates()
 	if err != nil {
-		return pkgerrors.New(pkgerrors.ErrCodeOperationFail, "version", "check for updates", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "check for updates", err)
 	}
 
 	if !hasUpdate {

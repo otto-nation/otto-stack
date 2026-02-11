@@ -44,7 +44,7 @@ func TestValidateProjectName(t *testing.T) {
 }
 
 func TestValidateServiceConfigs(t *testing.T) {
-	handler := NewInitHandler()
+	validator := services.NewValidator()
 
 	tests := []struct {
 		name           string
@@ -59,7 +59,7 @@ func TestValidateServiceConfigs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := handler.validateServiceConfigs(tt.serviceConfigs)
+			err := validator.ValidateServiceConfigs(tt.serviceConfigs)
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {

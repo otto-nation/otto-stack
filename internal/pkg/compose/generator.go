@@ -37,7 +37,7 @@ func NewGenerator(projectName string) (*Generator, error) {
 // buildComposeStructure creates the compose structure from ServiceConfigs
 func (g *Generator) buildComposeStructure(serviceConfigs []types.ServiceConfig) (map[string]any, error) {
 	if g.projectName == "" {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "input", messages.ValidationProjectNameEmpty, nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, messages.ValidationProjectNameEmpty, nil)
 	}
 
 	services, err := g.buildServicesFromConfigs(serviceConfigs)
