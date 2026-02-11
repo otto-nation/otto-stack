@@ -50,21 +50,21 @@ func TestError_Unwrap(t *testing.T) {
 	assert.Equal(t, cause, err.Unwrap())
 }
 
-func TestNew(t *testing.T) {
+func TestNewSystemError(t *testing.T) {
 	cause := errors.New("cause")
-	err := New(ErrCodeNotFound, "service", "not found", cause)
+	err := NewSystemError(ErrCodeNotFound, "not found", cause)
 
 	assert.Equal(t, ErrCodeNotFound, err.Code)
-	assert.Equal(t, "service", err.Context)
+	assert.Equal(t, "", err.Context)
 	assert.Equal(t, "not found", err.Message)
 	assert.Equal(t, cause, err.Cause)
 }
 
-func TestNewf(t *testing.T) {
-	err := Newf(ErrCodeInvalid, "field", "invalid value: %s", "test")
+func TestNewSystemErrorf(t *testing.T) {
+	err := NewSystemErrorf(ErrCodeInvalid, "invalid value: %s", "test")
 
 	assert.Equal(t, ErrCodeInvalid, err.Code)
-	assert.Equal(t, "field", err.Context)
+	assert.Equal(t, "", err.Context)
 	assert.Equal(t, "invalid value: test", err.Message)
 	assert.Nil(t, err.Cause)
 }
