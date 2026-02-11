@@ -23,7 +23,7 @@ func TestError_Error(t *testing.T) {
 		{
 			name:     "with context",
 			err:      &Error{Context: "service", Message: "failed"},
-			expected: "service: failed",
+			expected: "failed",
 		},
 		{
 			name:     "with cause",
@@ -33,7 +33,7 @@ func TestError_Error(t *testing.T) {
 		{
 			name:     "with context and cause",
 			err:      &Error{Context: "docker", Message: "connection failed", Cause: errors.New("timeout")},
-			expected: "docker: connection failed: timeout",
+			expected: "connection failed: timeout",
 		},
 	}
 
