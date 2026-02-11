@@ -116,12 +116,6 @@ func (c *Client) GetCli() DockerClient {
 	return c.cli
 }
 
-// GetComposeManager returns the compose manager
-// deadcode: used for accessing internal state in unit tests
-func (c *Client) GetComposeManager() *Manager {
-	return c.compose
-}
-
 // Resource management
 func (c *Client) ListResources(ctx context.Context, resourceType ResourceType, project string) ([]string, error) {
 	filter := NewProjectFilter(project)

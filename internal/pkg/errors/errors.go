@@ -1,7 +1,6 @@
 package errors
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -174,77 +173,5 @@ func NewDockerError(code, message string, cause error) *Error {
 		Context: ComponentDocker,
 		Message: message,
 		Cause:   cause,
-	}
-}
-
-// Helpers
-func GetErrorCode(err error) string {
-	if err == nil {
-		return ""
-	}
-	var e *Error
-	if errors.As(err, &e) {
-		return e.Code
-	}
-	return ErrCodeUnknown
-}
-
-func IsNotFound(err error) bool {
-	return GetErrorCode(err) == ErrCodeNotFound
-}
-
-func IsAlreadyExists(err error) bool {
-	return GetErrorCode(err) == ErrCodeAlreadyExists
-}
-
-func IsRetryable(err error) bool {
-	code := GetErrorCode(err)
-	return code == ErrCodeTimeout || code == ErrCodeUnavailable
-}
-
-func IsPermissionDenied(err error) bool {
-	return GetErrorCode(err) == ErrCodePermission
-}
-
-func IsInvalid(err error) bool {
-	return GetErrorCode(err) == ErrCodeInvalid
-}
-
-func FormatForUser(err error) string {
-	if err == nil {
-		return ""
-	}
-	code := GetErrorCode(err)
-	switch code {
-	case ErrCodeNotFound:
-		return fmt.Sprintf("%s\nHint: Check the name and try again", err.Error())
-	case ErrCodeUnavailable:
-		return fmt.Sprintf("%s\nHint: Ensure required services are running", err.Error())
-	case ErrCodePermission:
-		return fmt.Sprintf("%s\nHint: Check file permissions or run with appropriate privileges", err.Error())
-	default:
-		return err.Error()
-	}
-}
-
-func GetExitCode(err error) int {
-	if err == nil {
-		return ExitSuccess
-	}
-	switch GetErrorCode(err) {
-	case ErrCodeNotFound:
-		return ExitNotFound
-	case ErrCodeInvalid:
-		return ExitInvalidInput
-	case ErrCodePermission:
-		return ExitPermissionError
-	case ErrCodeAlreadyExists:
-		return ExitAlreadyExists
-	case ErrCodeTimeout:
-		return ExitTimeout
-	case ErrCodeUnavailable:
-		return ExitUnavailable
-	default:
-		return ExitGeneralError
 	}
 }

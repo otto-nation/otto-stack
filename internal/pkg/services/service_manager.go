@@ -32,18 +32,6 @@ type ServiceInterface interface {
 	Exec(ctx context.Context, req ExecRequest) error
 }
 
-// NewServiceWithDependencies creates a service with injected dependencies (for testing)
-// deadcode: used for dependency injection in unit tests
-func NewServiceWithDependencies(compose api.Compose, characteristics CharacteristicsResolver, project ProjectLoader, dockerClient *docker.Client) *Service {
-	return &Service{
-		compose:         compose,
-		characteristics: characteristics,
-		project:         project,
-		DockerClient:    dockerClient,
-		logger:          logger.GetLogger(),
-	}
-}
-
 // ResolveUpServices resolves service names and returns their configs with dependencies
 func ResolveUpServices(args []string, cfg *config.Config) ([]servicetypes.ServiceConfig, error) {
 	serviceNames := args
