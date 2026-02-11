@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"slices"
-	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -263,7 +262,9 @@ func (h *StatusHandler) displayStatus(base *base.BaseCommand, cmd *cobra.Command
 	}
 
 	serviceToContainer := h.buildServiceContainerMap(serviceConfigs)
-	serviceStatuses := convertToDisplayStatuses(statuses, serviceConfigs, serviceToContainer)
+
+	converter := NewStatusConverter()
+	serviceStatuses := converter.ConvertToDisplayStatuses(statuses, serviceConfigs, serviceToContainer)
 	verbose := base.GetVerbose(cmd)
 
 	formatter := display.NewStatusFormatter(os.Stdout)
@@ -305,78 +306,6 @@ func getContainerName(config types.ServiceConfig) string {
 }
 
 // convertToDisplayStatuses creates display service statuses with health inheritance
-func convertToDisplayStatuses(containerStatuses []docker.ContainerStatus, serviceConfigs []types.ServiceConfig, serviceToContainer map[string]string) []display.ServiceStatus {
-	containerMap := buildContainerMap(containerStatuses)
-	return buildDisplayStatuses(serviceConfigs, serviceToContainer, containerMap)
-}
-
-func buildContainerMap(containerStatuses []docker.ContainerStatus) map[string]docker.ContainerStatus {
-	containerMap := make(map[string]docker.ContainerStatus, len(containerStatuses))
-	for _, status := range containerStatuses {
-		containerMap[status.Name] = status
-	}
-	return containerMap
-}
-
-func buildDisplayStatuses(serviceConfigs []types.ServiceConfig, serviceToContainer map[string]string, containerMap map[string]docker.ContainerStatus) []display.ServiceStatus {
-	result := make([]display.ServiceStatus, 0, len(serviceConfigs))
-	for _, config := range serviceConfigs {
-		if shouldSkipService(config) {
-			continue
-		}
-		result = append(result, createServiceStatus(config, serviceToContainer, containerMap))
-	}
-	return result
-}
-
-func shouldSkipService(config types.ServiceConfig) bool {
-	return config.Container.Restart == types.RestartPolicyNo || config.Hidden
-}
-
-func createServiceStatus(config types.ServiceConfig, serviceToContainer map[string]string, containerMap map[string]docker.ContainerStatus) display.ServiceStatus {
-	provider := serviceToContainer[config.Name]
-	providerName := getProviderName(config.Name, provider)
-
-	if containerStatus, exists := containerMap[provider]; exists {
-		return buildFoundStatus(config.Name, providerName, containerStatus)
-	}
-
-	return buildNotFoundStatus(config.Name, providerName)
-}
-
-func getProviderName(serviceName, provider string) string {
-	if provider == serviceName {
-		return ""
-	}
-	return provider
-}
-
-func buildFoundStatus(name, provider string, containerStatus docker.ContainerStatus) display.ServiceStatus {
-	uptime := time.Duration(0)
-	if !containerStatus.StartedAt.IsZero() {
-		uptime = time.Since(containerStatus.StartedAt)
-	}
-
-	return display.ServiceStatus{
-		Name:      name,
-		Provider:  provider,
-		State:     containerStatus.State,
-		Health:    containerStatus.Health,
-		Ports:     containerStatus.Ports,
-		CreatedAt: containerStatus.CreatedAt,
-		UpdatedAt: containerStatus.StartedAt,
-		Uptime:    uptime,
-	}
-}
-
-func buildNotFoundStatus(name, provider string) display.ServiceStatus {
-	return display.ServiceStatus{
-		Name:     name,
-		Provider: provider,
-		State:    "not found",
-		Health:   "unknown",
-	}
-}
 
 // filterInitContainers removes init containers from status display
 func filterInitContainers(serviceConfigs []types.ServiceConfig) []string {
