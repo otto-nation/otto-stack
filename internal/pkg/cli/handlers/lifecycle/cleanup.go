@@ -166,60 +166,8 @@ func (h *CleanupHandler) checkOrphans(ctx context.Context, setup *common.CoreSet
 }
 
 func (h *CleanupHandler) displayOrphans(base *base.BaseCommand, orphans []registry.OrphanInfo) {
-	safe, warning, critical := h.groupBySeverity(orphans)
-
-	base.Output.Warning(messages.OrphanFound, len(orphans))
-	h.displayCritical(base, critical)
-	h.displayWarning(base, warning)
-	h.displaySafe(base, safe)
-	base.Output.Info(messages.OrphanRunCleanupHint)
-}
-
-func (h *CleanupHandler) displayCritical(base *base.BaseCommand, orphans []registry.OrphanInfo) {
-	if len(orphans) == 0 {
-		return
-	}
-	base.Output.Error(messages.OrphanSeverityCritical, len(orphans))
-	for _, o := range orphans {
-		base.Output.Info("    - %s: %s", o.Service, o.Reason)
-	}
-}
-
-func (h *CleanupHandler) displayWarning(base *base.BaseCommand, orphans []registry.OrphanInfo) {
-	if len(orphans) == 0 {
-		return
-	}
-	base.Output.Warning(messages.OrphanSeverityWarning, len(orphans))
-	for _, o := range orphans {
-		base.Output.Info("    - %s: %s", o.Service, o.Reason)
-		if len(o.ProjectsFound) > 0 {
-			base.Output.Info("      "+messages.OrphanRemainingProjects, o.ProjectsFound)
-		}
-	}
-}
-
-func (h *CleanupHandler) displaySafe(base *base.BaseCommand, orphans []registry.OrphanInfo) {
-	if len(orphans) == 0 {
-		return
-	}
-	base.Output.Info(messages.OrphanSeveritySafe, len(orphans))
-	for _, o := range orphans {
-		base.Output.Info("    - %s: %s", o.Service, o.Reason)
-	}
-}
-
-func (h *CleanupHandler) groupBySeverity(orphans []registry.OrphanInfo) (safe, warning, critical []registry.OrphanInfo) {
-	for _, o := range orphans {
-		switch o.Severity {
-		case registry.OrphanSeveritySafe:
-			safe = append(safe, o)
-		case registry.OrphanSeverityWarning:
-			warning = append(warning, o)
-		case registry.OrphanSeverityCritical:
-			critical = append(critical, o)
-		}
-	}
-	return
+	display := registry.NewOrphanDisplay(base.Output)
+	display.Display(orphans)
 }
 
 // cleanOrphans removes orphaned shared containers
