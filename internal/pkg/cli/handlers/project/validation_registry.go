@@ -17,9 +17,11 @@ type ValidationFunc func(*InitHandler, []types.ServiceConfig, *base.BaseCommand)
 type CheckFunc func(*InitHandler, []types.ServiceConfig, *base.BaseCommand)
 
 var ValidationRegistry = map[string]ValidationFunc{
-	core.ValidationDocker:             validateDocker,
-	core.ValidationConfigSyntax:       validateNoFileConflicts,
-	core.ValidationServiceDefinitions: validateServices,
+	core.ValidationDocker:       validateDocker,
+	core.ValidationConfigSyntax: validateNoFileConflicts,
+	core.ValidationServiceDefinitions: func(h *InitHandler, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
+		return services.NewValidator().ValidateServiceConfigs(serviceConfigs)
+	},
 }
 
 var CheckRegistry = map[string]CheckFunc{
@@ -28,7 +30,7 @@ var CheckRegistry = map[string]CheckFunc{
 
 func validateDocker(h *InitHandler, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
 	if !isCommandAvailable(docker.DockerCmd) {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "", messages.ValidationRequiredToolUnavailable, nil)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeInvalid, messages.ValidationRequiredToolUnavailable, nil)
 	}
 	return nil
 }
@@ -42,31 +44,7 @@ func validateNoFileConflicts(h *InitHandler, serviceConfigs []types.ServiceConfi
 	conflictingFiles := []string{docker.DockerComposeFileName, docker.DockerComposeFileNameYaml}
 	for _, file := range conflictingFiles {
 		if _, err := os.Stat(file); err == nil {
-			return pkgerrors.NewValidationError(pkgerrors.ErrCodeAlreadyExists, "", messages.ValidationConflictingFileExists, nil)
-		}
-	}
-	return nil
-}
-
-func validateServices(h *InitHandler, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
-	if len(serviceConfigs) == 0 {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationNoServicesSelected, nil)
-	}
-
-	// Check for duplicates
-	seen := make(map[string]bool)
-	for _, cfg := range serviceConfigs {
-		if seen[cfg.Name] {
-			return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationDuplicateService, cfg.Name)
-		}
-		seen[cfg.Name] = true
-	}
-
-	// Validate each service exists and is loadable
-	serviceUtils := services.NewServiceUtils()
-	for _, serviceConfig := range serviceConfigs {
-		if _, err := serviceUtils.LoadServiceConfig(serviceConfig.Name); err != nil {
-			return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationInvalidService, err)
+			return pkgerrors.NewSystemError(pkgerrors.ErrCodeAlreadyExists, messages.ValidationConflictingFileExists, nil)
 		}
 	}
 	return nil
