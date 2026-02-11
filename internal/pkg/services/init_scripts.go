@@ -59,7 +59,8 @@ func (s *Service) hasLocalInitScripts(config servicetypes.ServiceConfig) bool {
 func (s *Service) executeServiceInitScripts(ctx context.Context, config servicetypes.ServiceConfig, allConfigs []servicetypes.ServiceConfig, projectName string) error {
 	for _, script := range config.InitService.Scripts {
 		// Process template variables in script content
-		processedScript, err := s.processScriptTemplate(script.Content, config, allConfigs)
+		processor := NewTemplateProcessor()
+		processedScript, err := processor.Process(script.Content, config, allConfigs)
 		if err != nil {
 			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, config.Name, messages.InitTemplateProcessFailed, err)
 		}
@@ -84,12 +85,6 @@ func (s *Service) executeServiceInitScripts(ctx context.Context, config servicet
 		}
 	}
 	return nil
-}
-
-// processScriptTemplate processes Go template variables in script content
-func (s *Service) processScriptTemplate(scriptContent string, config servicetypes.ServiceConfig, allConfigs []servicetypes.ServiceConfig) (string, error) {
-	processor := NewTemplateProcessor()
-	return processor.Process(scriptContent, config, allConfigs)
 }
 
 // loadAndValidateServiceConfigs loads user service config files and validates them
