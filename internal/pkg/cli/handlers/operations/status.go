@@ -206,10 +206,10 @@ func (h *StatusHandler) handleProjectSharedStatusWithRequest(req statusRequest) 
 		return err
 	}
 
-	projectContainers := make([]*registry.ContainerInfo, 0, len(containers))
-	for _, container := range containers {
+	projectContainers := make(map[string]*registry.ContainerInfo)
+	for service, container := range containers {
 		if h.containsProject(container.Projects, req.projectName) {
-			projectContainers = append(projectContainers, container)
+			projectContainers[service] = container
 		}
 	}
 
@@ -338,14 +338,14 @@ func filterInitContainers(serviceConfigs []types.ServiceConfig) []string {
 	return filtered
 }
 
-func (h *StatusHandler) buildSharedStatuses(ctx context.Context, containers []*registry.ContainerInfo, dockerClient *docker.Client) []display.SharedContainerStatus {
+func (h *StatusHandler) buildSharedStatuses(ctx context.Context, containers map[string]*registry.ContainerInfo, dockerClient *docker.Client) []display.SharedContainerStatus {
 	statuses := make([]display.SharedContainerStatus, 0, len(containers))
 
-	for _, container := range containers {
+	for service, container := range containers {
 		state := h.getContainerState(ctx, container.Name, dockerClient)
 		statuses = append(statuses, display.SharedContainerStatus{
 			Name:      container.Name,
-			Service:   container.Service,
+			Service:   service,
 			State:     state,
 			Projects:  container.Projects,
 			CreatedAt: container.CreatedAt,

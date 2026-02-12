@@ -134,7 +134,6 @@ func (m *Manager) Register(service, containerName, projectName string) error {
 	if !exists {
 		container = &ContainerInfo{
 			Name:      containerName,
-			Service:   service,
 			Projects:  []string{projectName},
 			CreatedAt: now,
 			UpdatedAt: now,
@@ -183,18 +182,13 @@ func (m *Manager) Get(service string) (*ContainerInfo, error) {
 }
 
 // List returns all registered containers
-func (m *Manager) List() ([]*ContainerInfo, error) {
+func (m *Manager) List() (map[string]*ContainerInfo, error) {
 	registry, err := m.Load()
 	if err != nil {
 		return nil, err
 	}
 
-	containers := make([]*ContainerInfo, 0, len(registry.Containers))
-	for _, container := range registry.Containers {
-		containers = append(containers, container)
-	}
-
-	return containers, nil
+	return registry.Containers, nil
 }
 
 // IsShared checks if a service has a shared container

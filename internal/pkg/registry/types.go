@@ -9,7 +9,6 @@ import (
 // ContainerInfo represents a shared container in the registry
 type ContainerInfo struct {
 	Name      string    `yaml:"name" json:"name"`
-	Service   string    `yaml:"service" json:"service"`
 	Projects  []string  `yaml:"projects" json:"projects"`
 	CreatedAt time.Time `yaml:"created_at" json:"created_at"`
 	UpdatedAt time.Time `yaml:"updated_at" json:"updated_at"`

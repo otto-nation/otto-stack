@@ -48,7 +48,6 @@ func TestManager_SaveAndLoad(t *testing.T) {
 	registry := NewRegistry()
 	registry.Containers["postgres"] = &ContainerInfo{
 		Name:      "otto-stack-postgres",
-		Service:   "postgres",
 		Projects:  []string{"project1"},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
