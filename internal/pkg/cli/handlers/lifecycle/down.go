@@ -59,7 +59,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	case *clicontext.SharedMode:
 		return h.handleGlobalContext(ctx, cmd, args, base, mode.Shared)
 	default:
-		return fmt.Errorf("unknown execution mode: %T", execCtx)
+		return pkgerrors.NewSystemErrorf(pkgerrors.ErrCodeInternal, messages.ErrorsContextUnknownMode, execCtx)
 	}
 }
 

@@ -40,7 +40,7 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	case *clicontext.SharedMode:
 		return h.handleSharedContext(ctx, cmd, args, mode)
 	default:
-		return fmt.Errorf("unknown execution mode: %T", execCtx)
+		return pkgerrors.NewSystemErrorf(pkgerrors.ErrCodeInternal, messages.ErrorsContextUnknownMode, execCtx)
 	}
 }
 

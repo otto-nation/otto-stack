@@ -257,6 +257,7 @@ errors:
   # Context detection errors
   context_detector_create_failed: "Failed to create context detector"
   context_detect_failed: "Failed to detect execution context"
+  context_unknown_mode: "Unknown execution mode: %T"
   
   # Status errors
   status_resolve_services_failed: "Failed to resolve services"
