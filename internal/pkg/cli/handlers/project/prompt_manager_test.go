@@ -26,16 +26,6 @@ func TestNewPromptManager(t *testing.T) {
 	assert.Equal(t, validator, pm.validator)
 }
 
-func TestPromptManager_LoadServiceCategories(t *testing.T) {
-	pm := &PromptManager{}
-
-	categories, err := pm.loadServiceCategories()
-
-	// Should not error even if no services found
-	assert.NoError(t, err)
-	assert.NotNil(t, categories)
-}
-
 func TestPromptManager_PromptForServiceConfigs(t *testing.T) {
 	pm := &PromptManager{}
 

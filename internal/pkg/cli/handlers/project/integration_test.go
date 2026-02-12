@@ -55,6 +55,8 @@ func TestHandle_WithForceFlag(t *testing.T) {
 	handler := NewInitHandler()
 	cmd := &cobra.Command{}
 	cmd.Flags().Bool("force", true, "force initialization")
+	cmd.Flags().Bool("non-interactive", true, "non-interactive mode")
+	cmd.Flag("non-interactive").Value.Set("true")
 
 	base := &base.BaseCommand{
 		Logger: &MockLogger{},
@@ -66,7 +68,8 @@ func TestHandle_WithForceFlag(t *testing.T) {
 	assert.True(t,
 		strings.Contains(err.Error(), "validation failed") ||
 			strings.Contains(err.Error(), "project") ||
-			strings.Contains(err.Error(), "service"),
+			strings.Contains(err.Error(), "service") ||
+			strings.Contains(err.Error(), "Non-interactive mode requires explicit configuration"),
 		"Expected project/service error, got: %s", err.Error())
 }
 

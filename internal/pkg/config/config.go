@@ -150,7 +150,7 @@ func loadLocalConfig() (*Config, error) {
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "config.local.yaml", messages.ErrorsConfigParseFailed, err)
+		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, core.LocalConfigFileName, messages.ErrorsConfigParseFailed, err)
 	}
 
 	return &config, nil
@@ -205,7 +205,7 @@ func loadServiceConfig(serviceName string) (*types.ServiceConfig, error) {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && filepath.Base(path) == serviceName+".yaml" {
+		if !info.IsDir() && filepath.Base(path) == serviceName+core.ExtYAML {
 			configPath = path
 			return filepath.SkipAll
 		}
@@ -226,5 +226,3 @@ func loadServiceConfig(serviceName string) (*types.ServiceConfig, error) {
 	}
 	return &cfg, nil
 }
-
-// loadServiceConfigFile loads service configuration (base or local)

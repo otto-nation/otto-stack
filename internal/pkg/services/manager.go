@@ -44,20 +44,6 @@ func (m *Manager) GetAllServices() map[string]servicetypes.ServiceConfig {
 	return m.services
 }
 
-// ValidateServices validates a list of service names
-func (m *Manager) ValidateServices(serviceNames []string) error {
-	for _, name := range serviceNames {
-		service, exists := m.services[name]
-		if !exists {
-			return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceUnknown, name)
-		}
-		if service.Hidden {
-			return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceNotAccessible, name)
-		}
-	}
-	return nil
-}
-
 // GetDependencies returns dependencies for a service
 func (m *Manager) GetDependencies(serviceName string) ([]string, error) {
 	service, err := m.GetService(serviceName)
@@ -162,7 +148,7 @@ func (m *Manager) ExecuteCustomOperation(serviceName, operationName string) ([]s
 
 	operation, exists := service.Service.Management.Custom[operationName]
 	if !exists {
-		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, "operation", messages.ErrorsServiceOperationNotFound, operationName)
+		return nil, pkgerrors.NewSystemErrorf(pkgerrors.ErrCodeInvalid, messages.ErrorsServiceOperationNotFound, operationName)
 	}
 
 	cmd := make([]string, len(operation.Command))

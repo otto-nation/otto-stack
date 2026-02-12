@@ -69,6 +69,6 @@ func (cm *ConfigManager) generateServiceConfigContent(serviceName string) string
 	data, _ := yaml.Marshal(&config) // Simple struct marshal cannot fail
 
 	// Add comment header
-	header := fmt.Sprintf("# Documentation: %s/services/%s\n\n", core.DocsURL, serviceName)
+	header := fmt.Sprintf("# Documentation: %s/services/#%s\n\n", core.DocsURL, serviceName)
 	return header + string(data)
 }

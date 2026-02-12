@@ -32,18 +32,6 @@ type ServiceInterface interface {
 	Exec(ctx context.Context, req ExecRequest) error
 }
 
-// NewServiceWithDependencies creates a service with injected dependencies (for testing)
-// deadcode: used for dependency injection in unit tests
-func NewServiceWithDependencies(compose api.Compose, characteristics CharacteristicsResolver, project ProjectLoader, dockerClient *docker.Client) *Service {
-	return &Service{
-		compose:         compose,
-		characteristics: characteristics,
-		project:         project,
-		DockerClient:    dockerClient,
-		logger:          logger.GetLogger(),
-	}
-}
-
 // ResolveUpServices resolves service names and returns their configs with dependencies
 func ResolveUpServices(args []string, cfg *config.Config) ([]servicetypes.ServiceConfig, error) {
 	serviceNames := args
@@ -51,67 +39,13 @@ func ResolveUpServices(args []string, cfg *config.Config) ([]servicetypes.Servic
 		serviceNames = cfg.Stack.Enabled
 	}
 
-	// Load the service manager directly
 	manager, err := New()
 	if err != nil {
 		return nil, err
 	}
 
-	// Validate services exist
-	if err := manager.ValidateServices(serviceNames); err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackResolveServicesFailed, err)
-	}
-
-	// Resolve all dependencies recursively
-	resolvedNames := make(map[string]bool)
-	var allServiceNames []string
-
-	var resolveDependencies func(string) error
-	resolveDependencies = func(serviceName string) error {
-		if resolvedNames[serviceName] {
-			return nil
-		}
-
-		service, err := manager.GetService(serviceName)
-		if err != nil {
-			return err
-		}
-
-		// First resolve dependencies
-		for _, dep := range service.Service.Dependencies.Required {
-			if err := resolveDependencies(dep); err != nil {
-				// Skip missing dependencies (they might be virtual or init containers)
-				continue
-			}
-		}
-
-		// Add this service to output
-		if !resolvedNames[serviceName] {
-			resolvedNames[serviceName] = true
-			allServiceNames = append(allServiceNames, serviceName)
-		}
-
-		return nil
-	}
-
-	// Resolve dependencies for all requested services
-	for _, serviceName := range serviceNames {
-		if err := resolveDependencies(serviceName); err != nil {
-			return nil, err
-		}
-	}
-
-	// Load ServiceConfigs for resolved services
-	var serviceConfigs []servicetypes.ServiceConfig
-	for _, serviceName := range allServiceNames {
-		service, err := manager.GetService(serviceName)
-		if err != nil {
-			continue // Skip services that can't be loaded
-		}
-		serviceConfigs = append(serviceConfigs, *service)
-	}
-
-	return serviceConfigs, nil
+	resolver := NewServiceResolver(manager)
+	return resolver.ResolveServices(serviceNames)
 }
 
 // StartRequest defines parameters for starting a stack
@@ -333,32 +267,32 @@ func (s *Service) Cleanup(ctx context.Context, req CleanupRequest) error {
 	// List containers
 	containers, err := s.DockerClient.ListContainers(ctx, req.Project)
 	if err != nil {
-		return pkgerrors.New(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "list containers", err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerListContainersFailed, err)
 	}
 
 	// Remove containers
 	for _, container := range containers {
 		if err := s.DockerClient.RemoveContainer(ctx, container.ID, req.Force); err != nil {
-			return pkgerrors.New(pkgerrors.ErrCodeOperationFail, container.Name, "remove container", err)
+			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerRemoveContainerFailed, err)
 		}
 	}
 
 	// Remove volumes if requested
 	if req.RemoveVolumes {
 		if err := s.DockerClient.RemoveResources(ctx, docker.ResourceVolume, req.Project); err != nil {
-			return pkgerrors.New(pkgerrors.ErrCodeOperationFail, req.Project, "remove volumes", err)
+			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerRemoveVolumesFailed, err)
 		}
 	}
 
 	// Remove networks
 	if err := s.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, req.Project); err != nil {
-		return pkgerrors.New(pkgerrors.ErrCodeOperationFail, req.Project, "remove networks", err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerRemoveNetworksFailed, err)
 	}
 
 	// Remove images if requested
 	if req.RemoveImages {
 		if err := s.DockerClient.RemoveResources(ctx, docker.ResourceImage, req.Project); err != nil {
-			return pkgerrors.New(pkgerrors.ErrCodeOperationFail, req.Project, "remove images", err)
+			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerRemoveImagesFailed, err)
 		}
 	}
 
@@ -369,7 +303,7 @@ func (s *Service) Cleanup(ctx context.Context, req CleanupRequest) error {
 func (s *Service) CheckDockerHealth(ctx context.Context) error {
 	_, err := s.DockerClient.GetCli().Info(ctx)
 	if err != nil {
-		return pkgerrors.New(pkgerrors.ErrCodeUnavailable, pkgerrors.ComponentDocker, "check docker health", err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeUnavailable, messages.ErrorsDockerHealthCheckFailed, err)
 	}
 	return nil
 }

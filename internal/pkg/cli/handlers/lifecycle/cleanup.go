@@ -3,12 +3,14 @@ package lifecycle
 import (
 	"context"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 
@@ -51,7 +53,9 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Check for orphans (informational only)
-	_ = h.checkOrphans(ctx, setup, base, &ciFlags)
+	if err := h.checkOrphans(ctx, setup, base, &ciFlags); err != nil {
+		logger.Error("orphan check failed", "error", err)
+	}
 
 	// Execute cleanup based on flags
 	if flags.Orphans {
@@ -113,7 +117,7 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 		RemoveImages:  flags.Images,
 	})
 	if err != nil {
-		return err
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, projectName, messages.ErrorsServiceCleanupFailed, err)
 	}
 
 	if !ciFlags.Quiet {
@@ -126,8 +130,18 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 // confirmCleanup asks for user confirmation before cleaning
 func (h *CleanupHandler) confirmCleanup(base *base.BaseCommand) bool {
 	base.Output.Warning(messages.WarningsCleanupWarning)
-	// TODO: Implement proper confirmation with base.Output
-	return true
+
+	prompt := &survey.Confirm{
+		Message: messages.PromptsCleanupConfirm,
+		Default: false,
+	}
+
+	var confirmed bool
+	if err := survey.AskOne(prompt, &confirmed); err != nil {
+		return false
+	}
+
+	return confirmed
 }
 
 // checkOrphans checks for and reports orphaned shared containers
@@ -138,12 +152,12 @@ func (h *CleanupHandler) checkOrphans(ctx context.Context, setup *common.CoreSet
 
 	reg, err := h.getRegistry()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryGetFailed, err)
 	}
 
 	orphans, err := reg.FindOrphansWithChecks(ctx, setup.DockerClient)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryFindOrphansFailed, err)
 	}
 
 	if len(orphans) == 0 {
@@ -155,72 +169,20 @@ func (h *CleanupHandler) checkOrphans(ctx context.Context, setup *common.CoreSet
 }
 
 func (h *CleanupHandler) displayOrphans(base *base.BaseCommand, orphans []registry.OrphanInfo) {
-	safe, warning, critical := h.groupBySeverity(orphans)
-
-	base.Output.Warning(messages.OrphanFound, len(orphans))
-	h.displayCritical(base, critical)
-	h.displayWarning(base, warning)
-	h.displaySafe(base, safe)
-	base.Output.Info(messages.OrphanRunCleanupHint)
-}
-
-func (h *CleanupHandler) displayCritical(base *base.BaseCommand, orphans []registry.OrphanInfo) {
-	if len(orphans) == 0 {
-		return
-	}
-	base.Output.Error(messages.OrphanSeverityCritical, len(orphans))
-	for _, o := range orphans {
-		base.Output.Info("    - %s: %s", o.Service, o.Reason)
-	}
-}
-
-func (h *CleanupHandler) displayWarning(base *base.BaseCommand, orphans []registry.OrphanInfo) {
-	if len(orphans) == 0 {
-		return
-	}
-	base.Output.Warning(messages.OrphanSeverityWarning, len(orphans))
-	for _, o := range orphans {
-		base.Output.Info("    - %s: %s", o.Service, o.Reason)
-		if len(o.ProjectsFound) > 0 {
-			base.Output.Info("      "+messages.OrphanRemainingProjects, o.ProjectsFound)
-		}
-	}
-}
-
-func (h *CleanupHandler) displaySafe(base *base.BaseCommand, orphans []registry.OrphanInfo) {
-	if len(orphans) == 0 {
-		return
-	}
-	base.Output.Info(messages.OrphanSeveritySafe, len(orphans))
-	for _, o := range orphans {
-		base.Output.Info("    - %s: %s", o.Service, o.Reason)
-	}
-}
-
-func (h *CleanupHandler) groupBySeverity(orphans []registry.OrphanInfo) (safe, warning, critical []registry.OrphanInfo) {
-	for _, o := range orphans {
-		switch o.Severity {
-		case registry.OrphanSeveritySafe:
-			safe = append(safe, o)
-		case registry.OrphanSeverityWarning:
-			warning = append(warning, o)
-		case registry.OrphanSeverityCritical:
-			critical = append(critical, o)
-		}
-	}
-	return
+	display := registry.NewOrphanDisplay(base.Output)
+	display.Display(orphans)
 }
 
 // cleanOrphans removes orphaned shared containers
 func (h *CleanupHandler) cleanOrphans(ctx context.Context, setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
 	reg, err := h.getRegistry()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryGetFailed, err)
 	}
 
 	orphans, err := reg.FindOrphansWithChecks(ctx, setup.DockerClient)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryFindOrphansFailed, err)
 	}
 
 	if len(orphans) == 0 {
@@ -237,7 +199,7 @@ func (h *CleanupHandler) cleanOrphans(ctx context.Context, setup *common.CoreSet
 
 	cleaned, err := reg.CleanOrphans()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryCleanOrphansFailed, err)
 	}
 
 	if !ciFlags.Quiet {
@@ -269,18 +231,18 @@ func (h *CleanupHandler) getRegistry() (*registry.Manager, error) {
 func (h *CleanupHandler) reconcileRegistry(ctx context.Context, base *base.BaseCommand, ciFlags *ci.Flags) error {
 	reg, err := h.getRegistry()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryGetFailed, err)
 	}
 
 	// Get service manager which has Docker client
 	svc, err := common.NewServiceManager(false)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceManagerCreateFailed, err)
 	}
 
 	result, err := reg.Reconcile(ctx, svc.DockerClient)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryReconcileFailed, err)
 	}
 
 	if len(result.Removed) > 0 && !ciFlags.Quiet {

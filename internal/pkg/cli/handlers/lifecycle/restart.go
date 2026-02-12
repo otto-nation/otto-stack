@@ -51,14 +51,14 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	case *clicontext.SharedMode:
 		return h.handleSharedContext(ctx, cmd, args, base, mode)
 	default:
-		return fmt.Errorf("unknown execution mode: %T", execCtx)
+		return pkgerrors.NewSystemErrorf(pkgerrors.ErrCodeInternal, messages.ErrorsContextUnknownMode, execCtx)
 	}
 }
 
 func (h *RestartHandler) detectContext() (clicontext.ExecutionMode, error) {
 	detector, err := clicontext.NewDetector()
 	if err != nil {
-		return nil, err
+		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, messages.ErrorsContextDetectorCreateFailed, err)
 	}
 	return detector.DetectContext()
 }
@@ -72,7 +72,7 @@ func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Co
 
 	flags, err := core.ParseRestartFlags(cmd)
 	if err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailedParseFlags, err)
 	}
 
 	var serviceConfigs []types.ServiceConfig
@@ -86,7 +86,7 @@ func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Co
 	}
 
 	if err := h.restartServices(ctx, setup, serviceConfigs, flags); err != nil {
-		return err
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceRestartFailed, err)
 	}
 
 	base.Output.Success(messages.LifecycleRestartSuccess)
@@ -100,21 +100,21 @@ func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Com
 
 	reg, err := h.loadRegistry(mode.Shared.Root)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
 	}
 
 	if err := h.verifyServicesInRegistry(args, reg); err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceNotInRegistry, err)
 	}
 
 	flags, err := core.ParseRestartFlags(cmd)
 	if err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailedParseFlags, err)
 	}
 
 	dockerClient, err := docker.NewClient(logger.GetLogger())
 	if err != nil {
-		return err
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
 	}
 
 	timeout := flags.Timeout
@@ -122,7 +122,7 @@ func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Com
 
 	for _, serviceName := range args {
 		if err := dockerClient.GetDockerClient().ContainerRestart(ctx, serviceName, stopOpts); err != nil {
-			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, fmt.Sprintf("failed to restart %s", serviceName), err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, serviceName, messages.ErrorsServiceRestartFailed, err)
 		}
 		base.Output.Success("Restarted %s", serviceName)
 	}

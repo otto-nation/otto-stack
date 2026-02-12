@@ -42,24 +42,6 @@ func TestManager_GetService(t *testing.T) {
 	})
 }
 
-func TestManager_ValidateServices(t *testing.T) {
-	manager, err := New()
-	require.NoError(t, err)
-
-	t.Run("validates empty service list", func(t *testing.T) {
-		err := manager.ValidateServices([]string{})
-		assert.NoError(t, err)
-	})
-
-	t.Run("validates valid services", func(t *testing.T) {
-		err := manager.ValidateServices([]string{ServicePostgres})
-		// May error if service not found, but tests the function
-		if err != nil {
-			assert.Error(t, err)
-		}
-	})
-}
-
 func TestManager_GetDependencies(t *testing.T) {
 	manager, err := New()
 	require.NoError(t, err)

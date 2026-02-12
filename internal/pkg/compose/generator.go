@@ -37,7 +37,7 @@ func NewGenerator(projectName string) (*Generator, error) {
 // buildComposeStructure creates the compose structure from ServiceConfigs
 func (g *Generator) buildComposeStructure(serviceConfigs []types.ServiceConfig) (map[string]any, error) {
 	if g.projectName == "" {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "input", messages.ValidationProjectNameEmpty, nil)
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, messages.ValidationProjectNameEmpty, nil)
 	}
 
 	services, err := g.buildServicesFromConfigs(serviceConfigs)
@@ -87,7 +87,7 @@ func (g *Generator) processServiceConfigAndDependencies(config *types.ServiceCon
 	for _, dep := range config.Service.Dependencies.Required {
 		if depConfig, exists := configMap[dep]; exists {
 			if err := g.processServiceConfigAndDependencies(depConfig, configMap, serviceList, processed); err != nil {
-				return err
+				return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, dep, messages.ErrorsServiceDependencyFailed, err)
 			}
 		}
 	}
@@ -281,7 +281,7 @@ func (g *Generator) buildOttoLabels(serviceName string) map[string]string {
 func (g *Generator) BuildComposeData(serviceConfigs []types.ServiceConfig) ([]byte, error) {
 	composeData, err := g.buildComposeStructure(serviceConfigs)
 	if err != nil {
-		return nil, err
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeBuildStructureFailed, err)
 	}
 
 	composeContent, err := yaml.Marshal(composeData)
