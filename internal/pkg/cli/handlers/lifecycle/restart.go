@@ -58,7 +58,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 func (h *RestartHandler) detectContext() (clicontext.ExecutionMode, error) {
 	detector, err := clicontext.NewDetector()
 	if err != nil {
-		return nil, err
+		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, messages.ErrorsContextDetectorCreateFailed, err)
 	}
 	return detector.DetectContext()
 }
@@ -72,7 +72,7 @@ func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Co
 
 	flags, err := core.ParseRestartFlags(cmd)
 	if err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, "failed to parse restart flags", err)
 	}
 
 	var serviceConfigs []types.ServiceConfig
@@ -86,7 +86,7 @@ func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Co
 	}
 
 	if err := h.restartServices(ctx, setup, serviceConfigs, flags); err != nil {
-		return err
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "failed to restart services", err)
 	}
 
 	base.Output.Success(messages.LifecycleRestartSuccess)
@@ -100,21 +100,21 @@ func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Com
 
 	reg, err := h.loadRegistry(mode.Shared.Root)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
 	}
 
 	if err := h.verifyServicesInRegistry(args, reg); err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service not found in registry", err)
 	}
 
 	flags, err := core.ParseRestartFlags(cmd)
 	if err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, "failed to parse restart flags", err)
 	}
 
 	dockerClient, err := docker.NewClient(logger.GetLogger())
 	if err != nil {
-		return err
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
 	}
 
 	timeout := flags.Timeout

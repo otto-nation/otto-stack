@@ -61,7 +61,7 @@ func (h *LogsHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 
 	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsFailedResolveServices, err)
 	}
 
 	stackService, err := common.NewServiceManager(false)
@@ -86,12 +86,12 @@ func (h *LogsHandler) handleSharedContext(ctx context.Context, cmd *cobra.Comman
 	}
 
 	if err := h.verifyServicesInRegistry(args, mode); err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service not found in registry", err)
 	}
 
 	composeManager, err := docker.NewManager()
 	if err != nil {
-		return err
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "failed to create Docker manager", err)
 	}
 
 	options := docker.LogOptions{
@@ -109,7 +109,7 @@ func (h *LogsHandler) verifyServicesInRegistry(serviceNames []string, mode *clic
 	reg := registry.NewManager(mode.Shared.Root)
 	registryData, err := reg.Load()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
 	}
 
 	for _, serviceName := range serviceNames {

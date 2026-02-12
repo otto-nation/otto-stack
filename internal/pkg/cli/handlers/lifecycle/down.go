@@ -74,12 +74,12 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 
 	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsFailedResolveServices, err)
 	}
 
 	serviceConfigs, err = h.filterSharedIfNeeded(serviceConfigs, execCtx.Shared.Root, base)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to filter shared services", err)
 	}
 
 	if len(serviceConfigs) == 0 {
@@ -88,7 +88,7 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 	}
 
 	if err := h.stopServices(ctx, cmd, setup, serviceConfigs, base); err != nil {
-		return err
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsStackStopFailed, err)
 	}
 
 	// Unregister shared containers after stopping
@@ -211,7 +211,7 @@ func (h *DownHandler) determineServicesToStop(args []string, sharedInfo *clicont
 
 	containers, err := reg.List()
 	if err != nil {
-		return nil, err
+		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsStatusListSharedFailed, err)
 	}
 
 	if len(containers) == 0 {

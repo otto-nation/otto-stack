@@ -55,7 +55,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 
 	// Validate flags
 	if err := validation.ValidateUpFlags(cmd); err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailed, err)
 	}
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
@@ -66,14 +66,14 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 
 	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsFailedResolveServices, err)
 	}
 
 	// Register shared containers before starting
 	sharedConfigs := h.filterSharedServices(serviceConfigs, setup.Config)
 	if len(sharedConfigs) > 0 {
 		if err := h.registerSharedContainersForProject(sharedConfigs, setup.Config.Project.Name, execCtx.Shared.Root, base); err != nil {
-			return err
+			return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceRegisterSharedFailed, err)
 		}
 	}
 
@@ -123,11 +123,11 @@ func (h *UpHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, arg
 
 	serviceConfigs, err := h.loadServiceConfigs(args)
 	if err != nil {
-		return err
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentService, messages.ErrorsServiceLoadFailed, err)
 	}
 
 	if err := h.registerSharedContainers(serviceConfigs, execCtx, base); err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceRegisterSharedFailed, err)
 	}
 
 	h.displaySuccess(base, serviceConfigs)

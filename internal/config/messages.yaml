@@ -253,6 +253,7 @@ errors:
   service_load_category_failed: "Failed to load service category: %v"
   service_read_category_failed: "Failed to read category directory: %v"
   service_cleanup_failed: "Cleanup failed"
+  service_register_shared_failed: "Failed to register shared containers"
   
   # Context detection errors
   context_detector_create_failed: "Failed to create context detector"
