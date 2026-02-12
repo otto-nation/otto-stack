@@ -161,15 +161,35 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 	return nil
 }
 
+// statusRequest encapsulates parameters for status operations
+type statusRequest struct {
+	ctx         context.Context
+	cmd         *cobra.Command
+	base        *base.BaseCommand
+	mode        clicontext.ExecutionMode
+	projectName string
+}
+
 func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobra.Command, _ []string, base *base.BaseCommand, mode clicontext.ExecutionMode, projectName string) error {
-	ciFlags := ci.GetFlags(cmd)
+	req := statusRequest{
+		ctx:         ctx,
+		cmd:         cmd,
+		base:        base,
+		mode:        mode,
+		projectName: projectName,
+	}
+	return h.handleProjectSharedStatusWithRequest(req)
+}
+
+func (h *StatusHandler) handleProjectSharedStatusWithRequest(req statusRequest) error {
+	ciFlags := ci.GetFlags(req.cmd)
 
 	if !ciFlags.Quiet {
-		base.Output.Header(fmt.Sprintf(messages.InfoSharedContainersForProject, projectName))
+		req.base.Output.Header(fmt.Sprintf(messages.InfoSharedContainersForProject, req.projectName))
 	}
 
 	var sharedRoot string
-	switch m := mode.(type) {
+	switch m := req.mode.(type) {
 	case *clicontext.ProjectMode:
 		sharedRoot = m.Shared.Root
 	case *clicontext.SharedMode:
@@ -188,13 +208,13 @@ func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobr
 
 	projectContainers := make([]*registry.ContainerInfo, 0, len(containers))
 	for _, container := range containers {
-		if h.containsProject(container.Projects, projectName) {
+		if h.containsProject(container.Projects, req.projectName) {
 			projectContainers = append(projectContainers, container)
 		}
 	}
 
 	if len(projectContainers) == 0 {
-		base.Output.Info(fmt.Sprintf(messages.InfoNoSharedContainersForProject, projectName))
+		req.base.Output.Info(fmt.Sprintf(messages.InfoNoSharedContainersForProject, req.projectName))
 		return nil
 	}
 
@@ -203,18 +223,18 @@ func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobr
 		return err
 	}
 
-	statuses := h.buildSharedStatuses(ctx, projectContainers, dockerClient)
+	statuses := h.buildSharedStatuses(req.ctx, projectContainers, dockerClient)
 
 	if ciFlags.JSON {
 		ci.OutputResult(ciFlags, display.ProjectSharedStatusResponse{
-			Project:          projectName,
+			Project:          req.projectName,
 			SharedContainers: statuses,
 			Count:            len(statuses),
 		}, core.ExitSuccess)
 		return nil
 	}
 
-	h.displaySharedStatus(base, statuses)
+	h.displaySharedStatus(req.base, statuses)
 	return nil
 }
 

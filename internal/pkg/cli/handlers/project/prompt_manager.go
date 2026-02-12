@@ -78,22 +78,42 @@ func (pm *PromptManager) PromptForAdvancedOptions() (map[string]bool, map[string
 	return validation, advanced, nil
 }
 
+// InitConfirmation encapsulates initialization confirmation parameters
+type InitConfirmation struct {
+	ProjectName string
+	Services    []string
+	Validation  map[string]bool
+	Advanced    map[string]bool
+	Base        *base.BaseCommand
+}
+
 // ConfirmInitialization shows final confirmation with option to go back
 func (pm *PromptManager) ConfirmInitialization(projectName string, services []string, validation, advanced map[string]bool, base *base.BaseCommand) (string, error) {
-	// Display summary
-	base.Output.Info(messages.InfoProjectConfigSummary)
-	base.Output.Info("  Project Name: %s", projectName)
-	base.Output.Info("  Services: %s", strings.Join(services, ", "))
+	conf := InitConfirmation{
+		ProjectName: projectName,
+		Services:    services,
+		Validation:  validation,
+		Advanced:    advanced,
+		Base:        base,
+	}
+	return pm.confirmInitializationWithConfig(conf)
+}
 
-	if len(validation) > 0 {
-		base.Output.Info(messages.InfoValidationOptions)
+func (pm *PromptManager) confirmInitializationWithConfig(conf InitConfirmation) (string, error) {
+	// Display summary
+	conf.Base.Output.Info(messages.InfoProjectConfigSummary)
+	conf.Base.Output.Info("  Project Name: %s", conf.ProjectName)
+	conf.Base.Output.Info("  Services: %s", strings.Join(conf.Services, ", "))
+
+	if len(conf.Validation) > 0 {
+		conf.Base.Output.Info(messages.InfoValidationOptions)
 		// Sort keys for consistent display order
-		keys := make([]string, 0, len(validation))
-		for k := range validation {
+		keys := make([]string, 0, len(conf.Validation))
+		for k := range conf.Validation {
 			keys = append(keys, k)
 		}
 		for _, option := range keys {
-			base.Output.Info("    - %s", option)
+			conf.Base.Output.Info("    - %s", option)
 		}
 	}
 
