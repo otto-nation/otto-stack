@@ -72,7 +72,7 @@ func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Co
 
 	flags, err := core.ParseRestartFlags(cmd)
 	if err != nil {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, "failed to parse restart flags", err)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailedParseFlags, err)
 	}
 
 	var serviceConfigs []types.ServiceConfig
@@ -86,7 +86,7 @@ func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Co
 	}
 
 	if err := h.restartServices(ctx, setup, serviceConfigs, flags); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, "failed to restart services", err)
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsServiceRestartFailed, err)
 	}
 
 	base.Output.Success(messages.LifecycleRestartSuccess)
@@ -104,12 +104,12 @@ func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Com
 	}
 
 	if err := h.verifyServicesInRegistry(args, reg); err != nil {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service not found in registry", err)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceNotInRegistry, err)
 	}
 
 	flags, err := core.ParseRestartFlags(cmd)
 	if err != nil {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, "failed to parse restart flags", err)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailedParseFlags, err)
 	}
 
 	dockerClient, err := docker.NewClient(logger.GetLogger())
@@ -122,7 +122,7 @@ func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Com
 
 	for _, serviceName := range args {
 		if err := dockerClient.GetDockerClient().ContainerRestart(ctx, serviceName, stopOpts); err != nil {
-			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, fmt.Sprintf("failed to restart %s", serviceName), err)
+			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, serviceName, messages.ErrorsServiceRestartFailed, err)
 		}
 		base.Output.Success("Restarted %s", serviceName)
 	}

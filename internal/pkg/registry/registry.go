@@ -74,7 +74,7 @@ func (m *Manager) Load() (*Registry, error) {
 func (m *Manager) Save(registry *Registry) error {
 	data, err := yaml.Marshal(registry)
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to marshal registry", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryMarshalFailed, err)
 	}
 
 	// Ensure directory exists
@@ -94,7 +94,7 @@ func (m *Manager) Save(registry *Registry) error {
 	// Acquire exclusive lock
 	if err := lockFile(f); err != nil {
 		_ = f.Close()
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to lock registry file", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLockFailed, err)
 	}
 
 	// Write data
@@ -108,7 +108,7 @@ func (m *Manager) Save(registry *Registry) error {
 	if err := f.Sync(); err != nil {
 		_ = unlockFile(f)
 		_ = f.Close()
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to sync registry file", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistrySyncFailed, err)
 	}
 
 	_ = unlockFile(f)
@@ -116,7 +116,7 @@ func (m *Manager) Save(registry *Registry) error {
 
 	// Atomic rename
 	if err := os.Rename(tempPath, m.registryPath); err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to save registry", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistrySaveFailed, err)
 	}
 	return nil
 }

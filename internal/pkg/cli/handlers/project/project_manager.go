@@ -87,7 +87,7 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 // generateInitialComposeFiles generates Docker Compose files
 func (pm *ProjectManager) generateInitialComposeFiles(serviceConfigs []types.ServiceConfig, projectName string, _, _ map[string]bool, base *base.BaseCommand) error {
 	if err := pm.generateEnvFile(serviceConfigs, projectName, base); err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to generate environment file", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedGenerateEnv, err)
 	}
 
 	if err := pm.generateDockerCompose(serviceConfigs, projectName, base); err != nil {
@@ -100,7 +100,7 @@ func (pm *ProjectManager) generateInitialComposeFiles(serviceConfigs []types.Ser
 // generateEnvFile generates the .env file
 func (pm *ProjectManager) generateEnvFile(serviceConfigs []types.ServiceConfig, projectName string, base *base.BaseCommand) error {
 	if err := env.GenerateFile(projectName, serviceConfigs, core.EnvGeneratedFilePath); err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to generate env file", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedGenerateEnv, err)
 	}
 
 	base.Output.Success("Created environment file: %s", core.EnvGeneratedFilePath)
@@ -111,7 +111,7 @@ func (pm *ProjectManager) generateEnvFile(serviceConfigs []types.ServiceConfig, 
 func (pm *ProjectManager) generateDockerCompose(serviceConfigs []types.ServiceConfig, projectName string, base *base.BaseCommand) error {
 	generator, err := compose.NewGenerator(projectName)
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to create compose generator", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeGeneratorCreateFailed, err)
 	}
 
 	if err := generator.GenerateFromServiceConfigs(serviceConfigs, projectName); err != nil {

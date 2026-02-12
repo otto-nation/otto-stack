@@ -86,12 +86,12 @@ func (h *LogsHandler) handleSharedContext(ctx context.Context, cmd *cobra.Comman
 	}
 
 	if err := h.verifyServicesInRegistry(args, mode); err != nil {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, "service not found in registry", err)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceNotInRegistry, err)
 	}
 
 	composeManager, err := docker.NewManager()
 	if err != nil {
-		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "failed to create Docker manager", err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerManagerCreateFailed, err)
 	}
 
 	options := docker.LogOptions{

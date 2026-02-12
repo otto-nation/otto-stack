@@ -31,7 +31,7 @@ func NewWebInterfacesHandler() *WebInterfacesHandler {
 func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	flags, err := core.ParseWebInterfacesFlags(cmd)
 	if err != nil {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, "failed to parse web interfaces flags", err)
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailedParseFlags, err)
 	}
 
 	ciFlags := ci.GetFlags(cmd)

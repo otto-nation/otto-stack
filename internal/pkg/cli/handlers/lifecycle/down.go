@@ -79,7 +79,7 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 
 	serviceConfigs, err = h.filterSharedIfNeeded(serviceConfigs, execCtx.Shared.Root, base)
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to filter shared services", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceFilterSharedFailed, err)
 	}
 
 	if len(serviceConfigs) == 0 {

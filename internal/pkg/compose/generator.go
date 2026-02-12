@@ -87,7 +87,7 @@ func (g *Generator) processServiceConfigAndDependencies(config *types.ServiceCon
 	for _, dep := range config.Service.Dependencies.Required {
 		if depConfig, exists := configMap[dep]; exists {
 			if err := g.processServiceConfigAndDependencies(depConfig, configMap, serviceList, processed); err != nil {
-				return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, dep, "failed to process service dependency", err)
+				return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, dep, messages.ErrorsServiceDependencyFailed, err)
 			}
 		}
 	}
@@ -281,7 +281,7 @@ func (g *Generator) buildOttoLabels(serviceName string) map[string]string {
 func (g *Generator) BuildComposeData(serviceConfigs []types.ServiceConfig) ([]byte, error) {
 	composeData, err := g.buildComposeStructure(serviceConfigs)
 	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", "failed to build compose structure", err)
+		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeBuildStructureFailed, err)
 	}
 
 	composeContent, err := yaml.Marshal(composeData)

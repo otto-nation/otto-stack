@@ -267,32 +267,32 @@ func (s *Service) Cleanup(ctx context.Context, req CleanupRequest) error {
 	// List containers
 	containers, err := s.DockerClient.ListContainers(ctx, req.Project)
 	if err != nil {
-		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "list containers", err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerListContainersFailed, err)
 	}
 
 	// Remove containers
 	for _, container := range containers {
 		if err := s.DockerClient.RemoveContainer(ctx, container.ID, req.Force); err != nil {
-			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "remove container", err)
+			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerRemoveContainerFailed, err)
 		}
 	}
 
 	// Remove volumes if requested
 	if req.RemoveVolumes {
 		if err := s.DockerClient.RemoveResources(ctx, docker.ResourceVolume, req.Project); err != nil {
-			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "remove volumes", err)
+			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerRemoveVolumesFailed, err)
 		}
 	}
 
 	// Remove networks
 	if err := s.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, req.Project); err != nil {
-		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "remove networks", err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerRemoveNetworksFailed, err)
 	}
 
 	// Remove images if requested
 	if req.RemoveImages {
 		if err := s.DockerClient.RemoveResources(ctx, docker.ResourceImage, req.Project); err != nil {
-			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "remove images", err)
+			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerRemoveImagesFailed, err)
 		}
 	}
 
@@ -303,7 +303,7 @@ func (s *Service) Cleanup(ctx context.Context, req CleanupRequest) error {
 func (s *Service) CheckDockerHealth(ctx context.Context) error {
 	_, err := s.DockerClient.GetCli().Info(ctx)
 	if err != nil {
-		return pkgerrors.NewDockerError(pkgerrors.ErrCodeUnavailable, "check docker health", err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeUnavailable, messages.ErrorsDockerHealthCheckFailed, err)
 	}
 	return nil
 }
