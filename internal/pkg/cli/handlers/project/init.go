@@ -53,7 +53,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	defer h.handlePanic()
 
 	if err := h.validateInitFlags(cmd); err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailed, err)
 	}
 
 	ciFlags := ci.GetFlags(cmd)
@@ -62,7 +62,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	h.logDebugInfo(base, cmd, initFlags)
 
 	if err := h.setDefaultProjectName(initFlags, base, cmd); err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, "failed to set default project name", err)
 	}
 
 	h.forceOverwrite = initFlags.Force
@@ -70,11 +70,11 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	projectCtx, err := h.processMode(ciFlags, initFlags, base, cmd)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to process initialization mode", err)
 	}
 
 	if err := h.executeInit(ctx, projectCtx, base); err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to execute initialization", err)
 	}
 
 	h.displaySuccessMessage(projectCtx.Project.Name, base)

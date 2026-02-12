@@ -48,7 +48,7 @@ func (h *Handler) Handle(ctx context.Context, cmd *cobra.Command, args []string,
 	// Parse all flags with validation - single line!
 	flags, err := core.ParseVersionFlags(cmd)
 	if err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, "failed to parse version flags", err)
 	}
 
 	if flags.CheckUpdates {
@@ -98,7 +98,7 @@ func (h *Handler) handleVersionDisplay(_ context.Context, cmd *cobra.Command, _ 
 	// Parse all flags with validation - single line!
 	flags, err := core.ParseVersionFlags(cmd)
 	if err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, "failed to parse version flags", err)
 	}
 
 	currentVersion := h.versionDisplayManager.GetCurrentVersion()
