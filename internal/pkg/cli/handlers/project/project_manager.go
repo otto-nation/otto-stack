@@ -70,9 +70,14 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 
 	pm.configManager.GenerateServiceConfigs(projectCtx.Services.Configs, projectCtx.Sharing.Enabled, base)
 
+	// Generate env file with ALL services (shared and non-shared)
+	if err := pm.generateEnvFile(projectCtx.Services.Configs, projectCtx.Project.Name, base); err != nil {
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedGenerateEnv, err)
+	}
+
 	// Filter services for project compose file (exclude shared services)
 	projectServices := pm.filterProjectServices(projectCtx.Services.Configs, projectCtx.Sharing)
-	if err := pm.generateInitialComposeFiles(projectServices, projectCtx.Project.Name, projectCtx.Options.Validation, projectCtx.Options.Advanced, base); err != nil {
+	if err := pm.generateDockerCompose(projectServices, projectCtx.Project.Name, base); err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeGenerateFailed, err)
 	}
 
@@ -91,19 +96,6 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 
 	if err := pm.createReadme(projectCtx.Project.Name, projectCtx.Services.Configs, projectCtx.Sharing.Enabled, base); err != nil {
 		base.Output.Warning("Failed to create README: %v", err)
-	}
-
-	return nil
-}
-
-// generateInitialComposeFiles generates Docker Compose files
-func (pm *ProjectManager) generateInitialComposeFiles(serviceConfigs []types.ServiceConfig, projectName string, _, _ map[string]bool, base *base.BaseCommand) error {
-	if err := pm.generateEnvFile(serviceConfigs, projectName, base); err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedGenerateEnv, err)
-	}
-
-	if err := pm.generateDockerCompose(serviceConfigs, projectName, base); err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeGenerateFailed, err)
 	}
 
 	return nil

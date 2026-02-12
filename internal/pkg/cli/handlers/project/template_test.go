@@ -48,10 +48,14 @@ func TestGenerateInitialComposeFiles(t *testing.T) {
 	defer cleanup()
 
 	serviceConfigs := []types.ServiceConfig{{Name: services.ServicePostgres}}
-	err := handler.projectManager.generateInitialComposeFiles(serviceConfigs, TestProjectName,
-		map[string]bool{"skip_warnings": false},
-		map[string]bool{"auto_start": true}, &base.BaseCommand{Output: ui.NewOutput()})
+	baseCmd := &base.BaseCommand{Output: ui.NewOutput()}
 
+	err := handler.projectManager.generateEnvFile(serviceConfigs, TestProjectName, baseCmd)
+	if err != nil {
+		t.Logf("Expected error in test environment: %v", err)
+	}
+
+	err = handler.projectManager.generateDockerCompose(serviceConfigs, TestProjectName, baseCmd)
 	if err != nil {
 		t.Logf("Expected error in test environment: %v", err)
 	}
