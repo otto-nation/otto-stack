@@ -69,7 +69,9 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 
 	pm.configManager.GenerateServiceConfigs(projectCtx.Services.Configs, projectCtx.Sharing.Enabled, base)
 
-	if err := pm.generateInitialComposeFiles(projectCtx.Services.Configs, projectCtx.Project.Name, projectCtx.Options.Validation, projectCtx.Options.Advanced, base); err != nil {
+	// Filter services for project compose file (exclude shared services)
+	projectServices := pm.filterProjectServices(projectCtx.Services.Configs, projectCtx.Sharing)
+	if err := pm.generateInitialComposeFiles(projectServices, projectCtx.Project.Name, projectCtx.Options.Validation, projectCtx.Options.Advanced, base); err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeGenerateFailed, err)
 	}
 
@@ -269,6 +271,21 @@ func (pm *ProjectManager) generateSharedCompose(serviceConfigs []types.ServiceCo
 
 	base.Output.Success("Created shared compose file: %s", composePath)
 	return nil
+}
+
+// filterProjectServices returns only non-shared services for project compose file
+func (pm *ProjectManager) filterProjectServices(serviceConfigs []types.ServiceConfig, sharing *clicontext.SharingSpec) []types.ServiceConfig {
+	if sharing == nil || !sharing.Enabled {
+		return serviceConfigs
+	}
+
+	var projectServices []types.ServiceConfig
+	for _, config := range serviceConfigs {
+		if !config.Shareable {
+			projectServices = append(projectServices, config)
+		}
+	}
+	return projectServices
 }
 
 // formatServicesList formats services for README
