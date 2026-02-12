@@ -92,6 +92,7 @@ docs-site/
 Uses [PaperMod](https://github.com/adityatelange/hugo-PaperMod) theme via git submodule.
 
 Update theme:
+
 ```bash
 cd themes/PaperMod
 git pull origin master
@@ -106,16 +107,19 @@ See [docs/GITHUB_PAGES.md](../docs/GITHUB_PAGES.md) for setup details.
 ## Troubleshooting
 
 **Hugo build fails:**
+
 ```bash
 hugo config  # Check configuration
 ```
 
 **Theme missing:**
+
 ```bash
 git submodule update --init --recursive
 ```
 
 **Stale content:**
+
 ```bash
 npm run docs:clean
 npm run docs:build

@@ -14,7 +14,7 @@
     "docs:clean": "rm -rf public/",
     "docs:setup": "git submodule update --init --recursive",
     "lint:commits": "commitlint --from HEAD~1 --to HEAD --verbose",
-    "format": "prettier **/** -w -c"
+    "format": "prettier . -w -c"
   },
   "dependencies": {
     "@tabler/icons": "^3.34.1",

@@ -3,7 +3,7 @@ title: Services
 description: Available services and configuration options
 lead: Explore all the services you can use with otto-stack
 date: "2025-10-01"
-lastmod: "2026-02-10"
+lastmod: "2026-02-12"
 draft: false
 weight: 30
 toc: true
@@ -13,7 +13,7 @@ toc: true
 
 13 services available for your development stack.
 
-Each service can be configured through the `service_configuration` section in your `otto-stack-config.yaml` file. For detailed configuration instructions, see the [Configuration Guide](/otto-stack/configuration).
+Each service can be configured through the `service_configuration` section in your `otto-stack-config.yaml` file. For detailed configuration instructions, see the [Configuration Guide](/otto-stack/configuration/).
 
 ## 🗄️ Database
 

@@ -3,55 +3,60 @@ const path = require("path");
 const yaml = require("js-yaml");
 const ServiceAnalyzer = require("../utils/service-analyzer");
 const TemplateRenderer = require("../utils/template-renderer");
+const BaseGenerator = require("./base-generator");
 
-class ConfigurationGuideGenerator {
+const SCHEMA_PATH = path.join(__dirname, "../../internal/config/schema.yaml");
+const EXAMPLE_SERVICES = ["postgres", "redis"];
+const COMPLETE_EXAMPLE_SERVICES = ["postgres", "redis", "kafka"];
+
+class ConfigurationGuideGenerator extends BaseGenerator {
   constructor(config) {
-    this.config = config;
+    super(config);
     this.analyzer = new ServiceAnalyzer(config);
     this.templateRenderer = new TemplateRenderer();
-    this.schemaPath = path.join(__dirname, "../../internal/config/schema.yaml");
-    this.exampleServices = ["postgres", "redis"];
-    this.completeExampleServices = ["postgres", "redis", "kafka"];
   }
 
   generate() {
     console.log("Generating configuration guide...");
 
-    const schema = this.loadSchema();
-    const services = this.analyzer.loadAllServices();
+    try {
+      const schema = this.loadSchema();
+      const services = this.analyzer.loadAllServices();
 
-    const templateData = {
-      fileStructure: this.generateFileStructure(),
-      configStructure: this.generateConfigStructure(schema),
-      configSections: this.generateConfigSections(schema),
-      serviceConfigExample: this.generateServiceConfigExample(services),
-      customEnvExample: this.generateCustomEnvExample(services),
-      completeExample: this.generateCompleteExample(schema),
-      completeEnvExample: this.generateCompleteEnvExample(services),
-    };
+      const templateData = {
+        fileStructure: this.generateFileStructure(),
+        configStructure: this.generateConfigStructure(schema),
+        configSections: this.generateConfigSections(schema),
+        serviceConfigExample: this.generateServiceConfigExample(services),
+        customEnvExample: this.generateCustomEnvExample(services),
+        completeExample: this.generateCompleteExample(schema),
+        completeEnvExample: this.generateCompleteEnvExample(services),
+      };
 
-    const today = new Date().toISOString().split("T")[0];
-    const frontmatter = {
-      title: "Configuration Guide",
-      description: "Configure your otto-stack development environment",
-      lead: "Learn how to configure your development stack",
-      date: "2025-10-01",
-      lastmod: today,
-      draft: false,
-      weight: 25,
-      toc: true,
-    };
+      const frontmatter = this.createFrontmatter(
+        "Configuration Guide",
+        "Configure your otto-stack development environment",
+        "Learn how to configure your development stack",
+        25,
+      );
 
-    return this.templateRenderer.render(
-      "configuration-guide.md",
-      templateData,
-      frontmatter,
-    );
+      return this.templateRenderer.render(
+        "configuration-guide.md",
+        templateData,
+        frontmatter,
+      );
+    } catch (error) {
+      this.handleError("generate configuration guide", error);
+    }
   }
 
   loadSchema() {
-    const content = fs.readFileSync(this.schemaPath, "utf8");
-    return yaml.load(content);
+    try {
+      const content = fs.readFileSync(SCHEMA_PATH, "utf8");
+      return yaml.load(content);
+    } catch (error) {
+      this.handleError("load schema", error);
+    }
   }
 
   generateFileStructure() {
@@ -84,8 +89,7 @@ class ConfigurationGuideGenerator {
         ) {
           example[section][key] = prop.default;
         } else if (prop.type === "array") {
-          example[section][key] =
-            section === "stack" ? this.exampleServices : [];
+          example[section][key] = section === "stack" ? EXAMPLE_SERVICES : [];
         } else if (prop.type === "boolean") {
           example[section][key] = false;
         } else if (prop.type === "string") {
@@ -95,7 +99,7 @@ class ConfigurationGuideGenerator {
       }
     }
 
-    return yaml.dump(example, { indent: 2, lineWidth: 80 });
+    return this.dumpYaml(example);
   }
 
   generateProjectSection(schema) {
@@ -151,10 +155,9 @@ class ConfigurationGuideGenerator {
   }
 
   generateServiceConfigExample(services) {
-    // Get actual environment variables from service YAMLs
     const examples = [];
 
-    this.completeExampleServices.forEach((serviceName) => {
+    COMPLETE_EXAMPLE_SERVICES.forEach((serviceName) => {
       if (services[serviceName]) {
         const envVars = services[serviceName].environment || {};
         const envKeys = Object.keys(envVars);
@@ -179,7 +182,7 @@ class ConfigurationGuideGenerator {
         type: "docker",
       },
       stack: {
-        enabled: this.completeExampleServices,
+        enabled: COMPLETE_EXAMPLE_SERVICES,
       },
     };
 
@@ -192,13 +195,13 @@ class ConfigurationGuideGenerator {
       };
     }
 
-    return yaml.dump(example, { indent: 2, lineWidth: 80 });
+    return this.dumpYaml(example);
   }
 
   generateCustomEnvExample(services) {
     const examples = [];
 
-    this.exampleServices.forEach((serviceName) => {
+    EXAMPLE_SERVICES.forEach((serviceName) => {
       if (services[serviceName]) {
         const envVars = services[serviceName].environment || {};
         const envKeys = Object.keys(envVars);
@@ -220,7 +223,7 @@ class ConfigurationGuideGenerator {
   generateCompleteEnvExample(services) {
     const examples = [];
 
-    this.exampleServices.forEach((serviceName) => {
+    EXAMPLE_SERVICES.forEach((serviceName) => {
       if (services[serviceName]) {
         const envVars = services[serviceName].environment || {};
         const envKeys = Object.keys(envVars);

@@ -3,7 +3,7 @@ title: Configuration Guide
 description: Configure your otto-stack development environment
 lead: Learn how to configure your development stack
 date: "2025-10-01"
-lastmod: "2026-02-10"
+lastmod: "2026-02-12"
 draft: false
 weight: 25
 toc: true
@@ -211,6 +211,6 @@ REDIS_PASSWORD=production_value
 
 ## Next Steps
 
-- **[Services Guide](services/)** - Available services and environment variables
-- **[CLI Reference](cli-reference/)** - Command usage
-- **[Troubleshooting](troubleshooting/)** - Common issues
+- **[Services Guide](/otto-stack/services/)** - Available services and environment variables
+- **[CLI Reference](/otto-stack/cli-reference/)** - Command usage
+- **[Troubleshooting](/otto-stack/troubleshooting/)** - Common issues

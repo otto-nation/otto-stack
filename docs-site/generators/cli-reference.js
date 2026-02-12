@@ -1,29 +1,37 @@
 const yaml = require("js-yaml");
 const fs = require("fs");
 const path = require("path");
+const BaseGenerator = require("./base-generator");
 
-class CLIReferenceGenerator {
-  constructor(config) {
-    this.config = config;
-  }
+const COMMANDS_PATH = path.join(
+  process.cwd(),
+  "..",
+  "internal",
+  "config",
+  "commands.yaml",
+);
 
+class CLIReferenceGenerator extends BaseGenerator {
   generate() {
     console.log("Generating CLI reference...");
 
-    const commandsYaml = this.loadCommandsYaml();
+    try {
+      const commandsYaml = this.loadCommandsYaml();
+      const frontmatter = this.createFrontmatter(
+        "CLI Reference",
+        "Complete command reference for otto-stack CLI",
+        "Comprehensive reference for all otto-stack CLI commands and their usage",
+        50,
+      );
 
-    const today = new Date().toISOString().split("T")[0];
-    const frontmatter = {
-      title: "CLI Reference",
-      description: "Complete command reference for otto-stack CLI",
-      lead: "Comprehensive reference for all otto-stack CLI commands and their usage",
-      date: "2025-10-01",
-      lastmod: today,
-      draft: false,
-      weight: 50,
-      toc: true,
-    };
+      const content = this.generateContent(commandsYaml);
+      return this.formatDocument(frontmatter, content);
+    } catch (error) {
+      this.handleError("generate CLI reference", error);
+    }
+  }
 
+  generateContent(commandsYaml) {
     let content = `<!-- 
   ⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
   This file is generated from internal/config/commands.yaml
@@ -38,7 +46,6 @@ ${commandsYaml.metadata?.description || "A powerful development stack management
 
 `;
 
-    // Add categories section
     if (commandsYaml.categories) {
       Object.entries(commandsYaml.categories).forEach(([key, category]) => {
         content += `### ${category.icon} ${category.name}\n\n`;
@@ -49,7 +56,6 @@ ${commandsYaml.metadata?.description || "A powerful development stack management
 
     content += `## Commands\n\n`;
 
-    // Add detailed command information
     if (commandsYaml.commands) {
       Object.entries(commandsYaml.commands).forEach(
         ([commandName, command]) => {
@@ -58,24 +64,28 @@ ${commandsYaml.metadata?.description || "A powerful development stack management
       );
     }
 
-    // Add global flags section
     if (commandsYaml.global_flags) {
-      content += `## Global Flags\n\n`;
-      content += `These flags are available for all commands:\n\n`;
-
-      Object.entries(commandsYaml.global_flags).forEach(([flagName, flag]) => {
-        content += `- \`--${flagName}\``;
-        if (flag.short) content += `, \`-${flag.short}\``;
-        content += `: ${flag.description}`;
-        if (flag.default !== undefined)
-          content += ` (default: \`${flag.default}\`)`;
-        content += `\n`;
-      });
-      content += `\n`;
+      content += this.generateGlobalFlagsSection(commandsYaml.global_flags);
     }
 
-    const frontmatterYaml = yaml.dump(frontmatter);
-    return `---\n${frontmatterYaml}---\n\n${content}`;
+    return content;
+  }
+
+  generateGlobalFlagsSection(globalFlags) {
+    let section = `## Global Flags\n\n`;
+    section += `These flags are available for all commands:\n\n`;
+
+    Object.entries(globalFlags).forEach(([flagName, flag]) => {
+      section += `- \`--${flagName}\``;
+      if (flag.short) section += `, \`-${flag.short}\``;
+      section += `: ${flag.description}`;
+      if (flag.default !== undefined)
+        section += ` (default: \`${flag.default}\`)`;
+      section += `\n`;
+    });
+    section += `\n`;
+
+    return section;
   }
 
   generateCommandSection(commandName, command) {
@@ -137,23 +147,17 @@ ${commandsYaml.metadata?.description || "A powerful development stack management
   }
 
   loadCommandsYaml() {
-    const commandsPath = path.join(
-      process.cwd(),
-      "..",
-      "internal",
-      "config",
-      "commands.yaml",
-    );
-
-    if (!fs.existsSync(commandsPath)) {
-      throw new Error(`Commands configuration file not found: ${commandsPath}`);
+    if (!fs.existsSync(COMMANDS_PATH)) {
+      throw new Error(
+        `Commands configuration file not found: ${COMMANDS_PATH}`,
+      );
     }
 
     try {
-      const commandsContent = fs.readFileSync(commandsPath, "utf8");
+      const commandsContent = fs.readFileSync(COMMANDS_PATH, "utf8");
       return yaml.load(commandsContent);
     } catch (error) {
-      throw new Error(`Failed to load commands.yaml: ${error.message}`);
+      this.handleError("load commands.yaml", error);
     }
   }
 }
