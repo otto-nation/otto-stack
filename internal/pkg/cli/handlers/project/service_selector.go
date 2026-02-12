@@ -2,6 +2,7 @@ package project
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -60,7 +61,21 @@ func (ss *ServiceSelector) buildServiceList(categories map[string][]types.Servic
 	var serviceOptions []string
 	caser := cases.Title(language.English)
 
-	for categoryName, categoryServices := range categories {
+	// Sort category names for consistent ordering
+	categoryNames := make([]string, 0, len(categories))
+	for categoryName := range categories {
+		categoryNames = append(categoryNames, categoryName)
+	}
+	sort.Strings(categoryNames)
+
+	for _, categoryName := range categoryNames {
+		categoryServices := categories[categoryName]
+
+		// Sort services within category by name
+		sort.Slice(categoryServices, func(i, j int) bool {
+			return categoryServices[i].Name < categoryServices[j].Name
+		})
+
 		for _, service := range categoryServices {
 			displayName := fmt.Sprintf("[%s] %s - %s",
 				caser.String(categoryName), service.Name, service.Description)
