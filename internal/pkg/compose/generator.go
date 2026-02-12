@@ -279,6 +279,11 @@ func (g *Generator) buildOttoLabels(serviceName string) map[string]string {
 
 // BuildComposeData generates docker-compose YAML content from ServiceConfigs without writing to disk
 func (g *Generator) BuildComposeData(serviceConfigs []types.ServiceConfig) ([]byte, error) {
+	return g.BuildComposeDataWithHeader(serviceConfigs, "")
+}
+
+// BuildComposeDataWithHeader generates docker-compose YAML with optional header comment
+func (g *Generator) BuildComposeDataWithHeader(serviceConfigs []types.ServiceConfig, header string) ([]byte, error) {
 	composeData, err := g.buildComposeStructure(serviceConfigs)
 	if err != nil {
 		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeBuildStructureFailed, err)
@@ -287,6 +292,10 @@ func (g *Generator) BuildComposeData(serviceConfigs []types.ServiceConfig) ([]by
 	composeContent, err := yaml.Marshal(composeData)
 	if err != nil {
 		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeMarshalFailed, err)
+	}
+
+	if header != "" {
+		return append([]byte(header), composeContent...), nil
 	}
 	return composeContent, nil
 }

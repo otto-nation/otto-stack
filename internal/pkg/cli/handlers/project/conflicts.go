@@ -65,7 +65,7 @@ func (h *ConflictsHandler) checkServicePorts(service string, ports []int) []stri
 
 func (h *ConflictsHandler) checkPortConflict(service string, port int) string {
 	if h.isPortInUse(port) {
-		return fmt.Sprintf("Port %d (needed by %s) is already in use", port, service)
+		return fmt.Sprintf(messages.ValidationPortConflict, port, service)
 	}
 	return ""
 }

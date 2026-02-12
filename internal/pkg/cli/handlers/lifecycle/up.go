@@ -77,6 +77,9 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 		}
 	}
 
+	// Filter out shared services for local compose file generation
+	localConfigs := h.filterNonSharedServices(serviceConfigs, setup.Config)
+
 	service, err := common.NewServiceManager(false)
 	if err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStartFailed, err)
@@ -93,7 +96,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 
 	startRequest := services.StartRequest{
 		Project:        setup.Config.Project.Name,
-		ServiceConfigs: serviceConfigs,
+		ServiceConfigs: localConfigs,
 		Build:          upFlags.Build || force, // force implies build
 		ForceRecreate:  upFlags.ForceRecreate,
 		Detach:         upFlags.Detach,
@@ -192,6 +195,32 @@ func (h *UpHandler) filterSharedServices(serviceConfigs []types.ServiceConfig, c
 		}
 	}
 	return shared
+}
+
+func (h *UpHandler) filterNonSharedServices(serviceConfigs []types.ServiceConfig, cfg *config.Config) []types.ServiceConfig {
+	if !cfg.Sharing.Enabled {
+		return serviceConfigs
+	}
+
+	var nonShared []types.ServiceConfig
+	for _, svc := range serviceConfigs {
+		// Include non-shareable services
+		if !svc.Shareable {
+			nonShared = append(nonShared, svc)
+			continue
+		}
+
+		// If no specific services listed, exclude all shareable services
+		if len(cfg.Sharing.Services) == 0 {
+			continue
+		}
+
+		// Exclude if explicitly listed in sharing config
+		if !cfg.Sharing.Services[svc.Name] {
+			nonShared = append(nonShared, svc)
+		}
+	}
+	return nonShared
 }
 
 func (h *UpHandler) displaySuccess(base *base.BaseCommand, serviceConfigs []types.ServiceConfig) {

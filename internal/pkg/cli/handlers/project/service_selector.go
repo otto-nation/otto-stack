@@ -2,6 +2,7 @@ package project
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -43,16 +44,16 @@ func (ss *ServiceSelector) loadServiceCategories() (map[string][]types.ServiceCo
 func (ss *ServiceSelector) selectServicesFromAllCategories(categories map[string][]types.ServiceConfig) ([]types.ServiceConfig, error) {
 	allServices, serviceOptions := ss.buildServiceList(categories)
 
-	selected, err := ss.promptForServiceSelection(serviceOptions)
+	selectedNames, err := ss.promptForServiceSelection(serviceOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(selected) == 0 {
+	if len(selectedNames) == 0 {
 		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationNoServicesSelected, nil)
 	}
 
-	return ss.mapSelectedServices(selected, allServices), nil
+	return ss.mapSelectedServicesByName(selectedNames, allServices), nil
 }
 
 func (ss *ServiceSelector) buildServiceList(categories map[string][]types.ServiceConfig) ([]types.ServiceConfig, []string) {
@@ -60,7 +61,21 @@ func (ss *ServiceSelector) buildServiceList(categories map[string][]types.Servic
 	var serviceOptions []string
 	caser := cases.Title(language.English)
 
-	for categoryName, categoryServices := range categories {
+	// Sort category names for consistent ordering
+	categoryNames := make([]string, 0, len(categories))
+	for categoryName := range categories {
+		categoryNames = append(categoryNames, categoryName)
+	}
+	sort.Strings(categoryNames)
+
+	for _, categoryName := range categoryNames {
+		categoryServices := categories[categoryName]
+
+		// Sort services within category by name
+		sort.Slice(categoryServices, func(i, j int) bool {
+			return categoryServices[i].Name < categoryServices[j].Name
+		})
+
 		for _, service := range categoryServices {
 			displayName := fmt.Sprintf("[%s] %s - %s",
 				caser.String(categoryName), service.Name, service.Description)
@@ -74,9 +89,9 @@ func (ss *ServiceSelector) buildServiceList(categories map[string][]types.Servic
 
 func (ss *ServiceSelector) promptForServiceSelection(serviceOptions []string) ([]string, error) {
 	prompt := &survey.MultiSelect{
-		Message: "Select services for your project:",
+		Message: messages.PromptsSelectServices,
 		Options: serviceOptions,
-		Help:    "Use space to select, enter to confirm. Services are grouped by category.",
+		Help:    messages.PromptsSelectServicesHelp,
 	}
 
 	var selected []string
@@ -84,20 +99,22 @@ func (ss *ServiceSelector) promptForServiceSelection(serviceOptions []string) ([
 		return nil, err
 	}
 
-	return selected, nil
+	// Extract service names from selected display strings
+	serviceNames := make([]string, 0, len(selected))
+	for _, displayStr := range selected {
+		name := ss.extractServiceName(displayStr)
+		if name != "" {
+			serviceNames = append(serviceNames, name)
+		}
+	}
+
+	return serviceNames, nil
 }
 
-func (ss *ServiceSelector) mapSelectedServices(selected []string, allServices []types.ServiceConfig) []types.ServiceConfig {
+func (ss *ServiceSelector) mapSelectedServicesByName(serviceNames []string, allServices []types.ServiceConfig) []types.ServiceConfig {
 	var selectedConfigs []types.ServiceConfig
-	selectedMap := make(map[string]bool)
 
-	for _, selection := range selected {
-		serviceName := ss.extractServiceName(selection)
-		if serviceName == "" || selectedMap[serviceName] {
-			continue
-		}
-		selectedMap[serviceName] = true
-
+	for _, serviceName := range serviceNames {
 		if config := ss.findServiceConfig(serviceName, allServices); config != nil {
 			selectedConfigs = append(selectedConfigs, *config)
 		}

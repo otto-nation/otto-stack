@@ -14,6 +14,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/env"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/filesystem"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
@@ -67,31 +68,35 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", messages.ErrorsConfigWriteFailed, err)
 	}
 
-	pm.configManager.GenerateServiceConfigs(projectCtx.Services.Configs, base)
+	pm.configManager.GenerateServiceConfigs(projectCtx.Services.Configs, projectCtx.Sharing.Enabled, base)
 
-	if err := pm.generateInitialComposeFiles(projectCtx.Services.Configs, projectCtx.Project.Name, projectCtx.Options.Validation, projectCtx.Options.Advanced, base); err != nil {
+	// Generate env file with ALL services (shared and non-shared)
+	if err := pm.generateEnvFile(projectCtx.Services.Configs, projectCtx.Project.Name, base); err != nil {
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedGenerateEnv, err)
+	}
+
+	// Filter services for project compose file (exclude shared services)
+	projectServices := pm.filterProjectServices(projectCtx.Services.Configs, projectCtx.Sharing)
+	hasSharingEnabled := projectCtx.Sharing != nil && projectCtx.Sharing.Enabled
+	if err := pm.generateDockerComposeWithSharing(projectServices, projectCtx.Project.Name, hasSharingEnabled, base); err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeGenerateFailed, err)
+	}
+
+	// Generate shared docker-compose.yml if sharing is enabled
+	if projectCtx.Sharing != nil && projectCtx.Sharing.Enabled {
+		homeDir, _ := os.UserHomeDir()
+		sharedRoot := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
+		if err := pm.generateSharedCompose(projectCtx.Services.Configs, sharedRoot, base); err != nil {
+			base.Output.Warning("Failed to generate shared compose file: %v", err)
+		}
 	}
 
 	if err := pm.createGitignoreEntries(base); err != nil {
 		base.Output.Warning("Failed to create .gitignore entries: %v", err)
 	}
 
-	if err := pm.createReadme(projectCtx.Project.Name, projectCtx.Services.Configs, base); err != nil {
+	if err := pm.createReadme(projectCtx.Project.Name, projectCtx.Services.Configs, projectCtx.Sharing.Enabled, base); err != nil {
 		base.Output.Warning("Failed to create README: %v", err)
-	}
-
-	return nil
-}
-
-// generateInitialComposeFiles generates Docker Compose files
-func (pm *ProjectManager) generateInitialComposeFiles(serviceConfigs []types.ServiceConfig, projectName string, _, _ map[string]bool, base *base.BaseCommand) error {
-	if err := pm.generateEnvFile(serviceConfigs, projectName, base); err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedGenerateEnv, err)
-	}
-
-	if err := pm.generateDockerCompose(serviceConfigs, projectName, base); err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeGenerateFailed, err)
 	}
 
 	return nil
@@ -107,15 +112,33 @@ func (pm *ProjectManager) generateEnvFile(serviceConfigs []types.ServiceConfig, 
 	return nil
 }
 
-// generateDockerCompose generates the docker-compose.yml file
-func (pm *ProjectManager) generateDockerCompose(serviceConfigs []types.ServiceConfig, projectName string, base *base.BaseCommand) error {
+// generateDockerComposeWithSharing generates the docker-compose.yml file with sharing info
+func (pm *ProjectManager) generateDockerComposeWithSharing(serviceConfigs []types.ServiceConfig, projectName string, hasSharingEnabled bool, base *base.BaseCommand) error {
 	generator, err := compose.NewGenerator(projectName)
 	if err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeGeneratorCreateFailed, err)
 	}
 
-	if err := generator.GenerateFromServiceConfigs(serviceConfigs, projectName); err != nil {
+	var header string
+	if hasSharingEnabled {
+		homeDir, _ := os.UserHomeDir()
+		sharedPath := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
+		header = fmt.Sprintf(core.ComposeHeaderProjectShared, sharedPath)
+	} else {
+		header = core.ComposeHeaderProject
+	}
+
+	content, err := generator.BuildComposeDataWithHeader(serviceConfigs, header)
+	if err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeGenerateFailed, err)
+	}
+
+	if err := filesystem.EnsureDir(core.GeneratedDir); err != nil {
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeDirCreateFailed, err)
+	}
+
+	if err := filesystem.WriteFile(docker.DockerComposeFilePath, content, core.PermReadWrite); err != nil {
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeWriteFailed, err)
 	}
 
 	base.Output.Success("Created Docker Compose file: %s", docker.DockerComposeFilePath)
@@ -128,6 +151,7 @@ func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 		"# " + core.AppNameTitle,
 		core.OttoStackDir + "/logs/",
 		core.ExtENV + core.LocalFileExtension,
+		core.LocalConfigFileName,
 		"*.log",
 	}
 
@@ -143,13 +167,13 @@ func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 }
 
 // createReadme creates README file
-func (pm *ProjectManager) createReadme(projectName string, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
+func (pm *ProjectManager) createReadme(projectName string, serviceConfigs []types.ServiceConfig, sharingEnabled bool, base *base.BaseCommand) error {
 	const readmeTemplate = `# %s
 
 This project was initialized with %s.
 
 ## Services
-%s
+%s%s
 
 ## Commands
 - ` + "`%s up`" + ` - Start all services
@@ -161,7 +185,7 @@ This project was initialized with %s.
 ## Configuration
 - Main config: ` + "`%s/%s`" + `
 - Service configs: ` + "`%s/%s/`" + `
-
+%s
 ## File Management
 - **Generated files** (` + "`docker-compose.yml`" + `, ` + "`env.generated`" + `): Automatically regenerated on each ` + "`up`" + ` command
 - **Service configs** (` + "`service-configs/`" + `): Created during ` + "`init`" + `, preserved across ` + "`up`" + ` commands for user customization
@@ -171,13 +195,17 @@ This project was initialized with %s.
 %s
 `
 
+	sharedInfo, sharedSection := pm.buildSharedServicesInfo(serviceConfigs, sharingEnabled)
+
 	readmeContent := fmt.Sprintf(readmeTemplate,
 		projectName,
 		core.AppNameTitle,
 		pm.formatServicesList(svc.ExtractServiceNames(serviceConfigs)),
+		sharedInfo,
 		core.AppName, core.AppName, core.AppName, core.AppName, core.AppName,
 		core.OttoStackDir, core.ConfigFileName,
 		core.OttoStackDir, core.ServiceConfigsDir,
+		sharedSection,
 		core.DocsURL,
 	)
 
@@ -188,6 +216,90 @@ This project was initialized with %s.
 
 	base.Output.Success("Created README file: %s", readmePath)
 	return nil
+}
+
+// buildSharedServicesInfo builds shared services information for README
+func (pm *ProjectManager) buildSharedServicesInfo(serviceConfigs []types.ServiceConfig, sharingEnabled bool) (string, string) {
+	if !sharingEnabled {
+		return "", ""
+	}
+
+	var sharedServices []string
+
+	for _, config := range serviceConfigs {
+		if config.Shareable {
+			sharedServices = append(sharedServices, config.Name)
+		}
+	}
+
+	if len(sharedServices) == 0 {
+		return "", ""
+	}
+
+	homeDir, _ := os.UserHomeDir()
+	sharedPath := filepath.Join(homeDir, core.SharedDir)
+
+	info := fmt.Sprintf("\n### Shared Services\nThe following services are shared across projects:\n%s", pm.formatServicesList(sharedServices))
+
+	section := fmt.Sprintf("\n## Shared Services\nShared services are managed globally and located at:\n- `%s/`\n- Registry: `%s/containers.yaml`\n- Compose: `%s/docker-compose.yml`\n",
+		sharedPath,
+		sharedPath,
+		sharedPath,
+	)
+
+	return info, section
+}
+
+// generateSharedCompose generates docker-compose.yml for shared services
+func (pm *ProjectManager) generateSharedCompose(serviceConfigs []types.ServiceConfig, sharedRoot string, base *base.BaseCommand) error {
+	var sharedConfigs []types.ServiceConfig
+	for _, config := range serviceConfigs {
+		if config.Shareable {
+			sharedConfigs = append(sharedConfigs, config)
+		}
+	}
+
+	if len(sharedConfigs) == 0 {
+		return nil
+	}
+
+	generator, err := compose.NewGenerator("shared")
+	if err != nil {
+		return err
+	}
+
+	header := core.ComposeHeaderShared
+	content, err := generator.BuildComposeDataWithHeader(sharedConfigs, header)
+	if err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(sharedRoot, core.PermReadWriteExec); err != nil {
+		return err
+	}
+
+	composePath := filepath.Join(sharedRoot, "docker-compose.yml")
+	if err := os.WriteFile(composePath, content, core.PermReadWrite); err != nil {
+		return err
+	}
+
+	base.Output.Success("Created shared compose file: %s", composePath)
+	return nil
+}
+
+// filterProjectServices returns only non-shared services for project compose file
+func (pm *ProjectManager) filterProjectServices(serviceConfigs []types.ServiceConfig, sharing *clicontext.SharingSpec) []types.ServiceConfig {
+	if sharing == nil || !sharing.Enabled {
+		return serviceConfigs
+	}
+
+	var projectServices []types.ServiceConfig
+	for _, config := range serviceConfigs {
+		if !config.Shareable {
+			projectServices = append(projectServices, config)
+		}
+	}
+	return projectServices
 }
 
 // formatServicesList formats services for README

@@ -72,7 +72,7 @@ func (h *DepsHandler) buildDependencyRows(serviceNames []string, allServices map
 
 func (h *DepsHandler) formatDependencies(deps []string) string {
 	if len(deps) == 0 {
-		return "None"
+		return messages.InfoProjectsNone
 	}
 
 	var result strings.Builder
