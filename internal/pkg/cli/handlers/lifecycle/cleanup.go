@@ -10,6 +10,7 @@ import (
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 
@@ -52,7 +53,9 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	// Check for orphans (informational only)
-	_ = h.checkOrphans(ctx, setup, base, &ciFlags)
+	if err := h.checkOrphans(ctx, setup, base, &ciFlags); err != nil {
+		logger.Error("orphan check failed", "error", err)
+	}
 
 	// Execute cleanup based on flags
 	if flags.Orphans {
