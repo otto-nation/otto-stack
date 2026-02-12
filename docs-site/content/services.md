@@ -453,7 +453,7 @@ SQS queues to create
 
 - **visibility_timeout** (`integer`) = `30`: Message visibility timeout in seconds
 
-- **dead_letter_queue** (`string`): Dead letter queue name
+- **dead_letter_queue** (`boolean`): Enable dead letter queue (creates {name}-dlq)
 
 - **max_receive_count** (`integer`) = `3`: Max receive count before moving to DLQ
 
@@ -465,7 +465,7 @@ SQS queues to create
 queues:
   - name: example-name
     visibility_timeout: 30
-    dead_letter_queue: example-dead_letter_queue
+    dead_letter_queue: false
     max_receive_count: 3
 ```
 

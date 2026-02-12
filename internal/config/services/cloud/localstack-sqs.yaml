@@ -30,8 +30,9 @@ configuration_schema:
             default: 30
             description: Message visibility timeout in seconds
           dead_letter_queue:
-            type: string
-            description: Dead letter queue name
+            type: boolean
+            default: false
+            description: Enable dead letter queue (creates {name}-dlq)
           max_receive_count:
             type: integer
             default: 3
