@@ -77,7 +77,7 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 		base.Output.Warning("Failed to create .gitignore entries: %v", err)
 	}
 
-	if err := pm.createReadme(projectCtx.Project.Name, projectCtx.Services.Configs, base); err != nil {
+	if err := pm.createReadme(projectCtx.Project.Name, projectCtx.Services.Configs, projectCtx.Sharing.Enabled, base); err != nil {
 		base.Output.Warning("Failed to create README: %v", err)
 	}
 
@@ -143,13 +143,13 @@ func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 }
 
 // createReadme creates README file
-func (pm *ProjectManager) createReadme(projectName string, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
+func (pm *ProjectManager) createReadme(projectName string, serviceConfigs []types.ServiceConfig, sharingEnabled bool, base *base.BaseCommand) error {
 	const readmeTemplate = `# %s
 
 This project was initialized with %s.
 
 ## Services
-%s
+%s%s
 
 ## Commands
 - ` + "`%s up`" + ` - Start all services
@@ -161,7 +161,7 @@ This project was initialized with %s.
 ## Configuration
 - Main config: ` + "`%s/%s`" + `
 - Service configs: ` + "`%s/%s/`" + `
-
+%s
 ## File Management
 - **Generated files** (` + "`docker-compose.yml`" + `, ` + "`env.generated`" + `): Automatically regenerated on each ` + "`up`" + ` command
 - **Service configs** (` + "`service-configs/`" + `): Created during ` + "`init`" + `, preserved across ` + "`up`" + ` commands for user customization
@@ -171,13 +171,17 @@ This project was initialized with %s.
 %s
 `
 
+	sharedInfo, sharedSection := pm.buildSharedServicesInfo(serviceConfigs, sharingEnabled)
+
 	readmeContent := fmt.Sprintf(readmeTemplate,
 		projectName,
 		core.AppNameTitle,
 		pm.formatServicesList(svc.ExtractServiceNames(serviceConfigs)),
+		sharedInfo,
 		core.AppName, core.AppName, core.AppName, core.AppName, core.AppName,
 		core.OttoStackDir, core.ConfigFileName,
 		core.OttoStackDir, core.ServiceConfigsDir,
+		sharedSection,
 		core.DocsURL,
 	)
 
@@ -188,6 +192,38 @@ This project was initialized with %s.
 
 	base.Output.Success("Created README file: %s", readmePath)
 	return nil
+}
+
+// buildSharedServicesInfo builds shared services information for README
+func (pm *ProjectManager) buildSharedServicesInfo(serviceConfigs []types.ServiceConfig, sharingEnabled bool) (string, string) {
+	if !sharingEnabled {
+		return "", ""
+	}
+
+	var sharedServices []string
+
+	for _, config := range serviceConfigs {
+		if config.Shareable {
+			sharedServices = append(sharedServices, config.Name)
+		}
+	}
+
+	if len(sharedServices) == 0 {
+		return "", ""
+	}
+
+	homeDir, _ := os.UserHomeDir()
+	sharedPath := filepath.Join(homeDir, core.SharedDir)
+
+	info := fmt.Sprintf("\n### Shared Services\nThe following services are shared across projects:\n%s", pm.formatServicesList(sharedServices))
+
+	section := fmt.Sprintf("\n## Shared Services\nShared services are managed globally and located at:\n- `%s/`\n- Registry: `%s/containers.yaml`\n- Compose: `%s/docker-compose.yml`\n",
+		sharedPath,
+		sharedPath,
+		sharedPath,
+	)
+
+	return info, section
 }
 
 // formatServicesList formats services for README
