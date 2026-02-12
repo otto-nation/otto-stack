@@ -77,7 +77,8 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 
 	// Filter services for project compose file (exclude shared services)
 	projectServices := pm.filterProjectServices(projectCtx.Services.Configs, projectCtx.Sharing)
-	if err := pm.generateDockerCompose(projectServices, projectCtx.Project.Name, base); err != nil {
+	hasSharingEnabled := projectCtx.Sharing != nil && projectCtx.Sharing.Enabled
+	if err := pm.generateDockerComposeWithSharing(projectServices, projectCtx.Project.Name, hasSharingEnabled, base); err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeGenerateFailed, err)
 	}
 
@@ -111,24 +112,15 @@ func (pm *ProjectManager) generateEnvFile(serviceConfigs []types.ServiceConfig, 
 	return nil
 }
 
-// generateDockerCompose generates the docker-compose.yml file
-func (pm *ProjectManager) generateDockerCompose(serviceConfigs []types.ServiceConfig, projectName string, base *base.BaseCommand) error {
+// generateDockerComposeWithSharing generates the docker-compose.yml file with sharing info
+func (pm *ProjectManager) generateDockerComposeWithSharing(serviceConfigs []types.ServiceConfig, projectName string, hasSharingEnabled bool, base *base.BaseCommand) error {
 	generator, err := compose.NewGenerator(projectName)
 	if err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeGeneratorCreateFailed, err)
 	}
 
-	// Check if any services are shareable to add appropriate header
-	hasSharedServices := false
-	for _, config := range serviceConfigs {
-		if config.Shareable {
-			hasSharedServices = true
-			break
-		}
-	}
-
 	var header string
-	if hasSharedServices {
+	if hasSharingEnabled {
 		homeDir, _ := os.UserHomeDir()
 		sharedPath := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
 		header = fmt.Sprintf(core.ComposeHeaderProjectShared, sharedPath)
@@ -159,6 +151,7 @@ func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 		"# " + core.AppNameTitle,
 		core.OttoStackDir + "/logs/",
 		core.ExtENV + core.LocalFileExtension,
+		core.LocalConfigFileName,
 		"*.log",
 	}
 

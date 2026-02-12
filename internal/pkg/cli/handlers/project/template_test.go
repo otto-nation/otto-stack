@@ -36,7 +36,7 @@ func TestGenerateDockerCompose(t *testing.T) {
 	assert.NoError(t, err)
 
 	serviceConfigs := []types.ServiceConfig{{Name: services.ServicePostgres}}
-	err = handler.projectManager.generateDockerCompose(serviceConfigs, TestProjectName, &base.BaseCommand{Output: ui.NewOutput()})
+	err = handler.projectManager.generateDockerComposeWithSharing(serviceConfigs, TestProjectName, false, &base.BaseCommand{Output: ui.NewOutput()})
 	if err != nil {
 		t.Logf("Expected error in test environment: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestGenerateInitialComposeFiles(t *testing.T) {
 		t.Logf("Expected error in test environment: %v", err)
 	}
 
-	err = handler.projectManager.generateDockerCompose(serviceConfigs, TestProjectName, baseCmd)
+	err = handler.projectManager.generateDockerComposeWithSharing(serviceConfigs, TestProjectName, false, baseCmd)
 	if err != nil {
 		t.Logf("Expected error in test environment: %v", err)
 	}

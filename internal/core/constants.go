@@ -111,6 +111,7 @@ const (
 	ComposeHeaderProject       = GeneratedFileHeader + "\n"
 	ComposeHeaderProjectShared = GeneratedFileHeader + "# This file contains project-specific services only\n# Shared services are located at: %s/docker-compose.yml\n\n"
 	EnvGeneratedHeader         = GeneratedFileHeader + "# Generated on %s\n"
+	RegistryHeader             = GeneratedFileHeader + "# This file tracks shared containers across projects\n\n"
 )
 
 // HTTP status constants

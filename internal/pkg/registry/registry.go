@@ -79,6 +79,9 @@ func (m *Manager) Save(registry *Registry) error {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryMarshalFailed, err)
 	}
 
+	// Prepend header comment
+	dataWithHeader := append([]byte(core.RegistryHeader), data...)
+
 	// Ensure directory exists
 	dir := filepath.Dir(m.registryPath)
 	if err := os.MkdirAll(dir, core.PermReadWriteExec); err != nil {
@@ -100,7 +103,7 @@ func (m *Manager) Save(registry *Registry) error {
 	}
 
 	// Write data
-	if _, err := f.Write(data); err != nil {
+	if _, err := f.Write(dataWithHeader); err != nil {
 		_ = unlockFile(f)
 		_ = f.Close()
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsFileWriteFailed, err)
