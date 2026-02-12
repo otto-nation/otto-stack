@@ -14,6 +14,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/env"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/filesystem"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
@@ -125,8 +126,35 @@ func (pm *ProjectManager) generateDockerCompose(serviceConfigs []types.ServiceCo
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeGeneratorCreateFailed, err)
 	}
 
-	if err := generator.GenerateFromServiceConfigs(serviceConfigs, projectName); err != nil {
+	// Check if any services are shareable to add appropriate header
+	hasSharedServices := false
+	for _, config := range serviceConfigs {
+		if config.Shareable {
+			hasSharedServices = true
+			break
+		}
+	}
+
+	var header string
+	if hasSharedServices {
+		homeDir, _ := os.UserHomeDir()
+		sharedPath := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
+		header = fmt.Sprintf(core.ComposeHeaderProjectShared, sharedPath)
+	} else {
+		header = core.ComposeHeaderProject
+	}
+
+	content, err := generator.BuildComposeDataWithHeader(serviceConfigs, header)
+	if err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeGenerateFailed, err)
+	}
+
+	if err := filesystem.EnsureDir(core.GeneratedDir); err != nil {
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeDirCreateFailed, err)
+	}
+
+	if err := filesystem.WriteFile(docker.DockerComposeFilePath, content, core.PermReadWrite); err != nil {
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeWriteFailed, err)
 	}
 
 	base.Output.Success("Created Docker Compose file: %s", docker.DockerComposeFilePath)
@@ -255,7 +283,8 @@ func (pm *ProjectManager) generateSharedCompose(serviceConfigs []types.ServiceCo
 		return err
 	}
 
-	content, err := generator.BuildComposeData(sharedConfigs)
+	header := core.ComposeHeaderShared
+	content, err := generator.BuildComposeDataWithHeader(sharedConfigs, header)
 	if err != nil {
 		return err
 	}
