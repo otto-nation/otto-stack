@@ -1,0 +1,159 @@
+name: CI Stability Monitor
+
+on:
+  schedule:
+    # Run daily at 9 AM UTC
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  monitor:
+    name: Monitor CI Stability
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check recent workflow runs
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Get workflow runs from last 7 days
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            
+            const workflows = ['validation.yml', 'build.yml', 'security.yml'];
+            const results = {
+              total: 0,
+              failed: 0,
+              passed: 0,
+              failures: []
+            };
+            
+            for (const workflow of workflows) {
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner,
+                repo,
+                workflow_id: workflow,
+                created: `>=${sevenDaysAgo.toISOString()}`,
+                per_page: 100
+              });
+              
+              for (const run of runs.data.workflow_runs) {
+                results.total++;
+                if (run.conclusion === 'failure') {
+                  results.failed++;
+                  results.failures.push({
+                    workflow: workflow,
+                    name: run.name,
+                    url: run.html_url,
+                    created: run.created_at,
+                    head_branch: run.head_branch
+                  });
+                } else if (run.conclusion === 'success') {
+                  results.passed++;
+                }
+              }
+            }
+            
+            const successRate = results.total > 0 
+              ? ((results.passed / results.total) * 100).toFixed(1)
+              : 100;
+            
+            core.setOutput('success_rate', successRate);
+            core.setOutput('total_runs', results.total);
+            core.setOutput('failed_runs', results.failed);
+            core.setOutput('has_failures', results.failed > 0);
+            
+            // Create summary
+            let summary = `## 📊 CI Stability Report (Last 7 Days)\n\n`;
+            summary += `- **Success Rate**: ${successRate}%\n`;
+            summary += `- **Total Runs**: ${results.total}\n`;
+            summary += `- **Passed**: ${results.passed}\n`;
+            summary += `- **Failed**: ${results.failed}\n\n`;
+            
+            if (results.failures.length > 0) {
+              summary += `### ❌ Recent Failures\n\n`;
+              for (const failure of results.failures.slice(0, 10)) {
+                summary += `- [${failure.workflow}](${failure.url}) on \`${failure.head_branch}\` - ${new Date(failure.created).toLocaleDateString()}\n`;
+              }
+            }
+            
+            await core.summary.addRaw(summary).write();
+            
+            return results;
+
+      - name: Create issue if stability drops
+        if: steps.check.outputs.success_rate < 90
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const successRate = '${{ steps.check.outputs.success_rate }}';
+            const totalRuns = '${{ steps.check.outputs.total_runs }}';
+            const failedRuns = '${{ steps.check.outputs.failed_runs }}';
+            
+            const title = `⚠️ CI Stability Alert: ${successRate}% success rate`;
+            const body = `## CI Stability Issue Detected
+            
+**Success Rate**: ${successRate}% (below 90% threshold)
+**Period**: Last 7 days
+**Total Runs**: ${totalRuns}
+**Failed Runs**: ${failedRuns}
+
+### Action Required
+The CI success rate has dropped below the acceptable threshold. Please investigate recent failures.
+
+### Investigation Steps
+1. Review failed workflow runs in the [Actions tab](https://github.com/${{ github.repository }}/actions)
+2. Check for platform-specific failures
+3. Verify generated files are up to date
+4. Review recent dependency updates
+
+---
+*This issue was automatically created by the CI Stability Monitor workflow.*`;
+
+            // Check if similar issue already exists
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'ci,automated',
+              per_page: 10
+            });
+            
+            const existingIssue = issues.data.find(issue => 
+              issue.title.includes('CI Stability Alert')
+            );
+            
+            if (existingIssue) {
+              // Update existing issue
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existingIssue.number,
+                body: `## Updated Alert\n\n${body}`
+              });
+              console.log(`Updated existing issue #${existingIssue.number}`);
+            } else {
+              // Create new issue
+              const issue = await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: title,
+                body: body,
+                labels: ['ci', 'monitoring', 'automated']
+              });
+              console.log(`Created new issue #${issue.data.number}`);
+            }
+
+      - name: Post success summary
+        if: steps.check.outputs.success_rate >= 90
+        run: |
+          echo "✅ CI stability is healthy: ${{ steps.check.outputs.success_rate }}% success rate"
+          echo "Total runs: ${{ steps.check.outputs.total_runs }}"
+          echo "Failed runs: ${{ steps.check.outputs.failed_runs }}"
