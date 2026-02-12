@@ -12,6 +12,8 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // Manager handles shared container registry operations
@@ -72,55 +74,58 @@ func (m *Manager) Load() (*Registry, error) {
 func (m *Manager) Save(registry *Registry) error {
 	data, err := yaml.Marshal(registry)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to marshal registry", err)
 	}
 
 	// Ensure directory exists
 	dir := filepath.Dir(m.registryPath)
 	if err := os.MkdirAll(dir, core.PermReadWriteExec); err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDirectoryCreateFailed, err)
 	}
 
 	// Atomic write: write to temp file, then rename
 	tempPath := m.registryPath + ".tmp"
 	f, err := os.OpenFile(tempPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, core.PermReadWrite)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsFileWriteFailed, err)
 	}
 	defer func() { _ = os.Remove(tempPath) }() // Clean up temp file on error
 
 	// Acquire exclusive lock
 	if err := lockFile(f); err != nil {
 		_ = f.Close()
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to lock registry file", err)
 	}
 
 	// Write data
 	if _, err := f.Write(data); err != nil {
 		_ = unlockFile(f)
 		_ = f.Close()
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsFileWriteFailed, err)
 	}
 
 	// Sync to disk
 	if err := f.Sync(); err != nil {
 		_ = unlockFile(f)
 		_ = f.Close()
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to sync registry file", err)
 	}
 
 	_ = unlockFile(f)
 	_ = f.Close()
 
 	// Atomic rename
-	return os.Rename(tempPath, m.registryPath)
+	if err := os.Rename(tempPath, m.registryPath); err != nil {
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to save registry", err)
+	}
+	return nil
 }
 
 // Register adds or updates a container in the registry
 func (m *Manager) Register(service, containerName, projectName string) error {
 	registry, err := m.Load()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
 	}
 
 	now := time.Now()
@@ -149,7 +154,7 @@ func (m *Manager) Register(service, containerName, projectName string) error {
 func (m *Manager) Unregister(service, projectName string) error {
 	registry, err := m.Load()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
 	}
 
 	container, exists := registry.Containers[service]
