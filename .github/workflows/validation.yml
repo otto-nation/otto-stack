@@ -55,6 +55,16 @@ jobs:
       - name: Validate documentation
         run: task validate:docs
 
+      - name: Verify generated files
+        run: |
+          task generate
+          if ! git diff --exit-code; then
+            echo "❌ Generated files are out of date. Run 'task generate' and commit the changes."
+            git diff
+            exit 1
+          fi
+          echo "✅ Generated files are up to date"
+
       - name: Check for broken links
         uses: tcort/github-action-markdown-link-check@v1
         with:

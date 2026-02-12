@@ -15,7 +15,6 @@ updates:
     commit-message:
       prefix: "deps"
       prefix-development: "deps-dev"
-      include: "scope"
     labels:
       - "dependencies"
       - "go"
@@ -44,7 +43,6 @@ updates:
       - "isaacgarza"
     commit-message:
       prefix: "ci"
-      include: "scope"
     labels:
       - "dependencies"
       - "github-actions"
@@ -67,8 +65,7 @@ updates:
     assignees:
       - "isaacgarza"
     commit-message:
-      prefix: "docker"
-      include: "scope"
+      prefix: "build"
     labels:
       - "dependencies"
       - "docker"
@@ -91,7 +88,6 @@ updates:
       - "isaacgarza"
     commit-message:
       prefix: "deps"
-      include: "scope"
     labels:
       - "dependencies"
       - "npm"
