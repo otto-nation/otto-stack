@@ -89,9 +89,9 @@ func (ss *ServiceSelector) buildServiceList(categories map[string][]types.Servic
 
 func (ss *ServiceSelector) promptForServiceSelection(serviceOptions []string) ([]string, error) {
 	prompt := &survey.MultiSelect{
-		Message: "Select services for your project:",
+		Message: messages.PromptsSelectServices,
 		Options: serviceOptions,
-		Help:    "Use space to select, enter to confirm. Services are grouped by category.",
+		Help:    messages.PromptsSelectServicesHelp,
 	}
 
 	var selected []string

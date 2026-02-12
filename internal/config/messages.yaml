@@ -73,6 +73,7 @@ validation:
   duplicate_service: "duplicate service '%s' found"
   invalid_service: "invalid service '%s': %w"
   conflicting_file_exists: "conflicting file '%s' already exists. Please remove or rename it before initializing"
+  port_conflict: "Port %d (needed by %s) is already in use"
   services_required_non_interactive: "services flag is required in non-interactive mode"
   project_name_required_non_interactive: "project name is required in non-interactive mode"
   service_name_required: "service name is required"
@@ -163,6 +164,11 @@ warnings:
 
 prompts:
   cleanup_confirm: "Proceed with cleanup?"
+  select_services: "Select services for your project:"
+  select_services_help: "Use space to select, enter to confirm. Services are grouped by category."
+  select_validation_options: "Select validation options:"
+  select_validation_options_help: "Choose which validations to run"
+  proceed_initialization: "Proceed with initialization?"
 
 info:
   no_cleanup_options: "No cleanup options specified. Use --help for available options"
