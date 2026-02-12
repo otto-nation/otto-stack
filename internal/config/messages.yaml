@@ -241,6 +241,10 @@ errors:
   
   # Registry errors
   registry_load_failed: "Failed to load container registry: %v"
+  registry_get_failed: "Failed to get registry"
+  registry_find_orphans_failed: "Failed to find orphaned containers"
+  registry_clean_orphans_failed: "Failed to clean orphaned containers"
+  registry_reconcile_failed: "Failed to reconcile registry"
   
   # Service operation errors
   service_operation_failed: "Service operation failed: %v"
@@ -248,6 +252,16 @@ errors:
   service_read_directory_failed: "Failed to read services directory: %v"
   service_load_category_failed: "Failed to load service category: %v"
   service_read_category_failed: "Failed to read category directory: %v"
+  service_cleanup_failed: "Cleanup failed"
+  
+  # Context detection errors
+  context_detector_create_failed: "Failed to create context detector"
+  context_detect_failed: "Failed to detect execution context"
+  
+  # Status errors
+  status_resolve_services_failed: "Failed to resolve services"
+  status_get_statuses_failed: "Failed to get service statuses"
+  status_list_shared_failed: "Failed to list shared containers"
   
   # Docker operation errors
   docker_create_cli_failed: "Failed to create Docker CLI: %v"

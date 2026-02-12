@@ -40,12 +40,12 @@ func NewStatusHandler() *StatusHandler {
 func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	detector, err := clicontext.NewDetector()
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, "failed to create context detector", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, messages.ErrorsContextDetectorCreateFailed, err)
 	}
 
 	execCtx, err := detector.DetectContext()
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, "failed to detect execution context", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, messages.ErrorsContextDetectFailed, err)
 	}
 
 	showAll, _ := cmd.Flags().GetBool(docker.FlagAll)
@@ -89,12 +89,12 @@ func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Comm
 
 	serviceConfigs, err := h.resolveServices(args, setup, &ciFlags)
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to resolve services", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsStatusResolveServicesFailed, err)
 	}
 
 	statuses, err := h.getServiceStatuses(ctx, setup.Config.Project.Name, serviceConfigs, &ciFlags)
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to get service statuses", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsStatusGetStatusesFailed, err)
 	}
 
 	if ciFlags.JSON {
@@ -129,12 +129,12 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 	reg := registry.NewManager(sharedRoot)
 	_, err := reg.Load()
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to load registry", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
 	}
 
 	sharedContainers, err := reg.List()
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to list shared containers", err)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsStatusListSharedFailed, err)
 	}
 
 	if len(sharedContainers) == 0 {
@@ -144,7 +144,7 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 
 	dockerClient, err := docker.NewClient(h.logger)
 	if err != nil {
-		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, "failed to create Docker client", err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
 	}
 
 	statuses := h.buildSharedStatuses(ctx, sharedContainers, dockerClient)
