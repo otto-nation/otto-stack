@@ -67,7 +67,7 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "", messages.ErrorsConfigWriteFailed, err)
 	}
 
-	pm.configManager.GenerateServiceConfigs(projectCtx.Services.Configs, base)
+	pm.configManager.GenerateServiceConfigs(projectCtx.Services.Configs, projectCtx.Sharing.Enabled, base)
 
 	if err := pm.generateInitialComposeFiles(projectCtx.Services.Configs, projectCtx.Project.Name, projectCtx.Options.Validation, projectCtx.Options.Advanced, base); err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, "compose", messages.ErrorsComposeGenerateFailed, err)
