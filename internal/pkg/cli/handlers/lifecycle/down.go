@@ -222,7 +222,7 @@ func (h *DownHandler) determineServicesToStop(args []string, sharedInfo *clicont
 	return h.promptStopAll(containers, base), nil
 }
 
-func (h *DownHandler) promptStopAll(containers []*registry.ContainerInfo, base *base.BaseCommand) []string {
+func (h *DownHandler) promptStopAll(containers map[string]*registry.ContainerInfo, base *base.BaseCommand) []string {
 	base.Output.Warning(messages.SharedStopAllPrompt)
 	var services []string
 	for _, container := range containers {
