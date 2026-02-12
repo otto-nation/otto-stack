@@ -119,7 +119,7 @@ func (pm *PromptManager) confirmInitializationWithConfig(conf InitConfirmation) 
 
 	// Confirmation prompt with back option
 	confirmPrompt := &survey.Select{
-		Message: "Proceed with initialization?",
+		Message: messages.PromptsProceedInitialization,
 		Options: []string{
 			core.ActionProceed,
 			core.ActionBack,

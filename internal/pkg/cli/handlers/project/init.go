@@ -59,6 +59,11 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	ciFlags := ci.GetFlags(cmd)
 	initFlags, _ := core.ParseInitFlags(cmd)
 
+	// Check if already initialized before any other processing
+	if err := h.checkAlreadyInitialized(initFlags.Force); err != nil {
+		return err
+	}
+
 	h.logDebugInfo(base, cmd, initFlags)
 
 	if err := h.setDefaultProjectName(initFlags, base, cmd); err != nil {
@@ -229,5 +234,17 @@ func (h *InitHandler) validateServiceShareable(serviceName string, serviceConfig
 			serviceName,
 		)
 	}
+	return nil
+}
+
+func (h *InitHandler) checkAlreadyInitialized(force bool) error {
+	if force {
+		return nil
+	}
+
+	if _, err := os.Stat(core.OttoStackDir); err == nil {
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeAlreadyExists, messages.MiddlewareProjectAlreadyInitialized, nil)
+	}
+
 	return nil
 }

@@ -49,8 +49,11 @@ func (v *Validator) ValidateServiceConfigs(serviceConfigs []types.ServiceConfig)
 		seen[cfg.Name] = true
 	}
 
-	// Validate each service exists and is loadable
+	// Validate each service exists (skip hidden services as they may be dependencies)
 	for _, cfg := range serviceConfigs {
+		if cfg.Hidden {
+			continue
+		}
 		if _, err := v.utils.LoadServiceConfig(cfg.Name); err != nil {
 			return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationInvalidService, err)
 		}

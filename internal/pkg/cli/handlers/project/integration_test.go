@@ -131,7 +131,7 @@ func TestCreateReadme(t *testing.T) {
 	assert.NoError(t, err)
 
 	serviceConfigs := []types.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServiceRedis}}
-	err = handler.projectManager.createReadme(TestProjectName, serviceConfigs, &base.BaseCommand{Output: ui.NewOutput()})
+	err = handler.projectManager.createReadme(TestProjectName, serviceConfigs, false, &base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	readmePath := filepath.Join(core.OttoStackDir, core.ReadmeFileName)

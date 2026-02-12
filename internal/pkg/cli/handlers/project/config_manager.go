@@ -41,9 +41,13 @@ func (cm *ConfigManager) CreateConfigFile(ctx clicontext.Context, base *base.Bas
 }
 
 // GenerateServiceConfigs generates individual service configuration files
-func (cm *ConfigManager) GenerateServiceConfigs(serviceConfigs []types.ServiceConfig, base *base.BaseCommand) {
+func (cm *ConfigManager) GenerateServiceConfigs(serviceConfigs []types.ServiceConfig, sharingEnabled bool, base *base.BaseCommand) {
 	for _, config := range serviceConfigs {
 		if config.Hidden {
+			continue
+		}
+		// Skip generating files for shared services
+		if sharingEnabled && config.Shareable {
 			continue
 		}
 		if err := cm.generateServiceConfig(config.Name); err != nil {

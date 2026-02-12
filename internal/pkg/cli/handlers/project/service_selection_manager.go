@@ -58,7 +58,14 @@ func (ssm *ServiceSelectionManager) logWorkflowStart(base *base.BaseCommand) {
 }
 
 func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, projectName string, base *base.BaseCommand) (*SelectionResult, error) {
-	serviceConfigs, err := ssm.promptManager.PromptForServiceConfigs()
+	selectedConfigs, err := ssm.promptManager.PromptForServiceConfigs()
+	if err != nil {
+		return nil, err
+	}
+
+	// Resolve dependencies for selected services
+	serviceNames := services.ExtractServiceNames(selectedConfigs)
+	serviceConfigs, err := services.ResolveUpServices(serviceNames, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +84,6 @@ func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, proj
 		return nil, err
 	}
 
-	serviceNames := services.ExtractServiceNames(serviceConfigs)
 	action, err := ssm.promptManager.ConfirmInitialization(projectName, serviceNames, validation, advanced, base)
 	if err != nil {
 		return nil, err

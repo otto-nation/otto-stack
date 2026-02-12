@@ -3,6 +3,7 @@ package project
 import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
 // ValidationPrompter handles validation option prompts
@@ -29,9 +30,9 @@ func (vp *ValidationPrompter) PromptForValidationOptions() (map[string]bool, err
 
 func (vp *ValidationPrompter) askToEnableValidation() (bool, error) {
 	validationPrompt := &survey.Confirm{
-		Message: "Select validation options:",
+		Message: messages.PromptsSelectValidationOptions,
 		Default: true,
-		Help:    "Choose which validations to run",
+		Help:    messages.PromptsSelectValidationOptionsHelp,
 	}
 
 	var enableValidation bool
@@ -61,10 +62,10 @@ func (vp *ValidationPrompter) buildValidationOptionsList() []string {
 func (vp *ValidationPrompter) promptForValidationSelection(validationOptions []string) ([]string, error) {
 	var selectedValidations []string
 	validationSelectPrompt := &survey.MultiSelect{
-		Message: "Select validation options:",
+		Message: messages.PromptsSelectValidationOptions,
 		Options: validationOptions,
 		Default: validationOptions,
-		Help:    "Choose which validations to run",
+		Help:    messages.PromptsSelectValidationOptionsHelp,
 	}
 
 	if err := survey.AskOne(validationSelectPrompt, &selectedValidations); err != nil {
