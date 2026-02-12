@@ -159,10 +159,10 @@ curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts
 
 ## 📚 Next Steps
 
-- **[Configuration](configuration/)** - Configure your development stack
-- **[Services Guide](services/)** - Available services and options
-- **[CLI Reference](cli-reference/)** - Complete command reference
-- **[Troubleshooting](troubleshooting/)** - Common issues and solutions
+- **[Configuration](/otto-stack/configuration/)** - Configure your development stack
+- **[Services Guide](/otto-stack/services/)** - Available services and options
+- **[CLI Reference](/otto-stack/cli-reference/)** - Complete command reference
+- **[Troubleshooting](/otto-stack/troubleshooting/)** - Common issues and solutions
 
 ## 🆘 Need Help?
 

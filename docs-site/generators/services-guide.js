@@ -1,10 +1,11 @@
 const ServiceAnalyzer = require("../utils/service-analyzer");
 const SchemaParser = require("../utils/schema-parser");
 const TemplateRenderer = require("../utils/template-renderer");
+const BaseGenerator = require("./base-generator");
 
-class ServicesGuideGenerator {
+class ServicesGuideGenerator extends BaseGenerator {
   constructor(config) {
-    this.config = config;
+    super(config);
     this.analyzer = new ServiceAnalyzer(config);
     this.schemaParser = new SchemaParser();
     this.templateRenderer = new TemplateRenderer();
@@ -13,31 +14,33 @@ class ServicesGuideGenerator {
   generate() {
     console.log("Generating services guide...");
 
-    const services = this.analyzer.loadAllServices();
-    const categories = this.analyzer.categorizeServices(services);
+    try {
+      const services = this.analyzer.loadAllServices();
+      const categories = this.analyzer.categorizeServices(services);
 
-    const today = new Date().toISOString().split("T")[0];
-    const frontmatter = {
-      title: "Services",
-      description: "Available services and configuration options",
-      lead: "Explore all the services you can use with otto-stack",
-      date: "2025-10-01",
-      lastmod: today,
-      draft: false,
-      weight: 30,
-      toc: true,
-    };
+      const frontmatter = this.createFrontmatter(
+        "Services",
+        "Available services and configuration options",
+        "Explore all the services you can use with otto-stack",
+        30,
+      );
 
-    // Generate main services guide
+      const content = this.generateContent(services, categories);
+      return this.formatDocument(frontmatter, content);
+    } catch (error) {
+      this.handleError("generate services guide", error);
+    }
+  }
+
+  generateContent(services, categories) {
     let content = `# Available Services
 
 ${Object.keys(services).length} services available for your development stack.
 
-Each service can be configured through the \`service_configuration\` section in your \`otto-stack-config.yaml\` file. For detailed configuration instructions, see the [Configuration Guide](/otto-stack/configuration).
+Each service can be configured through the \`service_configuration\` section in your \`otto-stack-config.yaml\` file. For detailed configuration instructions, see the [Configuration Guide](/otto-stack/configuration/).
 
 `;
 
-    // Generate each category
     this.getSortedCategories(categories).forEach(
       ([categoryName, categoryServices]) => {
         const categoryConfig = this.analyzer.getCategoryConfig(categoryName);
@@ -54,8 +57,7 @@ Each service can be configured through the \`service_configuration\` section in 
       },
     );
 
-    const frontmatterYaml = require("js-yaml").dump(frontmatter);
-    return `---\n${frontmatterYaml}---\n\n${content}`;
+    return content;
   }
 
   renderServiceSection(serviceData) {
