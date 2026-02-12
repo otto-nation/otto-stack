@@ -78,6 +78,24 @@ init_service:
         {{range .queues}}
         awscli sqs create-queue --queue-name {{.name}}
 
+        {{if .dead_letter_queue}}
+        # Create dead letter queue
+        dlqUrl=$(awscli sqs create-queue --queue-name {{.name}}-dlq | jq -r '.QueueUrl')
+        dlqArn=$(awscli sqs get-queue-attributes --queue-url $dlqUrl --attribute-names QueueArn | jq -r '.Attributes.QueueArn')
+
+        # Configure redrive policy
+        awscli sqs set-queue-attributes \
+          --queue-url $(awscli sqs get-queue-url --queue-name {{.name}} | jq -r '.QueueUrl') \
+          --attributes "{\"RedrivePolicy\":\"{\\\"deadLetterTargetArn\\\":\\\"$dlqArn\\\",\\\"maxReceiveCount\\\":{{.max_receive_count}}}\"}"
+        {{end}}
+
+        {{if .subscription}}
+        # Validate SNS topic exists before creating subscription
+        if ! awscli sns get-topic-attributes --topic-arn arn:aws:sns:${AWS_DEFAULT_REGION}:${AWS_ACCOUNT_ID}:{{.subscription.topic}} >/dev/null 2>&1; then
+          echo "Error: SNS topic '{{.subscription.topic}}' does not exist. Create it first."
+          exit 1
+        fi
+
         # Create Subscription
         subscriptionArn=$(awscli sns subscribe \
           --topic-arn arn:aws:sns:${AWS_DEFAULT_REGION}:${AWS_ACCOUNT_ID}:{{.subscription.topic}} \
@@ -90,6 +108,7 @@ init_service:
           --subscription-arn $subscriptionArn \
           --attribute-name RawMessageDelivery \
           --attribute-value {{.subscription.rawMessageDelivery}}
+        {{end}}
         {{end}}
 
         # Create S3 buckets
