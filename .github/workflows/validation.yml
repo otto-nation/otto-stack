@@ -58,9 +58,9 @@ jobs:
       - name: Verify generated files
         run: |
           task generate
-          if ! git diff --exit-code internal/cli/generated internal/config/generated; then
+          if ! git diff --exit-code; then
             echo "❌ Generated files are out of date. Run 'task generate' and commit the changes."
-            git diff internal/cli/generated internal/config/generated
+            git diff
             exit 1
           fi
           echo "✅ Generated files are up to date"
