@@ -60,7 +60,9 @@ func FormatError(flags Flags, err error) error {
 			Error:    err.Error(),
 			ExitCode: core.ExitError,
 		}
-		_ = json.NewEncoder(os.Stdout).Encode(errorOutput)
+		if encodeErr := json.NewEncoder(os.Stdout).Encode(errorOutput); encodeErr != nil {
+			logger.Error("failed to encode error output", "error", encodeErr)
+		}
 	} else if !flags.Quiet {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
@@ -73,7 +75,9 @@ func outputJSON(result any, exitCode int) {
 		ExitCode: exitCode,
 	}
 
-	_ = json.NewEncoder(os.Stdout).Encode(output)
+	if encodeErr := json.NewEncoder(os.Stdout).Encode(output); encodeErr != nil {
+		logger.Error("failed to encode output", "error", encodeErr)
+	}
 
 	if exitCode != core.ExitSuccess {
 		os.Exit(exitCode)

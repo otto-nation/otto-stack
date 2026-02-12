@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"slices"
-	"time"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -41,12 +40,12 @@ func NewStatusHandler() *StatusHandler {
 func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	detector, err := clicontext.NewDetector()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, messages.ErrorsContextDetectorCreateFailed, err)
 	}
 
 	execCtx, err := detector.DetectContext()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, messages.ErrorsContextDetectFailed, err)
 	}
 
 	showAll, _ := cmd.Flags().GetBool(docker.FlagAll)
@@ -71,7 +70,7 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 	case *clicontext.SharedMode:
 		return h.handleSharedStatus(ctx, cmd, args, base, mode)
 	default:
-		return fmt.Errorf("unknown execution mode: %T", execCtx)
+		return pkgerrors.NewSystemErrorf(pkgerrors.ErrCodeInternal, messages.ErrorsContextUnknownMode, execCtx)
 	}
 }
 
@@ -90,12 +89,12 @@ func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Comm
 
 	serviceConfigs, err := h.resolveServices(args, setup, &ciFlags)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsStatusResolveServicesFailed, err)
 	}
 
 	statuses, err := h.getServiceStatuses(ctx, setup.Config.Project.Name, serviceConfigs, &ciFlags)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsStatusGetStatusesFailed, err)
 	}
 
 	if ciFlags.JSON {
@@ -130,12 +129,12 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 	reg := registry.NewManager(sharedRoot)
 	_, err := reg.Load()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
 	}
 
 	sharedContainers, err := reg.List()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsStatusListSharedFailed, err)
 	}
 
 	if len(sharedContainers) == 0 {
@@ -145,7 +144,7 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 
 	dockerClient, err := docker.NewClient(h.logger)
 	if err != nil {
-		return err
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
 	}
 
 	statuses := h.buildSharedStatuses(ctx, sharedContainers, dockerClient)
@@ -162,15 +161,35 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 	return nil
 }
 
+// statusRequest encapsulates parameters for status operations
+type statusRequest struct {
+	ctx         context.Context
+	cmd         *cobra.Command
+	base        *base.BaseCommand
+	mode        clicontext.ExecutionMode
+	projectName string
+}
+
 func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobra.Command, _ []string, base *base.BaseCommand, mode clicontext.ExecutionMode, projectName string) error {
-	ciFlags := ci.GetFlags(cmd)
+	req := statusRequest{
+		ctx:         ctx,
+		cmd:         cmd,
+		base:        base,
+		mode:        mode,
+		projectName: projectName,
+	}
+	return h.handleProjectSharedStatusWithRequest(req)
+}
+
+func (h *StatusHandler) handleProjectSharedStatusWithRequest(req statusRequest) error {
+	ciFlags := ci.GetFlags(req.cmd)
 
 	if !ciFlags.Quiet {
-		base.Output.Header(fmt.Sprintf(messages.InfoSharedContainersForProject, projectName))
+		req.base.Output.Header(fmt.Sprintf(messages.InfoSharedContainersForProject, req.projectName))
 	}
 
 	var sharedRoot string
-	switch m := mode.(type) {
+	switch m := req.mode.(type) {
 	case *clicontext.ProjectMode:
 		sharedRoot = m.Shared.Root
 	case *clicontext.SharedMode:
@@ -189,13 +208,13 @@ func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobr
 
 	projectContainers := make([]*registry.ContainerInfo, 0, len(containers))
 	for _, container := range containers {
-		if h.containsProject(container.Projects, projectName) {
+		if h.containsProject(container.Projects, req.projectName) {
 			projectContainers = append(projectContainers, container)
 		}
 	}
 
 	if len(projectContainers) == 0 {
-		base.Output.Info(fmt.Sprintf(messages.InfoNoSharedContainersForProject, projectName))
+		req.base.Output.Info(fmt.Sprintf(messages.InfoNoSharedContainersForProject, req.projectName))
 		return nil
 	}
 
@@ -204,18 +223,18 @@ func (h *StatusHandler) handleProjectSharedStatus(ctx context.Context, cmd *cobr
 		return err
 	}
 
-	statuses := h.buildSharedStatuses(ctx, projectContainers, dockerClient)
+	statuses := h.buildSharedStatuses(req.ctx, projectContainers, dockerClient)
 
 	if ciFlags.JSON {
 		ci.OutputResult(ciFlags, display.ProjectSharedStatusResponse{
-			Project:          projectName,
+			Project:          req.projectName,
 			SharedContainers: statuses,
 			Count:            len(statuses),
 		}, core.ExitSuccess)
 		return nil
 	}
 
-	h.displaySharedStatus(base, statuses)
+	h.displaySharedStatus(req.base, statuses)
 	return nil
 }
 
@@ -263,7 +282,9 @@ func (h *StatusHandler) displayStatus(base *base.BaseCommand, cmd *cobra.Command
 	}
 
 	serviceToContainer := h.buildServiceContainerMap(serviceConfigs)
-	serviceStatuses := convertToDisplayStatuses(statuses, serviceConfigs, serviceToContainer)
+
+	converter := NewStatusConverter()
+	serviceStatuses := converter.ConvertToDisplayStatuses(statuses, serviceConfigs, serviceToContainer)
 	verbose := base.GetVerbose(cmd)
 
 	formatter := display.NewStatusFormatter(os.Stdout)
@@ -305,78 +326,6 @@ func getContainerName(config types.ServiceConfig) string {
 }
 
 // convertToDisplayStatuses creates display service statuses with health inheritance
-func convertToDisplayStatuses(containerStatuses []docker.ContainerStatus, serviceConfigs []types.ServiceConfig, serviceToContainer map[string]string) []display.ServiceStatus {
-	containerMap := buildContainerMap(containerStatuses)
-	return buildDisplayStatuses(serviceConfigs, serviceToContainer, containerMap)
-}
-
-func buildContainerMap(containerStatuses []docker.ContainerStatus) map[string]docker.ContainerStatus {
-	containerMap := make(map[string]docker.ContainerStatus, len(containerStatuses))
-	for _, status := range containerStatuses {
-		containerMap[status.Name] = status
-	}
-	return containerMap
-}
-
-func buildDisplayStatuses(serviceConfigs []types.ServiceConfig, serviceToContainer map[string]string, containerMap map[string]docker.ContainerStatus) []display.ServiceStatus {
-	result := make([]display.ServiceStatus, 0, len(serviceConfigs))
-	for _, config := range serviceConfigs {
-		if shouldSkipService(config) {
-			continue
-		}
-		result = append(result, createServiceStatus(config, serviceToContainer, containerMap))
-	}
-	return result
-}
-
-func shouldSkipService(config types.ServiceConfig) bool {
-	return config.Container.Restart == types.RestartPolicyNo || config.Hidden
-}
-
-func createServiceStatus(config types.ServiceConfig, serviceToContainer map[string]string, containerMap map[string]docker.ContainerStatus) display.ServiceStatus {
-	provider := serviceToContainer[config.Name]
-	providerName := getProviderName(config.Name, provider)
-
-	if containerStatus, exists := containerMap[provider]; exists {
-		return buildFoundStatus(config.Name, providerName, containerStatus)
-	}
-
-	return buildNotFoundStatus(config.Name, providerName)
-}
-
-func getProviderName(serviceName, provider string) string {
-	if provider == serviceName {
-		return ""
-	}
-	return provider
-}
-
-func buildFoundStatus(name, provider string, containerStatus docker.ContainerStatus) display.ServiceStatus {
-	uptime := time.Duration(0)
-	if !containerStatus.StartedAt.IsZero() {
-		uptime = time.Since(containerStatus.StartedAt)
-	}
-
-	return display.ServiceStatus{
-		Name:      name,
-		Provider:  provider,
-		State:     containerStatus.State,
-		Health:    containerStatus.Health,
-		Ports:     containerStatus.Ports,
-		CreatedAt: containerStatus.CreatedAt,
-		UpdatedAt: containerStatus.StartedAt,
-		Uptime:    uptime,
-	}
-}
-
-func buildNotFoundStatus(name, provider string) display.ServiceStatus {
-	return display.ServiceStatus{
-		Name:     name,
-		Provider: provider,
-		State:    "not found",
-		Health:   "unknown",
-	}
-}
 
 // filterInitContainers removes init containers from status display
 func filterInitContainers(serviceConfigs []types.ServiceConfig) []string {

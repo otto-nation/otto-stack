@@ -8,7 +8,7 @@ import (
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
-	svc "github.com/otto-nation/otto-stack/internal/pkg/services"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 )
 
 // NonInteractiveProcessor handles non-interactive mode processing
@@ -19,22 +19,23 @@ type NonInteractiveProcessor struct {
 // Process validates and processes flags for non-interactive mode
 func (p *NonInteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCommand) (clicontext.Context, error) {
 	if flags.Services == "" {
-		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "services", messages.ValidationServicesRequiredNonInteractive, nil)
+		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationServicesRequiredNonInteractive, nil)
 	}
 
 	if flags.ProjectName == "" {
-		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "project-name", messages.ValidationProjectNameRequiredNonInteractive, nil)
+		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, messages.ValidationProjectNameRequiredNonInteractive, nil)
 	}
 
 	serviceNames := parseServices(flags.Services)
 
 	// Convert service names to ServiceConfigs at entry point
-	serviceConfigs, err := svc.ResolveUpServices(serviceNames, nil)
+	serviceConfigs, err := services.ResolveUpServices(serviceNames, nil)
 	if err != nil {
 		return clicontext.Context{}, err
 	}
 
-	if err := p.handler.validateServiceConfigs(serviceConfigs); err != nil {
+	validator := services.NewValidator()
+	if err := validator.ValidateServiceConfigs(serviceConfigs); err != nil {
 		return clicontext.Context{}, err
 	}
 

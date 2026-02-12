@@ -1,7 +1,6 @@
 package services
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"maps"
@@ -9,9 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
-	"slices"
 	"strings"
-	"text/template"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -62,7 +59,8 @@ func (s *Service) hasLocalInitScripts(config servicetypes.ServiceConfig) bool {
 func (s *Service) executeServiceInitScripts(ctx context.Context, config servicetypes.ServiceConfig, allConfigs []servicetypes.ServiceConfig, projectName string) error {
 	for _, script := range config.InitService.Scripts {
 		// Process template variables in script content
-		processedScript, err := s.processScriptTemplate(script.Content, config, allConfigs)
+		processor := NewTemplateProcessor()
+		processedScript, err := processor.Process(script.Content, config, allConfigs)
 		if err != nil {
 			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, config.Name, messages.InitTemplateProcessFailed, err)
 		}
@@ -87,103 +85,6 @@ func (s *Service) executeServiceInitScripts(ctx context.Context, config servicet
 		}
 	}
 	return nil
-}
-
-// processScriptTemplate processes Go template variables in script content
-func (s *Service) processScriptTemplate(scriptContent string, config servicetypes.ServiceConfig, allConfigs []servicetypes.ServiceConfig) (string, error) {
-	// Create template data by collecting from dependent services
-	templateData := s.collectTemplateData(config, allConfigs)
-
-	// Parse and execute template
-	tmpl, err := template.New("script").Parse(scriptContent)
-	if err != nil {
-		return "", err
-	}
-
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, templateData); err != nil {
-		return "", err
-	}
-
-	return buf.String(), nil
-}
-
-// collectTemplateData collects template data from enabled services that depend on this service
-func (s *Service) collectTemplateData(config servicetypes.ServiceConfig, allConfigs []servicetypes.ServiceConfig) map[string]any {
-	templateData := make(map[string]any)
-
-	// Collect data from services that depend on the current service (config.Name)
-	for _, serviceConfig := range allConfigs {
-		if s.serviceDependsOn(serviceConfig, config.Name) {
-			s.addConfigData(templateData, serviceConfig)
-		}
-	}
-
-	s.logger.Debug("Collected template data", "data", templateData)
-
-	return templateData
-}
-
-// serviceDependsOn checks if serviceConfig depends on the given service name
-func (s *Service) serviceDependsOn(serviceConfig servicetypes.ServiceConfig, serviceName string) bool {
-	if serviceConfig.Service.Dependencies.Required != nil {
-		return slices.Contains(serviceConfig.Service.Dependencies.Required, serviceName)
-	}
-	return false
-}
-
-// addConfigData adds configuration data from a service to template data
-func (s *Service) addConfigData(templateData map[string]any, serviceConfig servicetypes.ServiceConfig) {
-	v := reflect.ValueOf(serviceConfig)
-
-	for i := 0; i < v.NumField(); i++ {
-		s.processServiceField(templateData, v.Field(i))
-	}
-}
-
-func (s *Service) processServiceField(templateData map[string]any, field reflect.Value) {
-	if field.Kind() != reflect.Pointer || field.IsNil() {
-		return
-	}
-
-	structValue := field.Elem()
-	structType := structValue.Type()
-
-	if !strings.HasSuffix(structType.Name(), "Config") {
-		return
-	}
-
-	s.extractFieldsFromStruct(templateData, structValue, structType)
-}
-
-func (s *Service) extractFieldsFromStruct(templateData map[string]any, structValue reflect.Value, structType reflect.Type) {
-	for j := 0; j < structValue.NumField(); j++ {
-		s.processStructField(templateData, structValue.Field(j), structType.Field(j))
-	}
-}
-
-func (s *Service) processStructField(templateData map[string]any, structField reflect.Value, structFieldType reflect.StructField) {
-	if !s.isPopulatedSlice(structField) {
-		return
-	}
-
-	fieldName := s.getYAMLFieldName(structFieldType)
-	if fieldName != "" {
-		templateData[fieldName] = structField.Interface()
-	}
-}
-
-func (s *Service) isPopulatedSlice(field reflect.Value) bool {
-	return field.Kind() == reflect.Slice && field.Len() > 0
-}
-
-func (s *Service) getYAMLFieldName(structField reflect.StructField) string {
-	yamlTag := structField.Tag.Get(ServiceCatalogYAMLFormat)
-	fieldName := strings.Split(yamlTag, ",")[0]
-	if fieldName != "-" {
-		return fieldName
-	}
-	return ""
 }
 
 // loadAndValidateServiceConfigs loads user service config files and validates them

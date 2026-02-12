@@ -54,6 +54,12 @@ success:
 
 validation:
   failed: "validation failed: %w"
+  failed_parse_flags: "Failed to parse flags"
+  failed_set_project_name: "Failed to set default project name"
+  failed_process_init_mode: "Failed to process initialization mode"
+  failed_execute_init: "Failed to execute initialization"
+  failed_generate_env: "Failed to generate environment file"
+  failed_check_updates: "Failed to check for updates"
   directory_failed: "directory validation failed: %w"
   config_failed: "❌ Configuration validation failed with %d errors:"
   warnings: "⚠️  %d warnings:"
@@ -155,6 +161,9 @@ warnings:
   failed_readme: "Failed to create README: %v"
   cleanup_warning: "This will remove all containers, networks, and volumes"
 
+prompts:
+  cleanup_confirm: "Proceed with cleanup?"
+
 info:
   no_cleanup_options: "No cleanup options specified. Use --help for available options"
   no_services_specified: "No services specified"
@@ -205,7 +214,6 @@ errors:
   config_load_failed: "Failed to load configuration: %v"
   config_write_failed: "Failed to write configuration file: %v"
   config_nil: "Configuration is missing or invalid"
-  config_save_not_implemented: "Saving configuration is not yet supported"
   
   # Service errors
   service_not_found: "Service '%s' not found. Run 'otto-stack services' to see available services."
@@ -218,6 +226,13 @@ errors:
   # Docker errors
   docker_client_create_failed: "Failed to create Docker client. Is Docker running?"
   docker_unavailable: "Docker is not available. Please start Docker and try again."
+  docker_manager_create_failed: "Failed to create Docker manager"
+  docker_list_containers_failed: "Failed to list containers"
+  docker_remove_container_failed: "Failed to remove container"
+  docker_remove_volumes_failed: "Failed to remove volumes"
+  docker_remove_networks_failed: "Failed to remove networks"
+  docker_remove_images_failed: "Failed to remove images"
+  docker_health_check_failed: "Failed to check Docker health"
   
   # Stack operation errors
   stack_start_failed: "Failed to start services: %v"
@@ -231,6 +246,8 @@ errors:
   compose_marshal_failed: "Failed to format docker-compose data: %v"
   compose_write_failed: "Failed to write docker-compose file: %v"
   compose_dir_create_failed: "Failed to create compose directory: %v"
+  compose_build_structure_failed: "Failed to build compose structure"
+  compose_generator_create_failed: "Failed to create compose generator"
   
   # Directory/File errors
   directory_create_failed: "Failed to create directory: %v"
@@ -239,6 +256,14 @@ errors:
   
   # Registry errors
   registry_load_failed: "Failed to load container registry: %v"
+  registry_get_failed: "Failed to get registry"
+  registry_find_orphans_failed: "Failed to find orphaned containers"
+  registry_clean_orphans_failed: "Failed to clean orphaned containers"
+  registry_reconcile_failed: "Failed to reconcile registry"
+  registry_marshal_failed: "Failed to marshal registry"
+  registry_lock_failed: "Failed to lock registry file"
+  registry_sync_failed: "Failed to sync registry file"
+  registry_save_failed: "Failed to save registry"
   
   # Service operation errors
   service_operation_failed: "Service operation failed: %v"
@@ -246,13 +271,28 @@ errors:
   service_read_directory_failed: "Failed to read services directory: %v"
   service_load_category_failed: "Failed to load service category: %v"
   service_read_category_failed: "Failed to read category directory: %v"
+  service_cleanup_failed: "Cleanup failed"
+  service_register_shared_failed: "Failed to register shared containers"
+  service_dependency_failed: "Failed to process service dependency"
+  service_restart_failed: "Failed to restart services"
+  service_not_in_registry: "Service not found in registry"
+  service_filter_shared_failed: "Failed to filter shared services"
+  
+  # Context detection errors
+  context_detector_create_failed: "Failed to create context detector"
+  context_detect_failed: "Failed to detect execution context"
+  context_unknown_mode: "Unknown execution mode: %T"
+  
+  # Status errors
+  status_resolve_services_failed: "Failed to resolve services"
+  status_get_statuses_failed: "Failed to get service statuses"
+  status_list_shared_failed: "Failed to list shared containers"
   
   # Docker operation errors
   docker_create_cli_failed: "Failed to create Docker CLI: %v"
   docker_initialize_cli_failed: "Failed to initialize Docker CLI: %v"
   docker_create_compose_failed: "Failed to create Docker Compose service: %v"
   docker_load_project_failed: "Failed to load Docker Compose project: %v"
-  docker_list_containers_failed: "Failed to list Docker containers: %v"
   docker_create_container_failed: "Failed to create Docker container: %v"
   docker_start_container_failed: "Failed to start Docker container: %v"
   

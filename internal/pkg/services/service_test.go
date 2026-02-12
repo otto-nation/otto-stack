@@ -58,13 +58,6 @@ func TestStartRequest_Validation(t *testing.T) {
 }
 
 func TestService_ConstructorsAndOperations(t *testing.T) {
-	t.Run("new service with dependencies", func(t *testing.T) {
-		service := NewServiceWithDependencies(nil, nil, nil, nil)
-		if service == nil {
-			t.Error("NewServiceWithDependencies should return service")
-		}
-	})
-
 	t.Run("new service", func(t *testing.T) {
 		service, err := NewService(nil, nil, nil)
 		if err != nil {

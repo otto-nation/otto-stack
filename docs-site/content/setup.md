@@ -134,7 +134,7 @@ POSTGRES_DB=my_custom_db
 POSTGRES_PASSWORD=secure_password
 ```
 
-See [Configuration Guide](/configuration) for details.
+See [Configuration Guide](configuration/) for details.
 
 ## 🔧 Verification
 
@@ -159,13 +159,12 @@ curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts
 
 ## 📚 Next Steps
 
-- **[Configuration](/configuration)** - Configure your development stack
-- **[Services Guide](/services)** - Available services and options
-- **[CLI Reference](/cli-reference)** - Complete command reference
-- **[Troubleshooting](/troubleshooting)** - Common issues and solutions
+- **[Configuration](configuration/)** - Configure your development stack
+- **[Services Guide](services/)** - Available services and options
+- **[CLI Reference](cli-reference/)** - Complete command reference
+- **[Troubleshooting](troubleshooting/)** - Common issues and solutions
 
 ## 🆘 Need Help?
 
 - **Issues**: [GitHub Issues](https://github.com/otto-nation/otto-stack/issues)
 - **Questions**: [GitHub Issues](https://github.com/otto-nation/otto-stack/issues)
-- **Documentation**: [Full Documentation](/)

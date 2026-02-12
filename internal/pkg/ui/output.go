@@ -72,7 +72,7 @@ func (o *Output) List(items []string) {
 	}
 	logger.Info("UI List", "items", items)
 	for _, item := range items {
-		fmt.Printf("  • %s\n", item)
+		_, _ = fmt.Fprintf(os.Stdout, "  • %s\n", item)
 	}
 }
 
@@ -102,9 +102,9 @@ func (o *Output) Box(title, content string) {
 	}
 	logger.Info("UI Box", "title", title, "content", content)
 	if o.NoColor {
-		fmt.Printf("\n┌─ %s ─\n│ %s\n└─\n", title, content)
+		_, _ = fmt.Fprintf(os.Stdout, "\n┌─ %s ─\n│ %s\n└─\n", title, content)
 	} else {
-		fmt.Printf("\n%s\n\n%s\n", formatColored(title, ColorGreen+ColorBold, false), content)
+		_, _ = fmt.Fprintf(os.Stdout, "\n%s\n\n%s\n", formatColored(title, ColorGreen+ColorBold, false), content)
 	}
 }
 
@@ -114,7 +114,7 @@ func (o *Output) print(formatted, logType string) {
 		return
 	}
 	logger.Info("UI "+logType, "message", formatted)
-	fmt.Println(formatted)
+	_, _ = fmt.Fprintln(os.Stdout, formatted)
 }
 
 // Global output instance

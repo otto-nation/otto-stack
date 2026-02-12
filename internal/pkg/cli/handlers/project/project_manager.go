@@ -87,11 +87,11 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 // generateInitialComposeFiles generates Docker Compose files
 func (pm *ProjectManager) generateInitialComposeFiles(serviceConfigs []types.ServiceConfig, projectName string, _, _ map[string]bool, base *base.BaseCommand) error {
 	if err := pm.generateEnvFile(serviceConfigs, projectName, base); err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedGenerateEnv, err)
 	}
 
 	if err := pm.generateDockerCompose(serviceConfigs, projectName, base); err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeGenerateFailed, err)
 	}
 
 	return nil
@@ -100,7 +100,7 @@ func (pm *ProjectManager) generateInitialComposeFiles(serviceConfigs []types.Ser
 // generateEnvFile generates the .env file
 func (pm *ProjectManager) generateEnvFile(serviceConfigs []types.ServiceConfig, projectName string, base *base.BaseCommand) error {
 	if err := env.GenerateFile(projectName, serviceConfigs, core.EnvGeneratedFilePath); err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedGenerateEnv, err)
 	}
 
 	base.Output.Success("Created environment file: %s", core.EnvGeneratedFilePath)
@@ -111,11 +111,11 @@ func (pm *ProjectManager) generateEnvFile(serviceConfigs []types.ServiceConfig, 
 func (pm *ProjectManager) generateDockerCompose(serviceConfigs []types.ServiceConfig, projectName string, base *base.BaseCommand) error {
 	generator, err := compose.NewGenerator(projectName)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeGeneratorCreateFailed, err)
 	}
 
 	if err := generator.GenerateFromServiceConfigs(serviceConfigs, projectName); err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeGenerateFailed, err)
 	}
 
 	base.Output.Success("Created Docker Compose file: %s", docker.DockerComposeFilePath)
@@ -135,7 +135,7 @@ func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 	gitignorePath := filepath.Join(core.OttoStackDir, core.GitIgnoreFileName)
 
 	if err := os.WriteFile(gitignorePath, []byte(content), core.PermReadWrite); err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsFileWriteFailed, err)
 	}
 
 	base.Output.Success("Updated %s file", gitignorePath)
@@ -183,7 +183,7 @@ This project was initialized with %s.
 
 	readmePath := filepath.Join(core.OttoStackDir, core.ReadmeFileName)
 	if err := os.WriteFile(readmePath, []byte(readmeContent), core.PermReadWrite); err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsFileWriteFailed, err)
 	}
 
 	base.Output.Success("Created README file: %s", readmePath)

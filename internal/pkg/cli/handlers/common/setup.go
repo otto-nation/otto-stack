@@ -40,7 +40,7 @@ func SetupCoreCommand(ctx context.Context, base *base.BaseCommand) (*CoreSetup, 
 	// Create Docker client
 	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
-		return nil, nil, pkgerrors.New(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, "create docker client", err)
+		return nil, nil, pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
 	}
 
 	cleanup := func() {

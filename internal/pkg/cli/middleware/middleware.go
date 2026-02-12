@@ -29,7 +29,7 @@ func (m *ValidationMiddleware) Execute(ctx context.Context, cliCtx clicontext.Co
 	}
 
 	if _, err := os.Stat(core.OttoStackDir); err == nil {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeAlreadyExists, "project", messages.MiddlewareProjectAlreadyInitialized, nil)
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeAlreadyExists, messages.MiddlewareProjectAlreadyInitialized, nil)
 	}
 
 	return next.Execute(ctx, cliCtx, base)
@@ -50,7 +50,7 @@ func (m *LoggingMiddleware) Execute(ctx context.Context, cliCtx clicontext.Conte
 	err := next.Execute(ctx, cliCtx, base)
 
 	if err != nil {
-		logger.Error("operation_failed", "operation", "init", "error", err)
+		logger.Debug("operation_failed", "operation", "init", "error", err)
 	} else {
 		logger.Info("operation_completed", "operation", "init")
 	}

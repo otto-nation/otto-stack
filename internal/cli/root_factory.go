@@ -7,6 +7,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -20,8 +21,15 @@ import (
 // ExecuteFactory executes the root command using the functional builder
 func ExecuteFactory() error {
 	rootCmd := cli.BuildRootCommand()
+	rootCmd.SilenceErrors = true
+	rootCmd.SilenceUsage = true
 	cobra.OnInitialize(initConfig)
-	return rootCmd.Execute()
+
+	err := rootCmd.Execute()
+	if err != nil {
+		ui.DefaultOutput.Error("%s", err.Error())
+	}
+	return err
 }
 
 // initConfig reads in config file and ENV variables if set

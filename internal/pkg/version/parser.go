@@ -80,7 +80,7 @@ func (v Version) Compare(other Version) int {
 // ParseVersion parses a version string into a Version struct
 func ParseVersion(versionStr string) (*Version, error) {
 	if versionStr == "" {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", messages.ErrorsEmptyVersion, nil)
+		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeInvalid, messages.ErrorsEmptyVersion, nil)
 	}
 
 	versionStr = strings.TrimSpace(versionStr)
@@ -97,22 +97,22 @@ func ParseVersion(versionStr string) (*Version, error) {
 
 	matches := semverRegex.FindStringSubmatch(versionStr)
 	if matches == nil {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", messages.VersionInvalidFormat, nil)
+		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeInvalid, messages.VersionInvalidFormat, nil)
 	}
 
 	major, err := strconv.Atoi(matches[1])
 	if err != nil {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", messages.VersionInvalidMajor, nil)
+		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeInvalid, messages.VersionInvalidMajor, nil)
 	}
 
 	minor, err := strconv.Atoi(matches[2])
 	if err != nil {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", messages.VersionInvalidMinor, nil)
+		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeInvalid, messages.VersionInvalidMinor, nil)
 	}
 
 	patch, err := strconv.Atoi(matches[3])
 	if err != nil {
-		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, "version", messages.VersionInvalidPatch, nil)
+		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeInvalid, messages.VersionInvalidPatch, nil)
 	}
 
 	return &Version{

@@ -127,7 +127,7 @@ func ValidateProjectVersion(projectPath string) error {
 	}
 
 	if !constraint.Satisfies(*currentVersion) {
-		return pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, "version", messages.VersionConstraintNotSatisfied,
+		return pkgerrors.NewSystemErrorf(pkgerrors.ErrCodeInvalid, messages.VersionConstraintNotSatisfied,
 			currentVersion, constraint.Original)
 	}
 

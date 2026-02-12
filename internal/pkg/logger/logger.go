@@ -26,7 +26,7 @@ func Init(config Config) error {
 	opts := &slog.HandlerOptions{
 		Level: level,
 	}
-	handler := slog.NewTextHandler(os.Stdout, opts)
+	handler := slog.NewTextHandler(os.Stderr, opts)
 	defaultLogger = slog.New(handler)
 	return nil
 }

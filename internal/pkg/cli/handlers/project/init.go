@@ -53,7 +53,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	defer h.handlePanic()
 
 	if err := h.validateInitFlags(cmd); err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailed, err)
 	}
 
 	ciFlags := ci.GetFlags(cmd)
@@ -62,7 +62,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	h.logDebugInfo(base, cmd, initFlags)
 
 	if err := h.setDefaultProjectName(initFlags, base, cmd); err != nil {
-		return err
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, messages.ValidationFailedSetProjectName, err)
 	}
 
 	h.forceOverwrite = initFlags.Force
@@ -70,11 +70,11 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	projectCtx, err := h.processMode(ciFlags, initFlags, base, cmd)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedProcessInitMode, err)
 	}
 
 	if err := h.executeInit(ctx, projectCtx, base); err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedExecuteInit, err)
 	}
 
 	h.displaySuccessMessage(projectCtx.Project.Name, base)
@@ -194,8 +194,7 @@ func (h *InitHandler) buildSharingConfig(initFlags *core.InitFlags, serviceConfi
 		return sharingSpec, nil
 	}
 
-	//nolint:modernize // SplitSeq requires Go 1.24+
-	for _, svc := range strings.Split(initFlags.SharedServices, ",") {
+	for svc := range strings.SplitSeq(initFlags.SharedServices, ",") {
 		svc = strings.TrimSpace(svc)
 		if svc == "" {
 			continue
