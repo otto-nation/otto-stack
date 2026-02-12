@@ -27,7 +27,7 @@ jobs:
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             
-            const workflows = ['validation.yml', 'build.yml', 'security.yml'];
+            const workflows = ['validation.yml', 'ci.yml', 'security.yml'];
             const results = {
               total: 0,
               failed: 0,
