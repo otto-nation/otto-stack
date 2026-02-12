@@ -43,7 +43,7 @@ const (
 
 // URLs
 const (
-	DocsURL = "https://github.com/otto-nation/otto-stack/blob/main/docs"
+	DocsURL = "https://otto-nation.github.io/otto-stack"
 )
 
 // Actions
