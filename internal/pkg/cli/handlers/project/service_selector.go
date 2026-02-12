@@ -44,16 +44,16 @@ func (ss *ServiceSelector) loadServiceCategories() (map[string][]types.ServiceCo
 func (ss *ServiceSelector) selectServicesFromAllCategories(categories map[string][]types.ServiceConfig) ([]types.ServiceConfig, error) {
 	allServices, serviceOptions := ss.buildServiceList(categories)
 
-	selected, err := ss.promptForServiceSelection(serviceOptions)
+	selectedNames, err := ss.promptForServiceSelection(serviceOptions)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(selected) == 0 {
+	if len(selectedNames) == 0 {
 		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationNoServicesSelected, nil)
 	}
 
-	return ss.mapSelectedServices(selected, allServices), nil
+	return ss.mapSelectedServicesByName(selectedNames, allServices), nil
 }
 
 func (ss *ServiceSelector) buildServiceList(categories map[string][]types.ServiceConfig) ([]types.ServiceConfig, []string) {
@@ -99,20 +99,22 @@ func (ss *ServiceSelector) promptForServiceSelection(serviceOptions []string) ([
 		return nil, err
 	}
 
-	return selected, nil
+	// Extract service names from selected display strings
+	serviceNames := make([]string, 0, len(selected))
+	for _, displayStr := range selected {
+		name := ss.extractServiceName(displayStr)
+		if name != "" {
+			serviceNames = append(serviceNames, name)
+		}
+	}
+
+	return serviceNames, nil
 }
 
-func (ss *ServiceSelector) mapSelectedServices(selected []string, allServices []types.ServiceConfig) []types.ServiceConfig {
+func (ss *ServiceSelector) mapSelectedServicesByName(serviceNames []string, allServices []types.ServiceConfig) []types.ServiceConfig {
 	var selectedConfigs []types.ServiceConfig
-	selectedMap := make(map[string]bool)
 
-	for _, selection := range selected {
-		serviceName := ss.extractServiceName(selection)
-		if serviceName == "" || selectedMap[serviceName] {
-			continue
-		}
-		selectedMap[serviceName] = true
-
+	for _, serviceName := range serviceNames {
 		if config := ss.findServiceConfig(serviceName, allServices); config != nil {
 			selectedConfigs = append(selectedConfigs, *config)
 		}
