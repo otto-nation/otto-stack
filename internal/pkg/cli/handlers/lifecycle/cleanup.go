@@ -114,7 +114,7 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 		RemoveImages:  flags.Images,
 	})
 	if err != nil {
-		return err
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, projectName, "cleanup failed", err)
 	}
 
 	if !ciFlags.Quiet {
@@ -149,12 +149,12 @@ func (h *CleanupHandler) checkOrphans(ctx context.Context, setup *common.CoreSet
 
 	reg, err := h.getRegistry()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to get registry", err)
 	}
 
 	orphans, err := reg.FindOrphansWithChecks(ctx, setup.DockerClient)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to find orphaned containers", err)
 	}
 
 	if len(orphans) == 0 {
@@ -174,12 +174,12 @@ func (h *CleanupHandler) displayOrphans(base *base.BaseCommand, orphans []regist
 func (h *CleanupHandler) cleanOrphans(ctx context.Context, setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
 	reg, err := h.getRegistry()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to get registry", err)
 	}
 
 	orphans, err := reg.FindOrphansWithChecks(ctx, setup.DockerClient)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to find orphaned containers", err)
 	}
 
 	if len(orphans) == 0 {
@@ -196,7 +196,7 @@ func (h *CleanupHandler) cleanOrphans(ctx context.Context, setup *common.CoreSet
 
 	cleaned, err := reg.CleanOrphans()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to clean orphaned containers", err)
 	}
 
 	if !ciFlags.Quiet {
@@ -228,18 +228,18 @@ func (h *CleanupHandler) getRegistry() (*registry.Manager, error) {
 func (h *CleanupHandler) reconcileRegistry(ctx context.Context, base *base.BaseCommand, ciFlags *ci.Flags) error {
 	reg, err := h.getRegistry()
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to get registry", err)
 	}
 
 	// Get service manager which has Docker client
 	svc, err := common.NewServiceManager(false)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to create service manager", err)
 	}
 
 	result, err := reg.Reconcile(ctx, svc.DockerClient)
 	if err != nil {
-		return err
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, "failed to reconcile registry", err)
 	}
 
 	if len(result.Removed) > 0 && !ciFlags.Quiet {
