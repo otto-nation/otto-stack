@@ -93,3 +93,13 @@ func TestServiceResolver(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestServiceResolver_EdgeCases(t *testing.T) {
+	manager, _ := New()
+	resolver := NewServiceResolver(manager)
+
+	t.Run("handles multiple invalid services", func(t *testing.T) {
+		_, err := resolver.ResolveServices([]string{"invalid1", "invalid2"})
+		assert.Error(t, err)
+	})
+}

@@ -126,3 +126,17 @@ func TestManager_ServiceValidation(t *testing.T) {
 		}
 	})
 }
+
+func TestManager_EdgeCases(t *testing.T) {
+	t.Run("New creates manager successfully", func(t *testing.T) {
+		manager, err := New()
+		assert.NoError(t, err)
+		assert.NotNil(t, manager)
+	})
+
+	t.Run("GetService returns error for invalid service", func(t *testing.T) {
+		manager, _ := New()
+		_, err := manager.GetService("nonexistent")
+		assert.Error(t, err)
+	})
+}
