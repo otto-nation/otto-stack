@@ -216,12 +216,18 @@ func TestApplyFlagsToStopOptions(t *testing.T) {
 		flags := []string{"--timeout=30"}
 		base := docker.StopOptions{}
 		result := resolver.applyFlagsToStopOptions(flags, base)
-		// Timeout should be set if parseTimeout succeeds
 		assert.NotNil(t, result)
 	})
 
 	t.Run("handles no flags", func(t *testing.T) {
 		flags := []string{}
+		base := docker.StopOptions{}
+		result := resolver.applyFlagsToStopOptions(flags, base)
+		assert.Equal(t, base, result)
+	})
+
+	t.Run("handles invalid timeout", func(t *testing.T) {
+		flags := []string{"--timeout=invalid"}
 		base := docker.StopOptions{}
 		result := resolver.applyFlagsToStopOptions(flags, base)
 		assert.Equal(t, base, result)

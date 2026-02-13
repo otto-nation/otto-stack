@@ -111,6 +111,30 @@ func TestVersion_Compare(t *testing.T) {
 		v2 := Version{Major: 1, Minor: 0, Patch: 0, PreRelease: "alpha"}
 		assert.Equal(t, VersionNewer, v1.Compare(v2))
 	})
+
+	t.Run("prerelease is older than release", func(t *testing.T) {
+		v1 := Version{Major: 1, Minor: 0, Patch: 0, PreRelease: "alpha"}
+		v2 := Version{Major: 1, Minor: 0, Patch: 0}
+		assert.Equal(t, VersionOlder, v1.Compare(v2))
+	})
+
+	t.Run("compares minor older", func(t *testing.T) {
+		v1 := Version{Major: 1, Minor: 1, Patch: 0}
+		v2 := Version{Major: 1, Minor: 2, Patch: 0}
+		assert.Equal(t, VersionOlder, v1.Compare(v2))
+	})
+
+	t.Run("compares patch older", func(t *testing.T) {
+		v1 := Version{Major: 1, Minor: 0, Patch: 1}
+		v2 := Version{Major: 1, Minor: 0, Patch: 2}
+		assert.Equal(t, VersionOlder, v1.Compare(v2))
+	})
+
+	t.Run("compares prerelease older", func(t *testing.T) {
+		v1 := Version{Major: 1, Minor: 0, Patch: 0, PreRelease: "alpha"}
+		v2 := Version{Major: 1, Minor: 0, Patch: 0, PreRelease: "beta"}
+		assert.Equal(t, VersionOlder, v1.Compare(v2))
+	})
 }
 
 func TestVersionConstraint_Satisfies(t *testing.T) {

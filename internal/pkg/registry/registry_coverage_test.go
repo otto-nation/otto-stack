@@ -232,3 +232,77 @@ func TestSave_ErrorHandling(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestRegister(t *testing.T) {
+	tempDir := t.TempDir()
+	manager := NewManager(tempDir)
+
+	t.Run("registers new service", func(t *testing.T) {
+		err := manager.Register("redis", "otto-stack-redis", "project1")
+		require.NoError(t, err)
+
+		info, err := manager.Get("redis")
+		require.NoError(t, err)
+		assert.Equal(t, "otto-stack-redis", info.Name)
+		assert.Contains(t, info.Projects, "project1")
+	})
+
+	t.Run("adds project to existing service", func(t *testing.T) {
+		err := manager.Register("redis", "otto-stack-redis", "project2")
+		require.NoError(t, err)
+
+		info, err := manager.Get("redis")
+		require.NoError(t, err)
+		assert.Contains(t, info.Projects, "project1")
+		assert.Contains(t, info.Projects, "project2")
+	})
+
+	t.Run("does not duplicate projects", func(t *testing.T) {
+		err := manager.Register("redis", "otto-stack-redis", "project1")
+		require.NoError(t, err)
+
+		info, err := manager.Get("redis")
+		require.NoError(t, err)
+		count := 0
+		for _, p := range info.Projects {
+			if p == "project1" {
+				count++
+			}
+		}
+		assert.Equal(t, 1, count)
+	})
+}
+
+func TestUnregister(t *testing.T) {
+	tempDir := t.TempDir()
+	manager := NewManager(tempDir)
+
+	t.Run("removes project from service", func(t *testing.T) {
+		err := manager.Register("redis", "otto-stack-redis", "project1")
+		require.NoError(t, err)
+		err = manager.Register("redis", "otto-stack-redis", "project2")
+		require.NoError(t, err)
+
+		err = manager.Unregister("redis", "project1")
+		require.NoError(t, err)
+
+		info, err := manager.Get("redis")
+		require.NoError(t, err)
+		assert.NotContains(t, info.Projects, "project1")
+		assert.Contains(t, info.Projects, "project2")
+	})
+
+	t.Run("removes service when no projects left", func(t *testing.T) {
+		err := manager.Unregister("redis", "project2")
+		require.NoError(t, err)
+
+		info, err := manager.Get("redis")
+		require.NoError(t, err)
+		assert.Nil(t, info)
+	})
+
+	t.Run("handles unregistering non-existent service", func(t *testing.T) {
+		err := manager.Unregister("nonexistent", "project1")
+		assert.NoError(t, err)
+	})
+}
