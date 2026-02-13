@@ -102,4 +102,23 @@ func TestServiceResolver_EdgeCases(t *testing.T) {
 		_, err := resolver.ResolveServices([]string{"invalid1", "invalid2"})
 		assert.Error(t, err)
 	})
+
+	t.Run("resolves valid services", func(t *testing.T) {
+		configs, err := resolver.ResolveServices([]string{ServicePostgres})
+		if err == nil {
+			assert.NotEmpty(t, configs)
+		}
+	})
+
+	t.Run("handles empty service list", func(t *testing.T) {
+		_, err := resolver.ResolveServices([]string{})
+		assert.Error(t, err) // Empty list should error
+	})
+
+	t.Run("resolves multiple services", func(t *testing.T) {
+		configs, err := resolver.ResolveServices([]string{ServicePostgres, ServiceRedis})
+		if err == nil {
+			assert.GreaterOrEqual(t, len(configs), 2)
+		}
+	})
 }

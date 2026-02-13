@@ -139,4 +139,19 @@ func TestManager_EdgeCases(t *testing.T) {
 		_, err := manager.GetService("nonexistent")
 		assert.Error(t, err)
 	})
+
+	t.Run("GetAllServices returns map", func(t *testing.T) {
+		manager, _ := New()
+		services := manager.GetAllServices()
+		assert.NotEmpty(t, services)
+	})
+
+	t.Run("loadServices loads from embedded FS", func(t *testing.T) {
+		manager := &Manager{
+			services: make(map[string]servicetypes.ServiceConfig),
+		}
+		err := manager.loadServices()
+		assert.NoError(t, err)
+		assert.NotEmpty(t, manager.services)
+	})
 }

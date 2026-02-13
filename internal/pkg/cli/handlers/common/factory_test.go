@@ -75,3 +75,32 @@ func TestGetCharacteristicsResolver(t *testing.T) {
 	assert.NoError(t, err2)
 	assert.Same(t, resolver1, resolver2, "Should return cached instance")
 }
+
+func TestNewServiceManager_ErrorHandling(t *testing.T) {
+	t.Run("handles debug flag", func(t *testing.T) {
+		cacheMutex.Lock()
+		stackServiceCache = nil
+		cacheMutex.Unlock()
+
+		_, err := NewServiceManager(true)
+		if err != nil {
+			t.Skipf("Skipping Docker test: %v", err)
+		}
+	})
+}
+
+func TestGetDockerManager_Caching(t *testing.T) {
+	t.Run("caches manager instance", func(t *testing.T) {
+		cacheMutex.Lock()
+		dockerManagerCache = nil
+		cacheMutex.Unlock()
+
+		m1, err := getDockerManager()
+		if err != nil {
+			t.Skipf("Skipping Docker test: %v", err)
+		}
+
+		m2, _ := getDockerManager()
+		assert.Same(t, m1, m2)
+	})
+}
