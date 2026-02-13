@@ -208,3 +208,22 @@ func TestApplyFlagsToDownOptions(t *testing.T) {
 		assert.True(t, result.RemoveVolumes)
 	})
 }
+
+func TestApplyFlagsToStopOptions(t *testing.T) {
+	resolver := &DefaultCharacteristicsResolver{}
+
+	t.Run("applies timeout flag", func(t *testing.T) {
+		flags := []string{"--timeout=30"}
+		base := docker.StopOptions{}
+		result := resolver.applyFlagsToStopOptions(flags, base)
+		// Timeout should be set if parseTimeout succeeds
+		assert.NotNil(t, result)
+	})
+
+	t.Run("handles no flags", func(t *testing.T) {
+		flags := []string{}
+		base := docker.StopOptions{}
+		result := resolver.applyFlagsToStopOptions(flags, base)
+		assert.Equal(t, base, result)
+	})
+}

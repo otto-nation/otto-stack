@@ -57,6 +57,16 @@ func TestVersion_String(t *testing.T) {
 		v := Version{Major: 1, Minor: 2, Patch: 3, PreRelease: "alpha"}
 		assert.Contains(t, v.String(), "alpha")
 	})
+
+	t.Run("includes build metadata", func(t *testing.T) {
+		v := Version{Major: 1, Minor: 2, Patch: 3, Build: "20210101"}
+		assert.Contains(t, v.String(), "20210101")
+	})
+
+	t.Run("uses original if set", func(t *testing.T) {
+		v := Version{Major: 1, Minor: 2, Patch: 3, Original: "v1.2.3"}
+		assert.Equal(t, "v1.2.3", v.String())
+	})
 }
 
 func TestVersion_Compare(t *testing.T) {
@@ -80,6 +90,24 @@ func TestVersion_Compare(t *testing.T) {
 
 	t.Run("release is newer than prerelease", func(t *testing.T) {
 		v1 := Version{Major: 1, Minor: 0, Patch: 0}
+		v2 := Version{Major: 1, Minor: 0, Patch: 0, PreRelease: "alpha"}
+		assert.Equal(t, VersionNewer, v1.Compare(v2))
+	})
+
+	t.Run("compares minor versions", func(t *testing.T) {
+		v1 := Version{Major: 1, Minor: 2, Patch: 0}
+		v2 := Version{Major: 1, Minor: 1, Patch: 0}
+		assert.Equal(t, VersionNewer, v1.Compare(v2))
+	})
+
+	t.Run("compares patch versions", func(t *testing.T) {
+		v1 := Version{Major: 1, Minor: 0, Patch: 2}
+		v2 := Version{Major: 1, Minor: 0, Patch: 1}
+		assert.Equal(t, VersionNewer, v1.Compare(v2))
+	})
+
+	t.Run("compares prerelease versions", func(t *testing.T) {
+		v1 := Version{Major: 1, Minor: 0, Patch: 0, PreRelease: "beta"}
 		v2 := Version{Major: 1, Minor: 0, Patch: 0, PreRelease: "alpha"}
 		assert.Equal(t, VersionNewer, v1.Compare(v2))
 	})
@@ -120,5 +148,63 @@ func TestVersionConstraint_Satisfies(t *testing.T) {
 		}
 		v := Version{Major: 99, Minor: 99, Patch: 99}
 		assert.True(t, constraint.Satisfies(v))
+	})
+
+	t.Run("greater than or equal operator", func(t *testing.T) {
+		constraint := VersionConstraint{
+			Operator: ">=",
+			Version:  Version{Major: 1, Minor: 0, Patch: 0},
+		}
+		v1 := Version{Major: 1, Minor: 0, Patch: 0}
+		v2 := Version{Major: 2, Minor: 0, Patch: 0}
+		assert.True(t, constraint.Satisfies(v1))
+		assert.True(t, constraint.Satisfies(v2))
+	})
+
+	t.Run("less than or equal operator", func(t *testing.T) {
+		constraint := VersionConstraint{
+			Operator: "<=",
+			Version:  Version{Major: 2, Minor: 0, Patch: 0},
+		}
+		v1 := Version{Major: 2, Minor: 0, Patch: 0}
+		v2 := Version{Major: 1, Minor: 0, Patch: 0}
+		assert.True(t, constraint.Satisfies(v1))
+		assert.True(t, constraint.Satisfies(v2))
+	})
+
+	t.Run("not equal operator", func(t *testing.T) {
+		constraint := VersionConstraint{
+			Operator: "!=",
+			Version:  Version{Major: 1, Minor: 0, Patch: 0},
+		}
+		v := Version{Major: 2, Minor: 0, Patch: 0}
+		assert.True(t, constraint.Satisfies(v))
+	})
+
+	t.Run("double equals operator", func(t *testing.T) {
+		constraint := VersionConstraint{
+			Operator: "==",
+			Version:  Version{Major: 1, Minor: 0, Patch: 0},
+		}
+		v := Version{Major: 1, Minor: 0, Patch: 0}
+		assert.True(t, constraint.Satisfies(v))
+	})
+
+	t.Run("empty operator defaults to equals", func(t *testing.T) {
+		constraint := VersionConstraint{
+			Operator: "",
+			Version:  Version{Major: 1, Minor: 0, Patch: 0},
+		}
+		v := Version{Major: 1, Minor: 0, Patch: 0}
+		assert.True(t, constraint.Satisfies(v))
+	})
+
+	t.Run("unknown operator returns false", func(t *testing.T) {
+		constraint := VersionConstraint{
+			Operator: "~>",
+			Version:  Version{Major: 1, Minor: 0, Patch: 0},
+		}
+		v := Version{Major: 1, Minor: 0, Patch: 0}
+		assert.False(t, constraint.Satisfies(v))
 	})
 }
