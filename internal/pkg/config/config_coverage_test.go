@@ -311,6 +311,32 @@ func TestMergeConfigs_EdgeCases(t *testing.T) {
 		assert.Equal(t, "base-project", result.Project.Name)
 		assert.Equal(t, []string{"postgres"}, result.Stack.Enabled)
 	})
+
+	t.Run("overrides project name when local has value", func(t *testing.T) {
+		base := &Config{
+			Project: ProjectConfig{Name: "base-project"},
+			Stack:   StackConfig{Enabled: []string{"postgres"}},
+		}
+		local := &Config{
+			Project: ProjectConfig{Name: "local-project"},
+		}
+
+		result := mergeConfigs(base, local)
+		assert.Equal(t, "local-project", result.Project.Name)
+	})
+
+	t.Run("overrides services when local has services", func(t *testing.T) {
+		base := &Config{
+			Project: ProjectConfig{Name: "test"},
+			Stack:   StackConfig{Enabled: []string{"postgres"}},
+		}
+		local := &Config{
+			Stack: StackConfig{Enabled: []string{"redis", "mysql"}},
+		}
+
+		result := mergeConfigs(base, local)
+		assert.Equal(t, []string{"redis", "mysql"}, result.Stack.Enabled)
+	})
 }
 
 func TestGenerateConfig_ErrorCases(t *testing.T) {
@@ -323,5 +349,40 @@ func TestGenerateConfig_ErrorCases(t *testing.T) {
 
 		_, err := GenerateConfig(ctx)
 		assert.Error(t, err)
+	})
+}
+
+func TestValidateSharingPolicy_EdgeCases(t *testing.T) {
+	t.Run("allows nil sharing config", func(t *testing.T) {
+		cfg := &Config{
+			Project: ProjectConfig{Name: "test"},
+			Stack:   StackConfig{Enabled: []string{"postgres"}},
+			Sharing: nil,
+		}
+		err := validateSharingPolicy(cfg)
+		assert.NoError(t, err)
+	})
+
+	t.Run("allows disabled sharing", func(t *testing.T) {
+		cfg := &Config{
+			Project: ProjectConfig{Name: "test"},
+			Stack:   StackConfig{Enabled: []string{"postgres"}},
+			Sharing: &SharingConfig{Enabled: false},
+		}
+		err := validateSharingPolicy(cfg)
+		assert.NoError(t, err)
+	})
+
+	t.Run("allows empty services list", func(t *testing.T) {
+		cfg := &Config{
+			Project: ProjectConfig{Name: "test"},
+			Stack:   StackConfig{Enabled: []string{"postgres"}},
+			Sharing: &SharingConfig{
+				Enabled:  true,
+				Services: map[string]bool{},
+			},
+		}
+		err := validateSharingPolicy(cfg)
+		assert.NoError(t, err)
 	})
 }
