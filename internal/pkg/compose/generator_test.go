@@ -145,3 +145,29 @@ func TestGenerator_BuildServicesFromConfigs(t *testing.T) {
 		assert.NotContains(t, result, "localstack-sns")
 	})
 }
+
+func TestGenerator_HealthCheckTiming(t *testing.T) {
+	t.Run("adds health check with timing", func(t *testing.T) {
+		gen, err := NewGenerator("test-project")
+		require.NoError(t, err)
+
+		services := []types.ServiceConfig{
+			{
+				Name: "postgres",
+				Container: types.ContainerSpec{
+					Image: "postgres:latest",
+					HealthCheck: &types.HealthCheckSpec{
+						Test:     []string{"CMD", "pg_isready"},
+						Interval: 10,
+						Timeout:  5,
+						Retries:  3,
+					},
+				},
+			},
+		}
+
+		result, err := gen.buildServicesFromConfigs(services)
+		require.NoError(t, err)
+		assert.Contains(t, result, "postgres")
+	})
+}

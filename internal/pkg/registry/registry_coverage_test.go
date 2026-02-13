@@ -1,6 +1,8 @@
 package registry
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -179,5 +181,54 @@ func TestIsShared(t *testing.T) {
 		shared, err := manager.IsShared("nonexistent")
 		require.NoError(t, err)
 		assert.False(t, shared)
+	})
+}
+
+func TestLoad_ErrorHandling(t *testing.T) {
+	t.Run("handles invalid YAML", func(t *testing.T) {
+		tempDir := t.TempDir()
+		manager := NewManager(tempDir)
+
+		// Write invalid YAML
+		err := os.WriteFile(manager.registryPath, []byte("invalid: yaml: content: ["), 0644)
+		require.NoError(t, err)
+
+		_, err = manager.Load()
+		assert.Error(t, err)
+	})
+
+	t.Run("returns empty registry for empty file", func(t *testing.T) {
+		tempDir := t.TempDir()
+		manager := NewManager(tempDir)
+
+		// Create empty file
+		err := os.WriteFile(manager.registryPath, []byte(""), 0644)
+		require.NoError(t, err)
+
+		registry, err := manager.Load()
+		require.NoError(t, err)
+		assert.NotNil(t, registry)
+		assert.Empty(t, registry.Containers)
+	})
+}
+
+func TestSave_ErrorHandling(t *testing.T) {
+	t.Run("creates directory if not exists", func(t *testing.T) {
+		tempDir := t.TempDir()
+		nestedPath := filepath.Join(tempDir, "nested", "path")
+		manager := NewManager(nestedPath)
+
+		registry := &Registry{
+			Containers: map[string]*ContainerInfo{
+				"test": {Name: "otto-stack-test", Projects: []string{"p1"}},
+			},
+		}
+
+		err := manager.Save(registry)
+		require.NoError(t, err)
+
+		// Verify file was created
+		_, err = os.Stat(manager.registryPath)
+		assert.NoError(t, err)
 	})
 }
