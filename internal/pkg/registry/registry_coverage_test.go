@@ -90,9 +90,94 @@ func TestExtractServiceName(t *testing.T) {
 	}
 }
 
-func TestProjectExists(t *testing.T) {
-	t.Run("returns false for non-existent project", func(t *testing.T) {
-		exists := projectExists("/nonexistent/path/to/project")
-		assert.False(t, exists)
+func TestGet(t *testing.T) {
+	tempDir := t.TempDir()
+	manager := NewManager(tempDir)
+
+	t.Run("returns container info when exists", func(t *testing.T) {
+		registry := &Registry{
+			Containers: map[string]*ContainerInfo{
+				"redis": {
+					Name:     "otto-stack-redis",
+					Projects: []string{"project1"},
+				},
+			},
+		}
+		err := manager.Save(registry)
+		require.NoError(t, err)
+
+		info, err := manager.Get("redis")
+		require.NoError(t, err)
+		assert.Equal(t, "otto-stack-redis", info.Name)
+		assert.Contains(t, info.Projects, "project1")
+	})
+
+	t.Run("returns nil when not found", func(t *testing.T) {
+		registry := &Registry{Containers: map[string]*ContainerInfo{}}
+		err := manager.Save(registry)
+		require.NoError(t, err)
+
+		info, err := manager.Get("nonexistent")
+		require.NoError(t, err)
+		assert.Nil(t, info)
+	})
+}
+
+func TestList(t *testing.T) {
+	tempDir := t.TempDir()
+	manager := NewManager(tempDir)
+
+	t.Run("returns all containers", func(t *testing.T) {
+		registry := &Registry{
+			Containers: map[string]*ContainerInfo{
+				"redis":    {Name: "otto-stack-redis", Projects: []string{"p1"}},
+				"postgres": {Name: "otto-stack-postgres", Projects: []string{"p2"}},
+			},
+		}
+		err := manager.Save(registry)
+		require.NoError(t, err)
+
+		containers, err := manager.List()
+		require.NoError(t, err)
+		assert.Len(t, containers, 2)
+	})
+
+	t.Run("returns empty list when no containers", func(t *testing.T) {
+		registry := &Registry{Containers: map[string]*ContainerInfo{}}
+		err := manager.Save(registry)
+		require.NoError(t, err)
+
+		containers, err := manager.List()
+		require.NoError(t, err)
+		assert.Empty(t, containers)
+	})
+}
+
+func TestIsShared(t *testing.T) {
+	tempDir := t.TempDir()
+	manager := NewManager(tempDir)
+
+	t.Run("returns true when service is shared", func(t *testing.T) {
+		registry := &Registry{
+			Containers: map[string]*ContainerInfo{
+				"redis": {Name: "otto-stack-redis", Projects: []string{"p1"}},
+			},
+		}
+		err := manager.Save(registry)
+		require.NoError(t, err)
+
+		shared, err := manager.IsShared("redis")
+		require.NoError(t, err)
+		assert.True(t, shared)
+	})
+
+	t.Run("returns false when service not shared", func(t *testing.T) {
+		registry := &Registry{Containers: map[string]*ContainerInfo{}}
+		err := manager.Save(registry)
+		require.NoError(t, err)
+
+		shared, err := manager.IsShared("nonexistent")
+		require.NoError(t, err)
+		assert.False(t, shared)
 	})
 }
