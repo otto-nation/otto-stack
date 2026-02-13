@@ -208,3 +208,44 @@ func TestVersionConstraint_Satisfies(t *testing.T) {
 		assert.False(t, constraint.Satisfies(v))
 	})
 }
+
+func TestParseVersion_EdgeCases(t *testing.T) {
+	t.Run("parses version with build metadata", func(t *testing.T) {
+		v, err := ParseVersion("1.2.3+build123")
+		require.NoError(t, err)
+		assert.Equal(t, "build123", v.Build)
+	})
+
+	t.Run("parses version with prerelease and build", func(t *testing.T) {
+		v, err := ParseVersion("1.2.3-alpha+build123")
+		require.NoError(t, err)
+		assert.Equal(t, "alpha", v.PreRelease)
+		assert.Equal(t, "build123", v.Build)
+	})
+
+	t.Run("handles wildcard", func(t *testing.T) {
+		v, err := ParseVersion("*")
+		require.NoError(t, err)
+		assert.NotNil(t, v)
+	})
+
+	t.Run("trims whitespace", func(t *testing.T) {
+		v, err := ParseVersion("  1.2.3  ")
+		require.NoError(t, err)
+		assert.Equal(t, 1, v.Major)
+	})
+}
+
+func TestGetAppVersion_EdgeCases(t *testing.T) {
+	t.Run("returns version", func(t *testing.T) {
+		version := GetAppVersion()
+		assert.NotEmpty(t, version)
+	})
+}
+
+func TestGetShortVersion_EdgeCases(t *testing.T) {
+	t.Run("returns short version", func(t *testing.T) {
+		version := GetShortVersion()
+		assert.NotEmpty(t, version)
+	})
+}
