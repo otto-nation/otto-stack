@@ -1,6 +1,7 @@
 package compose
 
 import (
+	"os"
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
@@ -169,5 +170,33 @@ func TestGenerator_HealthCheckTiming(t *testing.T) {
 		result, err := gen.buildServicesFromConfigs(services)
 		require.NoError(t, err)
 		assert.Contains(t, result, "postgres")
+	})
+}
+
+func TestGenerator_ResolveEnvVar(t *testing.T) {
+	gen, err := NewGenerator("test-project")
+	require.NoError(t, err)
+
+	t.Run("returns value as-is for non-template", func(t *testing.T) {
+		result := gen.resolveEnvVar("plain-value")
+		assert.Equal(t, "plain-value", result)
+	})
+
+	t.Run("resolves env var with default", func(t *testing.T) {
+		result := gen.resolveEnvVar("${NONEXISTENT_VAR:-default}")
+		assert.Equal(t, "default", result)
+	})
+
+	t.Run("uses env var if set", func(t *testing.T) {
+		os.Setenv("TEST_VAR", "actual-value")
+		defer os.Unsetenv("TEST_VAR")
+
+		result := gen.resolveEnvVar("${TEST_VAR:-default}")
+		assert.Equal(t, "actual-value", result)
+	})
+
+	t.Run("returns value for malformed template", func(t *testing.T) {
+		result := gen.resolveEnvVar("${MALFORMED")
+		assert.Equal(t, "${MALFORMED", result)
 	})
 }
