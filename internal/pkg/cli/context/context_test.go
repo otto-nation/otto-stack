@@ -51,3 +51,27 @@ func TestBuilder_EmptyContext(t *testing.T) {
 	assert.Empty(t, ctx.Options.Advanced)
 	assert.False(t, ctx.Runtime.Force)
 }
+
+func TestBuilder_WithSharing(t *testing.T) {
+	sharing := &SharingSpec{
+		Enabled:  true,
+		Services: map[string]bool{"redis": true, "postgres": true},
+	}
+
+	ctx := NewBuilder().
+		WithSharing(sharing).
+		Build()
+
+	assert.NotNil(t, ctx.Sharing)
+	assert.True(t, ctx.Sharing.Enabled)
+	assert.True(t, ctx.Sharing.Services["redis"])
+	assert.True(t, ctx.Sharing.Services["postgres"])
+}
+
+func TestNewProjectInfo(t *testing.T) {
+	info := NewProjectInfo("/test/.otto-stack")
+
+	assert.Equal(t, "/test", info.Root)
+	assert.Equal(t, "/test/.otto-stack", info.ConfigDir)
+	assert.Contains(t, info.ConfigFile, "config.yaml")
+}

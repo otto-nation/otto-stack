@@ -77,3 +77,19 @@ func TestServiceConfigValidation(t *testing.T) {
 		assert.NotEmpty(t, config.Description)
 	})
 }
+
+func TestServiceResolver(t *testing.T) {
+	t.Run("creates resolver", func(t *testing.T) {
+		manager, _ := New()
+		resolver := NewServiceResolver(manager)
+		assert.NotNil(t, resolver)
+	})
+
+	t.Run("resolves services with invalid names", func(t *testing.T) {
+		manager, _ := New()
+		resolver := NewServiceResolver(manager)
+
+		_, err := resolver.ResolveServices([]string{"invalid-service"})
+		assert.Error(t, err)
+	})
+}
