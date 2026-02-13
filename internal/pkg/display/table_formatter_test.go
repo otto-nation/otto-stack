@@ -73,3 +73,28 @@ func TestTableFormatter_FormatTableWithSeparators(t *testing.T) {
 		assert.Contains(t, output, "database")
 	})
 }
+
+func TestRenderTable(t *testing.T) {
+	buf := &bytes.Buffer{}
+	headers := []string{"Name", "Status"}
+	rows := [][]string{
+		{"service1", "running"},
+	}
+
+	RenderTable(buf, headers, rows)
+	assert.Contains(t, buf.String(), "service1")
+}
+
+func TestRenderTableWithSeparators(t *testing.T) {
+	buf := &bytes.Buffer{}
+	headers := []string{"Service", "Type"}
+	groups := [][][]string{
+		{{"postgres", "database"}},
+		{{"redis", "cache"}},
+	}
+
+	RenderTableWithSeparators(buf, headers, groups)
+	output := buf.String()
+	assert.Contains(t, output, "postgres")
+	assert.Contains(t, output, "redis")
+}
