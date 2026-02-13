@@ -158,3 +158,53 @@ func TestServiceCatalogConstants(t *testing.T) {
 		}
 	})
 }
+
+func TestApplyFlagsToUpOptions(t *testing.T) {
+	resolver := &DefaultCharacteristicsResolver{}
+
+	t.Run("applies remove-orphans flag", func(t *testing.T) {
+		flags := []string{"--remove-orphans"}
+		base := docker.UpOptions{}
+		result := resolver.applyFlagsToUpOptions(flags, base)
+		assert.True(t, result.RemoveOrphans)
+	})
+
+	t.Run("applies build flag", func(t *testing.T) {
+		flags := []string{"--build"}
+		base := docker.UpOptions{}
+		result := resolver.applyFlagsToUpOptions(flags, base)
+		assert.True(t, result.Build)
+	})
+
+	t.Run("applies force-recreate flag", func(t *testing.T) {
+		flags := []string{"--force-recreate"}
+		base := docker.UpOptions{}
+		result := resolver.applyFlagsToUpOptions(flags, base)
+		assert.True(t, result.ForceRecreate)
+	})
+}
+
+func TestApplyFlagsToDownOptions(t *testing.T) {
+	resolver := &DefaultCharacteristicsResolver{}
+
+	t.Run("applies remove-orphans flag", func(t *testing.T) {
+		flags := []string{"--remove-orphans"}
+		base := docker.DownOptions{}
+		result := resolver.applyFlagsToDownOptions(flags, base)
+		assert.True(t, result.RemoveOrphans)
+	})
+
+	t.Run("applies volumes flag", func(t *testing.T) {
+		flags := []string{"--volumes"}
+		base := docker.DownOptions{}
+		result := resolver.applyFlagsToDownOptions(flags, base)
+		assert.True(t, result.RemoveVolumes)
+	})
+
+	t.Run("applies -v flag", func(t *testing.T) {
+		flags := []string{"-v"}
+		base := docker.DownOptions{}
+		result := resolver.applyFlagsToDownOptions(flags, base)
+		assert.True(t, result.RemoveVolumes)
+	})
+}
