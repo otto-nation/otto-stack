@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -165,6 +166,15 @@ stack:
 		require.NoError(t, err)
 		assert.Equal(t, "test-project", cfg.Project.Name)
 	})
+
+	t.Run("returns error when config not found", func(t *testing.T) {
+		tempDir := t.TempDir()
+		err := os.Chdir(tempDir)
+		require.NoError(t, err)
+
+		_, err = service.LoadConfig()
+		assert.Error(t, err)
+	})
 }
 
 func TestConfigService_ValidateConfig(t *testing.T) {
@@ -232,5 +242,86 @@ func TestConfigService_GetConfigHash(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, hash1, hash2)
+	})
+}
+
+func TestGenerateConfig_WithSharing(t *testing.T) {
+	t.Run("generates config with sharing enabled", func(t *testing.T) {
+		ctx := clicontext.Context{
+			Project: clicontext.ProjectSpec{Name: "test-project"},
+			Services: clicontext.ServiceSpec{
+				Names: []string{"postgres", "redis"},
+			},
+			Sharing: &clicontext.SharingSpec{
+				Enabled:  true,
+				Services: map[string]bool{"postgres": true},
+			},
+		}
+
+		data, err := GenerateConfig(ctx)
+		require.NoError(t, err)
+		assert.NotEmpty(t, data)
+
+		// Verify YAML contains sharing config
+		assert.Contains(t, string(data), "sharing:")
+		assert.Contains(t, string(data), "enabled: true")
+	})
+
+	t.Run("generates config without sharing", func(t *testing.T) {
+		ctx := clicontext.Context{
+			Project: clicontext.ProjectSpec{Name: "test-project"},
+			Services: clicontext.ServiceSpec{
+				Names: []string{"postgres"},
+			},
+		}
+
+		data, err := GenerateConfig(ctx)
+		require.NoError(t, err)
+		assert.NotEmpty(t, data)
+	})
+}
+
+func TestLoadBaseConfig_ErrorHandling(t *testing.T) {
+	t.Run("returns error for invalid YAML", func(t *testing.T) {
+		tempDir := t.TempDir()
+		err := os.Chdir(tempDir)
+		require.NoError(t, err)
+
+		err = os.MkdirAll(".otto-stack", 0755)
+		require.NoError(t, err)
+
+		// Write invalid YAML
+		err = os.WriteFile(".otto-stack/config.yaml", []byte("invalid: yaml: ["), 0644)
+		require.NoError(t, err)
+
+		_, err = LoadConfig()
+		assert.Error(t, err)
+	})
+}
+
+func TestMergeConfigs_EdgeCases(t *testing.T) {
+	t.Run("preserves base when local has empty values", func(t *testing.T) {
+		base := &Config{
+			Project: ProjectConfig{Name: "base-project"},
+			Stack:   StackConfig{Enabled: []string{"postgres"}},
+		}
+		local := &Config{}
+
+		result := mergeConfigs(base, local)
+		assert.Equal(t, "base-project", result.Project.Name)
+		assert.Equal(t, []string{"postgres"}, result.Stack.Enabled)
+	})
+}
+
+func TestGenerateConfig_ErrorCases(t *testing.T) {
+	t.Run("returns error for empty project name", func(t *testing.T) {
+		ctx := clicontext.Context{
+			Services: clicontext.ServiceSpec{
+				Names: []string{"postgres"},
+			},
+		}
+
+		_, err := GenerateConfig(ctx)
+		assert.Error(t, err)
 	})
 }
