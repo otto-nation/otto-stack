@@ -278,11 +278,22 @@ func TestGetAppVersion_EdgeCases(t *testing.T) {
 		version := GetAppVersion()
 		assert.NotEmpty(t, version)
 	})
+
+	t.Run("returns non-empty string", func(t *testing.T) {
+		version := GetAppVersion()
+		assert.IsType(t, "", version)
+		assert.NotEmpty(t, version)
+	})
 }
 
 func TestGetShortVersion_EdgeCases(t *testing.T) {
 	t.Run("returns short version", func(t *testing.T) {
 		version := GetShortVersion()
 		assert.NotEmpty(t, version)
+	})
+
+	t.Run("returns string type", func(t *testing.T) {
+		version := GetShortVersion()
+		assert.IsType(t, "", version)
 	})
 }
