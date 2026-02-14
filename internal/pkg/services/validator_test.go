@@ -53,4 +53,22 @@ func TestValidator_ValidateServiceConfigs(t *testing.T) {
 			t.Logf("Service validation error (may be expected if services don't exist): %v", err)
 		}
 	})
+
+	t.Run("empty service name", func(t *testing.T) {
+		configs := []types.ServiceConfig{
+			{Name: ""},
+		}
+		err := validator.ValidateServiceConfigs(configs)
+		assert.Error(t, err)
+	})
+
+	t.Run("single valid service", func(t *testing.T) {
+		configs := []types.ServiceConfig{
+			{Name: "postgres"},
+		}
+		err := validator.ValidateServiceConfigs(configs)
+		if err != nil {
+			t.Logf("Service validation error: %v", err)
+		}
+	})
 }
