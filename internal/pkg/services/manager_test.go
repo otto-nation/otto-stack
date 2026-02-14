@@ -154,4 +154,42 @@ func TestManager_EdgeCases(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotEmpty(t, manager.services)
 	})
+
+	t.Run("parseService sets category from parameter", func(t *testing.T) {
+		manager := &Manager{
+			services: make(map[string]servicetypes.ServiceConfig),
+		}
+		data := []byte(`name: test-service`)
+		err := manager.parseService(data, "test", "database")
+		assert.NoError(t, err)
+		assert.Equal(t, "database", manager.services["test-service"].Category)
+	})
+
+	t.Run("parseService uses service name from YAML", func(t *testing.T) {
+		manager := &Manager{
+			services: make(map[string]servicetypes.ServiceConfig),
+		}
+		data := []byte(`name: yaml-name`)
+		err := manager.parseService(data, "file-name", "cache")
+		assert.NoError(t, err)
+		assert.Contains(t, manager.services, "yaml-name")
+	})
+
+	t.Run("parseService combines environment variables", func(t *testing.T) {
+		manager := &Manager{
+			services: make(map[string]servicetypes.ServiceConfig),
+		}
+		data := []byte(`
+name: test
+environment:
+  KEY1: value1
+container:
+  environment:
+    KEY2: value2
+`)
+		err := manager.parseService(data, "test", "database")
+		assert.NoError(t, err)
+		assert.Equal(t, "value1", manager.services["test"].AllEnvironment["KEY1"])
+		assert.Equal(t, "value2", manager.services["test"].AllEnvironment["KEY2"])
+	})
 }

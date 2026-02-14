@@ -62,6 +62,14 @@ func TestResolveUpServices(t *testing.T) {
 			assert.NotNil(t, configs)
 		}
 	})
+
+	t.Run("uses config enabled services when args empty", func(t *testing.T) {
+		configs, err := ResolveUpServices([]string{}, cfg)
+		if err == nil {
+			// Should use enabled services from config
+			assert.NotEmpty(t, configs)
+		}
+	})
 }
 
 func TestServiceConfigValidation(t *testing.T) {
