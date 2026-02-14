@@ -221,3 +221,129 @@ func TestService_CheckDockerHealthWithMocks(t *testing.T) {
 		assert.NoError(t, err)
 	})
 }
+
+func TestService_StartErrorPaths(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	t.Run("handles compose up error", func(t *testing.T) {
+		mockCompose := &testhelpers.MockComposeAPI{
+			UpFunc: func(ctx context.Context, project *composetypes.Project, options api.UpOptions) error {
+				return assert.AnError
+			},
+		}
+
+		mockLoader := &testhelpers.MockProjectLoader{
+			LoadFunc: func(projectName string) (*composetypes.Project, error) {
+				return &composetypes.Project{Name: projectName}, nil
+			},
+		}
+
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		req := StartRequest{
+			Project: "test-project",
+			ServiceConfigs: []types.ServiceConfig{
+				{Name: "postgres"},
+			},
+			Timeout: 10 * time.Second,
+		}
+
+		err = service.Start(context.Background(), req)
+		assert.Error(t, err)
+	})
+
+	t.Run("handles project load error", func(t *testing.T) {
+		mockCompose := &testhelpers.MockComposeAPI{}
+
+		mockLoader := &testhelpers.MockProjectLoader{
+			LoadFunc: func(projectName string) (*composetypes.Project, error) {
+				return nil, assert.AnError
+			},
+		}
+
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		req := StartRequest{
+			Project: "test-project",
+			ServiceConfigs: []types.ServiceConfig{
+				{Name: "postgres"},
+			},
+			Timeout: 10 * time.Second,
+		}
+
+		err = service.Start(context.Background(), req)
+		assert.Error(t, err)
+	})
+}
+
+func TestService_StopErrorPaths(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	t.Run("handles stop error", func(t *testing.T) {
+		mockCompose := &testhelpers.MockComposeAPI{
+			StopFunc: func(ctx context.Context, projectName string, options api.StopOptions) error {
+				return assert.AnError
+			},
+		}
+
+		mockLoader := &testhelpers.MockProjectLoader{
+			LoadFunc: func(projectName string) (*composetypes.Project, error) {
+				return &composetypes.Project{Name: projectName}, nil
+			},
+		}
+
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		req := StopRequest{
+			Project: "test-project",
+			ServiceConfigs: []types.ServiceConfig{
+				{Name: "postgres"},
+			},
+			Timeout: 10 * time.Second,
+		}
+
+		err = service.Stop(context.Background(), req)
+		assert.Error(t, err)
+	})
+
+	t.Run("uses down when remove is true", func(t *testing.T) {
+		downCalled := false
+		mockCompose := &testhelpers.MockComposeAPI{
+			DownFunc: func(ctx context.Context, projectName string, options api.DownOptions) error {
+				downCalled = true
+				return nil
+			},
+		}
+
+		mockLoader := &testhelpers.MockProjectLoader{
+			LoadFunc: func(projectName string) (*composetypes.Project, error) {
+				return &composetypes.Project{Name: projectName}, nil
+			},
+		}
+
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		req := StopRequest{
+			Project: "test-project",
+			ServiceConfigs: []types.ServiceConfig{
+				{Name: "postgres"},
+			},
+			Remove:  true,
+			Timeout: 10 * time.Second,
+		}
+
+		err = service.Stop(context.Background(), req)
+		assert.NoError(t, err)
+		assert.True(t, downCalled)
+	})
+}
