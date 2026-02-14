@@ -233,6 +233,74 @@ func TestSave_ErrorHandling(t *testing.T) {
 	})
 }
 
+func TestLoad_EdgeCases(t *testing.T) {
+	t.Run("loads registry with nil containers", func(t *testing.T) {
+		tempDir := t.TempDir()
+		manager := NewManager(tempDir)
+
+		// Write YAML without containers field
+		err := os.WriteFile(manager.registryPath, []byte("version: 1\n"), 0644)
+		require.NoError(t, err)
+
+		registry, err := manager.Load()
+		require.NoError(t, err)
+		assert.NotNil(t, registry.Containers)
+	})
+
+	t.Run("creates new registry if file doesn't exist", func(t *testing.T) {
+		tempDir := t.TempDir()
+		nonExistentPath := filepath.Join(tempDir, "nonexistent")
+		manager := NewManager(nonExistentPath)
+
+		registry, err := manager.Load()
+		require.NoError(t, err)
+		assert.NotNil(t, registry)
+		assert.NotNil(t, registry.Containers)
+	})
+}
+
+func TestSave_EdgeCases(t *testing.T) {
+	t.Run("saves empty registry", func(t *testing.T) {
+		tempDir := t.TempDir()
+		manager := NewManager(tempDir)
+
+		registry := NewRegistry()
+		err := manager.Save(registry)
+		require.NoError(t, err)
+
+		loaded, err := manager.Load()
+		require.NoError(t, err)
+		assert.Empty(t, loaded.Containers)
+	})
+
+	t.Run("overwrites existing registry", func(t *testing.T) {
+		tempDir := t.TempDir()
+		manager := NewManager(tempDir)
+
+		registry1 := &Registry{
+			Containers: map[string]*ContainerInfo{
+				"test1": {Name: "otto-stack-test1", Projects: []string{"p1"}},
+			},
+		}
+		err := manager.Save(registry1)
+		require.NoError(t, err)
+
+		registry2 := &Registry{
+			Containers: map[string]*ContainerInfo{
+				"test2": {Name: "otto-stack-test2", Projects: []string{"p2"}},
+			},
+		}
+		err = manager.Save(registry2)
+		require.NoError(t, err)
+
+		loaded, err := manager.Load()
+		require.NoError(t, err)
+		assert.Len(t, loaded.Containers, 1)
+		assert.Contains(t, loaded.Containers, "test2")
+		assert.NotContains(t, loaded.Containers, "test1")
+	})
+}
+
 func TestRegister(t *testing.T) {
 	tempDir := t.TempDir()
 	manager := NewManager(tempDir)

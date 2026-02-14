@@ -48,4 +48,10 @@ func TestValidateProjectVersion(t *testing.T) {
 		// Should not error with wildcard constraint
 		assert.NoError(t, err)
 	})
+
+	t.Run("handles dev builds", func(t *testing.T) {
+		// Dev builds always satisfy constraints
+		err := ValidateProjectVersion("/tmp/test")
+		assert.NoError(t, err)
+	})
 }

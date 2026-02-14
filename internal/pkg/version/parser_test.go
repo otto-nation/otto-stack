@@ -258,6 +258,19 @@ func TestParseVersion_EdgeCases(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 1, v.Major)
 	})
+
+	t.Run("handles latest", func(t *testing.T) {
+		v, err := ParseVersion("latest")
+		require.NoError(t, err)
+		assert.Equal(t, MaxVersionNumber, v.Major)
+		assert.Equal(t, "latest", v.Original)
+	})
+
+	t.Run("preserves original version string", func(t *testing.T) {
+		v, err := ParseVersion("v1.2.3-beta+build")
+		require.NoError(t, err)
+		assert.Equal(t, "v1.2.3-beta+build", v.Original)
+	})
 }
 
 func TestGetAppVersion_EdgeCases(t *testing.T) {
