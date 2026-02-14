@@ -26,8 +26,14 @@ func TestUpdateChecker_IsNewer(t *testing.T) {
 
 	t.Run("handles version comparison", func(t *testing.T) {
 		checker := NewUpdateChecker("1.0.0")
-		// Will return false for dev builds (AppVersion is "devel" in tests)
 		newer, err := checker.isNewer("2.0.0")
+		require.NoError(t, err)
+		assert.False(t, newer)
+	})
+
+	t.Run("returns false for older version", func(t *testing.T) {
+		checker := NewUpdateChecker("2.0.0")
+		newer, err := checker.isNewer("1.0.0")
 		require.NoError(t, err)
 		assert.False(t, newer)
 	})
