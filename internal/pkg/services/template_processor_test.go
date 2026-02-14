@@ -89,3 +89,34 @@ func TestTemplateProcessor_AddConfigData(t *testing.T) {
 		assert.NotNil(t, templateData)
 	})
 }
+
+func TestTemplateProcessor_CollectTemplateData(t *testing.T) {
+	processor := NewTemplateProcessor()
+
+	t.Run("collects data from dependent services", func(t *testing.T) {
+		config := servicetypes.ServiceConfig{Name: "app"}
+		allConfigs := []servicetypes.ServiceConfig{
+			{
+				Name: "postgres",
+				Service: servicetypes.ServiceSpec{
+					Dependencies: servicetypes.DependenciesSpec{
+						Required: []string{"app"},
+					},
+				},
+			},
+		}
+
+		data := processor.collectTemplateData(config, allConfigs)
+		assert.NotNil(t, data)
+	})
+
+	t.Run("returns empty data when no dependencies", func(t *testing.T) {
+		config := servicetypes.ServiceConfig{Name: "app"}
+		allConfigs := []servicetypes.ServiceConfig{
+			{Name: "postgres"},
+		}
+
+		data := processor.collectTemplateData(config, allConfigs)
+		assert.NotNil(t, data)
+	})
+}

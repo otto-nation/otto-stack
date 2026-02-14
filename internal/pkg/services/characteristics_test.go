@@ -182,6 +182,21 @@ func TestApplyFlagsToUpOptions(t *testing.T) {
 		result := resolver.applyFlagsToUpOptions(flags, base)
 		assert.True(t, result.ForceRecreate)
 	})
+
+	t.Run("applies timeout flag", func(t *testing.T) {
+		flags := []string{"--timeout=30"}
+		base := docker.UpOptions{}
+		result := resolver.applyFlagsToUpOptions(flags, base)
+		assert.NotNil(t, result.Timeout)
+	})
+
+	t.Run("applies multiple flags", func(t *testing.T) {
+		flags := []string{"--build", "--remove-orphans"}
+		base := docker.UpOptions{}
+		result := resolver.applyFlagsToUpOptions(flags, base)
+		assert.True(t, result.Build)
+		assert.True(t, result.RemoveOrphans)
+	})
 }
 
 func TestApplyFlagsToDownOptions(t *testing.T) {
