@@ -129,3 +129,95 @@ func TestService_StatusWithMocks(t *testing.T) {
 		assert.Len(t, statuses, 1)
 	})
 }
+
+func TestService_LogsWithMocks(t *testing.T) {
+	t.Run("streams logs successfully", func(t *testing.T) {
+		mockCompose := &testhelpers.MockComposeAPI{
+			LogsFunc: func(ctx context.Context, projectName string, consumer api.LogConsumer, options api.LogOptions) error {
+				return nil
+			},
+		}
+
+		mockLoader := &testhelpers.MockProjectLoader{}
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		req := LogRequest{
+			Project: "test-project",
+			ServiceConfigs: []types.ServiceConfig{
+				{Name: "postgres"},
+			},
+			Follow: false,
+		}
+
+		err = service.Logs(context.Background(), req)
+		assert.NoError(t, err)
+	})
+}
+
+func TestService_ExecWithMocks(t *testing.T) {
+	t.Run("executes command successfully", func(t *testing.T) {
+		mockCompose := &testhelpers.MockComposeAPI{
+			ExecFunc: func(ctx context.Context, projectName string, options api.RunOptions) (int, error) {
+				return 0, nil
+			},
+		}
+
+		mockLoader := &testhelpers.MockProjectLoader{}
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		req := ExecRequest{
+			Project: "test-project",
+			Service: "postgres",
+			Command: []string{"psql", "--version"},
+		}
+
+		err = service.Exec(context.Background(), req)
+		assert.NoError(t, err)
+	})
+}
+
+func TestService_CleanupWithMocks(t *testing.T) {
+	t.Run("cleans up resources successfully", func(t *testing.T) {
+		mockCompose := &testhelpers.MockComposeAPI{
+			DownFunc: func(ctx context.Context, projectName string, options api.DownOptions) error {
+				return nil
+			},
+		}
+
+		mockLoader := &testhelpers.MockProjectLoader{
+			LoadFunc: func(projectName string) (*composetypes.Project, error) {
+				return &composetypes.Project{Name: projectName}, nil
+			},
+		}
+
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		req := CleanupRequest{
+			Project:       "test-project",
+			RemoveVolumes: true,
+			RemoveImages:  false,
+		}
+
+		err = service.Cleanup(context.Background(), req)
+		assert.NoError(t, err)
+	})
+}
+
+func TestService_CheckDockerHealthWithMocks(t *testing.T) {
+	t.Run("checks docker health successfully", func(t *testing.T) {
+		mockCompose := &testhelpers.MockComposeAPI{}
+		mockLoader := &testhelpers.MockProjectLoader{}
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		err = service.CheckDockerHealth(context.Background())
+		assert.NoError(t, err)
+	})
+}
