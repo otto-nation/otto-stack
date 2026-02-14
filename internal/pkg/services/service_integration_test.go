@@ -347,3 +347,103 @@ func TestService_StopErrorPaths(t *testing.T) {
 		assert.True(t, downCalled)
 	})
 }
+
+func TestService_GenerateComposeFile(t *testing.T) {
+	tmpDir := t.TempDir()
+	oldDir, _ := os.Getwd()
+	defer os.Chdir(oldDir)
+	os.Chdir(tmpDir)
+
+	t.Run("generates compose file successfully", func(t *testing.T) {
+		mockCompose := &testhelpers.MockComposeAPI{}
+		mockLoader := &testhelpers.MockProjectLoader{}
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		configs := []types.ServiceConfig{
+			{Name: "postgres", Description: "PostgreSQL"},
+		}
+
+		err = service.GenerateComposeFile("test-project", configs)
+		assert.NoError(t, err)
+	})
+}
+
+func TestService_LogsWithOptions(t *testing.T) {
+	t.Run("logs with follow option", func(t *testing.T) {
+		mockCompose := &testhelpers.MockComposeAPI{
+			LogsFunc: func(ctx context.Context, projectName string, consumer api.LogConsumer, options api.LogOptions) error {
+				assert.True(t, options.Follow)
+				return nil
+			},
+		}
+
+		mockLoader := &testhelpers.MockProjectLoader{}
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		req := LogRequest{
+			Project: "test-project",
+			ServiceConfigs: []types.ServiceConfig{
+				{Name: "postgres"},
+			},
+			Follow: true,
+		}
+
+		err = service.Logs(context.Background(), req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("logs with timestamps", func(t *testing.T) {
+		mockCompose := &testhelpers.MockComposeAPI{
+			LogsFunc: func(ctx context.Context, projectName string, consumer api.LogConsumer, options api.LogOptions) error {
+				assert.True(t, options.Timestamps)
+				return nil
+			},
+		}
+
+		mockLoader := &testhelpers.MockProjectLoader{}
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		req := LogRequest{
+			Project: "test-project",
+			ServiceConfigs: []types.ServiceConfig{
+				{Name: "postgres"},
+			},
+			Timestamps: true,
+		}
+
+		err = service.Logs(context.Background(), req)
+		assert.NoError(t, err)
+	})
+}
+
+func TestService_ExecWithOptions(t *testing.T) {
+	t.Run("exec with user option", func(t *testing.T) {
+		mockCompose := &testhelpers.MockComposeAPI{
+			ExecFunc: func(ctx context.Context, projectName string, options api.RunOptions) (int, error) {
+				assert.Equal(t, "admin", options.User)
+				return 0, nil
+			},
+		}
+
+		mockLoader := &testhelpers.MockProjectLoader{}
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		req := ExecRequest{
+			Project: "test-project",
+			Service: "postgres",
+			Command: []string{"psql"},
+			User:    "admin",
+		}
+
+		err = service.Exec(context.Background(), req)
+		assert.NoError(t, err)
+	})
+}
