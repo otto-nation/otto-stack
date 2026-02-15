@@ -4,6 +4,7 @@ package services
 
 import (
 	"testing"
+	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
@@ -68,6 +69,37 @@ func TestDefaultCharacteristicsResolver_ResolveStopOptions(t *testing.T) {
 	// Should extract service names using constants
 	expected := []string{ServiceRedis}
 	assert.Equal(t, expected, result.Services)
+}
+
+func TestCharacteristicsResolver_ApplyFlags(t *testing.T) {
+	resolver := &DefaultCharacteristicsResolver{}
+
+	t.Run("applies timeout flag to down options", func(t *testing.T) {
+		flags := []string{"--timeout=30"}
+		base := docker.DownOptions{}
+
+		result := resolver.applyFlagsToDownOptions(flags, base)
+		assert.NotNil(t, result.Timeout)
+		if result.Timeout != nil {
+			assert.Equal(t, 30*time.Second, *result.Timeout)
+		}
+	})
+
+	t.Run("handles invalid timeout gracefully", func(t *testing.T) {
+		flags := []string{"--timeout=invalid"}
+		base := docker.DownOptions{}
+
+		result := resolver.applyFlagsToDownOptions(flags, base)
+		assert.Equal(t, base, result)
+	})
+
+	t.Run("applies volumes flag to down options", func(t *testing.T) {
+		flags := []string{"--volumes"}
+		base := docker.DownOptions{}
+
+		result := resolver.applyFlagsToDownOptions(flags, base)
+		assert.True(t, result.RemoveVolumes)
+	})
 }
 
 func TestServiceConstantsValidation(t *testing.T) {
