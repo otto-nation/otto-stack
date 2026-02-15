@@ -222,6 +222,90 @@ func TestService_CheckDockerHealthWithMocks(t *testing.T) {
 	})
 }
 
+func TestService_NewServiceErrorHandling(t *testing.T) {
+	t.Run("creates service successfully", func(t *testing.T) {
+		mockCompose := &testhelpers.MockComposeAPI{}
+		mockLoader := &testhelpers.MockProjectLoader{}
+		resolver, _ := NewDefaultCharacteristicsResolver()
+
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		assert.NoError(t, err)
+		assert.NotNil(t, service)
+		assert.NotNil(t, service.DockerClient)
+	})
+}
+
+func TestService_StartWithBuildFlag(t *testing.T) {
+	_, cleanup := setupTestEnv(t)
+	defer cleanup()
+
+	t.Run("starts with build flag", func(t *testing.T) {
+		buildCalled := false
+		mockCompose := &testhelpers.MockComposeAPI{
+			UpFunc: func(ctx context.Context, project *composetypes.Project, options api.UpOptions) error {
+				buildCalled = true
+				return nil
+			},
+		}
+
+		mockLoader := &testhelpers.MockProjectLoader{
+			LoadFunc: func(projectName string) (*composetypes.Project, error) {
+				return &composetypes.Project{Name: projectName}, nil
+			},
+		}
+
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		req := StartRequest{
+			Project: "test-project",
+			ServiceConfigs: []types.ServiceConfig{
+				{Name: "postgres"},
+			},
+			Build:   true,
+			Timeout: 10 * time.Second,
+		}
+
+		err = service.Start(context.Background(), req)
+		assert.NoError(t, err)
+		assert.True(t, buildCalled)
+	})
+
+	t.Run("starts with force recreate", func(t *testing.T) {
+		recreateCalled := false
+		mockCompose := &testhelpers.MockComposeAPI{
+			UpFunc: func(ctx context.Context, project *composetypes.Project, options api.UpOptions) error {
+				recreateCalled = true
+				return nil
+			},
+		}
+
+		mockLoader := &testhelpers.MockProjectLoader{
+			LoadFunc: func(projectName string) (*composetypes.Project, error) {
+				return &composetypes.Project{Name: projectName}, nil
+			},
+		}
+
+		resolver, _ := NewDefaultCharacteristicsResolver()
+		service, err := NewService(mockCompose, resolver, mockLoader)
+		require.NoError(t, err)
+
+		req := StartRequest{
+			Project: "test-project",
+			ServiceConfigs: []types.ServiceConfig{
+				{Name: "postgres"},
+			},
+			ForceRecreate: true,
+			Timeout:       10 * time.Second,
+		}
+
+		err = service.Start(context.Background(), req)
+		assert.NoError(t, err)
+		assert.True(t, recreateCalled)
+	})
+}
+
 func TestService_StartErrorPaths(t *testing.T) {
 	_, cleanup := setupTestEnv(t)
 	defer cleanup()

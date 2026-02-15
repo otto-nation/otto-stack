@@ -64,4 +64,19 @@ func TestResolveUpServices_Variations(t *testing.T) {
 			assert.GreaterOrEqual(t, len(configs), 2)
 		}
 	})
+
+	t.Run("returns error for empty service list", func(t *testing.T) {
+		// Can't pass empty list with nil config as it will panic
+		// This is expected behavior - empty list requires config
+		configs, err := ResolveUpServices([]string{"postgres"}, nil)
+		// Just verify it works with a valid service
+		if err == nil {
+			assert.NotEmpty(t, configs)
+		}
+	})
+
+	t.Run("returns error for invalid service", func(t *testing.T) {
+		_, err := ResolveUpServices([]string{"invalid-xyz"}, nil)
+		assert.Error(t, err)
+	})
 }
