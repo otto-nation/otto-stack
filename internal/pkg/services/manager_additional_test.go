@@ -50,6 +50,21 @@ func TestManager_GetService_Variations(t *testing.T) {
 	})
 }
 
+func TestManager_ExecuteCustomOperation(t *testing.T) {
+	manager, err := New()
+	require.NoError(t, err)
+
+	t.Run("returns error for nonexistent service", func(t *testing.T) {
+		_, err := manager.ExecuteCustomOperation("nonexistent", "backup")
+		assert.Error(t, err)
+	})
+
+	t.Run("returns error for service without custom operations", func(t *testing.T) {
+		_, err := manager.ExecuteCustomOperation("postgres", "nonexistent-op")
+		assert.Error(t, err)
+	})
+}
+
 func TestResolveUpServices_Variations(t *testing.T) {
 	t.Run("resolves with nil config", func(t *testing.T) {
 		configs, err := ResolveUpServices([]string{"postgres"}, nil)
