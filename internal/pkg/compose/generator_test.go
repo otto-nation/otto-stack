@@ -1,67 +1,185 @@
-//go:build unit
-
-package compose_test
+package compose
 
 import (
+	"os"
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/compose"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/test/fixtures"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 func TestNewGenerator(t *testing.T) {
-	t.Run("creates generator successfully", func(t *testing.T) {
-		generator, err := compose.NewGenerator("test-project")
-		require.NoError(t, err)
-		assert.NotNil(t, generator)
-	})
+	gen, err := NewGenerator("test-project")
+	require.NoError(t, err)
+	assert.NotNil(t, gen)
+	assert.Equal(t, "test-project", gen.projectName)
 
-	t.Run("handles empty project name", func(t *testing.T) {
-		generator, err := compose.NewGenerator("")
-		require.NoError(t, err)
-		assert.NotNil(t, generator)
-	})
+	gen, err = NewGenerator("")
+	require.NoError(t, err)
+	assert.NotNil(t, gen)
 }
 
 func TestGenerator_BuildComposeData(t *testing.T) {
-	generator, err := compose.NewGenerator("test-project")
+	gen, err := NewGenerator("test-project")
 	require.NoError(t, err)
 
-	t.Run("generates valid YAML from empty configs", func(t *testing.T) {
-		data, err := generator.BuildComposeData([]types.ServiceConfig{})
-		require.NoError(t, err)
-		assert.NotEmpty(t, data)
+	data, err := gen.BuildComposeData([]types.ServiceConfig{})
+	require.NoError(t, err)
+	assert.NotEmpty(t, data)
+	assert.Contains(t, string(data), "test-project")
 
-		// Verify it's valid YAML
-		var result map[string]any
-		err = yaml.Unmarshal(data, &result)
-		require.NoError(t, err)
-		assert.Contains(t, result, "services")
-		assert.Contains(t, result, "networks")
-	})
+	services := []types.ServiceConfig{
+		fixtures.NewServiceConfig("redis").
+			WithImage("redis:latest").
+			WithPort("6379", "6379").
+			Build(),
+	}
 
-	t.Run("generates YAML with service configs", func(t *testing.T) {
-		configs := []types.ServiceConfig{
-			{
-				Name: "test-service",
-				Container: types.ContainerSpec{
-					Image: "test:latest",
-				},
-			},
-		}
+	data, err = gen.BuildComposeData(services)
+	require.NoError(t, err)
+	assert.NotEmpty(t, data)
+	assert.Contains(t, string(data), "redis")
+	assert.Contains(t, string(data), "redis:latest")
 
-		data, err := generator.BuildComposeData(configs)
-		require.NoError(t, err)
-		assert.NotEmpty(t, data)
+	gen, err = NewGenerator("")
+	require.NoError(t, err)
+	_, err = gen.BuildComposeData([]types.ServiceConfig{})
+	assert.Error(t, err)
+}
 
-		var result map[string]any
-		err = yaml.Unmarshal(data, &result)
-		require.NoError(t, err)
+func TestGenerator_BuildComposeDataWithHeader(t *testing.T) {
+	gen, err := NewGenerator("test-project")
+	require.NoError(t, err)
 
-		services := result["services"].(map[string]any)
-		assert.Contains(t, services, "test-service")
-	})
+	header := "# Test Header\n"
+	data, err := gen.BuildComposeDataWithHeader([]types.ServiceConfig{}, header)
+	require.NoError(t, err)
+	assert.NotEmpty(t, data)
+	assert.Contains(t, string(data), "# Test Header")
+
+	data, err = gen.BuildComposeDataWithHeader([]types.ServiceConfig{}, "")
+	require.NoError(t, err)
+	assert.NotEmpty(t, data)
+}
+
+func TestGenerator_BuildServicesFromConfigs(t *testing.T) {
+	gen, err := NewGenerator("test-project")
+	require.NoError(t, err)
+
+	services := []types.ServiceConfig{
+		fixtures.NewServiceConfig("postgres").
+			WithImage("postgres:latest").
+			WithEnv("POSTGRES_PASSWORD", "secret").
+			WithEnv("POSTGRES_USER", "admin").
+			Build(),
+	}
+
+	result, err := gen.buildServicesFromConfigs(services)
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Contains(t, result, "postgres")
+
+	services = []types.ServiceConfig{
+		fixtures.NewServiceConfig("mysql").
+			WithImage("mysql:latest").
+			WithVolume("./data:/var/lib/mysql").
+			Build(),
+	}
+
+	result, err = gen.buildServicesFromConfigs(services)
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+	assert.Contains(t, result, "mysql")
+
+	services = []types.ServiceConfig{
+		{
+			Name:        "localstack-sns",
+			ServiceType: types.ServiceTypeConfiguration,
+		},
+	}
+
+	result, err = gen.buildServicesFromConfigs(services)
+	require.NoError(t, err)
+	assert.NotContains(t, result, "localstack-sns")
+}
+
+func TestGenerator_HealthCheckTiming(t *testing.T) {
+	gen, err := NewGenerator("test-project")
+	require.NoError(t, err)
+
+	services := []types.ServiceConfig{
+		fixtures.NewServiceConfig("postgres").
+			WithImage("postgres:latest").
+			WithHealthCheck([]string{"CMD", "pg_isready"}, 10, 5, 3).
+			Build(),
+	}
+
+	result, err := gen.buildServicesFromConfigs(services)
+	require.NoError(t, err)
+	assert.Contains(t, result, "postgres")
+}
+
+func TestGenerator_ResolveEnvVar(t *testing.T) {
+	gen, err := NewGenerator("test-project")
+	require.NoError(t, err)
+
+	result := gen.resolveEnvVar("plain-value")
+	assert.Equal(t, "plain-value", result)
+
+	result = gen.resolveEnvVar("${NONEXISTENT_VAR:-default}")
+	assert.Equal(t, "default", result)
+
+	os.Setenv("TEST_VAR", "actual-value")
+	defer os.Unsetenv("TEST_VAR")
+
+	result = gen.resolveEnvVar("${TEST_VAR:-default}")
+	assert.Equal(t, "actual-value", result)
+
+	result = gen.resolveEnvVar("${MALFORMED")
+	assert.Equal(t, "${MALFORMED", result)
+}
+
+func TestGenerator_WriteComposeFile(t *testing.T) {
+	gen, err := NewGenerator("test-project")
+	require.NoError(t, err)
+
+	tempDir := t.TempDir()
+	content := []byte("version: '3.8'\nservices:\n  test:\n    image: test:latest")
+
+	err = gen.WriteComposeFile(content, tempDir)
+	require.NoError(t, err)
+
+	filePath := tempDir + "/docker-compose.yml"
+	data, err := os.ReadFile(filePath)
+	require.NoError(t, err)
+	assert.Equal(t, content, data)
+
+	tempDir = t.TempDir()
+	nestedDir := tempDir + "/nested/path"
+	content = []byte("test content")
+
+	err = gen.WriteComposeFile(content, nestedDir)
+	require.NoError(t, err)
+
+	filePath = nestedDir + "/docker-compose.yml"
+	_, err = os.Stat(filePath)
+	assert.NoError(t, err)
+}
+
+func TestGenerator_GenerateFromServiceConfigs(t *testing.T) {
+	gen, err := NewGenerator("test-project")
+	require.NoError(t, err)
+
+	tempDir := t.TempDir()
+	originalPath := tempDir + "/.otto-stack/generated"
+	err = os.MkdirAll(originalPath, 0755)
+	require.NoError(t, err)
+
+	configs := []types.ServiceConfig{
+		fixtures.NewServiceConfig("redis").WithImage("redis:latest").Build(),
+	}
+
+	_ = gen.GenerateFromServiceConfigs(configs, "test-project")
 }

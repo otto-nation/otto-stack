@@ -96,6 +96,7 @@ jobs:
             const successRate = '${{ steps.check.outputs.success_rate }}';
             const totalRuns = '${{ steps.check.outputs.total_runs }}';
             const failedRuns = '${{ steps.check.outputs.failed_runs }}';
+            const repository = '${{ github.repository }}';
             
             const title = `⚠️ CI Stability Alert: ${successRate}% success rate`;
             const body = `## CI Stability Issue Detected
@@ -109,7 +110,7 @@ jobs:
 The CI success rate has dropped below the acceptable threshold. Please investigate recent failures.
 
 ### Investigation Steps
-1. Review failed workflow runs in the [Actions tab](https://github.com/${{ github.repository }}/actions)
+1. Review failed workflow runs in the [Actions tab](https://github.com/${repository}/actions)
 2. Check for platform-specific failures
 3. Verify generated files are up to date
 4. Review recent dependency updates

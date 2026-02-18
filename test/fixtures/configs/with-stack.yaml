@@ -1,0 +1,8 @@
+project:
+  name: test-project
+  type: docker
+stack:
+  enabled:
+    - postgres
+    - redis
+    - nginx

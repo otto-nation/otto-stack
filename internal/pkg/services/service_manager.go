@@ -110,13 +110,18 @@ func NewService(compose api.Compose, characteristics CharacteristicsResolver, pr
 		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, messages.ErrorsStackDockerClientFailed, err)
 	}
 
+	return NewServiceWithClient(compose, characteristics, project, dockerClient), nil
+}
+
+// NewServiceWithClient creates a new Service with an injected Docker client (for testing)
+func NewServiceWithClient(compose api.Compose, characteristics CharacteristicsResolver, project ProjectLoader, dockerClient *docker.Client) *Service {
 	return &Service{
 		compose:         compose,
 		characteristics: characteristics,
 		project:         project,
 		DockerClient:    dockerClient,
 		logger:          logger.GetLogger(),
-	}, nil
+	}
 }
 
 // Start starts services with automatic characteristics resolution

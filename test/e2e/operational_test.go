@@ -25,14 +25,10 @@ func TestE2E_ServiceOperations(t *testing.T) {
 	err = lifecycle.StartServices()
 	require.NoError(t, err)
 
-	t.Run("status shows running services", func(t *testing.T) {
-		result := lifecycle.CLI.RunExpectSuccess(core.CommandStatus)
-		assert.Contains(t, result.Stdout, services.ServicePostgres)
-		assert.Contains(t, result.Stdout, "running")
-	})
+	result := lifecycle.CLI.RunExpectSuccess(core.CommandStatus)
+	assert.Contains(t, result.Stdout, services.ServicePostgres)
+	assert.Contains(t, result.Stdout, "running")
 
-	t.Run("logs retrieves container output", func(t *testing.T) {
-		result := lifecycle.CLI.RunExpectSuccess(core.CommandLogs)
-		assert.NotEmpty(t, result.Stdout)
-	})
+	result = lifecycle.CLI.RunExpectSuccess(core.CommandLogs)
+	assert.NotEmpty(t, result.Stdout)
 }

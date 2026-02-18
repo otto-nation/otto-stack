@@ -8,32 +8,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestVersionDisplayManager_Methods(t *testing.T) {
-	t.Run("tests NewVersionDisplayManager", func(t *testing.T) {
-		manager := NewVersionDisplayManager()
-		assert.NotNil(t, manager)
-	})
+func TestNewVersionHandler(t *testing.T) {
+	handler := NewVersionHandler()
+	assert.NotNil(t, handler)
+}
 
-	t.Run("tests DisplayBasic", func(t *testing.T) {
-		manager := NewVersionDisplayManager()
+func TestVersionHandler_ValidateArgs(t *testing.T) {
+	handler := NewVersionHandler()
+	err := handler.ValidateArgs([]string{})
+	assert.NoError(t, err)
+}
 
-		manager.DisplayBasic("1.0.0", "text")
-		// Should not panic
-		assert.True(t, true)
-	})
+func TestVersionHandler_GetRequiredFlags(t *testing.T) {
+	handler := NewVersionHandler()
+	flags := handler.GetRequiredFlags()
+	assert.Empty(t, flags)
+}
 
-	t.Run("tests DisplayFull", func(t *testing.T) {
-		manager := NewVersionDisplayManager()
-
-		manager.DisplayFull("1.0.0", "text")
-		// Should not panic
-		assert.True(t, true)
-	})
-
-	t.Run("tests GetCurrentVersion", func(t *testing.T) {
-		manager := NewVersionDisplayManager()
-
-		version := manager.GetCurrentVersion()
-		assert.IsType(t, "", version)
-	})
+func TestNewEnforcementHandler(t *testing.T) {
+	handler := NewEnforcementHandler(nil)
+	assert.NotNil(t, handler)
 }

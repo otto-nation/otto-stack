@@ -1,0 +1,13 @@
+name: grafana
+description: Grafana monitoring
+category: monitoring
+container:
+  image: grafana:latest
+documentation:
+  web_interfaces:
+    - name: Dashboard
+      url: http://localhost:3000
+      description: Grafana Dashboard
+    - name: API
+      url: http://localhost:3000/api
+      description: Grafana API

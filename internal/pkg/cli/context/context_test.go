@@ -3,6 +3,7 @@
 package context
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -50,4 +51,30 @@ func TestBuilder_EmptyContext(t *testing.T) {
 	assert.Empty(t, ctx.Options.Validation)
 	assert.Empty(t, ctx.Options.Advanced)
 	assert.False(t, ctx.Runtime.Force)
+}
+
+func TestBuilder_WithSharing(t *testing.T) {
+	sharing := &SharingSpec{
+		Enabled:  true,
+		Services: map[string]bool{"redis": true, "postgres": true},
+	}
+
+	ctx := NewBuilder().
+		WithSharing(sharing).
+		Build()
+
+	assert.NotNil(t, ctx.Sharing)
+	assert.True(t, ctx.Sharing.Enabled)
+	assert.True(t, ctx.Sharing.Services["redis"])
+	assert.True(t, ctx.Sharing.Services["postgres"])
+}
+
+func TestNewProjectInfo(t *testing.T) {
+	configDir := filepath.Join(string(filepath.Separator), "test", ".otto-stack")
+	info := NewProjectInfo(configDir)
+
+	expectedRoot := filepath.Join(string(filepath.Separator), "test")
+	assert.Equal(t, expectedRoot, info.Root)
+	assert.Equal(t, configDir, info.ConfigDir)
+	assert.Contains(t, info.ConfigFile, "config.yaml")
 }
