@@ -93,3 +93,18 @@ func TestGenerateFile_ValidFormat(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateFile_DirectoryError(t *testing.T) {
+	services := []types.ServiceConfig{
+		{Name: "test", AllEnvironment: map[string]string{"KEY": "value"}},
+	}
+
+	// Try to write to an invalid path (file as directory)
+	tempFile := filepath.Join(t.TempDir(), "file.txt")
+	err := os.WriteFile(tempFile, []byte("test"), 0644)
+	assert.NoError(t, err)
+
+	invalidPath := filepath.Join(tempFile, "subdir", ".env")
+	err = GenerateFile("test-project", services, invalidPath)
+	assert.Error(t, err)
+}

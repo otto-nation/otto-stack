@@ -259,6 +259,25 @@ func TestService_CleanupWithMocks(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestService_Cleanup_WithImages(t *testing.T) {
+	mockCompose := testhelpers.NewMockCompose().WithDownSuccess()
+	mockLoader := testhelpers.NewMockProjectLoader().WithLoadSuccess("test-project")
+
+	resolver := &mockResolver{}
+	mockDocker := &mockDockerClient{}
+	dockerClient := docker.NewClientWithDependencies(mockDocker, nil, nil)
+	service := NewServiceWithClient(mockCompose, resolver, mockLoader, dockerClient)
+
+	req := CleanupRequest{
+		Project:       "test-project",
+		RemoveVolumes: false,
+		RemoveImages:  true,
+	}
+
+	err := service.Cleanup(context.Background(), req)
+	assert.NoError(t, err)
+}
+
 func TestService_CheckDockerHealthWithMocks(t *testing.T) {
 	mockCompose := testhelpers.NewMockCompose()
 	mockLoader := testhelpers.NewMockProjectLoader()
