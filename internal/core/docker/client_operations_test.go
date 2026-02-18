@@ -77,16 +77,11 @@ func TestClient_GetServiceStatus_Unit(t *testing.T) {
 			}, nil
 		},
 		ContainerInspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
-			return types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
-					ID:      containerID,
-					Created: "2024-01-01T00:00:00Z",
-					State: &types.ContainerState{
-						StartedAt: "2024-01-01T00:00:01Z",
-					},
-				},
-				NetworkSettings: &types.NetworkSettings{},
-			}, nil
+			json := testhelpers.MockContainerJSON(containerID, "/test", "test:latest", "test-project", false)
+			json.Created = "2024-01-01T00:00:00Z"
+			json.State.StartedAt = "2024-01-01T00:00:01Z"
+			json.NetworkSettings = &types.NetworkSettings{}
+			return json, nil
 		},
 	}
 

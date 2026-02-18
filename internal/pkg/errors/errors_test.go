@@ -70,31 +70,21 @@ func TestNewSystemErrorf(t *testing.T) {
 }
 
 func TestLegacyAliases(t *testing.T) {
-	t.Run("NewValidationError", func(t *testing.T) {
-		err := NewValidationError(ErrCodeInvalid, "field", "invalid", nil)
-		assert.Equal(t, ErrCodeInvalid, err.Code)
-		assert.Equal(t, "field", err.Context)
-	})
+	err := NewValidationError(ErrCodeInvalid, "field", "invalid", nil)
+	assert.Equal(t, ErrCodeInvalid, err.Code)
+	assert.Equal(t, "field", err.Context)
 
-	t.Run("NewValidationErrorf", func(t *testing.T) {
-		err := NewValidationErrorf(ErrCodeInvalid, "field", "invalid: %s", "test")
-		assert.Equal(t, "invalid: test", err.Message)
-	})
+	err = NewValidationErrorf(ErrCodeInvalid, "field", "invalid: %s", "test")
+	assert.Equal(t, "invalid: test", err.Message)
 
-	t.Run("NewServiceError", func(t *testing.T) {
-		err := NewServiceError(ErrCodeOperationFail, "docker", "start failed", nil)
-		assert.Equal(t, ErrCodeOperationFail, err.Code)
-		assert.Equal(t, "docker", err.Context)
-	})
+	err = NewServiceError(ErrCodeOperationFail, "docker", "start failed", nil)
+	assert.Equal(t, ErrCodeOperationFail, err.Code)
+	assert.Equal(t, "docker", err.Context)
 
-	t.Run("NewConfigError", func(t *testing.T) {
-		err := NewConfigError(ErrCodeNotFound, "/path", "not found", nil)
-		assert.Equal(t, ErrCodeNotFound, err.Code)
-		assert.Equal(t, "/path", err.Context)
-	})
+	err = NewConfigError(ErrCodeNotFound, "/path", "not found", nil)
+	assert.Equal(t, ErrCodeNotFound, err.Code)
+	assert.Equal(t, "/path", err.Context)
 
-	t.Run("NewConfigErrorf", func(t *testing.T) {
-		err := NewConfigErrorf(ErrCodeInvalid, "/path", "invalid: %s", "yaml")
-		assert.Equal(t, "invalid: yaml", err.Message)
-	})
+	err = NewConfigErrorf(ErrCodeInvalid, "/path", "invalid: %s", "yaml")
+	assert.Equal(t, "invalid: yaml", err.Message)
 }

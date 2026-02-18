@@ -25,6 +25,29 @@ func TestNewRegistry(t *testing.T) {
 	}
 }
 
+func TestNewManager(t *testing.T) {
+	tmpDir := t.TempDir()
+	mgr := NewManager(tmpDir)
+	if mgr == nil {
+		t.Fatal("expected manager to be created")
+	}
+	if mgr.registryPath == "" {
+		t.Error("expected registryPath to be set")
+	}
+}
+
+func TestNewOrphanDetector(t *testing.T) {
+	tmpDir := t.TempDir()
+	mgr := NewManager(tmpDir)
+	detector := NewOrphanDetector(mgr)
+	if detector == nil {
+		t.Fatal("expected detector to be created")
+	}
+	if detector.manager == nil {
+		t.Error("expected manager to be set")
+	}
+}
+
 func TestManager_LoadEmpty(t *testing.T) {
 	tmpDir := t.TempDir()
 	mgr := NewManager(tmpDir)

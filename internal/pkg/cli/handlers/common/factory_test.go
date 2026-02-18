@@ -8,38 +8,32 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNewServiceManager(t *testing.T) {
-	// Reset caches for test isolation
+func TestNewServiceManager_Creates(t *testing.T) {
 	cacheMutex.Lock()
 	stackServiceCache = nil
 	dockerManagerCache = nil
 	resolverCache = nil
 	cacheMutex.Unlock()
 
-	t.Run("creates service manager successfully", func(t *testing.T) {
-		service, err := NewServiceManager(false)
+	service, err := NewServiceManager(false)
+	if err != nil {
+		t.Skipf("Skipping Docker test: %v", err)
+	}
+	assert.NotNil(t, service)
+}
 
-		if err != nil {
-			// Docker might not be available in test environment
-			t.Skipf("Skipping Docker test: %v", err)
-		}
+func TestNewServiceManager_Cached(t *testing.T) {
+	service1, err1 := NewServiceManager(false)
+	if err1 != nil {
+		t.Skipf("Skipping Docker test: %v", err1)
+	}
 
-		assert.NotNil(t, service)
-	})
+	service2, err2 := NewServiceManager(true)
+	if err2 != nil {
+		t.Skipf("Skipping Docker test: %v", err2)
+	}
 
-	t.Run("returns cached instance on second call", func(t *testing.T) {
-		service1, err1 := NewServiceManager(false)
-		if err1 != nil {
-			t.Skipf("Skipping Docker test: %v", err1)
-		}
-
-		service2, err2 := NewServiceManager(true) // Different debug flag
-		if err2 != nil {
-			t.Skipf("Skipping Docker test: %v", err2)
-		}
-
-		assert.Same(t, service1, service2, "Should return cached instance")
-	})
+	assert.Same(t, service1, service2, "Should return cached instance")
 }
 
 func TestGetDockerManager(t *testing.T) {
@@ -74,4 +68,29 @@ func TestGetCharacteristicsResolver(t *testing.T) {
 	resolver2, err2 := getCharacteristicsResolver()
 	assert.NoError(t, err2)
 	assert.Same(t, resolver1, resolver2, "Should return cached instance")
+}
+
+func TestNewServiceManager_Debug(t *testing.T) {
+	cacheMutex.Lock()
+	stackServiceCache = nil
+	cacheMutex.Unlock()
+
+	_, err := NewServiceManager(true)
+	if err != nil {
+		t.Skipf("Skipping Docker test: %v", err)
+	}
+}
+
+func TestGetDockerManager_Caching(t *testing.T) {
+	cacheMutex.Lock()
+	dockerManagerCache = nil
+	cacheMutex.Unlock()
+
+	m1, err := getDockerManager()
+	if err != nil {
+		t.Skipf("Skipping Docker test: %v", err)
+	}
+
+	m2, _ := getDockerManager()
+	assert.Same(t, m1, m2)
 }

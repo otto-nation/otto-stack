@@ -165,3 +165,36 @@ func (m *MockDockerClient) Close() error {
 	}
 	return nil
 }
+
+// MockContainerJSON creates a ContainerJSON for testing
+func MockContainerJSON(id, name, image, project string, running bool) types.ContainerJSON {
+	return types.ContainerJSON{
+		ContainerJSONBase: &types.ContainerJSONBase{
+			ID:   id,
+			Name: name,
+			State: &types.ContainerState{
+				Running: running,
+				Status:  map[bool]string{true: "running", false: "exited"}[running],
+			},
+		},
+		Config: &container.Config{
+			Image:  image,
+			Labels: map[string]string{"com.docker.compose.project": project},
+		},
+	}
+}
+
+// MockContainerJSONWithHealth creates a ContainerJSON with health status for testing
+func MockContainerJSONWithHealth(id string, running bool, healthStatus string) types.ContainerJSON {
+	return types.ContainerJSON{
+		ContainerJSONBase: &types.ContainerJSONBase{
+			ID: id,
+			State: &types.ContainerState{
+				Running: running,
+				Health: &types.Health{
+					Status: healthStatus,
+				},
+			},
+		},
+	}
+}

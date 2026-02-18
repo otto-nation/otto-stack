@@ -1,0 +1,12 @@
+name: testservice
+description: Test service with custom operations
+category: test
+service:
+  management:
+    custom:
+      backup:
+        command: ["pg_dump"]
+        args:
+          default: ["-U", "postgres"]
+      restore:
+        command: ["pg_restore"]

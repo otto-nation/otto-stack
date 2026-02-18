@@ -58,11 +58,23 @@ jobs:
       - name: Verify generated files
         run: |
           task generate
-          if ! git diff --exit-code; then
-            echo "❌ Generated files are out of date. Run 'task generate' and commit the changes."
-            git diff
+          
+          # Check for changes, ignoring lastmod date updates in docs
+          if git diff --name-only | grep -v 'docs-site/content' > /dev/null; then
+            echo "❌ Generated code files are out of date"
+            echo "Run 'task generate' and commit the changes"
+            git diff --name-only
             exit 1
           fi
+          
+          # For docs, check everything except lastmod lines
+          if git diff docs-site/content/ | grep -v '^[+-]lastmod:' | grep '^[+-]' | grep -v '^+++\|^---' > /dev/null; then
+            echo "❌ Generated documentation is out of date"
+            echo "Run 'task generate' and commit the changes"
+            git diff docs-site/content/
+            exit 1
+          fi
+          
           echo "✅ Generated files are up to date"
 
       - name: Check for broken links

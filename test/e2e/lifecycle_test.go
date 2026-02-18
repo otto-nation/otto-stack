@@ -22,23 +22,19 @@ func TestE2E_ServiceLifecycle(t *testing.T) {
 	err := lifecycle.InitializeStack()
 	require.NoError(t, err)
 
-	t.Run("start and verify containers", func(t *testing.T) {
-		err = lifecycle.StartServices()
-		require.NoError(t, err)
+	err = lifecycle.StartServices()
+	require.NoError(t, err)
 
-		result := lifecycle.CLI.RunExpectSuccess(core.CommandStatus)
-		assert.Contains(t, result.Stdout, services.ServicePostgres)
-		assert.Contains(t, result.Stdout, "running")
-	})
+	result := lifecycle.CLI.RunExpectSuccess(core.CommandStatus)
+	assert.Contains(t, result.Stdout, services.ServicePostgres)
+	assert.Contains(t, result.Stdout, "running")
 
-	t.Run("stop and restart cycle", func(t *testing.T) {
-		err = lifecycle.StopServices()
-		require.NoError(t, err)
+	err = lifecycle.StopServices()
+	require.NoError(t, err)
 
-		err = lifecycle.StartServices()
-		require.NoError(t, err)
+	err = lifecycle.StartServices()
+	require.NoError(t, err)
 
-		result := lifecycle.CLI.RunExpectSuccess(core.CommandStatus)
-		assert.Contains(t, result.Stdout, "running")
-	})
+	result = lifecycle.CLI.RunExpectSuccess(core.CommandStatus)
+	assert.Contains(t, result.Stdout, "running")
 }

@@ -13,144 +13,134 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestHealthCheckManager_Methods(t *testing.T) {
-	t.Run("tests NewHealthCheckManager", func(t *testing.T) {
-		manager := NewHealthCheckManager()
-		assert.NotNil(t, manager)
-	})
-
-	t.Run("tests RunAllChecks", func(t *testing.T) {
-		manager := NewHealthCheckManager()
-		mockBase := &base.BaseCommand{
-			Output: &mockOutput{},
-		}
-
-		result := manager.RunAllChecks(context.Background(), mockBase)
-		assert.IsType(t, false, result)
-	})
-
-	t.Run("tests CheckDocker", func(t *testing.T) {
-		manager := NewHealthCheckManager()
-		mockBase := &base.BaseCommand{
-			Output: &mockOutput{},
-		}
-
-		result := manager.CheckDocker(context.Background(), mockBase)
-		assert.IsType(t, false, result)
-	})
-
-	t.Run("tests CheckDockerCompose", func(t *testing.T) {
-		manager := NewHealthCheckManager()
-		mockBase := &base.BaseCommand{
-			Output: &mockOutput{},
-		}
-
-		result := manager.CheckDockerCompose(mockBase)
-		assert.IsType(t, false, result)
-	})
-
-	t.Run("tests CheckProjectInit", func(t *testing.T) {
-		manager := NewHealthCheckManager()
-		mockBase := &base.BaseCommand{
-			Output: &mockOutput{},
-		}
-
-		result := manager.CheckProjectInit(mockBase)
-		assert.IsType(t, false, result)
-	})
-
-	t.Run("tests CheckConfiguration", func(t *testing.T) {
-		manager := NewHealthCheckManager()
-		mockBase := &base.BaseCommand{
-			Output: &mockOutput{},
-		}
-
-		result := manager.CheckConfiguration(mockBase)
-		assert.IsType(t, false, result)
-	})
+func TestHealthCheckManager_New(t *testing.T) {
+	manager := NewHealthCheckManager()
+	assert.NotNil(t, manager)
 }
 
-func TestValidationManager_Methods(t *testing.T) {
-	t.Run("tests NewValidationManager", func(t *testing.T) {
-		manager := NewValidationManager()
-		assert.NotNil(t, manager)
-	})
+func TestHealthCheckManager_RunAllChecks(t *testing.T) {
+	manager := NewHealthCheckManager()
+	mockBase := &base.BaseCommand{
+		Output: &mockOutput{},
+	}
+
+	result := manager.RunAllChecks(context.Background(), mockBase)
+	assert.IsType(t, false, result)
 }
 
-func TestConfigManager_Methods(t *testing.T) {
-	t.Run("tests NewConfigManager", func(t *testing.T) {
-		manager := NewConfigManager()
-		assert.NotNil(t, manager)
-	})
+func TestHealthCheckManager_CheckDocker(t *testing.T) {
+	manager := NewHealthCheckManager()
+	mockBase := &base.BaseCommand{
+		Output: &mockOutput{},
+	}
+
+	result := manager.CheckDocker(context.Background(), mockBase)
+	assert.IsType(t, false, result)
 }
 
-func TestProjectManager_Methods(t *testing.T) {
-	t.Run("tests NewProjectManager", func(t *testing.T) {
-		manager := NewProjectManager()
-		assert.NotNil(t, manager)
-	})
+func TestHealthCheckManager_CheckDockerCompose(t *testing.T) {
+	manager := NewHealthCheckManager()
+	mockBase := &base.BaseCommand{
+		Output: &mockOutput{},
+	}
+
+	result := manager.CheckDockerCompose(mockBase)
+	assert.IsType(t, false, result)
 }
 
-func TestHandlers_Methods(t *testing.T) {
-	t.Run("tests DepsHandler", func(t *testing.T) {
-		handler := NewDepsHandler()
-		cmd := &cobra.Command{}
-		args := []string{}
+func TestHealthCheckManager_CheckProjectInit(t *testing.T) {
+	manager := NewHealthCheckManager()
+	mockBase := &base.BaseCommand{
+		Output: &mockOutput{},
+	}
 
-		mockBase := &base.BaseCommand{
-			Output: &mockOutput{},
-		}
+	result := manager.CheckProjectInit(mockBase)
+	assert.IsType(t, false, result)
+}
 
-		err := handler.Handle(context.Background(), cmd, args, mockBase)
-		if err != nil {
-			assert.Error(t, err)
-		}
-	})
+func TestHealthCheckManager_CheckConfiguration(t *testing.T) {
+	manager := NewHealthCheckManager()
+	mockBase := &base.BaseCommand{
+		Output: &mockOutput{},
+	}
 
-	t.Run("tests ConflictsHandler", func(t *testing.T) {
-		handler := NewConflictsHandler()
-		cmd := &cobra.Command{}
-		args := []string{}
+	result := manager.CheckConfiguration(mockBase)
+	assert.IsType(t, false, result)
+}
 
-		mockBase := &base.BaseCommand{
-			Output: &mockOutput{},
-		}
+func TestValidationManager_New(t *testing.T) {
+	manager := NewValidationManager()
+	assert.NotNil(t, manager)
+}
 
-		err := handler.Handle(context.Background(), cmd, args, mockBase)
-		if err != nil {
-			assert.Error(t, err)
-		}
-	})
+func TestConfigManager_New(t *testing.T) {
+	manager := NewConfigManager()
+	assert.NotNil(t, manager)
+}
 
-	t.Run("tests ValidateHandler", func(t *testing.T) {
-		handler := NewValidateHandler()
-		cmd := &cobra.Command{}
-		args := []string{}
+func TestProjectManager_New(t *testing.T) {
+	manager := NewProjectManager()
+	assert.NotNil(t, manager)
+}
 
-		mockBase := &base.BaseCommand{
-			Output: &mockOutput{},
-		}
+func TestDepsHandler(t *testing.T) {
+	handler := NewDepsHandler()
+	cmd := &cobra.Command{}
+	args := []string{}
 
-		err := handler.Handle(context.Background(), cmd, args, mockBase)
-		if err != nil {
-			assert.Error(t, err)
-		}
-	})
+	mockBase := &base.BaseCommand{
+		Output: &mockOutput{},
+	}
 
-	t.Run("tests DoctorHandler", func(t *testing.T) {
-		handler := NewDoctorHandler()
-		cmd := &cobra.Command{}
-		args := []string{}
+	err := handler.Handle(context.Background(), cmd, args, mockBase)
+	if err != nil {
+		assert.Error(t, err)
+	}
+}
 
-		mockBase := &base.BaseCommand{
-			Output: &mockOutput{},
-		}
+func TestConflictsHandler(t *testing.T) {
+	handler := NewConflictsHandler()
+	cmd := &cobra.Command{}
+	args := []string{}
 
-		err := handler.Handle(context.Background(), cmd, args, mockBase)
-		if err != nil {
-			assert.Error(t, err)
-		}
-	})
+	mockBase := &base.BaseCommand{
+		Output: &mockOutput{},
+	}
+
+	err := handler.Handle(context.Background(), cmd, args, mockBase)
+	if err != nil {
+		assert.Error(t, err)
+	}
+}
+
+func TestValidateHandler(t *testing.T) {
+	handler := NewValidateHandler()
+	cmd := &cobra.Command{}
+	args := []string{}
+
+	mockBase := &base.BaseCommand{
+		Output: &mockOutput{},
+	}
+
+	err := handler.Handle(context.Background(), cmd, args, mockBase)
+	if err != nil {
+		assert.Error(t, err)
+	}
+}
+
+func TestDoctorHandler(t *testing.T) {
+	handler := NewDoctorHandler()
+	cmd := &cobra.Command{}
+	args := []string{}
+
+	mockBase := &base.BaseCommand{
+		Output: &mockOutput{},
+	}
+
+	err := handler.Handle(context.Background(), cmd, args, mockBase)
+	if err != nil {
+		assert.Error(t, err)
+	}
 }
 
 // Mock output for testing

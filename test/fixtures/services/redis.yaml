@@ -1,0 +1,8 @@
+name: redis
+description: Redis cache service
+category: cache
+container:
+  image: redis:latest
+  ports:
+    - external: "6379"
+      internal: "6379"

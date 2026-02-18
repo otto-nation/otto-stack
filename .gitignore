@@ -163,6 +163,7 @@ security-results/
 
 # User specific
 ignore
+.ignore
 .amazonq
 otto-stack-completion.*
 

@@ -1,0 +1,12 @@
+project:
+  name: shared-project
+  type: docker
+stack:
+  enabled:
+    - postgres
+    - redis
+sharing:
+  enabled: true
+  services:
+    postgres: true
+    redis: false

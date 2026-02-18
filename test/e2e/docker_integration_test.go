@@ -25,14 +25,10 @@ func TestE2E_DockerIntegration(t *testing.T) {
 	err = lifecycle.StartServices()
 	require.NoError(t, err)
 
-	t.Run("containers are actually running", func(t *testing.T) {
-		result := lifecycle.CLI.RunExpectSuccess(core.CommandStatus)
-		assert.Contains(t, result.Stdout, services.ServicePostgres)
-		assert.Contains(t, result.Stdout, "running")
-	})
+	result := lifecycle.CLI.RunExpectSuccess(core.CommandStatus)
+	assert.Contains(t, result.Stdout, services.ServicePostgres)
+	assert.Contains(t, result.Stdout, "running")
 
-	t.Run("validate passes with running containers", func(t *testing.T) {
-		result := lifecycle.CLI.RunExpectSuccess(core.CommandValidate)
-		assert.Contains(t, result.Stdout, "valid")
-	})
+	result = lifecycle.CLI.RunExpectSuccess(core.CommandValidate)
+	assert.Contains(t, result.Stdout, "valid")
 }

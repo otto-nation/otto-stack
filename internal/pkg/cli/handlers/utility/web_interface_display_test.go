@@ -8,56 +8,51 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWebInterfacesHandler_BasicMethods(t *testing.T) {
-	t.Run("tests checkStatus with various URLs", func(t *testing.T) {
-		handler := NewWebInterfacesHandler()
-
-		// Test with localhost URL
-		status := handler.checkStatus("http://localhost:8080")
-		assert.IsType(t, "", status)
-		assert.NotEmpty(t, status)
-
-		// Test with invalid URL
-		status = handler.checkStatus("invalid-url")
-		assert.IsType(t, "", status)
-		assert.NotEmpty(t, status)
-
-		// Test with empty URL
-		status = handler.checkStatus("")
-		assert.IsType(t, "", status)
-		assert.NotEmpty(t, status)
-	})
+func TestWebInterfacesHandler_CheckStatus_Localhost(t *testing.T) {
+	handler := NewWebInterfacesHandler()
+	status := handler.checkStatus("http://localhost:8080")
+	assert.IsType(t, "", status)
+	assert.NotEmpty(t, status)
 }
 
-func TestWebInterfacesHandler_Validation(t *testing.T) {
-	t.Run("tests ValidateArgs", func(t *testing.T) {
-		handler := NewWebInterfacesHandler()
+func TestWebInterfacesHandler_CheckStatus_Invalid(t *testing.T) {
+	handler := NewWebInterfacesHandler()
+	status := handler.checkStatus("invalid-url")
+	assert.IsType(t, "", status)
+	assert.NotEmpty(t, status)
+}
 
-		// Test with empty args
-		err := handler.ValidateArgs([]string{})
-		if err != nil {
-			assert.Error(t, err)
-		}
+func TestWebInterfacesHandler_CheckStatus_Empty(t *testing.T) {
+	handler := NewWebInterfacesHandler()
+	status := handler.checkStatus("")
+	assert.IsType(t, "", status)
+	assert.NotEmpty(t, status)
+}
 
-		// Test with service args
-		err = handler.ValidateArgs([]string{"postgres", "redis"})
-		if err != nil {
-			assert.Error(t, err)
-		}
-	})
+func TestWebInterfacesHandler_ValidateArgs_Empty(t *testing.T) {
+	handler := NewWebInterfacesHandler()
+	err := handler.ValidateArgs([]string{})
+	if err != nil {
+		assert.Error(t, err)
+	}
+}
 
-	t.Run("tests GetRequiredFlags", func(t *testing.T) {
-		handler := NewWebInterfacesHandler()
+func TestWebInterfacesHandler_ValidateArgs_WithServices(t *testing.T) {
+	handler := NewWebInterfacesHandler()
+	err := handler.ValidateArgs([]string{"postgres", "redis"})
+	if err != nil {
+		assert.Error(t, err)
+	}
+}
 
-		flags := handler.GetRequiredFlags()
-		assert.IsType(t, []string{}, flags)
-	})
+func TestWebInterfacesHandler_GetRequiredFlags(t *testing.T) {
+	handler := NewWebInterfacesHandler()
+	flags := handler.GetRequiredFlags()
+	assert.IsType(t, []string{}, flags)
 }
 
 func TestWebInterfacesHandler_Creation(t *testing.T) {
-	t.Run("creates web interfaces handler", func(t *testing.T) {
-		handler := NewWebInterfacesHandler()
-		assert.NotNil(t, handler)
-		assert.IsType(t, &WebInterfacesHandler{}, handler)
-	})
+	handler := NewWebInterfacesHandler()
+	assert.NotNil(t, handler)
+	assert.IsType(t, &WebInterfacesHandler{}, handler)
 }

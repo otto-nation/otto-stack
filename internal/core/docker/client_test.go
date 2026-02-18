@@ -49,7 +49,7 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
-func TestClient_Close(t *testing.T) {
+func TestClient_Close_Once(t *testing.T) {
 	testLogger := logger.GetLogger()
 
 	client, err := NewClient(testLogger)
@@ -57,16 +57,21 @@ func TestClient_Close(t *testing.T) {
 		t.Skipf("Docker not available: %v", err)
 	}
 
-	t.Run("close client", func(t *testing.T) {
-		err := client.Close()
-		assert.NoError(t, err)
-	})
+	err = client.Close()
+	assert.NoError(t, err)
+}
 
-	t.Run("close client twice", func(t *testing.T) {
-		// Should not panic on double close
-		assert.NotPanics(t, func() {
-			_ = client.Close()
-		})
+func TestClient_Close_Twice(t *testing.T) {
+	testLogger := logger.GetLogger()
+
+	client, err := NewClient(testLogger)
+	if err != nil {
+		t.Skipf("Docker not available: %v", err)
+	}
+
+	_ = client.Close()
+	assert.NotPanics(t, func() {
+		_ = client.Close()
 	})
 }
 
@@ -79,10 +84,7 @@ func TestClient_GetCli(t *testing.T) {
 	}
 	defer func() { _ = client.Close() }()
 
-	t.Run("get underlying docker client", func(t *testing.T) {
-		// Test that the underlying client is accessible
-		assert.NotNil(t, client.GetCli())
-	})
+	assert.NotNil(t, client.GetCli())
 }
 
 func TestClient_WithNilLogger(t *testing.T) {
@@ -96,8 +98,6 @@ func TestClient_WithNilLogger(t *testing.T) {
 		}
 	}()
 
-	t.Run("client works with nil logger", func(t *testing.T) {
-		assert.NotNil(t, client)
-		assert.NotNil(t, client.GetCli())
-	})
+	assert.NotNil(t, client)
+	assert.NotNil(t, client.GetCli())
 }

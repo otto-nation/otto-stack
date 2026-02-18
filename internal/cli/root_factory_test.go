@@ -6,25 +6,19 @@ import (
 	"testing"
 )
 
-func TestRootFactory(t *testing.T) {
-	t.Run("validates factory execution", func(t *testing.T) {
-		err := ExecuteFactory()
-		// ExecuteFactory may succeed in test environment
-		_ = err
-	})
+func TestRootFactory_Execute(t *testing.T) {
+	err := ExecuteFactory()
+	_ = err
+}
 
-	t.Run("validates config initialization", func(t *testing.T) {
-		initConfig()
-		// No assertion needed, just testing execution
-	})
+func TestRootFactory_InitConfig(t *testing.T) {
+	initConfig()
+}
 
-	t.Run("validates viper setup", func(t *testing.T) {
-		setupViper()
-		// No assertion needed, just testing execution
-	})
+func TestRootFactory_SetupViper(t *testing.T) {
+	setupViper()
+}
 
-	t.Run("validates logger configuration", func(t *testing.T) {
-		configureLogger()
-		// No assertion needed, just testing execution
-	})
+func TestRootFactory_ConfigureLogger(t *testing.T) {
+	configureLogger()
 }

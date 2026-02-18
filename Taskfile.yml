@@ -20,7 +20,7 @@ vars:
   BUILD_ARCH:
     sh: echo "{{ARCH}}"
   LDFLAGS: '-ldflags "-X {{.MODULE_PATH}}/internal/pkg/version.AppVersion={{.VERSION}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildDate={{.BUILD_DATE}} -X {{.MODULE_PATH}}/internal/pkg/version.GitCommit={{.COMMIT}} -X {{.MODULE_PATH}}/internal/pkg/version.BuildBy=taskfile"'
-  GOLANGCI_LINT_VERSION: "v2.6.0"
+  GOLANGCI_LINT_VERSION: "v2.9.0"
 
 # ============================================================================
 # TASKS
@@ -811,29 +811,25 @@ tasks:
       - echo "✅ Homebrew formula syntax valid"
 
   validate:commits:
-    desc: "📝 Validate commit message lengths"
+    desc: "📝 Validate commit message format using commitlint (same as CI)"
     silent: true
     cmds:
       - |
-        echo "📝 Validating commit messages..."
+        echo "📝 Validating commit messages with commitlint..."
         BRANCH=$(git rev-parse --abbrev-ref HEAD)
-        INVALID_COMMITS=$(git log --oneline origin/$BRANCH..HEAD --format="%h %s" 2>/dev/null | while read sha msg; do
-          if [ ${#msg} -gt 72 ]; then
-            echo "$sha: $msg (${#msg} chars)"
-          fi
-        done)
-
-        if [ -n "$INVALID_COMMITS" ]; then
-          echo ""
-          echo "❌ Commit headers exceed 72 characters"
-          echo ""
-          echo "Invalid commits:"
-          echo "$INVALID_COMMITS"
-          echo ""
-          echo "🔧 Fix with: git rebase -i origin/$BRANCH"
-          echo "   Then reword the commit messages to be ≤72 characters"
-          exit 1
+        BASE_BRANCH=${BASE_BRANCH:-main}
+        
+        # Get commit range
+        if git rev-parse --verify origin/$BASE_BRANCH >/dev/null 2>&1; then
+          FROM="origin/$BASE_BRANCH"
+        else
+          FROM="$BASE_BRANCH"
         fi
+        
+        # Run commitlint using commitlint.config.js (which loads .github/.commitlintrc.json)
+        # This ensures the same config as CI while allowing proper module resolution
+        npx --yes -p @commitlint/config-conventional -p @commitlint/cli commitlint --from "$FROM" --to HEAD
+        
         echo "✅ All commit messages valid"
 
   # ============================================================================

@@ -1,0 +1,10 @@
+project:
+  name: validated-project
+  type: docker
+stack:
+  enabled:
+    - postgres
+validation:
+  options:
+    strict: true
+    check_versions: true
