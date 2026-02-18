@@ -82,6 +82,11 @@ func (b *ServiceConfigBuilder) WithMemoryLimit(limit string) *ServiceConfigBuild
 	return b
 }
 
+func (b *ServiceConfigBuilder) WithEntrypoint(entrypoint []string) *ServiceConfigBuilder {
+	b.config.Container.Entrypoint = entrypoint
+	return b
+}
+
 func (b *ServiceConfigBuilder) Build() types.ServiceConfig {
 	return b.config
 }

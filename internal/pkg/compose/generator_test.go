@@ -111,6 +111,18 @@ func TestGenerator_BuildServicesFromConfigs(t *testing.T) {
 	assert.Equal(t, "512m", redisService["mem_limit"])
 
 	services = []types.ServiceConfig{
+		fixtures.NewServiceConfig("custom").
+			WithImage("custom:latest").
+			WithEntrypoint([]string{"/bin/sh", "-c"}).
+			Build(),
+	}
+
+	result, err = gen.buildServicesFromConfigs(services)
+	require.NoError(t, err)
+	customService := result["custom"].(map[string]any)
+	assert.Equal(t, []string{"/bin/sh", "-c"}, customService["entrypoint"])
+
+	services = []types.ServiceConfig{
 		{
 			Name:        "localstack-sns",
 			ServiceType: types.ServiceTypeConfiguration,

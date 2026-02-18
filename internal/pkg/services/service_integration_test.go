@@ -278,6 +278,26 @@ func TestService_Cleanup_WithImages(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+func TestService_Cleanup_VolumesAndImages(t *testing.T) {
+	mockCompose := testhelpers.NewMockCompose().WithDownSuccess()
+	mockLoader := testhelpers.NewMockProjectLoader().WithLoadSuccess("test-project")
+
+	resolver := &mockResolver{}
+	mockDocker := &mockDockerClient{}
+	dockerClient := docker.NewClientWithDependencies(mockDocker, nil, nil)
+	service := NewServiceWithClient(mockCompose, resolver, mockLoader, dockerClient)
+
+	req := CleanupRequest{
+		Project:       "test-project",
+		RemoveVolumes: true,
+		RemoveImages:  true,
+		Force:         true,
+	}
+
+	err := service.Cleanup(context.Background(), req)
+	assert.NoError(t, err)
+}
+
 func TestService_CheckDockerHealthWithMocks(t *testing.T) {
 	mockCompose := testhelpers.NewMockCompose()
 	mockLoader := testhelpers.NewMockProjectLoader()
@@ -287,6 +307,42 @@ func TestService_CheckDockerHealthWithMocks(t *testing.T) {
 	service := NewServiceWithClient(mockCompose, resolver, mockLoader, dockerClient)
 
 	err := service.CheckDockerHealth(context.Background())
+	assert.NoError(t, err)
+}
+
+func TestService_GenerateComposeFileWithMocks(t *testing.T) {
+	mockCompose := testhelpers.NewMockCompose()
+	mockLoader := testhelpers.NewMockProjectLoader()
+	resolver := &mockResolver{}
+	mockDocker := &mockDockerClient{}
+	dockerClient := docker.NewClientWithDependencies(mockDocker, nil, nil)
+	service := NewServiceWithClient(mockCompose, resolver, mockLoader, dockerClient)
+
+	serviceConfigs := []servicetypes.ServiceConfig{
+		fixtures.NewServiceConfig(ServicePostgres).Build(),
+		fixtures.NewServiceConfig(ServiceRedis).Build(),
+	}
+
+	err := service.GenerateComposeFile("test-project", serviceConfigs)
+	assert.NoError(t, err)
+}
+
+func TestService_ExecWithUser(t *testing.T) {
+	mockCompose := testhelpers.NewMockCompose().WithExecSuccess()
+	mockLoader := testhelpers.NewMockProjectLoader()
+	resolver := &mockResolver{}
+	mockDocker := &mockDockerClient{}
+	dockerClient := docker.NewClientWithDependencies(mockDocker, nil, nil)
+	service := NewServiceWithClient(mockCompose, resolver, mockLoader, dockerClient)
+
+	req := ExecRequest{
+		Project: "test-project",
+		Service: ServicePostgres,
+		Command: []string{"psql", "-U", "postgres"},
+		User:    "postgres",
+	}
+
+	err := service.Exec(context.Background(), req)
 	assert.NoError(t, err)
 }
 
