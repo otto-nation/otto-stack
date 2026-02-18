@@ -10,6 +10,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewRegistry(t *testing.T) {
@@ -278,4 +279,40 @@ func TestManager_Reconcile(t *testing.T) {
 	if result == nil {
 		t.Error("Expected non-nil result")
 	}
+}
+
+func TestManager_Get_LoadError(t *testing.T) {
+	tempDir := t.TempDir()
+	manager := NewManager(filepath.Join(tempDir, "nonexistent", "registry.yaml"))
+
+	// Create invalid directory structure to force Load error
+	invalidPath := filepath.Join(tempDir, "file.txt")
+	err := os.WriteFile(invalidPath, []byte("test"), 0644)
+	assert.NoError(t, err)
+
+	manager = NewManager(filepath.Join(invalidPath, "registry.yaml"))
+	_, err = manager.Get("test")
+	assert.Error(t, err)
+}
+
+func TestManager_List_LoadError(t *testing.T) {
+	tempDir := t.TempDir()
+	invalidPath := filepath.Join(tempDir, "file.txt")
+	err := os.WriteFile(invalidPath, []byte("test"), 0644)
+	assert.NoError(t, err)
+
+	manager := NewManager(filepath.Join(invalidPath, "registry.yaml"))
+	_, err = manager.List()
+	assert.Error(t, err)
+}
+
+func TestManager_IsShared_LoadError(t *testing.T) {
+	tempDir := t.TempDir()
+	invalidPath := filepath.Join(tempDir, "file.txt")
+	err := os.WriteFile(invalidPath, []byte("test"), 0644)
+	assert.NoError(t, err)
+
+	manager := NewManager(filepath.Join(invalidPath, "registry.yaml"))
+	_, err = manager.IsShared("test")
+	assert.Error(t, err)
 }
