@@ -208,3 +208,82 @@ func TestResourceManager_Remove(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+func TestResourceManager_RemoveVolumes_WithError(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	mock.VolumeRemoveFunc = func(ctx context.Context, volumeID string, force bool) error {
+		if volumeID == "vol-error" {
+			return assert.AnError
+		}
+		return nil
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	// Should not return error even if individual removes fail (errors are logged)
+	err := rm.removeVolumes(ctx, []string{"vol1", "vol2"})
+	assert.NoError(t, err)
+}
+
+func TestResourceManager_ListContainers_Error(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	mock.ContainerListFunc = func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
+		return nil, assert.AnError
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	_, err := rm.listContainers(ctx, NewProjectFilter("test"))
+	assert.Error(t, err)
+}
+
+func TestResourceManager_ListVolumes_Error(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	mock.VolumeListFunc = func(ctx context.Context, options volume.ListOptions) (volume.ListResponse, error) {
+		return volume.ListResponse{}, assert.AnError
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	_, err := rm.listVolumes(ctx, NewProjectFilter("test"))
+	assert.Error(t, err)
+}
+
+func TestResourceManager_ListNetworks_Error(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	mock.NetworkListFunc = func(ctx context.Context, options network.ListOptions) ([]network.Summary, error) {
+		return nil, assert.AnError
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	_, err := rm.listNetworks(ctx, NewProjectFilter("test"))
+	assert.Error(t, err)
+}
+
+func TestResourceManager_ListImages_Error(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	mock.ImageListFunc = func(ctx context.Context, options image.ListOptions) ([]image.Summary, error) {
+		return nil, assert.AnError
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	_, err := rm.listImages(ctx, NewProjectFilter("test"))
+	assert.Error(t, err)
+}
