@@ -88,3 +88,70 @@ func TestStatusFormatter_CreateSummary(t *testing.T) {
 	assert.Equal(t, 2, summary["running"])
 	assert.Equal(t, 1, summary["stopped"])
 }
+
+func TestStatusFormatter_getIcon(t *testing.T) {
+	sf := NewStatusFormatter(&bytes.Buffer{})
+
+	tests := []struct {
+		state    string
+		expected string
+	}{
+		{"running", "✅ "},
+		{"healthy", "🟢 "},
+		{"stopped", "❌ "},
+		{"unhealthy", "🔴 "},
+		{"starting", "🔄 "},
+		{"unknown", "❓ "},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.state, func(t *testing.T) {
+			result := sf.getIcon(tt.state)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestStatusFormatter_formatDuration(t *testing.T) {
+	sf := NewStatusFormatter(&bytes.Buffer{})
+
+	tests := []struct {
+		name     string
+		duration time.Duration
+		expected string
+	}{
+		{"seconds", 30 * time.Second, "30s"},
+		{"minutes", 5 * time.Minute, "5m"},
+		{"hours", 3 * time.Hour, "3h"},
+		{"days", 48 * time.Hour, "2d"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := sf.formatDuration(tt.duration)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestStatusFormatter_formatPorts(t *testing.T) {
+	sf := NewStatusFormatter(&bytes.Buffer{})
+
+	tests := []struct {
+		name     string
+		ports    []string
+		expected string
+	}{
+		{"empty", []string{}, "-"},
+		{"single", []string{"8080"}, "8080"},
+		{"multiple", []string{"8080", "8081"}, "8080,8081"},
+		{"many", []string{"1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"}, "1,2,3,4,5,6,7,8,9,10,11,12..."},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := sf.formatPorts(tt.ports)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
