@@ -98,25 +98,21 @@ jobs:
             const failedRuns = '${{ steps.check.outputs.failed_runs }}';
             const repository = '${{ github.repository }}';
             
-            const title = `⚠️ CI Stability Alert: ${successRate}% success rate`;
-            const body = `## CI Stability Issue Detected
-            
-**Success Rate**: ${successRate}% (below 90% threshold)
-**Period**: Last 7 days
-**Total Runs**: ${totalRuns}
-**Failed Runs**: ${failedRuns}
-
-### Action Required
-The CI success rate has dropped below the acceptable threshold. Please investigate recent failures.
-
-### Investigation Steps
-1. Review failed workflow runs in the [Actions tab](https://github.com/${repository}/actions)
-2. Check for platform-specific failures
-3. Verify generated files are up to date
-4. Review recent dependency updates
-
----
-*This issue was automatically created by the CI Stability Monitor workflow.*`;
+            const title = '⚠️ CI Stability Alert: ' + successRate + '% success rate';
+            const body = '## CI Stability Issue Detected\n\n' +
+              '**Success Rate**: ' + successRate + '% (below 90% threshold)\n' +
+              '**Period**: Last 7 days\n' +
+              '**Total Runs**: ' + totalRuns + '\n' +
+              '**Failed Runs**: ' + failedRuns + '\n\n' +
+              '### Action Required\n' +
+              'The CI success rate has dropped below the acceptable threshold. Please investigate recent failures.\n\n' +
+              '### Investigation Steps\n' +
+              '1. Review failed workflow runs in the [Actions tab](https://github.com/' + repository + '/actions)\n' +
+              '2. Check for platform-specific failures\n' +
+              '3. Verify generated files are up to date\n' +
+              '4. Review recent dependency updates\n\n' +
+              '---\n' +
+              '*This issue was automatically created by the CI Stability Monitor workflow.*';
 
             // Check if similar issue already exists
             const issues = await github.rest.issues.listForRepo({
@@ -137,9 +133,9 @@ The CI success rate has dropped below the acceptable threshold. Please investiga
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: existingIssue.number,
-                body: `## Updated Alert\n\n${body}`
+                body: '## Updated Alert\n\n' + body
               });
-              console.log(`Updated existing issue #${existingIssue.number}`);
+              console.log('Updated existing issue #' + existingIssue.number);
             } else {
               // Create new issue
               const issue = await github.rest.issues.create({
