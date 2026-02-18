@@ -67,6 +67,21 @@ func (b *ServiceConfigBuilder) WithHealthCheck(test []string, interval, timeout,
 	return b
 }
 
+func (b *ServiceConfigBuilder) WithRestart(policy string) *ServiceConfigBuilder {
+	b.config.Container.Restart = types.RestartPolicy(policy)
+	return b
+}
+
+func (b *ServiceConfigBuilder) WithCommand(command []string) *ServiceConfigBuilder {
+	b.config.Container.Command = command
+	return b
+}
+
+func (b *ServiceConfigBuilder) WithMemoryLimit(limit string) *ServiceConfigBuilder {
+	b.config.Container.MemoryLimit = limit
+	return b
+}
+
 func (b *ServiceConfigBuilder) Build() types.ServiceConfig {
 	return b.config
 }

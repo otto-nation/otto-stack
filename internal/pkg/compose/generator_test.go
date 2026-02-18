@@ -94,6 +94,23 @@ func TestGenerator_BuildServicesFromConfigs(t *testing.T) {
 	assert.Contains(t, result, "mysql")
 
 	services = []types.ServiceConfig{
+		fixtures.NewServiceConfig("redis").
+			WithImage("redis:latest").
+			WithRestart("always").
+			WithCommand([]string{"redis-server", "--appendonly", "yes"}).
+			WithMemoryLimit("512m").
+			Build(),
+	}
+
+	result, err = gen.buildServicesFromConfigs(services)
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+	redisService := result["redis"].(map[string]any)
+	assert.Equal(t, "always", redisService["restart"])
+	assert.Equal(t, []string{"redis-server", "--appendonly", "yes"}, redisService["command"])
+	assert.Equal(t, "512m", redisService["mem_limit"])
+
+	services = []types.ServiceConfig{
 		{
 			Name:        "localstack-sns",
 			ServiceType: types.ServiceTypeConfiguration,
