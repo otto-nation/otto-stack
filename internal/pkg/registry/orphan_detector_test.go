@@ -1,6 +1,8 @@
 package registry
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
@@ -31,4 +33,17 @@ func TestOrphanDetector_buildContainerMap_Empty(t *testing.T) {
 	containerMap := detector.buildContainerMap([]docker.ContainerInfo{})
 
 	assert.Empty(t, containerMap)
+}
+
+func TestOrphanDetector_FindOrphans_LoadError(t *testing.T) {
+	tempDir := t.TempDir()
+	invalidPath := filepath.Join(tempDir, "file.txt")
+	err := os.WriteFile(invalidPath, []byte("test"), 0644)
+	assert.NoError(t, err)
+
+	manager := NewManager(filepath.Join(invalidPath, "registry.yaml"))
+	detector := NewOrphanDetector(manager)
+
+	_, err = detector.FindOrphans()
+	assert.Error(t, err)
 }
