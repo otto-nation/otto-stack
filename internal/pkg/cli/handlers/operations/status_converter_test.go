@@ -123,3 +123,20 @@ func TestStatusConverter_ConvertToDisplayStatuses(t *testing.T) {
 	assert.Equal(t, "postgres", statuses[0].Name)
 	assert.Equal(t, "running", statuses[0].State)
 }
+
+func TestStatusConverter_buildFoundStatus_ZeroStartTime(t *testing.T) {
+	converter := NewStatusConverter()
+
+	status := converter.buildFoundStatus("test", "docker", docker.ContainerStatus{
+		State:  "running",
+		Health: "healthy",
+		// StartedAt is zero
+	})
+
+	if status.Name != "test" {
+		t.Errorf("expected name 'test', got '%s'", status.Name)
+	}
+	if status.Uptime != 0 {
+		t.Errorf("expected uptime 0, got %v", status.Uptime)
+	}
+}
