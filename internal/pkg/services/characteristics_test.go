@@ -186,3 +186,9 @@ func TestApplyFlagsToStopOptions_InvalidTimeout(t *testing.T) {
 	result := resolver.applyFlagsToStopOptions(flags, base)
 	assert.Equal(t, base, result)
 }
+
+func TestNewDefaultCharacteristicsResolver(t *testing.T) {
+	resolver, err := NewDefaultCharacteristicsResolver()
+	assert.NoError(t, err)
+	assert.NotNil(t, resolver)
+}
