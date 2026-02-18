@@ -1,0 +1,138 @@
+package docker
+
+import (
+	"context"
+	"testing"
+
+	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/api/types/volume"
+	"github.com/otto-nation/otto-stack/test/testhelpers"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestResourceManager_ListVolumes(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	mock.VolumeListFunc = func(ctx context.Context, options volume.ListOptions) (volume.ListResponse, error) {
+		return volume.ListResponse{
+			Volumes: []*volume.Volume{
+				{Name: "vol1"},
+				{Name: "vol2"},
+			},
+		}, nil
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	names, err := rm.listVolumes(ctx, NewProjectFilter("test"))
+	assert.NoError(t, err)
+	assert.Len(t, names, 2)
+	assert.Contains(t, names, "vol1")
+	assert.Contains(t, names, "vol2")
+}
+
+func TestResourceManager_ListNetworks(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	mock.NetworkListFunc = func(ctx context.Context, options network.ListOptions) ([]network.Summary, error) {
+		return []network.Summary{
+			{Name: "net1"},
+			{Name: "net2"},
+		}, nil
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	names, err := rm.listNetworks(ctx, NewProjectFilter("test"))
+	assert.NoError(t, err)
+	assert.Len(t, names, 2)
+	assert.Contains(t, names, "net1")
+	assert.Contains(t, names, "net2")
+}
+
+func TestResourceManager_ListImages(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	mock.ImageListFunc = func(ctx context.Context, options image.ListOptions) ([]image.Summary, error) {
+		return []image.Summary{
+			{RepoTags: []string{"img1:latest", "img1:v1"}},
+			{RepoTags: []string{"img2:latest"}},
+		}, nil
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	names, err := rm.listImages(ctx, NewProjectFilter("test"))
+	assert.NoError(t, err)
+	assert.Len(t, names, 3)
+	assert.Contains(t, names, "img1:latest")
+	assert.Contains(t, names, "img1:v1")
+	assert.Contains(t, names, "img2:latest")
+}
+
+func TestResourceManager_RemoveVolumes(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	removed := []string{}
+	mock.VolumeRemoveFunc = func(ctx context.Context, volumeID string, force bool) error {
+		removed = append(removed, volumeID)
+		return nil
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	err := rm.removeVolumes(ctx, []string{"vol1", "vol2"})
+	assert.NoError(t, err)
+	assert.Len(t, removed, 2)
+	assert.Contains(t, removed, "vol1")
+	assert.Contains(t, removed, "vol2")
+}
+
+func TestResourceManager_RemoveNetworks(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	removed := []string{}
+	mock.NetworkRemoveFunc = func(ctx context.Context, networkID string) error {
+		removed = append(removed, networkID)
+		return nil
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	err := rm.removeNetworks(ctx, []string{"net1", "net2"})
+	assert.NoError(t, err)
+	assert.Len(t, removed, 2)
+	assert.Contains(t, removed, "net1")
+	assert.Contains(t, removed, "net2")
+}
+
+func TestResourceManager_RemoveImages(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	removed := []string{}
+	mock.ImageRemoveFunc = func(ctx context.Context, imageID string, options image.RemoveOptions) ([]image.DeleteResponse, error) {
+		removed = append(removed, imageID)
+		return nil, nil
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	err := rm.removeImages(ctx, []string{"img1", "img2"})
+	assert.NoError(t, err)
+	assert.Len(t, removed, 2)
+	assert.Contains(t, removed, "img1")
+	assert.Contains(t, removed, "img2")
+}
