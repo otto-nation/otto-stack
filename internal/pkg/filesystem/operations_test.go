@@ -33,6 +33,13 @@ func TestEnsureDir(t *testing.T) {
 		err = EnsureDir(tempDir)
 		require.NoError(t, err)
 	})
+
+	t.Run("returns nil when stat returns non-IsNotExist error", func(t *testing.T) {
+		// When a directory exists, os.Stat returns nil error, so EnsureDir returns nil
+		tempDir := t.TempDir()
+		err := EnsureDir(tempDir)
+		assert.NoError(t, err)
+	})
 }
 
 func TestWriteFile(t *testing.T) {

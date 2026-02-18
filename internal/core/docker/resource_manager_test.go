@@ -4,12 +4,35 @@ import (
 	"context"
 	"testing"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestResourceManager_ListContainers(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	mock.ContainerListFunc = func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
+		return []types.Container{
+			{ID: "container1"},
+			{ID: "container2"},
+		}, nil
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	names, err := rm.listContainers(ctx, NewProjectFilter("test"))
+	assert.NoError(t, err)
+	assert.Len(t, names, 2)
+	assert.Contains(t, names, "container1")
+	assert.Contains(t, names, "container2")
+}
 
 func TestResourceManager_ListVolumes(t *testing.T) {
 	ctx := context.Background()
@@ -135,4 +158,53 @@ func TestResourceManager_RemoveImages(t *testing.T) {
 	assert.Len(t, removed, 2)
 	assert.Contains(t, removed, "img1")
 	assert.Contains(t, removed, "img2")
+}
+
+func TestResourceManager_List(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	mock.VolumeListFunc = func(ctx context.Context, options volume.ListOptions) (volume.ListResponse, error) {
+		return volume.ListResponse{Volumes: []*volume.Volume{{Name: "vol1"}}}, nil
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	t.Run("list volumes", func(t *testing.T) {
+		names, err := rm.List(ctx, ResourceVolume, NewProjectFilter("test"))
+		assert.NoError(t, err)
+		assert.Len(t, names, 1)
+		assert.Contains(t, names, "vol1")
+	})
+
+	t.Run("unsupported type", func(t *testing.T) {
+		_, err := rm.List(ctx, "unsupported", NewProjectFilter("test"))
+		assert.Error(t, err)
+	})
+}
+
+func TestResourceManager_Remove(t *testing.T) {
+	ctx := context.Background()
+	mock := &testhelpers.MockDockerClient{}
+
+	removed := []string{}
+	mock.VolumeRemoveFunc = func(ctx context.Context, volumeID string, force bool) error {
+		removed = append(removed, volumeID)
+		return nil
+	}
+
+	client := NewClientWithDependencies(mock, nil, nil)
+	rm := NewResourceManager(client)
+
+	t.Run("remove volumes", func(t *testing.T) {
+		err := rm.Remove(ctx, ResourceVolume, []string{"vol1"})
+		assert.NoError(t, err)
+		assert.Len(t, removed, 1)
+	})
+
+	t.Run("unsupported type", func(t *testing.T) {
+		err := rm.Remove(ctx, "unsupported", []string{"vol1"})
+		assert.Error(t, err)
+	})
 }

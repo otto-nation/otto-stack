@@ -192,3 +192,24 @@ func TestNewDefaultCharacteristicsResolver(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, resolver)
 }
+
+func TestParseTimeout(t *testing.T) {
+	resolver, _ := NewDefaultCharacteristicsResolver()
+
+	t.Run("valid timeout", func(t *testing.T) {
+		duration, err := resolver.parseTimeout("timeout=30")
+		assert.NoError(t, err)
+		assert.Equal(t, 30*time.Second, duration)
+	})
+
+	t.Run("invalid format", func(t *testing.T) {
+		duration, err := resolver.parseTimeout("timeout")
+		assert.NoError(t, err)
+		assert.Equal(t, time.Duration(0), duration)
+	})
+
+	t.Run("invalid number", func(t *testing.T) {
+		_, err := resolver.parseTimeout("timeout=abc")
+		assert.Error(t, err)
+	})
+}
