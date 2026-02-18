@@ -82,4 +82,15 @@ func TestWriteFile(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, newContent, readContent)
 	})
+
+	t.Run("fails when directory creation fails", func(t *testing.T) {
+		tempDir := t.TempDir()
+		existingFile := filepath.Join(tempDir, "file.txt")
+		err := os.WriteFile(existingFile, []byte("test"), 0644)
+		require.NoError(t, err)
+
+		// Try to write to a path where parent is a file
+		err = WriteFile(filepath.Join(existingFile, "subfile.txt"), []byte("test"), 0644)
+		assert.Error(t, err)
+	})
 }
