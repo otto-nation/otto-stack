@@ -35,5 +35,8 @@
       "always",
       72
     ]
-  }
+  },
+  "ignores": [
+    "(commit) => commit.includes('dependabot[bot]')"
+  ]
 }
