@@ -291,8 +291,8 @@ func TestManager_Get_LoadError(t *testing.T) {
 
 	registryPath := filepath.Join(registryDir, "registry.yaml")
 
-	// Write malformed YAML that will fail to unmarshal
-	err = os.WriteFile(registryPath, []byte("containers:\n  - invalid: [unclosed"), 0644)
+	// Write YAML with wrong type for containers field (string instead of map)
+	err = os.WriteFile(registryPath, []byte("containers: \"not a map\""), 0644)
 	assert.NoError(t, err)
 
 	manager := NewManager(registryPath)
@@ -304,8 +304,8 @@ func TestManager_List_LoadError(t *testing.T) {
 	tempDir := t.TempDir()
 	registryPath := filepath.Join(tempDir, "registry.yaml")
 
-	// Write malformed YAML that will fail to unmarshal
-	err := os.WriteFile(registryPath, []byte("containers:\n  - invalid: [unclosed"), 0644)
+	// Write YAML with wrong type for containers field (string instead of map)
+	err := os.WriteFile(registryPath, []byte("containers: \"not a map\""), 0644)
 	assert.NoError(t, err)
 
 	manager := NewManager(registryPath)
@@ -317,8 +317,8 @@ func TestManager_IsShared_LoadError(t *testing.T) {
 	tempDir := t.TempDir()
 	registryPath := filepath.Join(tempDir, "registry.yaml")
 
-	// Write malformed YAML that will fail to unmarshal
-	err := os.WriteFile(registryPath, []byte("containers:\n  - invalid: [unclosed"), 0644)
+	// Write YAML with wrong type for containers field (string instead of map)
+	err := os.WriteFile(registryPath, []byte("containers: \"not a map\""), 0644)
 	assert.NoError(t, err)
 
 	manager := NewManager(registryPath)
