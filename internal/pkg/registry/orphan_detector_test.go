@@ -39,8 +39,8 @@ func TestOrphanDetector_FindOrphans_LoadError(t *testing.T) {
 	tempDir := t.TempDir()
 	registryPath := filepath.Join(tempDir, "registry.yaml")
 
-	// Write an invalid YAML file to force unmarshal error
-	err := os.WriteFile(registryPath, []byte("invalid: yaml: content: ["), 0644)
+	// Write malformed YAML that will fail to unmarshal
+	err := os.WriteFile(registryPath, []byte("containers:\n  - invalid: [unclosed"), 0644)
 	assert.NoError(t, err)
 
 	manager := NewManager(registryPath)
