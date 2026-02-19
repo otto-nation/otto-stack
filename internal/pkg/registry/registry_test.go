@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"testing"
 	"time"
@@ -282,6 +283,9 @@ func TestManager_Reconcile(t *testing.T) {
 }
 
 func TestManager_Get_LoadError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows - file-as-directory behavior differs")
+	}
 	tempDir := t.TempDir()
 	manager := NewManager(filepath.Join(tempDir, "nonexistent", "registry.yaml"))
 
@@ -296,6 +300,9 @@ func TestManager_Get_LoadError(t *testing.T) {
 }
 
 func TestManager_List_LoadError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows - file-as-directory behavior differs")
+	}
 	tempDir := t.TempDir()
 	invalidPath := filepath.Join(tempDir, "file.txt")
 	err := os.WriteFile(invalidPath, []byte("test"), 0644)
@@ -307,6 +314,9 @@ func TestManager_List_LoadError(t *testing.T) {
 }
 
 func TestManager_IsShared_LoadError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping on Windows - file-as-directory behavior differs")
+	}
 	tempDir := t.TempDir()
 	invalidPath := filepath.Join(tempDir, "file.txt")
 	err := os.WriteFile(invalidPath, []byte("test"), 0644)
