@@ -24,14 +24,14 @@
     "@thulite/seo": "^2.4.3",
     "ajv": "^8.18.0",
     "fs-extra": "^11.3.3",
-    "glob": "^13.0.3",
+    "glob": "^13.0.6",
     "handlebars": "^4.7.8",
     "js-yaml": "^4.1.1",
     "thulite": "^2.6.4"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.4.1",
-    "@commitlint/config-conventional": "^20.4.1",
+    "@commitlint/cli": "^20.4.2",
+    "@commitlint/config-conventional": "^20.4.2",
     "markdown-link-check": "^3.14.2",
     "markdownlint-cli": "^0.47.0",
     "prettier": "^3.8.1",
