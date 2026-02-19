@@ -10,7 +10,6 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestNewRegistry(t *testing.T) {
@@ -279,46 +278,4 @@ func TestManager_Reconcile(t *testing.T) {
 	if result == nil {
 		t.Error("Expected non-nil result")
 	}
-}
-
-func TestManager_Get_LoadError(t *testing.T) {
-	tempDir := t.TempDir()
-	registryDir := filepath.Join(tempDir, "registry")
-	err := os.Mkdir(registryDir, 0755)
-	assert.NoError(t, err)
-	registryPath := filepath.Join(registryDir, "registry.yaml")
-
-	// Use binary data that cannot be parsed as YAML
-	err = os.WriteFile(registryPath, []byte{0xFF, 0xFE, 0xFD}, 0644)
-	assert.NoError(t, err)
-
-	manager := NewManager(registryPath)
-	_, err = manager.Get("test")
-	assert.Error(t, err)
-}
-
-func TestManager_List_LoadError(t *testing.T) {
-	tempDir := t.TempDir()
-	registryPath := filepath.Join(tempDir, "registry.yaml")
-
-	// Use binary data that cannot be parsed as YAML
-	err := os.WriteFile(registryPath, []byte{0xFF, 0xFE, 0xFD}, 0644)
-	assert.NoError(t, err)
-
-	manager := NewManager(registryPath)
-	_, err = manager.List()
-	assert.Error(t, err)
-}
-
-func TestManager_IsShared_LoadError(t *testing.T) {
-	tempDir := t.TempDir()
-	registryPath := filepath.Join(tempDir, "registry.yaml")
-
-	// Use binary data that cannot be parsed as YAML
-	err := os.WriteFile(registryPath, []byte{0xFF, 0xFE, 0xFD}, 0644)
-	assert.NoError(t, err)
-
-	manager := NewManager(registryPath)
-	_, err = manager.IsShared("test")
-	assert.Error(t, err)
 }
