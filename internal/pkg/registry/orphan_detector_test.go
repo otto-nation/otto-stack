@@ -39,8 +39,8 @@ func TestOrphanDetector_FindOrphans_LoadError(t *testing.T) {
 	tempDir := t.TempDir()
 	registryPath := filepath.Join(tempDir, "registry.yaml")
 
-	// Write YAML with wrong type for shared_containers field (string instead of map)
-	err := os.WriteFile(registryPath, []byte("shared_containers: \"not a map\""), 0644)
+	// Use tab character in YAML which is invalid per YAML spec
+	err := os.WriteFile(registryPath, []byte("shared_containers:\n\tinvalid"), 0644)
 	assert.NoError(t, err)
 
 	manager := NewManager(registryPath)

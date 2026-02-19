@@ -283,16 +283,13 @@ func TestManager_Reconcile(t *testing.T) {
 
 func TestManager_Get_LoadError(t *testing.T) {
 	tempDir := t.TempDir()
-
-	// Create a directory and make it inaccessible by creating a file with the same name as the registry path
 	registryDir := filepath.Join(tempDir, "registry")
 	err := os.Mkdir(registryDir, 0755)
 	assert.NoError(t, err)
-
 	registryPath := filepath.Join(registryDir, "registry.yaml")
 
-	// Write YAML with wrong type for shared_containers field (string instead of map)
-	err = os.WriteFile(registryPath, []byte("shared_containers: \"not a map\""), 0644)
+	// Use tab character in YAML which is invalid per YAML spec
+	err = os.WriteFile(registryPath, []byte("shared_containers:\n\tinvalid"), 0644)
 	assert.NoError(t, err)
 
 	manager := NewManager(registryPath)
@@ -304,8 +301,8 @@ func TestManager_List_LoadError(t *testing.T) {
 	tempDir := t.TempDir()
 	registryPath := filepath.Join(tempDir, "registry.yaml")
 
-	// Write YAML with wrong type for shared_containers field (string instead of map)
-	err := os.WriteFile(registryPath, []byte("shared_containers: \"not a map\""), 0644)
+	// Use tab character in YAML which is invalid per YAML spec
+	err := os.WriteFile(registryPath, []byte("shared_containers:\n\tinvalid"), 0644)
 	assert.NoError(t, err)
 
 	manager := NewManager(registryPath)
@@ -317,8 +314,8 @@ func TestManager_IsShared_LoadError(t *testing.T) {
 	tempDir := t.TempDir()
 	registryPath := filepath.Join(tempDir, "registry.yaml")
 
-	// Write YAML with wrong type for shared_containers field (string instead of map)
-	err := os.WriteFile(registryPath, []byte("shared_containers: \"not a map\""), 0644)
+	// Use tab character in YAML which is invalid per YAML spec
+	err := os.WriteFile(registryPath, []byte("shared_containers:\n\tinvalid"), 0644)
 	assert.NoError(t, err)
 
 	manager := NewManager(registryPath)
