@@ -39,8 +39,8 @@ func TestOrphanDetector_FindOrphans_LoadError(t *testing.T) {
 	tempDir := t.TempDir()
 	registryPath := filepath.Join(tempDir, "registry.yaml")
 
-	// Use tab character in YAML which is invalid per YAML spec
-	err := os.WriteFile(registryPath, []byte("shared_containers:\n\tinvalid"), 0644)
+	// Use binary data that cannot be parsed as YAML
+	err := os.WriteFile(registryPath, []byte{0xFF, 0xFE, 0xFD}, 0644)
 	assert.NoError(t, err)
 
 	manager := NewManager(registryPath)
