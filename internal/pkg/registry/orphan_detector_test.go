@@ -3,7 +3,6 @@ package registry
 import (
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
@@ -37,15 +36,14 @@ func TestOrphanDetector_buildContainerMap_Empty(t *testing.T) {
 }
 
 func TestOrphanDetector_FindOrphans_LoadError(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Skipping on Windows - file-as-directory behavior differs")
-	}
 	tempDir := t.TempDir()
-	invalidPath := filepath.Join(tempDir, "file.txt")
-	err := os.WriteFile(invalidPath, []byte("test"), 0644)
+	registryPath := filepath.Join(tempDir, "registry.yaml")
+
+	// Write an invalid YAML file to force unmarshal error
+	err := os.WriteFile(registryPath, []byte("invalid: yaml: content: ["), 0644)
 	assert.NoError(t, err)
 
-	manager := NewManager(filepath.Join(invalidPath, "registry.yaml"))
+	manager := NewManager(registryPath)
 	detector := NewOrphanDetector(manager)
 
 	_, err = detector.FindOrphans()
