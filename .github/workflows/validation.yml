@@ -59,16 +59,18 @@ jobs:
         run: |
           task generate
           
-          # Check for changes, ignoring lastmod date updates in docs
-          if git diff --name-only | grep -v 'docs-site/content' > /dev/null; then
+          # Check for code changes (excluding docs)
+          CODE_CHANGES=$(git diff --name-only | grep -v 'docs-site/content' || true)
+          if [ -n "$CODE_CHANGES" ]; then
             echo "❌ Generated code files are out of date"
             echo "Run 'task generate' and commit the changes"
-            git diff --name-only
+            echo "$CODE_CHANGES"
             exit 1
           fi
           
-          # For docs, check everything except lastmod lines
-          if git diff docs-site/content/ | grep -v '^[+-]lastmod:' | grep '^[+-]' | grep -v '^+++\|^---' > /dev/null; then
+          # Check docs changes (excluding lastmod lines)
+          DOCS_CHANGES=$(git diff docs-site/content/ | grep -v '^[+-]lastmod:' | grep '^[+-]' | grep -v '^+++\|^---' || true)
+          if [ -n "$DOCS_CHANGES" ]; then
             echo "❌ Generated documentation is out of date"
             echo "Run 'task generate' and commit the changes"
             git diff docs-site/content/
