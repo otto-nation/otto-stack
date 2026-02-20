@@ -1,0 +1,29 @@
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [
+      2,
+      'always',
+      [
+        'feat',
+        'fix',
+        'perf',
+        'deps',
+        'revert',
+        'docs',
+        'style',
+        'refactor',
+        'test',
+        'build',
+        'ci',
+        'chore',
+      ],
+    ],
+    'subject-empty': [2, 'never'],
+    'subject-full-stop': [2, 'never', '.'],
+    'header-max-length': [2, 'always', 72],
+  },
+  ignores: [
+    (commit) => commit.includes('dependabot[bot]'),
+  ],
+};
