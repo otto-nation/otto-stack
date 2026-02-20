@@ -21,7 +21,7 @@ jobs:
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -76,7 +76,7 @@ jobs:
     if: github.event_name == 'push'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -126,14 +126,14 @@ jobs:
           echo "Coverage report generated at coverage.html"
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-report
           path: coverage.html
           retention-days: 30
 
       - name: Setup Node.js
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: "18"
           cache: "npm"
@@ -150,7 +150,7 @@ jobs:
       go-matrix: ${{ steps.matrix.outputs.go-matrix }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Generate Go version matrix
         id: matrix
@@ -172,7 +172,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Go ${{ matrix.go-version }}
         uses: actions/setup-go@v6
@@ -209,7 +209,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup environment
         uses: ./.github/actions/setup-environment
