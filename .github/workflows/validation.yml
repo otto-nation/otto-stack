@@ -44,7 +44,7 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: wagoid/commitlint-github-action@v5
         with:
-          configFile: .github/.commitlintrc.json
+          configFile: .github/.commitlintrc.js
 
       - name: Setup Hugo for validation
         uses: peaceiris/actions-hugo@v3
