@@ -5,6 +5,8 @@ import "time"
 // ServiceStatus represents the status of a service
 type ServiceStatus struct {
 	Name      string        `json:"name" yaml:"name"`
+	Scope     string        `json:"scope" yaml:"scope"` // "shared" or "local"
+	Container string        `json:"container,omitempty" yaml:"container,omitempty"`
 	State     string        `json:"state" yaml:"state"`
 	Health    string        `json:"health" yaml:"health"`
 	Provider  string        `json:"provider,omitempty" yaml:"provider,omitempty"`

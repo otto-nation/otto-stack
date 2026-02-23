@@ -4,14 +4,24 @@ package logger
 
 import (
 	"log/slog"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestDefaultConfig(t *testing.T) {
+	// Clear env var for test
+	os.Unsetenv(EnvLogLevel)
 	config := DefaultConfig()
-	assert.Equal(t, LogLevelInfo, config.Level)
+	assert.Equal(t, LogLevelWarn, config.Level)
+}
+
+func TestDefaultConfigWithEnv(t *testing.T) {
+	os.Setenv(EnvLogLevel, "debug")
+	defer os.Unsetenv(EnvLogLevel)
+	config := DefaultConfig()
+	assert.Equal(t, LogLevelDebug, config.Level)
 }
 
 func TestParseLogLevel(t *testing.T) {
@@ -23,7 +33,7 @@ func TestParseLogLevel(t *testing.T) {
 		{"debug", LogLevelDebug, slog.LevelDebug},
 		{"info", LogLevelInfo, slog.LevelInfo},
 		{"warn", LogLevelWarn, slog.LevelWarn},
-		{"warning", "warning", slog.LevelWarn},
+		{"warning", LogLevelWarning, slog.LevelWarn},
 		{"error", LogLevelError, slog.LevelError},
 		{"invalid", "invalid", slog.LevelInfo},
 		{"uppercase", "DEBUG", slog.LevelDebug},

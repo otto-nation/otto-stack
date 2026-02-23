@@ -50,10 +50,10 @@ func (sc *StatusConverter) createServiceStatus(config types.ServiceConfig, servi
 	providerName := sc.getProviderName(config.Name, provider)
 
 	if containerStatus, exists := containerMap[provider]; exists {
-		return sc.buildFoundStatus(config.Name, providerName, containerStatus)
+		return sc.buildFoundStatus(config.Name, providerName, containerStatus, config.Shareable)
 	}
 
-	return sc.buildNotFoundStatus(config.Name, providerName)
+	return sc.buildNotFoundStatus(config.Name, providerName, config.Shareable)
 }
 
 func (sc *StatusConverter) getProviderName(serviceName, provider string) string {
@@ -63,14 +63,21 @@ func (sc *StatusConverter) getProviderName(serviceName, provider string) string 
 	return provider
 }
 
-func (sc *StatusConverter) buildFoundStatus(name, provider string, containerStatus docker.ContainerStatus) display.ServiceStatus {
+func (sc *StatusConverter) buildFoundStatus(name, provider string, containerStatus docker.ContainerStatus, shareable bool) display.ServiceStatus {
 	uptime := time.Duration(0)
 	if !containerStatus.StartedAt.IsZero() {
 		uptime = time.Since(containerStatus.StartedAt)
 	}
 
+	scope := display.ScopeLocal
+	if shareable {
+		scope = display.ScopeShared
+	}
+
 	return display.ServiceStatus{
 		Name:      name,
+		Scope:     scope,
+		Container: containerStatus.Name,
 		Provider:  provider,
 		State:     containerStatus.State,
 		Health:    containerStatus.Health,
@@ -81,11 +88,17 @@ func (sc *StatusConverter) buildFoundStatus(name, provider string, containerStat
 	}
 }
 
-func (sc *StatusConverter) buildNotFoundStatus(name, provider string) display.ServiceStatus {
+func (sc *StatusConverter) buildNotFoundStatus(name, provider string, shareable bool) display.ServiceStatus {
+	scope := display.ScopeLocal
+	if shareable {
+		scope = display.ScopeShared
+	}
+
 	return display.ServiceStatus{
 		Name:     name,
+		Scope:    scope,
 		Provider: provider,
-		State:    "not found",
-		Health:   "unknown",
+		State:    display.StateNotFound,
+		Health:   display.StateUnknown,
 	}
 }

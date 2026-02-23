@@ -111,18 +111,8 @@ func mergeProjectConfigs(base, local *config.Config) *config.Config {
 
 // ResolveServiceConfigs resolves service configurations from args or enabled services
 func ResolveServiceConfigs(args []string, setup *CoreSetup) ([]types.ServiceConfig, error) {
-	var serviceConfigs []types.ServiceConfig
-	var err error
-
 	if len(args) > 0 {
-		serviceConfigs, err = services.ResolveUpServices(args, setup.Config)
-	} else {
-		serviceConfigs, err = services.ResolveUpServices(setup.Config.Stack.Enabled, setup.Config)
+		return services.ResolveUpServices(args, setup.Config)
 	}
-
-	if err != nil {
-		return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentServices, messages.ErrorsStackResolveFailed, err)
-	}
-
-	return serviceConfigs, nil
+	return services.ResolveUpServices(setup.Config.Stack.Enabled, setup.Config)
 }

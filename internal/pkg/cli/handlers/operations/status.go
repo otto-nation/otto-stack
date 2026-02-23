@@ -89,7 +89,7 @@ func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Comm
 
 	serviceConfigs, err := h.resolveServices(args, setup, &ciFlags)
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsStatusResolveServicesFailed, err)
+		return err
 	}
 
 	statuses, err := h.getServiceStatuses(ctx, setup.Config.Project.Name, serviceConfigs, &ciFlags)
@@ -241,7 +241,7 @@ func (h *StatusHandler) handleProjectSharedStatusWithRequest(req statusRequest) 
 func (h *StatusHandler) resolveServices(args []string, setup *common.CoreSetup, ciFlags *ci.Flags) ([]types.ServiceConfig, error) {
 	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
-		return nil, ci.FormatError(*ciFlags, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackResolveFailed, err))
+		return nil, ci.FormatError(*ciFlags, err)
 	}
 	return serviceConfigs, nil
 }

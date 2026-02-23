@@ -7,8 +7,21 @@ const (
 	// Port display limits
 	MaxPortsDisplay = 12
 
+	// Display values
+	NotApplicable = "n/a"
+
+	// Scope values
+	ScopeLocal  = "local"
+	ScopeShared = "shared"
+
+	// State values
+	StateNotFound = "not found"
+	StateUnknown  = "unknown"
+
 	// Table headers - Status
 	HeaderService    = "SERVICE"
+	HeaderScope      = "SCOPE"
+	HeaderContainer  = "CONTAINER"
 	HeaderProvidedBy = "PROVIDED BY"
 	HeaderState      = "STATE"
 	HeaderHealth     = "HEALTH"

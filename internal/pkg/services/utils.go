@@ -1,8 +1,6 @@
 package services
 
 import (
-	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
@@ -46,15 +44,9 @@ func (u *ServiceUtils) LoadServicesByCategory() (map[string][]servicetypes.Servi
 }
 
 // LoadServiceConfig loads a specific service configuration
+// This is a pure loading function - use ValidationService for validation
 func (u *ServiceUtils) LoadServiceConfig(serviceName string) (*servicetypes.ServiceConfig, error) {
-	service, err := u.manager.GetService(serviceName)
-	if err != nil {
-		return nil, err
-	}
-	if service.Hidden {
-		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceNotAccessible, serviceName)
-	}
-	return service, nil
+	return u.manager.GetService(serviceName)
 }
 
 // GetServicesByCategory loads services organized by category (alias)

@@ -3,7 +3,7 @@ title: Configuration Guide
 description: Configure your otto-stack development environment
 lead: Learn how to configure your development stack
 date: "2025-10-01"
-lastmod: "2026-02-12"
+lastmod: "2026-02-23"
 draft: false
 weight: 25
 toc: true

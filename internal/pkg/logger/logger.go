@@ -14,9 +14,14 @@ type Config struct {
 }
 
 // DefaultConfig returns default logger configuration
+// Checks OTTO_LOG_LEVEL environment variable, defaults to warn
 func DefaultConfig() Config {
+	level := os.Getenv(EnvLogLevel)
+	if level == "" {
+		level = LogLevelWarn
+	}
 	return Config{
-		Level: LogLevelInfo,
+		Level: level,
 	}
 }
 
@@ -43,7 +48,7 @@ func parseLogLevel(level string) slog.Level {
 		return slog.LevelDebug
 	case LogLevelInfo:
 		return slog.LevelInfo
-	case LogLevelWarn, "warning":
+	case LogLevelWarn, LogLevelWarning:
 		return slog.LevelWarn
 	case LogLevelError:
 		return slog.LevelError

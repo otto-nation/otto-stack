@@ -68,7 +68,7 @@ func (sf *StatusFormatter) formatFull(services []ServiceStatus, options Options)
 }
 
 func (sf *StatusFormatter) buildCompactHeaders(hasProvider bool) table.Row {
-	headers := table.Row{HeaderService}
+	headers := table.Row{HeaderService, HeaderScope}
 	if hasProvider {
 		headers = append(headers, HeaderProvidedBy)
 	}
@@ -77,7 +77,7 @@ func (sf *StatusFormatter) buildCompactHeaders(hasProvider bool) table.Row {
 }
 
 func (sf *StatusFormatter) buildFullHeaders(hasProvider bool) table.Row {
-	headers := table.Row{HeaderService}
+	headers := table.Row{HeaderService, HeaderScope, HeaderContainer}
 	if hasProvider {
 		headers = append(headers, HeaderProvidedBy)
 	}
@@ -86,11 +86,11 @@ func (sf *StatusFormatter) buildFullHeaders(hasProvider bool) table.Row {
 }
 
 func (sf *StatusFormatter) buildCompactRow(service ServiceStatus, hasProvider bool) table.Row {
-	row := table.Row{service.Name}
+	row := table.Row{service.Name, service.Scope}
 	if hasProvider {
 		provider := service.Provider
 		if provider == "" {
-			provider = "n/a"
+			provider = NotApplicable
 		}
 		row = append(row, provider)
 	}
@@ -102,11 +102,16 @@ func (sf *StatusFormatter) buildCompactRow(service ServiceStatus, hasProvider bo
 }
 
 func (sf *StatusFormatter) buildFullRow(service ServiceStatus, hasProvider bool) table.Row {
-	row := table.Row{service.Name}
+	container := service.Container
+	if container == "" {
+		container = NotApplicable
+	}
+
+	row := table.Row{service.Name, service.Scope, container}
 	if hasProvider {
 		provider := service.Provider
 		if provider == "" {
-			provider = "n/a"
+			provider = NotApplicable
 		}
 		row = append(row, provider)
 	}

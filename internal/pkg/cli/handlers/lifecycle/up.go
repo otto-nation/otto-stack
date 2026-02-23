@@ -66,7 +66,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 
 	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsFailedResolveServices, err)
+		return err
 	}
 
 	// Register shared containers before starting
@@ -126,7 +126,7 @@ func (h *UpHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, arg
 
 	serviceConfigs, err := h.loadServiceConfigs(args)
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentService, messages.ErrorsServiceLoadFailed, err)
+		return err
 	}
 
 	if err := h.registerSharedContainers(serviceConfigs, execCtx, base); err != nil {
@@ -144,7 +144,7 @@ func (h *UpHandler) loadServiceConfigs(serviceNames []string) ([]types.ServiceCo
 	for _, name := range serviceNames {
 		cfg, err := serviceUtils.LoadServiceConfig(name)
 		if err != nil {
-			return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentService, messages.ErrorsServiceLoadFailed, err)
+			return nil, err
 		}
 		if cfg != nil {
 			configs = append(configs, *cfg)

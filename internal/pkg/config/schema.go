@@ -19,7 +19,10 @@ type ProjectConfig struct {
 }
 
 // StackConfig defines stack-level configuration
+// StackConfig defines stack service configuration
 type StackConfig struct {
+	// Enabled contains user-selected services only
+	// Dependencies are resolved automatically at runtime
 	Enabled []string `yaml:"enabled" json:"enabled"`
 }
 

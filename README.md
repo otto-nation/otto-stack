@@ -93,6 +93,24 @@ otto-stack up
 1. **[Complete installation guide](docs-site/content/setup.md)**
 3. **[Explore available services](docs-site/content/services.md)**
 
+## Git Workflow
+
+For AI-powered git automation, install [otto-workbench](https://github.com/otto-nation/otto-workbench):
+
+```bash
+git clone https://github.com/otto-nation/otto-workbench ~/workbench
+cd ~/workbench && ./install.sh
+```
+
+Then use from any project:
+```bash
+task --global commit      # AI-generated commit messages
+task --global create-pr   # AI-generated pull requests
+task --global update-pr   # Update PR descriptions
+```
+
+**otto-workbench** also provides shell aliases, development utilities, and AWS/Kubernetes helpers.
+
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](docs-site/content/contributing.md) for details.

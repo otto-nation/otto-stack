@@ -7,7 +7,7 @@ lead: >-
   Streamline your local development with powerful CLI tools and automated
   service management
 date: "2025-10-01"
-lastmod: "2026-02-12"
+lastmod: "2026-02-23"
 draft: false
 weight: 50
 toc: true
@@ -110,6 +110,25 @@ otto-stack up
 
 1. **[Complete installation guide](setup/)**
 2. **[Explore available services](services/)**
+
+## Git Workflow
+
+For AI-powered git automation, install [otto-workbench](https://github.com/otto-nation/otto-workbench):
+
+```bash
+git clone https://github.com/otto-nation/otto-workbench ~/workbench
+cd ~/workbench && ./install.sh
+```
+
+Then use from any project:
+
+```bash
+task --global commit      # AI-generated commit messages
+task --global create-pr   # AI-generated pull requests
+task --global update-pr   # Update PR descriptions
+```
+
+**otto-workbench** also provides shell aliases, development utilities, and AWS/Kubernetes helpers.
 
 ## Contributing
 

@@ -74,7 +74,7 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 
 	serviceConfigs, err := common.ResolveServiceConfigs(args, setup)
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsFailedResolveServices, err)
+		return err
 	}
 
 	serviceConfigs, err = h.filterSharedIfNeeded(serviceConfigs, execCtx.Shared.Root, base)

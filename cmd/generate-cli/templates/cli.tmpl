@@ -37,14 +37,8 @@ func BuildRootCommand() *cobra.Command {
 		Short: "Otto Stack CLI",
 		Long:  "A powerful development stack management tool",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			// Reconfigure logger based on verbose flag after flags are parsed
-			verbose, _ := cmd.Flags().GetBool("verbose")
+			// Initialize logger (respects OTTO_LOG_LEVEL env var)
 			config := logger.DefaultConfig()
-			if verbose {
-				config.Level = logger.LogLevelDebug
-			} else {
-				config.Level = logger.LogLevelWarn
-			}
 			logger.Init(config)
 		},
 	}

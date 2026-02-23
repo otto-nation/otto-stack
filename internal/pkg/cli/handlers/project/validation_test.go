@@ -10,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestValidateProjectName(t *testing.T) {
@@ -44,7 +45,9 @@ func TestValidateProjectName(t *testing.T) {
 }
 
 func TestValidateServiceConfigs(t *testing.T) {
-	validator := services.NewValidator()
+	manager, err := services.New()
+	require.NoError(t, err)
+	validator := services.NewValidationService(manager)
 
 	tests := []struct {
 		name           string
@@ -59,7 +62,7 @@ func TestValidateServiceConfigs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validator.ValidateServiceConfigs(tt.serviceConfigs)
+			err := validator.ValidateResolvedServices(tt.serviceConfigs)
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {

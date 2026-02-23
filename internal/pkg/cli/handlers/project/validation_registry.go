@@ -20,7 +20,12 @@ var ValidationRegistry = map[string]ValidationFunc{
 	core.ValidationDocker:       validateDocker,
 	core.ValidationConfigSyntax: validateNoFileConflicts,
 	core.ValidationServiceDefinitions: func(h *InitHandler, serviceConfigs []types.ServiceConfig, base *base.BaseCommand) error {
-		return services.NewValidator().ValidateServiceConfigs(serviceConfigs)
+		manager, err := services.New()
+		if err != nil {
+			return err
+		}
+		validationService := services.NewValidationService(manager)
+		return validationService.ValidateResolvedServices(serviceConfigs)
 	},
 }
 

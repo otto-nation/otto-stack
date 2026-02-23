@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/otto-nation/otto-stack/internal/core/docker"
+	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -48,21 +49,29 @@ func TestStatusConverter_buildFoundStatus(t *testing.T) {
 		Health: "healthy",
 	}
 
-	status := converter.buildFoundStatus("postgres", "postgres", containerStatus)
+	status := converter.buildFoundStatus("postgres", "postgres", containerStatus, true)
 	assert.Equal(t, "postgres", status.Name)
+	assert.Equal(t, display.ScopeShared, status.Scope)
 	assert.Equal(t, "running", status.State)
 	assert.Equal(t, "healthy", status.Health)
 	assert.Equal(t, "postgres", status.Provider)
+
+	statusLocal := converter.buildFoundStatus("postgres", "postgres", containerStatus, false)
+	assert.Equal(t, display.ScopeLocal, statusLocal.Scope)
 }
 
 func TestStatusConverter_buildNotFoundStatus(t *testing.T) {
 	converter := NewStatusConverter()
 
-	status := converter.buildNotFoundStatus("postgres", "postgres")
+	status := converter.buildNotFoundStatus("postgres", "postgres", true)
 	assert.Equal(t, "postgres", status.Name)
-	assert.Equal(t, "not found", status.State)
-	assert.Equal(t, "unknown", status.Health)
+	assert.Equal(t, display.ScopeShared, status.Scope)
+	assert.Equal(t, display.StateNotFound, status.State)
+	assert.Equal(t, display.StateUnknown, status.Health)
 	assert.Equal(t, "postgres", status.Provider)
+
+	statusLocal := converter.buildNotFoundStatus("postgres", "postgres", false)
+	assert.Equal(t, display.ScopeLocal, statusLocal.Scope)
 }
 
 func TestStatusConverter_createServiceStatus(t *testing.T) {
@@ -131,7 +140,7 @@ func TestStatusConverter_buildFoundStatus_ZeroStartTime(t *testing.T) {
 		State:  "running",
 		Health: "healthy",
 		// StartedAt is zero
-	})
+	}, false)
 
 	if status.Name != "test" {
 		t.Errorf("expected name 'test', got '%s'", status.Name)

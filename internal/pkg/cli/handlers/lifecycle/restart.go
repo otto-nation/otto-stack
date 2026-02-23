@@ -82,7 +82,7 @@ func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Co
 		serviceConfigs, err = services.ResolveUpServices(setup.Config.Stack.Enabled, setup.Config)
 	}
 	if err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackResolveFailed, err)
+		return err
 	}
 
 	if err := h.restartServices(ctx, setup, serviceConfigs, flags); err != nil {

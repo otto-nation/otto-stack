@@ -34,8 +34,13 @@ func (p *NonInteractiveProcessor) Process(flags *core.InitFlags, base *base.Base
 		return clicontext.Context{}, err
 	}
 
-	validator := services.NewValidator()
-	if err := validator.ValidateServiceConfigs(serviceConfigs); err != nil {
+	// Validate resolved services (allows hidden dependencies)
+	manager, err := services.New()
+	if err != nil {
+		return clicontext.Context{}, err
+	}
+	validationService := services.NewValidationService(manager)
+	if err := validationService.ValidateResolvedServices(serviceConfigs); err != nil {
 		return clicontext.Context{}, err
 	}
 

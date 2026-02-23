@@ -16,8 +16,9 @@ type ServiceSelectionManager struct {
 }
 
 // SelectionResult holds the result of service selection
+// SelectionResult contains the user's service selection
 type SelectionResult struct {
-	ServiceConfigs []types.ServiceConfig
+	ServiceConfigs []types.ServiceConfig // User-selected services ONLY (not resolved with dependencies)
 	Validation     map[string]bool
 	Advanced       map[string]bool
 	Action         string
@@ -70,8 +71,13 @@ func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, proj
 		return nil, err
 	}
 
-	validator := services.NewValidator()
-	if err := validator.ValidateServiceConfigs(serviceConfigs); err != nil {
+	// Validate resolved services (allows hidden dependencies)
+	manager, err := services.New()
+	if err != nil {
+		return nil, err
+	}
+	validationService := services.NewValidationService(manager)
+	if err := validationService.ValidateResolvedServices(serviceConfigs); err != nil {
 		return nil, err
 	}
 
@@ -89,8 +95,10 @@ func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, proj
 		return nil, err
 	}
 
+	// Return ORIGINAL user selection, not resolved configs
+	// Dependencies will be resolved at runtime
 	return &SelectionResult{
-		ServiceConfigs: serviceConfigs,
+		ServiceConfigs: selectedConfigs,
 		Validation:     validation,
 		Advanced:       advanced,
 		Action:         action,

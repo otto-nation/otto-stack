@@ -6,6 +6,12 @@ const (
 	LogLevelInfo  = "info"
 	LogLevelWarn  = "warn"
 	LogLevelError = "error"
+
+	// Environment variable
+	EnvLogLevel = "OTTO_LOG_LEVEL"
+
+	// Aliases
+	LogLevelWarning = "warning"
 )
 
 // Log formats
