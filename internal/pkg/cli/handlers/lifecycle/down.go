@@ -2,6 +2,8 @@ package lifecycle
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"slices"
 	"time"
 
@@ -184,7 +186,7 @@ func (h *DownHandler) stopServices(ctx context.Context, cmd *cobra.Command, setu
 	return service, nil
 }
 
-func (h *DownHandler) handleGlobalContext(_ context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, sharedInfo *clicontext.SharedInfo) error {
+func (h *DownHandler) handleGlobalContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, sharedInfo *clicontext.SharedInfo) error {
 	base.Output.Header(messages.SharedStopping)
 
 	nonInteractive := ci.GetFlags(cmd).NonInteractive
@@ -197,7 +199,32 @@ func (h *DownHandler) handleGlobalContext(_ context.Context, cmd *cobra.Command,
 		return nil
 	}
 
+	h.stopSharedContainersViaCompose(ctx, sharedInfo.Root, base)
+
 	return h.unregisterSharedContainers(servicesToStop, sharedInfo, base)
+}
+
+func (h *DownHandler) stopSharedContainersViaCompose(ctx context.Context, sharedRoot string, base *base.BaseCommand) {
+	composePath := filepath.Join(sharedRoot, core.GeneratedDir, docker.DockerComposeFileName)
+	if _, err := os.Stat(composePath); os.IsNotExist(err) {
+		base.Output.Warning("%s", messages.SharedComposeFileNotFound)
+		return
+	}
+
+	composeManager, err := docker.NewManager()
+	if err != nil {
+		base.Output.Warning(messages.ErrorsDockerManagerCreateFailed, err)
+		return
+	}
+
+	proj, err := composeManager.LoadProject(ctx, composePath, "shared")
+	if err != nil {
+		base.Output.Warning(messages.ErrorsDockerLoadProjectFailed, err)
+		return
+	}
+
+	// Ignore errors from down — containers may already be stopped
+	_ = composeManager.Down(ctx, proj, docker.DownOptions{RemoveOrphans: true}.ToSDK())
 }
 
 func (h *DownHandler) determineServicesToStop(args []string, sharedInfo *clicontext.SharedInfo, base *base.BaseCommand, nonInteractive bool) ([]string, error) {
@@ -266,7 +293,7 @@ func (h *DownHandler) serviceNamesToConfigs(serviceNames []string) []types.Servi
 
 func (h *DownHandler) promptStopShared(_ *base.BaseCommand) bool {
 	prompt := &survey.Confirm{
-		Message: messages.PromptsCleanupConfirm,
+		Message: messages.PromptsStopSharedContainers,
 		Default: false,
 	}
 	var confirmed bool

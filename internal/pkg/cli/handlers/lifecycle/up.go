@@ -5,12 +5,16 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/AlecAivazis/survey/v2"
 	"github.com/spf13/cobra"
 
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
@@ -18,7 +22,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
-	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/otto-nation/otto-stack/internal/pkg/validation"
 )
 
@@ -121,8 +124,12 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	return nil
 }
 
-func (h *UpHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.SharedMode) error {
+func (h *UpHandler) handleGlobalContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.SharedMode) error {
 	base.Output.Header(messages.SharedStarting)
+
+	if ci.GetFlags(cmd).NonInteractive {
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.SharedContextRequiresInteractive, nil)
+	}
 
 	if len(args) == 0 {
 		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationNoServicesSelected, nil)
@@ -137,12 +144,102 @@ func (h *UpHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, arg
 		return err
 	}
 
+	for _, svc := range serviceConfigs {
+		base.Output.Info(messages.InfoListItem, svc.Name)
+	}
+
+	confirmed, err := h.promptConfirmStart()
+	if err != nil || !confirmed {
+		base.Output.Info(messages.SharedCancelled)
+		return nil
+	}
+
+	sharedRoot := execCtx.Shared.Root
+	if err := project.GenerateSharedFiles(serviceConfigs, sharedRoot, base); err != nil {
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.WarningsComposeGenerateSharedFailed, err)
+	}
+
+	composePath := filepath.Join(sharedRoot, core.GeneratedDir, docker.DockerComposeFileName)
+	if err := h.startSharedContainers(ctx, composePath); err != nil {
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStartFailed, err)
+	}
+
 	if err := h.registerSharedContainers(serviceConfigs, execCtx, base); err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceRegisterSharedFailed, err)
 	}
 
-	h.displaySuccess(base, serviceConfigs)
+	base.Output.Success(messages.SharedRegistered)
+
+	h.displaySharedStatus(ctx, sharedRoot, base)
 	return nil
+}
+
+func (h *UpHandler) startSharedContainers(ctx context.Context, composePath string) error {
+	composeManager, err := docker.NewManager()
+	if err != nil {
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerManagerCreateFailed, err)
+	}
+
+	proj, err := composeManager.LoadProject(ctx, composePath, "shared")
+	if err != nil {
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, messages.ErrorsDockerLoadProjectFailed, err)
+	}
+
+	return composeManager.Up(ctx, proj, docker.UpOptions{Detach: true}.ToSDK())
+}
+
+func (h *UpHandler) promptConfirmStart() (bool, error) {
+	prompt := &survey.Confirm{
+		Message: messages.SharedConfirmStart,
+		Default: false,
+	}
+	var confirmed bool
+	if err := survey.AskOne(prompt, &confirmed); err != nil {
+		return false, err
+	}
+	return confirmed, nil
+}
+
+func (h *UpHandler) displaySharedStatus(ctx context.Context, sharedRoot string, base *base.BaseCommand) {
+	reg := registry.NewManager(sharedRoot)
+	containers, err := reg.List()
+	if err != nil || len(containers) == 0 {
+		return
+	}
+
+	dockerClient, err := docker.NewClient(nil)
+	if err != nil {
+		return
+	}
+	defer func() { _ = dockerClient.Close() }()
+
+	now := time.Now()
+	statuses := make([]display.SharedContainerStatus, 0, len(containers))
+	for service, container := range containers {
+		cs := dockerClient.InspectContainer(ctx, container.Name)
+		projectNames := make([]string, len(container.Projects))
+		for i, ref := range container.Projects {
+			projectNames[i] = ref.Name
+		}
+		uptime := time.Duration(0)
+		if !cs.StartedAt.IsZero() {
+			uptime = now.Sub(cs.StartedAt)
+		}
+		statuses = append(statuses, display.SharedContainerStatus{
+			Name:      container.Name,
+			Service:   service,
+			State:     cs.State,
+			Health:    cs.Health,
+			Ports:     cs.Ports,
+			Uptime:    uptime,
+			Projects:  projectNames,
+			CreatedAt: container.CreatedAt,
+			UpdatedAt: container.UpdatedAt,
+		})
+	}
+
+	// Silent fallback: if render fails, the command already succeeded — skip the table
+	_ = display.RenderSharedStatusTable(base.Output.Writer(), statuses, true, base.Output.GetNoColor())
 }
 
 func (h *UpHandler) loadServiceConfigs(serviceNames []string) ([]types.ServiceConfig, error) {
@@ -241,13 +338,6 @@ func (h *UpHandler) filterSharedServices(serviceConfigs []types.ServiceConfig, c
 		}
 	}
 	return shared
-}
-
-func (h *UpHandler) displaySuccess(base *base.BaseCommand, serviceConfigs []types.ServiceConfig) {
-	base.Output.Success(messages.SharedRegistered)
-	for _, svc := range serviceConfigs {
-		base.Output.Info(messages.SharedRegisteredItem, ui.IconOK, svc.Name)
-	}
 }
 
 // filterStatusQueryNames returns service names to include in a Docker status query.

@@ -193,6 +193,7 @@ warnings:
 
 prompts:
   cleanup_confirm: "Proceed with cleanup?"
+  stop_shared_containers: "Stop these shared containers? Other projects using them will be affected."
   select_services: "Select services for your project:"
   select_services_help: "Use space to select, enter to confirm. Services are grouped by category."
   select_validation_options: "Select validation options:"
@@ -419,6 +420,9 @@ shared:
   no_services_to_stop: "No services to stop"
   confirm_stop: "Stop shared containers? (y/N): "
   registered_item: "  %s %s (shared)"
+  confirm_start: "You are outside a project directory. Start the above as shared containers available to all projects?"
+  compose_file_not_found: "Shared compose file not found — containers may still be running. Removing from registry only."
+  context_requires_interactive: "Starting shared containers requires interactive mode. Use a project directory or run interactively."
 
 middleware:
   project_already_initialized: "Project already initialized. Use --force to overwrite"

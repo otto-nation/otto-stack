@@ -438,7 +438,9 @@ func (m *Manager) buildReadmeContent(registry *Registry) string {
 	b.WriteString("This directory manages shared containers across multiple otto-stack projects.\n\n")
 	b.WriteString("## Files\n\n")
 	b.WriteString("- `containers.yaml` - Registry tracking which projects use which shared containers\n")
-	b.WriteString("- `docker-compose.yml` - Generated compose file for shared containers (created on demand)\n\n")
+	b.WriteString("- `generated/docker-compose.yml` - Generated compose file for shared containers\n")
+	b.WriteString("- `generated/.env.generated` - Generated environment variables\n")
+	b.WriteString("- `services/` - Per-service configuration stubs\n\n")
 	b.WriteString("## Active Shared Containers\n\n")
 
 	if len(registry.Containers) == 0 {

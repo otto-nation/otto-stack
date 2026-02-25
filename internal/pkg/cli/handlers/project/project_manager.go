@@ -241,7 +241,7 @@ func (pm *ProjectManager) buildSharedServicesInfo(serviceConfigs []types.Service
 
 	info := fmt.Sprintf("\n### Shared Services\nThe following services are shared across projects:\n%s", pm.formatServicesList(sharedServices))
 
-	section := fmt.Sprintf("\n## Shared Services\nShared services are managed globally and located at:\n- `%s/`\n- Registry: `%s/containers.yaml`\n- Compose: `%s/docker-compose.yml`\n",
+	section := fmt.Sprintf("\n## Shared Services\nShared services are managed globally and located at:\n- `%s/`\n- Registry: `%s/containers.yaml`\n- Compose: `%s/generated/docker-compose.yml`\n",
 		sharedPath,
 		sharedPath,
 		sharedPath,
@@ -250,12 +250,23 @@ func (pm *ProjectManager) buildSharedServicesInfo(serviceConfigs []types.Service
 	return info, section
 }
 
-// generateSharedCompose generates docker-compose.yml for shared services
+// generateSharedCompose generates shared service files by delegating to GenerateSharedFiles.
 func (pm *ProjectManager) generateSharedCompose(serviceConfigs []types.ServiceConfig, sharedRoot string, base *base.BaseCommand) error {
+	return GenerateSharedFiles(serviceConfigs, sharedRoot, base)
+}
+
+// GenerateSharedFiles creates or refreshes all shared service files under sharedRoot:
+//   - generated/docker-compose.yml — the compose file for shared containers
+//   - generated/.env.generated    — generated environment variables
+//   - services/<name>.yml         — per-service configuration stubs
+//
+// Only shareable services are processed; non-shareable entries are ignored.
+// Idempotent: safe to call on every `up`.
+func GenerateSharedFiles(serviceConfigs []types.ServiceConfig, sharedRoot string, base *base.BaseCommand) error {
 	var sharedConfigs []types.ServiceConfig
-	for _, config := range serviceConfigs {
-		if config.Shareable {
-			sharedConfigs = append(sharedConfigs, config)
+	for _, cfg := range serviceConfigs {
+		if cfg.Shareable {
+			sharedConfigs = append(sharedConfigs, cfg)
 		}
 	}
 
@@ -263,27 +274,50 @@ func (pm *ProjectManager) generateSharedCompose(serviceConfigs []types.ServiceCo
 		return nil
 	}
 
+	if err := os.MkdirAll(sharedRoot, core.PermReadWriteExec); err != nil {
+		return err
+	}
+
+	generatedDir := filepath.Join(sharedRoot, core.GeneratedDir)
+	if err := os.MkdirAll(generatedDir, core.PermReadWriteExec); err != nil {
+		return err
+	}
+
 	generator, err := compose.NewGenerator("shared")
 	if err != nil {
 		return err
 	}
 
-	header := core.ComposeHeaderShared
-	content, err := generator.BuildComposeDataWithHeader(sharedConfigs, header)
+	content, err := generator.BuildComposeDataWithHeader(sharedConfigs, core.ComposeHeaderShared)
 	if err != nil {
 		return err
 	}
 
-	if err := os.MkdirAll(sharedRoot, core.PermReadWriteExec); err != nil {
-		return err
-	}
-
-	composePath := filepath.Join(sharedRoot, "docker-compose.yml")
+	composePath := filepath.Join(generatedDir, docker.DockerComposeFileName)
 	if err := os.WriteFile(composePath, content, core.PermReadWrite); err != nil {
 		return err
 	}
-
 	base.Output.Success(messages.SuccessCreatedSharedComposeFile, composePath)
+
+	envPath := filepath.Join(generatedDir, core.EnvGeneratedFileName)
+	if err := env.GenerateFile("shared", sharedConfigs, envPath); err != nil {
+		return err
+	}
+	base.Output.Success(messages.SuccessCreatedEnvFile, envPath)
+
+	servicesDir := filepath.Join(sharedRoot, core.ServiceConfigsDir)
+	if err := os.MkdirAll(servicesDir, core.PermReadWriteExec); err != nil {
+		return err
+	}
+	cm := NewConfigManager()
+	for _, svc := range sharedConfigs {
+		stubPath := filepath.Join(servicesDir, svc.Name+core.YMLFileExtension)
+		stubContent := cm.generateServiceConfigContent(svc.Name)
+		if err := os.WriteFile(stubPath, []byte(stubContent), core.PermReadWrite); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
