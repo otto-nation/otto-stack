@@ -5,58 +5,91 @@ package project
 import (
 	"testing"
 
-	"github.com/otto-nation/otto-stack/internal/pkg/services"
-	servicetypes "github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/display"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/test/fixtures"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDepsHandler_LoadServices(t *testing.T) {
-	handler := NewDepsHandler()
-
-	svcs, err := handler.loadServices()
-	assert.NoError(t, err)
-	assert.NotEmpty(t, svcs)
+func TestDepsHandler_JoinOrDash(t *testing.T) {
+	assert.Equal(t, depsDash, joinOrDash([]string{}))
+	assert.Equal(t, depsDash, joinOrDash(nil))
+	assert.Equal(t, "network", joinOrDash([]string{"network"}))
+	assert.Equal(t, "network, storage", joinOrDash([]string{"network", "storage"}))
 }
 
-func TestDepsHandler_FormatDependencies(t *testing.T) {
+func TestDepsHandler_BuildTable_CollapseEmpty(t *testing.T) {
 	handler := NewDepsHandler()
 
-	result := handler.formatDependencies([]string{})
-	assert.Equal(t, "none", result)
+	// Service with only Required deps — only SERVICE and REQUIRED columns shown
+	postgres := fixtures.NewServiceConfig("postgres").WithRequired("pgvector").Build()
+	headers, rows := handler.buildTable([]types.ServiceConfig{postgres})
 
-	result = handler.formatDependencies([]string{"network"})
-	assert.Equal(t, "network", result)
-
-	result = handler.formatDependencies([]string{"network", "storage"})
-	assert.Contains(t, result, "network")
-	assert.Contains(t, result, "storage")
+	assert.Equal(t, []string{display.HeaderService, display.HeaderRequired}, headers)
+	assert.Len(t, rows, 1)
+	assert.Equal(t, "postgres", rows[0][0])
+	assert.Equal(t, "pgvector", rows[0][1])
 }
 
-func TestDepsHandler_BuildDependencyRows(t *testing.T) {
+func TestDepsHandler_BuildTable_AllColumns(t *testing.T) {
 	handler := NewDepsHandler()
 
-	cfg := servicetypes.ServiceConfig{
-		Name: services.ServicePostgres,
-	}
-	cfg.Service.Dependencies.Required = []string{"network"}
+	postgres := fixtures.NewServiceConfig("postgres").
+		WithRequired("pgvector").
+		WithConflicts("mysql").
+		WithProvides("database", "sql").
+		Build()
+	redis := fixtures.NewServiceConfig("redis").
+		WithSoft("sentinel").
+		WithProvides("cache").
+		Build()
 
-	allServices := map[string]servicetypes.ServiceConfig{
-		services.ServicePostgres: cfg,
-	}
+	headers, rows := handler.buildTable([]types.ServiceConfig{postgres, redis})
 
-	rows := handler.buildDependencyRows([]string{services.ServicePostgres}, allServices)
-	assert.Len(t, rows, 1)
-	assert.Equal(t, services.ServicePostgres, rows[0][0])
+	assert.Equal(t, []string{
+		display.HeaderService,
+		display.HeaderRequired,
+		display.HeaderSoft,
+		display.HeaderConflicts,
+		display.HeaderProvides,
+	}, headers)
+	assert.Len(t, rows, 2)
+}
 
-	cfg = servicetypes.ServiceConfig{Name: services.ServicePostgres}
-	allServices = map[string]servicetypes.ServiceConfig{
-		services.ServicePostgres: cfg,
-	}
+func TestDepsHandler_BuildTable_DashForEmpty(t *testing.T) {
+	handler := NewDepsHandler()
 
-	rows = handler.buildDependencyRows([]string{services.ServicePostgres, "nonexistent"}, allServices)
-	assert.Len(t, rows, 1)
+	// postgres has Required but no Soft; redis has Soft but no Required
+	postgres := fixtures.NewServiceConfig("postgres").WithRequired("pgvector").Build()
+	redis := fixtures.NewServiceConfig("redis").WithSoft("sentinel").Build()
 
-	allServices = map[string]servicetypes.ServiceConfig{}
-	rows = handler.buildDependencyRows([]string{}, allServices)
+	headers, rows := handler.buildTable([]types.ServiceConfig{postgres, redis})
+
+	assert.Contains(t, headers, display.HeaderRequired)
+	assert.Contains(t, headers, display.HeaderSoft)
+
+	reqIdx := headerIndex(headers, display.HeaderRequired)
+	softIdx := headerIndex(headers, display.HeaderSoft)
+
+	// redis has no Required — should show dash
+	assert.Equal(t, depsDash, rows[1][reqIdx])
+	// postgres has no Soft — should show dash
+	assert.Equal(t, depsDash, rows[0][softIdx])
+}
+
+func TestDepsHandler_BuildTable_Empty(t *testing.T) {
+	handler := NewDepsHandler()
+
+	headers, rows := handler.buildTable(nil)
+	assert.Equal(t, []string{display.HeaderService}, headers)
 	assert.Empty(t, rows)
+}
+
+func headerIndex(headers []string, target string) int {
+	for i, h := range headers {
+		if h == target {
+			return i
+		}
+	}
+	return -1
 }

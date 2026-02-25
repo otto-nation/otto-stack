@@ -6,6 +6,14 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
+// tableStyle is the standard go-pretty table style used across all CLI tables.
+// SeparateRows draws a horizontal rule between every data row for readability.
+var tableStyle = func() table.Style {
+	s := table.StyleLight
+	s.Options.SeparateRows = true
+	return s
+}()
+
 // TableFormatter handles generic table formatting
 type TableFormatter struct {
 	writer io.Writer
@@ -20,7 +28,7 @@ func NewTableFormatter(writer io.Writer) *TableFormatter {
 func (tf *TableFormatter) FormatTable(headers []string, rows [][]string) error {
 	tw := table.NewWriter()
 	tw.SetOutputMirror(tf.writer)
-	tw.SetStyle(table.StyleLight)
+	tw.SetStyle(tableStyle)
 
 	// Convert headers to table.Row
 	headerRow := make(table.Row, len(headers))
@@ -46,7 +54,7 @@ func (tf *TableFormatter) FormatTable(headers []string, rows [][]string) error {
 func (tf *TableFormatter) FormatTableWithSeparators(headers []string, groups [][][]string) error {
 	tw := table.NewWriter()
 	tw.SetOutputMirror(tf.writer)
-	tw.SetStyle(table.StyleLight)
+	tw.SetStyle(tableStyle)
 
 	// Convert headers to table.Row
 	headerRow := make(table.Row, len(headers))

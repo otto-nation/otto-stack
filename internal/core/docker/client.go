@@ -161,6 +161,36 @@ func (c *Client) ListContainers(ctx context.Context, project string) ([]Containe
 	return result, nil
 }
 
+// InspectContainer returns the full status of a named container.
+// It is a silent fallback — on any error it returns a ContainerStatus with State = ServiceStatusNotFound.
+func (c *Client) InspectContainer(ctx context.Context, name string) ContainerStatus {
+	resp, err := c.cli.ContainerInspect(ctx, name)
+	if err != nil {
+		return ContainerStatus{Name: name, State: ServiceStatusNotFound, Health: HealthStatusUnknown}
+	}
+
+	status := ContainerStatus{
+		Name:  name,
+		State: resp.State.Status,
+	}
+
+	if resp.State.Health != nil {
+		status.Health = resp.State.Health.Status
+	} else {
+		status.Health = HealthStatusUnknown
+	}
+
+	if resp.NetworkSettings != nil {
+		status.Ports = extractPorts(resp.NetworkSettings.Ports)
+	}
+
+	if startedAt, err := time.Parse(time.RFC3339Nano, resp.State.StartedAt); err == nil {
+		status.StartedAt = startedAt
+	}
+
+	return status
+}
+
 // RemoveContainer removes a container by ID
 func (c *Client) RemoveContainer(ctx context.Context, containerID string, force bool) error {
 	return c.cli.ContainerRemove(ctx, containerID, container.RemoveOptions{Force: force})

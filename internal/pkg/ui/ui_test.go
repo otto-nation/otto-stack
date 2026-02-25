@@ -15,7 +15,7 @@ func TestNewOutput(t *testing.T) {
 	output := NewOutput()
 	assert.NotNil(t, output)
 	assert.False(t, output.Quiet)
-	assert.False(t, output.NoColor)
+	// NoColor is set by TTY detection; do not assert a specific value here
 }
 
 func TestOutput_MessageFormatting(t *testing.T) {
@@ -26,9 +26,9 @@ func TestOutput_MessageFormatting(t *testing.T) {
 		args     []any
 		expected string
 	}{
-		{"success", (*Output).Success, "Task completed on port %d", []any{5432}, "✅ Task completed on port 5432"},
-		{"warning", (*Output).Warning, "Port %d in use", []any{5432}, "⚠️  Port 5432 in use"},
-		{"info", (*Output).Info, "Connecting to %s", []any{"database"}, "ℹ️  Connecting to database"},
+		{"success", (*Output).Success, "Task completed on port %d", []any{5432}, "✓ Task completed on port 5432"},
+		{"warning", (*Output).Warning, "Port %d in use", []any{5432}, "! Port 5432 in use"},
+		{"info", (*Output).Info, "Connecting to %s", []any{"database"}, "Connecting to database"},
 	}
 
 	for _, tt := range tests {
@@ -92,8 +92,8 @@ func TestOutput_NoColorMode(t *testing.T) {
 	io.Copy(&buf, r)
 	result := buf.String()
 
-	assert.Contains(t, result, "✅ Success message")
-	assert.Contains(t, result, "=== Header message ===")
+	assert.Contains(t, result, "✓ Success message")
+	assert.Contains(t, result, "Header message")
 	assert.NotContains(t, result, "\033[", "No color mode should not contain ANSI codes")
 }
 
@@ -149,13 +149,13 @@ func TestFormatFunctions(t *testing.T) {
 		noColor  bool
 		contains string
 	}{
-		{"success with color", formatSuccess, "test", false, "✅"},
-		{"success no color", formatSuccess, "test", true, "✅ test"},
-		{"error with color", formatError, "test", false, "❌"},
-		{"error no color", formatError, "test", true, "❌ test"},
-		{"warning with color", formatWarning, "test", false, "⚠️"},
-		{"info with color", formatInfo, "test", false, "ℹ️"},
-		{"header no color", formatHeader, "test", true, "=== test ==="},
+		{"success with color", formatSuccess, "test", false, "✓"},
+		{"success no color", formatSuccess, "test", true, "✓ test"},
+		{"error with color", formatError, "test", false, "✗"},
+		{"error no color", formatError, "test", true, "✗ test"},
+		{"warning with color", formatWarning, "test", false, "!"},
+		{"info with color", formatInfo, "test", false, "test"},
+		{"header no color", formatHeader, "test", true, "test"},
 	}
 
 	for _, tt := range tests {

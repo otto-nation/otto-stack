@@ -36,6 +36,7 @@ func (m *mockOutput) Muted(format string, args ...interface{}) {
 	m.messages = append(m.messages, "muted")
 }
 func (m *mockOutput) Writer() io.Writer { return nil }
+func (m *mockOutput) GetNoColor() bool  { return false }
 
 func TestNewOrphanDisplay(t *testing.T) {
 	output := &mockOutput{}

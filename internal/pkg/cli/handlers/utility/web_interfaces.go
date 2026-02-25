@@ -2,8 +2,9 @@ package utility
 
 import (
 	"context"
+	"io"
 	"net/http"
-	"os"
+	"sync"
 	"time"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -16,6 +17,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -36,7 +38,7 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 
 	ciFlags := ci.GetFlags(cmd)
 	if !ciFlags.Quiet {
-		base.Output.Header("%s %s", core.IconCategory_web, core.TitleCase(core.CommandWebInterfaces))
+		base.Output.Header(core.TitleCase(core.CommandWebInterfaces))
 	}
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
@@ -65,14 +67,16 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 	return nil
 }
 
-// collectInterfaces gathers web interfaces from services
+// collectInterfaces gathers web interfaces from services and checks their availability concurrently.
 func (h *WebInterfacesHandler) collectInterfaces(ctx context.Context, setup *common.CoreSetup, serviceConfigs []types.ServiceConfig, showAll bool) ([]WebInterface, error) {
 	runningServices, err := h.getRunningServices(ctx, setup, serviceConfigs, showAll)
 	if err != nil {
 		return nil, err
 	}
 
-	return h.extractWebInterfaces(serviceConfigs, runningServices, showAll), nil
+	interfaces := h.extractWebInterfaces(serviceConfigs, runningServices, showAll)
+	h.checkAvailabilityConcurrent(interfaces)
+	return interfaces, nil
 }
 
 // getRunningServices gets the status of services if not showing all
@@ -119,7 +123,8 @@ func (h *WebInterfacesHandler) extractWebInterfaces(serviceConfigs []types.Servi
 	return interfaces
 }
 
-// createWebInterfaces creates WebInterface structs for a service
+// createWebInterfaces creates WebInterface structs for a service.
+// Available is left false until checkAvailabilityConcurrent fills it in.
 func (h *WebInterfacesHandler) createWebInterfaces(serviceName string, webInterfaces []types.WebInterface) []WebInterface {
 	interfaces := make([]WebInterface, len(webInterfaces))
 	for i, webIface := range webInterfaces {
@@ -131,6 +136,31 @@ func (h *WebInterfacesHandler) createWebInterfaces(serviceName string, webInterf
 		}
 	}
 	return interfaces
+}
+
+// checkAvailabilityConcurrent performs HTTP checks for all interfaces in parallel.
+func (h *WebInterfacesHandler) checkAvailabilityConcurrent(interfaces []WebInterface) {
+	var wg sync.WaitGroup
+	client := &http.Client{Timeout: core.DefaultHTTPTimeoutSeconds * time.Second}
+
+	for i := range interfaces {
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			interfaces[idx].Available = h.checkURL(client, interfaces[idx].URL)
+		}(i)
+	}
+	wg.Wait()
+}
+
+// checkURL returns true if the URL responds with a successful status code.
+func (h *WebInterfacesHandler) checkURL(client *http.Client, url string) bool {
+	resp, err := client.Get(url)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = resp.Body.Close() }()
+	return resp.StatusCode < core.HTTPOKStatusThreshold
 }
 
 // shouldIncludeService determines if a service should be included in results
@@ -153,7 +183,7 @@ func (h *WebInterfacesHandler) outputResults(interfaces []WebInterface, ciFlags 
 		return
 	}
 
-	h.printTable(interfaces)
+	h.printTable(interfaces, base.Output.Writer())
 }
 
 func (h *WebInterfacesHandler) outputJSON(interfaces []WebInterface, ciFlags ci.Flags) {
@@ -168,39 +198,22 @@ func (h *WebInterfacesHandler) outputJSON(interfaces []WebInterface, ciFlags ci.
 }
 
 // printTable prints interfaces in table format
-func (h *WebInterfacesHandler) printTable(interfaces []WebInterface) {
+func (h *WebInterfacesHandler) printTable(interfaces []WebInterface, writer io.Writer) {
 	headers := []string{display.HeaderService, display.HeaderInterface, display.HeaderURL, display.HeaderStatus}
 	rows := make([][]string, len(interfaces))
 
 	for i, iface := range interfaces {
-		status := h.checkStatus(iface.URL)
-		rows[i] = []string{iface.Service, iface.Name, iface.URL, status}
+		rows[i] = []string{iface.Service, iface.Name, iface.URL, h.formatStatus(iface.Available)}
 	}
 
-	display.RenderTable(os.Stdout, headers, rows)
-}
-
-// checkStatus checks if a web interface is accessible
-func (h *WebInterfacesHandler) checkStatus(url string) string {
-	client := &http.Client{Timeout: core.DefaultHTTPTimeoutSeconds * time.Second}
-	resp, err := client.Get(url)
-	if err != nil {
-		return h.formatStatus(false)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	return h.formatStatusFromResponse(resp.StatusCode)
+	display.RenderTable(writer, headers, rows)
 }
 
 func (h *WebInterfacesHandler) formatStatus(available bool) string {
 	if available {
-		return core.IconHealth_healthy + " " + messages.WebInterfacesAvailable
+		return ui.IconOK + " " + messages.WebInterfacesAvailable
 	}
-	return core.IconHealth_unhealthy + " " + messages.WebInterfacesNotAvailable
-}
-
-func (h *WebInterfacesHandler) formatStatusFromResponse(statusCode int) string {
-	return h.formatStatus(statusCode < core.HTTPOKStatusThreshold)
+	return ui.IconFail + " " + messages.WebInterfacesNotAvailable
 }
 
 // WebInterface represents a service web interface

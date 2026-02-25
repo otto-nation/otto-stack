@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/docker/compose/v5/pkg/api"
@@ -79,10 +80,11 @@ type StatusRequest struct {
 
 // CleanupRequest defines parameters for cleanup operations
 type CleanupRequest struct {
-	Project       string
-	Force         bool
-	RemoveVolumes bool
-	RemoveImages  bool
+	Project        string
+	Force          bool
+	RemoveVolumes  bool
+	RemoveImages   bool
+	RemoveNetworks bool
 }
 
 // ExecRequest defines parameters for executing commands in containers
@@ -101,6 +103,9 @@ type LogRequest struct {
 	Follow         bool
 	Timestamps     bool
 	Tail           string
+	Since          string
+	Until          string
+	NoColor        bool
 }
 
 // NewService creates a new stack service
@@ -226,8 +231,10 @@ func (s *Service) Logs(ctx context.Context, req LogRequest) error {
 		Follow:     req.Follow,
 		Timestamps: req.Timestamps,
 		Tail:       req.Tail,
+		Since:      req.Since,
+		Until:      req.Until,
 	}
-	consumer := &docker.SimpleLogConsumer{}
+	consumer := docker.NewServiceLogConsumer(os.Stdout, req.NoColor, len(serviceNames))
 	err := s.compose.Logs(ctx, req.Project, consumer, options.ToSDK())
 	if err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackGetLogsFailed, err)
@@ -289,9 +296,11 @@ func (s *Service) Cleanup(ctx context.Context, req CleanupRequest) error {
 		}
 	}
 
-	// Remove networks
-	if err := s.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, req.Project); err != nil {
-		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerRemoveNetworksFailed, err)
+	// Remove networks if requested
+	if req.RemoveNetworks {
+		if err := s.DockerClient.RemoveResources(ctx, docker.ResourceNetwork, req.Project); err != nil {
+			return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerRemoveNetworksFailed, err)
+		}
 	}
 
 	// Remove images if requested

@@ -28,6 +28,7 @@ const (
 	HeaderUptime     = "UPTIME"
 	HeaderPorts      = "PORTS"
 	HeaderUpdated    = "UPDATED"
+	HeaderUsedBy     = "USED BY"
 
 	// Table headers - Catalog
 	HeaderCategory    = "CATEGORY"
@@ -35,9 +36,17 @@ const (
 
 	// Table headers - Dependencies
 	HeaderDependencies = "DEPENDENCIES"
+	HeaderRequired     = "REQUIRED"
+	HeaderSoft         = "SOFT"
+	HeaderConflicts    = "CONFLICTS"
+	HeaderProvides     = "PROVIDES"
 
 	// Table headers - Web Interfaces
 	HeaderInterface = "INTERFACE"
 	HeaderURL       = "URL"
 	HeaderStatus    = "STATUS"
+
+	// Summary format strings
+	SummaryTotal = "Summary: %d total"
+	SummaryItem  = ", %d %s"
 )

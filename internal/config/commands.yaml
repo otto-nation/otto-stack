@@ -47,10 +47,6 @@ global:
         type: "bool"
         description: "Show help information"
         default: false
-      version:
-        type: "bool"
-        description: "Show version information"
-        default: false
       quiet:
         type: "bool"
         description: "Suppress non-essential output (CI-friendly)"
@@ -187,10 +183,6 @@ commands:
         type: "bool"
         description: "Stop both project and shared containers"
         default: false
-      remove:
-        type: "bool"
-        description: "Remove containers (default: false, just stops them)"
-        default: false
       volumes:
         type: "bool"
         description: "Remove named volumes and anonymous volumes"
@@ -288,13 +280,34 @@ commands:
     usage: "logs [service...]"
     examples:
       - command: "otto-stack logs"
-        description: "Show logs from all services"
+        description: "Show the last 100 lines from all services"
       - command: "otto-stack logs postgres redis"
         description: "Show logs from specific services"
-    flags: {}
+      - command: "otto-stack logs --follow postgres"
+        description: "Stream live logs from postgres"
+      - command: "otto-stack logs --since 30m"
+        description: "Show logs from the last 30 minutes"
+    flags:
+      follow:
+        type: "bool"
+        description: "Follow log output in real-time"
+        default: false
+      timestamps:
+        type: "bool"
+        description: "Show timestamps"
+        default: false
+      tail:
+        type: "string"
+        description: "Number of lines to show from the end of the logs"
+        default: "100"
+      since:
+        type: "string"
+        description: "Show logs since a relative duration (e.g. 30m, 1h) or timestamp"
+        default: ""
     related_commands: ["status"]
     tips:
       - "Logs from multiple services are color-coded for identification"
+      - "Use --follow to stream logs in real-time; interrupt with Ctrl+C"
 
   doctor:
     description: "Diagnose and troubleshoot stack health"
@@ -308,13 +321,7 @@ commands:
         description: "Run health checks on all services"
       - command: "otto-stack doctor postgres"
         description: "Diagnose a specific service"
-      - command: "otto-stack doctor --fix"
-        description: "Attempt to fix detected issues"
     flags:
-      fix:
-        type: "bool"
-        description: "Attempt to automatically fix issues"
-        default: false
       format:
         type: "string"
         description: "Output format (table|json)"
@@ -323,7 +330,7 @@ commands:
     related_commands: ["status", "logs"]
     tips:
       - "Run doctor when services aren't behaving as expected"
-      - "Use --fix to attempt automatic resolution of common issues"
+      - "Use --format json for programmatic access to health check results"
 
   cleanup:
     description: "Clean up unused resources and data"
@@ -466,62 +473,65 @@ commands:
     related_commands: ["deps", "conflicts", "init"]
 
   deps:
-    description: "Show dependency tree for a service"
+    description: "Show dependency information for enabled project services"
     long_description: |
-      Display the complete dependency tree for a service, showing all required
-      dependencies and the resolved start order. Helps understand service
-      relationships and startup sequences.
-    usage: "deps <service>"
+      Display full dependency information for services in your project stack.
+      Shows required dependencies, soft dependencies, declared conflicts, and
+      provided capabilities for each enabled service. Columns with no data are
+      hidden automatically. Optionally filter to a specific service by name.
+    usage: "deps [service]"
     examples:
-      - command: "otto-stack deps kafka-ui"
-        description: "Show dependencies for kafka-ui service"
+      - command: "otto-stack deps"
+        description: "Show dependency info for all enabled services"
       - command: "otto-stack deps postgres"
-        description: "Show dependencies for postgres service"
+        description: "Show dependency info for a specific service"
+      - command: "otto-stack deps kafka"
+        description: "Show what kafka requires and provides"
     related_commands: ["services", "conflicts", "up"]
 
   conflicts:
-    description: "Check for conflicts between services"
+    description: "Detect service conflicts in the project stack"
     long_description: |
-      Check if the specified services have any conflicts that would prevent
-      them from running together. Identifies port conflicts, resource conflicts,
-      and incompatible service combinations.
-    usage: "conflicts <service1> <service2> [service...]"
+      Analyze the enabled services in your project stack for conflicts.
+      Checks declared service incompatibilities and shared capability overlaps.
+      Use --check-ports to also verify that required host ports are available.
+      Returns exit code 1 when conflicts are found, making it safe to use in scripts.
+    usage: "conflicts [--check-ports]"
     examples:
-      - command: "otto-stack conflicts postgres mysql"
-        description: "Check if postgres and mysql conflict"
-      - command: "otto-stack conflicts postgres redis kafka-broker"
-        description: "Check conflicts between multiple services"
+      - command: "otto-stack conflicts"
+        description: "Check for semantic conflicts in the project stack"
+      - command: "otto-stack conflicts --check-ports"
+        description: "Also check if required ports are available on the host"
+      - command: "otto-stack conflicts && otto-stack up"
+        description: "Fail fast if conflicts exist before starting services"
+    flags:
+      check-ports:
+        type: "bool"
+        description: "Also check if required service ports are available on the host"
+        default: false
     related_commands: ["services", "deps", "up"]
 
   validate:
-    description: "Validate configurations and manifests"
+    description: "Validate project configuration and service definitions"
     long_description: |
-      Validate otto-stack configurations, service definitions, and YAML
-      manifests. Checks for syntax errors, missing dependencies, and
-      configuration inconsistencies.
-    usage: "validate [file...]"
+      Validate the otto-stack project configuration, project name, and service
+      definitions. Checks configuration syntax, validates that all enabled
+      services exist in the catalog, and resolves their dependencies.
+
+      With --strict, also verifies that Docker is available and warns when
+      the project is not inside a git repository.
+    usage: "validate"
     examples:
       - command: "otto-stack validate"
-        description: "Validate all configuration files"
-      - command: "otto-stack validate otto-stack-config.yaml"
-        description: "Validate specific configuration file"
+        description: "Validate configuration and service definitions"
       - command: "otto-stack validate --strict"
-        description: "Use strict validation rules"
+        description: "Also check Docker availability and git repository"
     flags:
       strict:
         type: "bool"
-        description: "Use strict validation rules"
+        description: "Also check Docker availability and git repository"
         default: false
-      format:
-        type: "string"
-        description: "Output format (table|json)"
-        default: "table"
-        options: ["table", "json"]
-      fix:
-        type: "bool"
-        description: "Attempt to fix validation errors"
-        default: false
-    related_commands: ["doctor"]
+    related_commands: ["doctor", "deps"]
 
   version:
     description: "Show version information"

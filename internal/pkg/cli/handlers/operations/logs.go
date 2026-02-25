@@ -2,7 +2,6 @@ package operations
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/spf13/cobra"
 
@@ -27,9 +26,7 @@ func NewLogsHandler() *LogsHandler {
 
 // Handle executes the logs command
 func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	base.Output.Header(messages.LifecycleLogs)
-
-	execCtx, err := h.detectContext()
+	execCtx, err := common.DetectExecutionContext()
 	if err != nil {
 		return err
 	}
@@ -38,18 +35,10 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	case *clicontext.ProjectMode:
 		return h.handleProjectContext(ctx, cmd, args, base)
 	case *clicontext.SharedMode:
-		return h.handleSharedContext(ctx, cmd, args, mode)
+		return h.handleSharedContext(ctx, cmd, args, base, mode)
 	default:
 		return pkgerrors.NewSystemErrorf(pkgerrors.ErrCodeInternal, messages.ErrorsContextUnknownMode, execCtx)
 	}
-}
-
-func (h *LogsHandler) detectContext() (clicontext.ExecutionMode, error) {
-	detector, err := clicontext.NewDetector()
-	if err != nil {
-		return nil, err
-	}
-	return detector.DetectContext()
 }
 
 func (h *LogsHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
@@ -69,23 +58,39 @@ func (h *LogsHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackCreateFailed, err)
 	}
 
+	flags, err := core.ParseLogsFlags(cmd)
+	if err != nil {
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailedParseFlags, err)
+	}
+
+	tail := flags.Tail
+	if tail == "" {
+		tail = core.DefaultLogTailLines
+	}
+
 	logReq := services.LogRequest{
 		Project:        setup.Config.Project.Name,
 		ServiceConfigs: serviceConfigs,
-		Follow:         h.getFlag(cmd, docker.FlagFollow),
-		Timestamps:     h.getFlag(cmd, docker.FlagTimestamps),
-		Tail:           h.getTailFlag(cmd),
+		Follow:         flags.Follow,
+		Timestamps:     flags.Timestamps,
+		Tail:           tail,
+		Since:          flags.Since,
+		NoColor:        base.Output.GetNoColor(),
 	}
 
 	return stackService.Logs(ctx, logReq)
 }
 
-func (h *LogsHandler) handleSharedContext(ctx context.Context, cmd *cobra.Command, args []string, mode *clicontext.SharedMode) error {
+func (h *LogsHandler) handleSharedContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, mode *clicontext.SharedMode) error {
 	if len(args) == 0 {
 		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationServiceNameRequired, nil)
 	}
 
-	if err := h.verifyServicesInRegistry(args, mode); err != nil {
+	reg, err := registry.NewManager(mode.Shared.Root).Load()
+	if err != nil {
+		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
+	}
+	if err := common.VerifyServicesInRegistry(args, reg); err != nil {
 		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceNotInRegistry, err)
 	}
 
@@ -94,43 +99,26 @@ func (h *LogsHandler) handleSharedContext(ctx context.Context, cmd *cobra.Comman
 		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerManagerCreateFailed, err)
 	}
 
+	flags, err := core.ParseLogsFlags(cmd)
+	if err != nil {
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailedParseFlags, err)
+	}
+
+	tail := flags.Tail
+	if tail == "" {
+		tail = core.DefaultLogTailLines
+	}
+
 	options := docker.LogOptions{
 		Services:   args,
-		Follow:     h.getFlag(cmd, docker.FlagFollow),
-		Timestamps: h.getFlag(cmd, docker.FlagTimestamps),
-		Tail:       h.getTailFlag(cmd),
+		Follow:     flags.Follow,
+		Timestamps: flags.Timestamps,
+		Tail:       tail,
+		Since:      flags.Since,
 	}
 
-	consumer := &docker.SimpleLogConsumer{}
-	return composeManager.Logs(ctx, "shared", consumer, options.ToSDK())
-}
-
-func (h *LogsHandler) verifyServicesInRegistry(serviceNames []string, mode *clicontext.SharedMode) error {
-	reg := registry.NewManager(mode.Shared.Root)
-	registryData, err := reg.Load()
-	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
-	}
-
-	for _, serviceName := range serviceNames {
-		if _, exists := registryData.Containers[serviceName]; !exists {
-			return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, fmt.Sprintf(messages.SharedServiceNotInRegistry, serviceName), nil)
-		}
-	}
-	return nil
-}
-
-func (h *LogsHandler) getFlag(cmd *cobra.Command, flag string) bool {
-	val, _ := cmd.Flags().GetBool(flag)
-	return val
-}
-
-func (h *LogsHandler) getTailFlag(cmd *cobra.Command) string {
-	tail, _ := cmd.Flags().GetString(docker.FlagTail)
-	if tail == "" {
-		return core.DefaultLogTailLines
-	}
-	return tail
+	consumer := docker.NewServiceLogConsumer(base.Output.Writer(), base.Output.GetNoColor(), len(args))
+	return composeManager.Logs(ctx, core.SharedDir, consumer, options.ToSDK())
 }
 
 // ValidateArgs validates the command arguments

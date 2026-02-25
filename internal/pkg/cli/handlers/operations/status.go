@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"slices"
+	"time"
 
-	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
@@ -22,6 +21,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 // StatusHandler handles the status command
@@ -38,14 +38,9 @@ func NewStatusHandler() *StatusHandler {
 
 // Handle executes the status command
 func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	detector, err := clicontext.NewDetector()
+	execCtx, err := common.DetectExecutionContext()
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, messages.ErrorsContextDetectorCreateFailed, err)
-	}
-
-	execCtx, err := detector.DetectContext()
-	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, messages.ErrorsContextDetectFailed, err)
+		return err
 	}
 
 	showAll, _ := cmd.Flags().GetBool(docker.FlagAll)
@@ -76,6 +71,10 @@ func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []s
 
 func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	ciFlags := ci.GetFlags(cmd)
+	statusFlags, err := core.ParseStatusFlags(cmd)
+	if err != nil {
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailedParseFlags, err)
+	}
 
 	if !ciFlags.Quiet {
 		base.Output.Header(messages.LifecycleStatus)
@@ -97,9 +96,13 @@ func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Comm
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsStatusGetStatusesFailed, err)
 	}
 
-	if ciFlags.JSON {
+	if ciFlags.JSON || statusFlags.Format == "json" {
 		h.outputJSON(&ciFlags, statuses)
 		return nil
+	}
+
+	if statusFlags.Format == "yaml" {
+		return h.outputYAML(statuses, base)
 	}
 
 	h.displayStatus(base, cmd, statuses, serviceConfigs)
@@ -157,7 +160,7 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 		return nil
 	}
 
-	h.displaySharedStatus(base, statuses)
+	h.displaySharedStatus(base, cmd, statuses)
 	return nil
 }
 
@@ -234,7 +237,7 @@ func (h *StatusHandler) handleProjectSharedStatusWithRequest(req statusRequest) 
 		return nil
 	}
 
-	h.displaySharedStatus(req.base, statuses)
+	h.displaySharedStatus(req.base, req.cmd, statuses)
 	return nil
 }
 
@@ -276,30 +279,16 @@ func (h *StatusHandler) outputJSON(ciFlags *ci.Flags, statuses []docker.Containe
 	ci.OutputResult(*ciFlags, output, core.ExitSuccess)
 }
 
+func (h *StatusHandler) outputYAML(statuses []docker.ContainerStatus, base *base.BaseCommand) error {
+	return yaml.NewEncoder(base.Output.Writer()).Encode(statuses)
+}
+
 func (h *StatusHandler) displayStatus(base *base.BaseCommand, cmd *cobra.Command, statuses []docker.ContainerStatus, serviceConfigs []types.ServiceConfig) {
 	if len(statuses) == 0 {
 		return
 	}
-
-	serviceToContainer := h.buildServiceContainerMap(serviceConfigs)
-
-	converter := NewStatusConverter()
-	serviceStatuses := converter.ConvertToDisplayStatuses(statuses, serviceConfigs, serviceToContainer)
 	verbose := base.GetVerbose(cmd)
-
-	formatter := display.NewStatusFormatter(os.Stdout)
-	_ = formatter.FormatTable(serviceStatuses, display.Options{
-		Compact: !verbose,
-		Verbose: verbose,
-	})
-}
-
-func (h *StatusHandler) buildServiceContainerMap(serviceConfigs []types.ServiceConfig) map[string]string {
-	serviceToContainer := make(map[string]string)
-	for _, config := range serviceConfigs {
-		serviceToContainer[config.Name] = getContainerName(config)
-	}
-	return serviceToContainer
+	_ = display.RenderStatusTable(base.Output.Writer(), statuses, serviceConfigs, !verbose, base.Output.GetNoColor())
 }
 
 // ValidateArgs validates the command arguments
@@ -310,19 +299,6 @@ func (h *StatusHandler) ValidateArgs(args []string) error {
 // GetRequiredFlags returns required flags for this command
 func (h *StatusHandler) GetRequiredFlags() []string {
 	return []string{}
-}
-
-// getContainerName returns the actual container name for a service
-func getContainerName(config types.ServiceConfig) string {
-	if config.Hidden {
-		return config.Name
-	}
-
-	if len(config.Service.Dependencies.Required) > 0 {
-		return config.Service.Dependencies.Required[0]
-	}
-
-	return config.Name
 }
 
 // convertToDisplayStatuses creates display service statuses with health inheritance
@@ -340,14 +316,26 @@ func filterInitContainers(serviceConfigs []types.ServiceConfig) []string {
 
 func (h *StatusHandler) buildSharedStatuses(ctx context.Context, containers map[string]*registry.ContainerInfo, dockerClient *docker.Client) []display.SharedContainerStatus {
 	statuses := make([]display.SharedContainerStatus, 0, len(containers))
+	now := time.Now()
 
 	for service, container := range containers {
-		state := h.getContainerState(ctx, container.Name, dockerClient)
+		cs := dockerClient.InspectContainer(ctx, container.Name)
+		projectNames := make([]string, len(container.Projects))
+		for i, ref := range container.Projects {
+			projectNames[i] = ref.Name
+		}
+		uptime := time.Duration(0)
+		if !cs.StartedAt.IsZero() {
+			uptime = now.Sub(cs.StartedAt)
+		}
 		statuses = append(statuses, display.SharedContainerStatus{
 			Name:      container.Name,
 			Service:   service,
-			State:     state,
-			Projects:  container.Projects,
+			State:     cs.State,
+			Health:    cs.Health,
+			Ports:     cs.Ports,
+			Uptime:    uptime,
+			Projects:  projectNames,
 			CreatedAt: container.CreatedAt,
 			UpdatedAt: container.UpdatedAt,
 		})
@@ -356,58 +344,15 @@ func (h *StatusHandler) buildSharedStatuses(ctx context.Context, containers map[
 	return statuses
 }
 
-func (h *StatusHandler) getContainerState(ctx context.Context, containerName string, dockerClient *docker.Client) string {
-	inspectResp, err := dockerClient.GetDockerClient().ContainerInspect(ctx, containerName)
-	if err != nil {
-		return messages.InfoStateNotFound
-	}
-	return inspectResp.State.Status
-}
-
-func (h *StatusHandler) displaySharedStatus(base *base.BaseCommand, statuses []display.SharedContainerStatus) {
+func (h *StatusHandler) displaySharedStatus(base *base.BaseCommand, cmd *cobra.Command, statuses []display.SharedContainerStatus) {
 	if len(statuses) == 0 {
 		base.Output.Info(messages.InfoNoSharedContainers)
 		return
 	}
-
-	tw := table.NewWriter()
-	tw.SetOutputMirror(os.Stdout)
-	tw.SetStyle(table.StyleLight)
-
-	tw.AppendHeader(table.Row{
-		messages.InfoHeaderContainer,
-		messages.InfoHeaderService,
-		messages.InfoHeaderState,
-		messages.InfoHeaderUsedBy,
-	})
-
-	for _, status := range statuses {
-		tw.AppendRow(table.Row{
-			status.Name,
-			status.Service,
-			status.State,
-			formatProjects(status.Projects),
-		})
-	}
-
-	tw.Render()
+	verbose := base.GetVerbose(cmd)
+	_ = display.RenderSharedStatusTable(base.Output.Writer(), statuses, !verbose, base.Output.GetNoColor())
 }
 
-func formatProjects(projects []string) string {
-	if len(projects) == 0 {
-		return messages.InfoProjectsNone
-	}
-	if len(projects) == 1 {
-		return projects[0]
-	}
-	const maxShow = 3
-	if len(projects) > maxShow {
-		const projectsToShow = 2
-		return fmt.Sprintf("%s, %s, +%d more", projects[0], projects[1], len(projects)-projectsToShow)
-	}
-	return fmt.Sprintf("%s", projects)
-}
-
-func (h *StatusHandler) containsProject(projects []string, projectName string) bool {
-	return slices.Contains(projects, projectName)
+func (h *StatusHandler) containsProject(projects []registry.ProjectRef, projectName string) bool {
+	return slices.ContainsFunc(projects, func(r registry.ProjectRef) bool { return r.Name == projectName })
 }

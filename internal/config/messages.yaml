@@ -32,25 +32,31 @@ web_interfaces:
 success:
   init: "otto stack initialized successfully!"
   start: "otto stack started successfully"
-  latest_version: "✅ You are running the latest version"
+  latest_version: "You are running the latest version"
   all_checks_passed: "All checks passed! Your %s is healthy."
-  config_valid: "✅ Configuration is valid"
+  config_valid: "Configuration is valid"
   created_file: "Created %s"
   updated_gitignore: "Updated .gitignore with otto-stack entries"
-  version_compliance_enforced: "✅ Version compliance enforced"
-  no_updates_available: "✅ No updates available"
-  notification_config_updated: "✅ Notification config updated"
-  notifications_suppressed: "✅ Notifications suppressed for %v"
-  version_compliance_satisfied: "✅ Version compliance satisfied"
-  no_version_drift: "✅ No version drift detected"
+  version_compliance_enforced: "Version compliance enforced"
+  no_updates_available: "No updates available"
+  notification_config_updated: "Notification config updated"
+  notifications_suppressed: "Notifications suppressed for %v"
+  version_compliance_satisfied: "Version compliance satisfied"
+  no_version_drift: "No version drift detected"
   generated_files: "Generated %s and %s"
   services_started: "Services started successfully"
   services_stopped: "Services stopped successfully"
   cleanup_completed: "Cleanup completed"
-  dependencies_displayed: "Dependencies displayed successfully"
-  services_listed: "Services listed successfully"
+
   no_conflicts: "No service conflicts detected"
   configuration_valid: "Configuration is valid"
+  restarted_service: "Restarted %s"
+  created_config_file: "Created configuration file: %s"
+  created_env_file: "Created environment file: %s"
+  created_compose_file: "Created Docker Compose file: %s"
+  created_shared_compose_file: "Created shared compose file: %s"
+  created_readme: "Created README file: %s"
+  updated_file: "Updated %s file"
 
 validation:
   failed: "validation failed: %w"
@@ -61,8 +67,8 @@ validation:
   failed_generate_env: "Failed to generate environment file"
   failed_check_updates: "Failed to check for updates"
   directory_failed: "directory validation failed: %w"
-  config_failed: "❌ Configuration validation failed with %d errors:"
-  warnings: "⚠️  %d warnings:"
+  config_failed: "Configuration validation failed with %d errors:"
+  warnings: "%d warnings:"
   required_tool_unavailable: "required tool '%s' is not available"
   project_name_empty: "project name cannot be empty"
   project_name_too_short: "project name must be at least 2 characters long"
@@ -78,18 +84,30 @@ validation:
   project_name_required_non_interactive: "project name is required in non-interactive mode"
   service_name_required: "service name is required"
   service_not_shareable: "service '%s' is marked as non-shareable and cannot be shared across projects"
-  service_not_shareable_warning: "⚠️  Warning: service '%s' is marked as non-shareable but will be shared (--force used)"
+  service_not_shareable_warning: "Warning: service '%s' is marked as non-shareable but will be shared (--force used)"
+
+validate:
+  check_config_syntax: "Configuration syntax valid"
+  check_project_name: "Project name valid"
+  check_services: "Service definitions valid"
+  check_docker: "Docker available"
+  strict_docker_unavailable: "Docker is not available (required for running services)"
 
 conflicts:
-  header: "Service Conflicts"
-  not_implemented: "Conflict detection not yet implemented"
+  header: "Conflict Analysis"
+  found: "%d conflict(s) found in your stack:"
+  explicit_incompatible: "%s and %s are declared incompatible"
+  provides_overlap: "%s and %s both provide '%s'"
+  port_found: "%d port conflict(s) detected"
+  port_in_use: "Port %d (%s) is already in use on your host"
+  no_port_conflicts: "No port conflicts detected"
 
 dependencies:
   header: "Service Dependencies"
-  none_found: "No service dependencies found"
+  no_enabled_services: "No services are currently enabled in this project"
 
 version:
-  checking_updates: "🔍 Checking for Updates"
+  checking_updates: "Checking for Updates"
   current_info: "Current version: %s"
   update_info: "To update:"
   install_script: "  • Using install script: curl -fsSL https://raw.githubusercontent.com/%s/%s/main/scripts/install.sh | bash"
@@ -100,7 +118,7 @@ version:
   git_commit: "Git Commit: %s"
   go_version: "Go Version: %s"
   platform: "Platform: %s/%s"
-  update_available: "⚠️  Update available: %s → %s"
+  update_available: "Update available: %s → %s"
   invalid_version: "invalid version format"
   invalid_format: "Invalid version format: %s"
   invalid_major: "Invalid major version: %s"
@@ -112,7 +130,7 @@ version:
 doctor:
   some_issues: "Some issues found. Please address them above."
   health_check_failed: "health check failed"
-  health_check_header: "🩺 %s Health Check"
+  health_check_header: "%s Health Check"
   checking_docker: "Checking Docker installation..."
   docker_not_found: "Docker not found"
   docker_install_help: "Install Docker: %s"
@@ -135,8 +153,11 @@ doctor:
   config_valid: "Configuration is valid"
 
 services:
+  header: "Available Services"
   select: "Select %s services:"
   no_description: "No description available"
+  total_available: "\nTotal services available: %d"
+  none_in_category: "No services found in category '%s'"
 
 init:
   summary: "Initialization Summary:"
@@ -156,11 +177,19 @@ init:
   container_execute_failed: "Failed to execute init container for service %s: %w"
 
 warnings:
-  update_available: "🔔 Update available: %s → %s (%s)"
+  update_available: "Update available: %s → %s (%s)"
   not_git_repository: "Not in a git repository. Consider running 'git init' first."
   failed_gitignore: "Failed to update .gitignore: %v"
   failed_readme: "Failed to create README: %v"
   cleanup_warning: "This will remove all containers, networks, and volumes"
+  registry_no_running_container: "registry has %s but no running container found"
+  registry_clean_failed: "Failed to clean registry: %v"
+  registry_register_failed: "Failed to register %s: %v"
+  registry_unregister_failed: "Failed to unregister %s: %v"
+  registry_reconcile_failed: "Failed to reconcile registry: %v"
+  config_generate_failed: "Failed to generate config for service %s: %v"
+  compose_generate_shared_failed: "Failed to generate shared compose file: %v"
+  gitignore_create_failed: "Failed to create .gitignore entries: %v"
 
 prompts:
   cleanup_confirm: "Proceed with cleanup?"
@@ -192,6 +221,14 @@ info:
   state_not_found: "not found"
   health_unknown: "unknown"
   projects_none: "none"
+  reconciled_registry: "Reconciled registry: removed %d stale entries"
+  expected_path: "   Expected: %s"
+  project_name_label: "  Project Name: %s"
+  services_label: "  Services: %s"
+  list_item: "  - %s"
+  list_item_indented: "    - %s"
+  list_item_with_reason: "    - %s: %s"
+  list_item_with_users: "  - %s (used by: %v)"
 
 notifications:
   config_header: "Notification Configuration:"
@@ -224,7 +261,7 @@ errors:
   # Service errors
   service_not_found: "Service '%s' not found. Run 'otto-stack services' to see available services."
   service_unknown: "Unknown service: %s"
-  service_not_accessible: "Service '%s' is not accessible in your current configuration"
+  service_not_accessible: "'%s' is an internal service that starts automatically as a dependency. Run 'otto-stack up' without specifying it directly."
   service_file_not_found: "Service definition file not found: %s"
   service_load_failed: "Failed to load services: %v"
   service_operation_not_found: "Operation '%s' not found"
@@ -241,7 +278,7 @@ errors:
   docker_health_check_failed: "Failed to check Docker health"
   
   # Stack operation errors
-  stack_start_failed: "Failed to start services: %v"
+  stack_start_failed: "Failed to start services"
   stack_stop_failed: "Failed to stop services: %v"
   stack_resolve_failed: "Failed to resolve services: %v"
   stack_create_failed: "Failed to create stack service: %v"
@@ -307,7 +344,7 @@ errors:
   stack_docker_client_failed: "Failed to create Docker client: %v"
   stack_compose_generate_failed: "Failed to generate compose file: %v"
   stack_project_load_failed: "Failed to load project: %v"
-  stack_services_start_failed: "Failed to start services: %v"
+  stack_services_start_failed: "Failed to start services"
   stack_project_start_failed: "Failed to start project: %v"
   stack_project_stop_failed: "Failed to stop project: %v"
   stack_project_remove_failed: "Failed to remove project: %v"
@@ -380,6 +417,8 @@ shared:
   cancelled: "Cancelled"
   skipping: "Skipping shared containers"
   no_services_to_stop: "No services to stop"
+  confirm_stop: "Stop shared containers? (y/N): "
+  registered_item: "  %s %s (shared)"
 
 middleware:
   project_already_initialized: "Project already initialized. Use --force to overwrite"

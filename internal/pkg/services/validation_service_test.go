@@ -36,7 +36,7 @@ func TestValidationService_ValidateUserServices(t *testing.T) {
 		// localstack is hidden
 		err := validator.ValidateUserServices([]string{"localstack"})
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not accessible")
+		assert.Contains(t, err.Error(), "internal service")
 	})
 }
 
@@ -49,7 +49,7 @@ func TestValidationService_ValidateWithContext(t *testing.T) {
 		ctx := NewUserValidationContext()
 		err := validator.ValidateWithContext("localstack", ctx)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "not accessible")
+		assert.Contains(t, err.Error(), "internal service")
 	})
 
 	t.Run("dependency context allows hidden service", func(t *testing.T) {

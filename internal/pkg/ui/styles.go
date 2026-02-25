@@ -10,30 +10,30 @@ func formatColored(text, color string, noColor bool) string {
 
 // formatSuccess formats success messages
 func formatSuccess(text string, noColor bool) string {
-	return formatColored(IconSuccess+" "+text, ColorGreen+ColorBold, noColor)
+	return formatColored(IconOK+" "+text, ColorGreen+ColorBold, noColor)
 }
 
 // formatError formats error messages
 func formatError(text string, noColor bool) string {
-	return formatColored(IconError+" "+text, ColorRed+ColorBold, noColor)
+	return formatColored(IconFail+" "+text, ColorRed+ColorBold, noColor)
 }
 
 // formatWarning formats warning messages
 func formatWarning(text string, noColor bool) string {
-	return formatColored(IconWarning+"  "+text, ColorYellow+ColorBold, noColor)
+	return formatColored(IconWarn+" "+text, ColorYellow+ColorBold, noColor)
 }
 
-// formatInfo formats info messages
+// formatInfo formats info messages — no prefix symbol, color is sufficient
 func formatInfo(text string, noColor bool) string {
-	return formatColored(IconInfo+"  "+text, ColorBlue, noColor)
+	return formatColored(text, ColorBlue, noColor)
 }
 
 // formatHeader formats header messages
 func formatHeader(text string, noColor bool) string {
 	if noColor {
-		return "\n=== " + text + " ===\n"
+		return "\n" + text + "\n"
 	}
-	return formatColored("\n"+IconHeader+" "+text+"\n", ColorGreen+ColorBold, noColor)
+	return formatColored("\n"+text+"\n", ColorGreen+ColorBold, noColor)
 }
 
 // formatMuted formats muted text

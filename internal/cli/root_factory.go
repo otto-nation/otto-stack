@@ -8,6 +8,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/cli"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
+	pkgversion "github.com/otto-nation/otto-stack/internal/pkg/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -23,10 +24,13 @@ func ExecuteFactory() error {
 	rootCmd := cli.BuildRootCommand()
 	rootCmd.SilenceErrors = true
 	rootCmd.SilenceUsage = true
+	rootCmd.Version = pkgversion.GetAppVersion()
+	rootCmd.SetVersionTemplate(fmt.Sprintf("%s version {{.Version}}\n", core.AppName))
+	cli.RegisterCompletions(rootCmd)
 	cobra.OnInitialize(initConfig)
 
 	err := rootCmd.Execute()
-	if err != nil {
+	if err != nil && err.Error() != "" {
 		ui.DefaultOutput.Error("%s", err.Error())
 	}
 	return err

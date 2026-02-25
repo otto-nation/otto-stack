@@ -94,6 +94,16 @@ func (e *Error) Unwrap() error {
 	return e.Cause
 }
 
+// ErrSilentExit signals exit code 1 without printing an additional error
+// message. Use when the command has already displayed relevant output to the
+// user (e.g., conflict detection, inline validation results) and needs to
+// exit non-zero for scripting purposes.
+var ErrSilentExit = &silentExitError{}
+
+type silentExitError struct{}
+
+func (e *silentExitError) Error() string { return "" }
+
 // NewValidationError creates a validation error for user input fields
 // Use when validating user-provided data like project names, service names, flags
 func NewValidationError(code, field, message string, cause error) *Error {

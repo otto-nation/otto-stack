@@ -28,15 +28,14 @@ func TestManager_Register_ErrorPath(t *testing.T) {
 	registryPath := filepath.Join(tempDir, "registry.yaml")
 	m := &Manager{registryPath: registryPath}
 
-	// Register successfully
-	err := m.Register("test-service", "test-container", "test-project")
+	project := ProjectRef{Name: "test-project", ConfigDir: t.TempDir()}
+	err := m.Register("test-service", "test-container", project)
 	assert.NoError(t, err)
 
-	// Verify it was registered
 	container, err := m.Get("test-service")
 	assert.NoError(t, err)
 	assert.NotNil(t, container)
-	assert.Contains(t, container.Projects, "test-project")
+	assert.Contains(t, container.Projects, project)
 }
 
 func TestManager_Unregister_ErrorPath(t *testing.T) {
@@ -44,8 +43,7 @@ func TestManager_Unregister_ErrorPath(t *testing.T) {
 	registryPath := filepath.Join(tempDir, "registry.yaml")
 	m := &Manager{registryPath: registryPath}
 
-	// Register and then unregister
-	err := m.Register("test-service", "test-container", "test-project")
+	err := m.Register("test-service", "test-container", ProjectRef{Name: "test-project", ConfigDir: t.TempDir()})
 	assert.NoError(t, err)
 
 	err = m.Unregister("test-service", "test-project")

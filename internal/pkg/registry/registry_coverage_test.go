@@ -20,7 +20,7 @@ func TestFindOrphans(t *testing.T) {
 			Containers: map[string]*ContainerInfo{
 				"test-service": {
 					Name:     "otto-stack-test",
-					Projects: []string{}, // Empty projects = orphan
+					Projects: []ProjectRef{}, // Empty projects = orphan
 				},
 			},
 		}
@@ -39,7 +39,7 @@ func TestFindOrphans(t *testing.T) {
 			Containers: map[string]*ContainerInfo{
 				"test-service": {
 					Name:     "otto-stack-test",
-					Projects: []string{"project1"},
+					Projects: []ProjectRef{{Name: "project1", ConfigDir: t.TempDir()}},
 				},
 			},
 		}
@@ -101,7 +101,7 @@ func TestGet(t *testing.T) {
 			Containers: map[string]*ContainerInfo{
 				"redis": {
 					Name:     "otto-stack-redis",
-					Projects: []string{"project1"},
+					Projects: []ProjectRef{{Name: "project1", ConfigDir: t.TempDir()}},
 				},
 			},
 		}
@@ -111,7 +111,8 @@ func TestGet(t *testing.T) {
 		info, err := manager.Get("redis")
 		require.NoError(t, err)
 		assert.Equal(t, "otto-stack-redis", info.Name)
-		assert.Contains(t, info.Projects, "project1")
+		assert.Len(t, info.Projects, 1)
+		assert.Equal(t, "project1", info.Projects[0].Name)
 	})
 
 	t.Run("returns nil when not found", func(t *testing.T) {
@@ -132,8 +133,8 @@ func TestList(t *testing.T) {
 	t.Run("returns all containers", func(t *testing.T) {
 		registry := &Registry{
 			Containers: map[string]*ContainerInfo{
-				"redis":    {Name: "otto-stack-redis", Projects: []string{"p1"}},
-				"postgres": {Name: "otto-stack-postgres", Projects: []string{"p2"}},
+				"redis":    {Name: "otto-stack-redis", Projects: []ProjectRef{{Name: "p1", ConfigDir: t.TempDir()}}},
+				"postgres": {Name: "otto-stack-postgres", Projects: []ProjectRef{{Name: "p2", ConfigDir: t.TempDir()}}},
 			},
 		}
 		err := manager.Save(registry)
@@ -162,7 +163,7 @@ func TestIsShared(t *testing.T) {
 	t.Run("returns true when service is shared", func(t *testing.T) {
 		registry := &Registry{
 			Containers: map[string]*ContainerInfo{
-				"redis": {Name: "otto-stack-redis", Projects: []string{"p1"}},
+				"redis": {Name: "otto-stack-redis", Projects: []ProjectRef{{Name: "p1", ConfigDir: t.TempDir()}}},
 			},
 		}
 		err := manager.Save(registry)
@@ -185,7 +186,7 @@ func TestIsShared(t *testing.T) {
 }
 
 func TestLoad_ErrorHandling(t *testing.T) {
-	t.Run("handles invalid YAML", func(t *testing.T) {
+	t.Run("heals invalid YAML via Docker rebuild", func(t *testing.T) {
 		tempDir := t.TempDir()
 		manager := NewManager(tempDir)
 
@@ -193,8 +194,11 @@ func TestLoad_ErrorHandling(t *testing.T) {
 		err := os.WriteFile(manager.registryPath, []byte("invalid: yaml: content: ["), 0644)
 		require.NoError(t, err)
 
-		_, err = manager.Load()
-		assert.Error(t, err)
+		// Load no longer errors on corrupt files — it calls rebuildFromDocker instead.
+		// If Docker is unavailable (common in CI), returns an empty registry with no error.
+		reg, err := manager.Load()
+		assert.NoError(t, err)
+		assert.NotNil(t, reg)
 	})
 
 	t.Run("returns empty registry for empty file", func(t *testing.T) {
@@ -220,7 +224,7 @@ func TestSave_ErrorHandling(t *testing.T) {
 
 		registry := &Registry{
 			Containers: map[string]*ContainerInfo{
-				"test": {Name: "otto-stack-test", Projects: []string{"p1"}},
+				"test": {Name: "otto-stack-test", Projects: []ProjectRef{{Name: "p1", ConfigDir: t.TempDir()}}},
 			},
 		}
 
@@ -279,7 +283,7 @@ func TestSave_EdgeCases(t *testing.T) {
 
 		registry1 := &Registry{
 			Containers: map[string]*ContainerInfo{
-				"test1": {Name: "otto-stack-test1", Projects: []string{"p1"}},
+				"test1": {Name: "otto-stack-test1", Projects: []ProjectRef{{Name: "p1", ConfigDir: t.TempDir()}}},
 			},
 		}
 		err := manager.Save(registry1)
@@ -287,7 +291,7 @@ func TestSave_EdgeCases(t *testing.T) {
 
 		registry2 := &Registry{
 			Containers: map[string]*ContainerInfo{
-				"test2": {Name: "otto-stack-test2", Projects: []string{"p2"}},
+				"test2": {Name: "otto-stack-test2", Projects: []ProjectRef{{Name: "p2", ConfigDir: t.TempDir()}}},
 			},
 		}
 		err = manager.Save(registry2)
@@ -305,35 +309,38 @@ func TestRegister(t *testing.T) {
 	tempDir := t.TempDir()
 	manager := NewManager(tempDir)
 
+	proj1Dir := t.TempDir()
+	proj2Dir := t.TempDir()
+
 	t.Run("registers new service", func(t *testing.T) {
-		err := manager.Register("redis", "otto-stack-redis", "project1")
+		err := manager.Register("redis", "otto-stack-redis", ProjectRef{Name: "project1", ConfigDir: proj1Dir})
 		require.NoError(t, err)
 
 		info, err := manager.Get("redis")
 		require.NoError(t, err)
 		assert.Equal(t, "otto-stack-redis", info.Name)
-		assert.Contains(t, info.Projects, "project1")
+		assert.Contains(t, info.Projects, ProjectRef{Name: "project1", ConfigDir: proj1Dir})
 	})
 
 	t.Run("adds project to existing service", func(t *testing.T) {
-		err := manager.Register("redis", "otto-stack-redis", "project2")
+		err := manager.Register("redis", "otto-stack-redis", ProjectRef{Name: "project2", ConfigDir: proj2Dir})
 		require.NoError(t, err)
 
 		info, err := manager.Get("redis")
 		require.NoError(t, err)
-		assert.Contains(t, info.Projects, "project1")
-		assert.Contains(t, info.Projects, "project2")
+		assert.Contains(t, info.Projects, ProjectRef{Name: "project1", ConfigDir: proj1Dir})
+		assert.Contains(t, info.Projects, ProjectRef{Name: "project2", ConfigDir: proj2Dir})
 	})
 
 	t.Run("does not duplicate projects", func(t *testing.T) {
-		err := manager.Register("redis", "otto-stack-redis", "project1")
+		err := manager.Register("redis", "otto-stack-redis", ProjectRef{Name: "project1", ConfigDir: proj1Dir})
 		require.NoError(t, err)
 
 		info, err := manager.Get("redis")
 		require.NoError(t, err)
 		count := 0
-		for _, p := range info.Projects {
-			if p == "project1" {
+		for _, ref := range info.Projects {
+			if ref.Name == "project1" {
 				count++
 			}
 		}
@@ -345,10 +352,13 @@ func TestUnregister(t *testing.T) {
 	tempDir := t.TempDir()
 	manager := NewManager(tempDir)
 
+	proj1Dir := t.TempDir()
+	proj2Dir := t.TempDir()
+
 	t.Run("removes project from service", func(t *testing.T) {
-		err := manager.Register("redis", "otto-stack-redis", "project1")
+		err := manager.Register("redis", "otto-stack-redis", ProjectRef{Name: "project1", ConfigDir: proj1Dir})
 		require.NoError(t, err)
-		err = manager.Register("redis", "otto-stack-redis", "project2")
+		err = manager.Register("redis", "otto-stack-redis", ProjectRef{Name: "project2", ConfigDir: proj2Dir})
 		require.NoError(t, err)
 
 		err = manager.Unregister("redis", "project1")
@@ -356,8 +366,8 @@ func TestUnregister(t *testing.T) {
 
 		info, err := manager.Get("redis")
 		require.NoError(t, err)
-		assert.NotContains(t, info.Projects, "project1")
-		assert.Contains(t, info.Projects, "project2")
+		assert.NotContains(t, info.Projects, ProjectRef{Name: "project1", ConfigDir: proj1Dir})
+		assert.Contains(t, info.Projects, ProjectRef{Name: "project2", ConfigDir: proj2Dir})
 	})
 
 	t.Run("removes service when no projects left", func(t *testing.T) {

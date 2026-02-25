@@ -39,6 +39,8 @@ type LogOptions struct {
 	Follow     bool
 	Timestamps bool
 	Tail       string
+	Since      string
+	Until      string
 }
 
 // ToSDK converts UpOptions to Docker Compose API options
@@ -94,6 +96,8 @@ func (o LogOptions) ToSDK() api.LogOptions {
 		Follow:     o.Follow,
 		Timestamps: o.Timestamps,
 		Tail:       o.Tail,
+		Since:      o.Since,
+		Until:      o.Until,
 	}
 }
 

@@ -8,27 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestWebInterfacesHandler_CheckStatus_Localhost(t *testing.T) {
-	handler := NewWebInterfacesHandler()
-	status := handler.checkStatus("http://localhost:8080")
-	assert.IsType(t, "", status)
-	assert.NotEmpty(t, status)
-}
-
-func TestWebInterfacesHandler_CheckStatus_Invalid(t *testing.T) {
-	handler := NewWebInterfacesHandler()
-	status := handler.checkStatus("invalid-url")
-	assert.IsType(t, "", status)
-	assert.NotEmpty(t, status)
-}
-
-func TestWebInterfacesHandler_CheckStatus_Empty(t *testing.T) {
-	handler := NewWebInterfacesHandler()
-	status := handler.checkStatus("")
-	assert.IsType(t, "", status)
-	assert.NotEmpty(t, status)
-}
-
 func TestWebInterfacesHandler_ValidateArgs_Empty(t *testing.T) {
 	handler := NewWebInterfacesHandler()
 	err := handler.ValidateArgs([]string{})

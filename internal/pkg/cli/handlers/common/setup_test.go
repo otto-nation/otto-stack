@@ -9,6 +9,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -94,6 +95,37 @@ stack:
 		cfg, err := LoadProjectConfig(configPath)
 		require.NoError(t, err)
 		assert.Equal(t, "local-project", cfg.Project.Name)
+	})
+}
+
+func TestVerifyServicesInRegistry(t *testing.T) {
+	t.Run("all services exist", func(t *testing.T) {
+		reg := &registry.Registry{
+			Containers: map[string]*registry.ContainerInfo{
+				"service1": {},
+				"service2": {},
+			},
+		}
+		err := VerifyServicesInRegistry([]string{"service1", "service2"}, reg)
+		assert.NoError(t, err)
+	})
+
+	t.Run("service not in registry", func(t *testing.T) {
+		reg := &registry.Registry{
+			Containers: map[string]*registry.ContainerInfo{
+				"service1": {},
+			},
+		}
+		err := VerifyServicesInRegistry([]string{"service1", "missing"}, reg)
+		assert.Error(t, err)
+	})
+
+	t.Run("empty service list", func(t *testing.T) {
+		reg := &registry.Registry{
+			Containers: map[string]*registry.ContainerInfo{},
+		}
+		err := VerifyServicesInRegistry([]string{}, reg)
+		assert.NoError(t, err)
 	})
 }
 

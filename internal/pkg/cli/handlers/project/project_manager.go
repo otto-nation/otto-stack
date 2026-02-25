@@ -87,16 +87,16 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 		homeDir, _ := os.UserHomeDir()
 		sharedRoot := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
 		if err := pm.generateSharedCompose(projectCtx.Services.Configs, sharedRoot, base); err != nil {
-			base.Output.Warning("Failed to generate shared compose file: %v", err)
+			base.Output.Warning(messages.WarningsComposeGenerateSharedFailed, err)
 		}
 	}
 
 	if err := pm.createGitignoreEntries(base); err != nil {
-		base.Output.Warning("Failed to create .gitignore entries: %v", err)
+		base.Output.Warning(messages.WarningsGitignoreCreateFailed, err)
 	}
 
 	if err := pm.createReadme(projectCtx.Project.Name, projectCtx.Services.Configs, projectCtx.Sharing.Enabled, base); err != nil {
-		base.Output.Warning("Failed to create README: %v", err)
+		base.Output.Warning(messages.WarningsFailedReadme, err)
 	}
 
 	return nil
@@ -108,7 +108,7 @@ func (pm *ProjectManager) generateEnvFile(serviceConfigs []types.ServiceConfig, 
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedGenerateEnv, err)
 	}
 
-	base.Output.Success("Created environment file: %s", core.EnvGeneratedFilePath)
+	base.Output.Success(messages.SuccessCreatedEnvFile, core.EnvGeneratedFilePath)
 	return nil
 }
 
@@ -141,7 +141,7 @@ func (pm *ProjectManager) generateDockerComposeWithSharing(serviceConfigs []type
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsComposeWriteFailed, err)
 	}
 
-	base.Output.Success("Created Docker Compose file: %s", docker.DockerComposeFilePath)
+	base.Output.Success(messages.SuccessCreatedComposeFile, docker.DockerComposeFilePath)
 	return nil
 }
 
@@ -162,7 +162,7 @@ func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsFileWriteFailed, err)
 	}
 
-	base.Output.Success("Updated %s file", gitignorePath)
+	base.Output.Success(messages.SuccessUpdatedFile, gitignorePath)
 	return nil
 }
 
@@ -214,7 +214,7 @@ This project was initialized with %s.
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsFileWriteFailed, err)
 	}
 
-	base.Output.Success("Created README file: %s", readmePath)
+	base.Output.Success(messages.SuccessCreatedReadme, readmePath)
 	return nil
 }
 
@@ -283,7 +283,7 @@ func (pm *ProjectManager) generateSharedCompose(serviceConfigs []types.ServiceCo
 		return err
 	}
 
-	base.Output.Success("Created shared compose file: %s", composePath)
+	base.Output.Success(messages.SuccessCreatedSharedComposeFile, composePath)
 	return nil
 }
 

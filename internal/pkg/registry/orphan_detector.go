@@ -3,9 +3,7 @@ package registry
 import (
 	"context"
 	"os"
-	"path/filepath"
 
-	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
@@ -99,9 +97,11 @@ func (d *OrphanDetector) checkContainer(service string, info *ContainerInfo, con
 
 func (d *OrphanDetector) checkProjectFilesystem(service string, info *ContainerInfo) *OrphanInfo {
 	var existingProjects []string
-	for _, project := range info.Projects {
-		if projectExists(project) {
-			existingProjects = append(existingProjects, project)
+	var allProjectNames []string
+	for _, ref := range info.Projects {
+		allProjectNames = append(allProjectNames, ref.Name)
+		if _, err := os.Stat(ref.ConfigDir); err == nil {
+			existingProjects = append(existingProjects, ref.Name)
 		}
 	}
 
@@ -112,7 +112,7 @@ func (d *OrphanDetector) checkProjectFilesystem(service string, info *ContainerI
 			Reason:         messages.OrphanReasonAllProjectsDeleted,
 			Severity:       OrphanSeveritySafe,
 			ContainerState: ContainerStateRunning,
-			ProjectsFound:  info.Projects,
+			ProjectsFound:  allProjectNames,
 		}
 	}
 
@@ -151,27 +151,4 @@ func (d *OrphanDetector) checkZombieContainers(registry *Registry, containers []
 	}
 
 	return orphans
-}
-
-// projectExists checks if a project directory exists
-func projectExists(projectName string) bool {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return false
-	}
-
-	possiblePaths := []string{
-		filepath.Join(homeDir, "projects", projectName, core.OttoStackDir),
-		filepath.Join(homeDir, "dev", projectName, core.OttoStackDir),
-		filepath.Join(homeDir, "workspace", projectName, core.OttoStackDir),
-		filepath.Join(homeDir, projectName, core.OttoStackDir),
-	}
-
-	for _, path := range possiblePaths {
-		if _, err := os.Stat(path); err == nil {
-			return true
-		}
-	}
-
-	return false
 }

@@ -63,13 +63,3 @@ type ServiceInfo struct {
 	Category    string `json:"category"`
 	Hidden      bool   `json:"hidden,omitempty"`
 }
-
-// ShellType represents a shell type for completion
-type ShellType string
-
-const (
-	ShellTypeBash       ShellType = "bash"
-	ShellTypeZsh        ShellType = "zsh"
-	ShellTypeFish       ShellType = "fish"
-	ShellTypePowershell ShellType = "powershell"
-)

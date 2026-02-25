@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	dockercontainer "github.com/docker/docker/api/types/container"
 	"gopkg.in/yaml.v3"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -62,7 +63,8 @@ func (m *Manager) Load() (*Registry, error) {
 
 	var registry Registry
 	if err := yaml.Unmarshal(data, &registry); err != nil {
-		return nil, err
+		// Registry file corrupted — attempt Docker-based rebuild
+		return m.rebuildFromDocker(context.Background())
 	}
 
 	if registry.Containers == nil {
@@ -126,13 +128,14 @@ func (m *Manager) Save(registry *Registry) error {
 	return nil
 }
 
-// Register adds or updates a container in the registry
-func (m *Manager) Register(service, containerName, projectName string) error {
+// Register adds or updates a container in the registry.
+func (m *Manager) Register(service, containerName string, project ProjectRef) error {
 	registry, err := m.Load()
 	if err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
 	}
 
+	// Remove stale project references before registering
 	m.cleanupOrphans(registry)
 
 	now := time.Now()
@@ -141,14 +144,14 @@ func (m *Manager) Register(service, containerName, projectName string) error {
 	if !exists {
 		container = &ContainerInfo{
 			Name:      containerName,
-			Projects:  []string{projectName},
+			Projects:  []ProjectRef{project},
 			CreatedAt: now,
 			UpdatedAt: now,
 		}
 		registry.Containers[service] = container
 	} else {
-		if !slices.Contains(container.Projects, projectName) {
-			container.Projects = append(container.Projects, projectName)
+		if !slices.ContainsFunc(container.Projects, func(r ProjectRef) bool { return r.Name == project.Name }) {
+			container.Projects = append(container.Projects, project)
 		}
 		container.UpdatedAt = now
 	}
@@ -167,14 +170,12 @@ func (m *Manager) Unregister(service, projectName string) error {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
 	}
 
-	m.cleanupOrphans(registry)
-
 	container, exists := registry.Containers[service]
 	if !exists {
 		return nil
 	}
 
-	container.Projects = remove(container.Projects, projectName)
+	container.Projects = removeProject(container.Projects, projectName)
 	container.UpdatedAt = time.Now()
 
 	if len(container.Projects) == 0 {
@@ -239,6 +240,65 @@ func extractServiceName(containerName string) string {
 		return ""
 	}
 	return containerName[len(core.SharedContainerPrefix):]
+}
+
+// ValidateAgainstDocker compares registry entries against running Docker containers.
+// Returns warning strings for any registry entry with no running container.
+// Non-blocking — never fails, returns nil if Docker is unavailable.
+func (m *Manager) ValidateAgainstDocker(ctx context.Context, dockerClient *docker.Client) []string {
+	registry, err := m.Load()
+	if err != nil {
+		return nil
+	}
+
+	containers, err := dockerClient.ListContainers(ctx, "")
+	if err != nil {
+		return nil // Docker unavailable, skip
+	}
+
+	running := make(map[string]bool)
+	for _, c := range containers {
+		if isSharedContainer(c.Name) {
+			running[extractServiceName(c.Name)] = true
+		}
+	}
+
+	var warnings []string
+	for service := range registry.Containers {
+		if !running[service] {
+			warnings = append(warnings,
+				fmt.Sprintf(messages.WarningsRegistryNoRunningContainer, service))
+		}
+	}
+	return warnings
+}
+
+// PurgeNonShareable removes registry entries for services not in the shareable set.
+// Heals any corruption from previous bugs. Called automatically during registration.
+func (m *Manager) PurgeNonShareable(shareableServices map[string]bool) error {
+	registry, err := m.Load()
+	if err != nil {
+		return pkgerrors.NewSystemError(
+			pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err,
+		)
+	}
+
+	changed := false
+	for service := range registry.Containers {
+		if !shareableServices[service] {
+			delete(registry.Containers, service)
+			changed = true
+		}
+	}
+
+	if !changed {
+		return nil
+	}
+
+	if err := m.Save(registry); err != nil {
+		return err
+	}
+	return m.createOrUpdateSharedReadme(registry)
 }
 
 // CleanOrphans removes orphaned containers from registry
@@ -311,52 +371,54 @@ func (m *Manager) Reconcile(ctx context.Context, dockerClient *docker.Client) (*
 	return result, nil
 }
 
-// cleanupOrphans removes projects that no longer exist from the registry
-func (m *Manager) cleanupOrphans(registry *Registry) {
-	homeDir, err := os.UserHomeDir()
+// rebuildFromDocker reconstructs the registry from running Docker containers.
+// Called when the registry file is corrupted. Returns an empty registry if
+// Docker is unavailable — never returns an error.
+func (m *Manager) rebuildFromDocker(ctx context.Context) (*Registry, error) {
+	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
-		return // Can't determine home, skip cleanup
+		return NewRegistry(), nil // Docker unavailable, start fresh
+	}
+	defer func() { _ = dockerClient.Close() }()
+
+	containers, err := dockerClient.GetDockerClient().ContainerList(ctx, dockercontainer.ListOptions{All: true})
+	if err != nil {
+		return NewRegistry(), nil
 	}
 
-	expectedSharedPath := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
-	actualSharedPath := filepath.Dir(m.registryPath)
+	registry := NewRegistry()
+	now := time.Now()
 
-	// Only run cleanup if we're in the real shared directory
-	if actualSharedPath != expectedSharedPath {
-		return // Skip cleanup in test environments
-	}
+	for _, cont := range containers {
+		if len(cont.Names) == 0 {
+			continue
+		}
+		name := strings.TrimPrefix(cont.Names[0], "/")
+		if !isSharedContainer(name) {
+			continue
+		}
 
-	for service, container := range registry.Containers {
-		validProjects := make([]string, 0, len(container.Projects))
-		for _, project := range container.Projects {
-			if m.projectExists(project, homeDir) {
-				validProjects = append(validProjects, project)
+		serviceName := extractServiceName(name)
+		project := cont.Labels[docker.LabelOttoProject]
+
+		entry, exists := registry.Containers[serviceName]
+		if !exists {
+			entry = &ContainerInfo{
+				Name:      name,
+				Projects:  []ProjectRef{},
+				CreatedAt: now,
+				UpdatedAt: now,
 			}
+			registry.Containers[serviceName] = entry
 		}
-		container.Projects = validProjects
-		if len(container.Projects) == 0 {
-			delete(registry.Containers, service)
-		}
-	}
-}
 
-// projectExists checks if a project directory exists
-func (m *Manager) projectExists(projectName, homeDir string) bool {
-	// Check common project locations relative to home
-	searchPaths := []string{
-		filepath.Join(homeDir, "git", "*", projectName, core.OttoStackDir),
-		filepath.Join(homeDir, "projects", projectName, core.OttoStackDir),
-		filepath.Join(homeDir, projectName, core.OttoStackDir),
-	}
-
-	for _, pattern := range searchPaths {
-		matches, _ := filepath.Glob(pattern)
-		if len(matches) > 0 {
-			return true
+		if project != "" && !slices.ContainsFunc(entry.Projects, func(r ProjectRef) bool { return r.Name == project }) {
+			// ConfigDir is unknown when rebuilding from Docker labels
+			entry.Projects = append(entry.Projects, ProjectRef{Name: project})
 		}
 	}
 
-	return false
+	return registry, nil
 }
 
 // createOrUpdateSharedReadme generates/updates the README in the shared directory
@@ -383,11 +445,15 @@ func (m *Manager) buildReadmeContent(registry *Registry) string {
 		b.WriteString("No shared containers currently registered.\n\n")
 	} else {
 		for service, info := range registry.Containers {
-			b.WriteString(fmt.Sprintf("### %s\n", service))
-			b.WriteString(fmt.Sprintf("- Container: `%s`\n", info.Name))
-			b.WriteString(fmt.Sprintf("- Projects: %s\n", strings.Join(info.Projects, ", ")))
-			b.WriteString(fmt.Sprintf("- Created: %s\n", info.CreatedAt.Format("2006-01-02 15:04:05")))
-			b.WriteString(fmt.Sprintf("- Updated: %s\n\n", info.UpdatedAt.Format("2006-01-02 15:04:05")))
+			fmt.Fprintf(&b, "### %s\n", service)
+			fmt.Fprintf(&b, "- Container: `%s`\n", info.Name)
+			projectNames := make([]string, len(info.Projects))
+			for i, ref := range info.Projects {
+				projectNames[i] = ref.Name
+			}
+			fmt.Fprintf(&b, "- Projects: %s\n", strings.Join(projectNames, ", "))
+			fmt.Fprintf(&b, "- Created: %s\n", info.CreatedAt.Format("2006-01-02 15:04:05"))
+			fmt.Fprintf(&b, "- Updated: %s\n\n", info.UpdatedAt.Format("2006-01-02 15:04:05"))
 		}
 	}
 
@@ -397,18 +463,46 @@ func (m *Manager) buildReadmeContent(registry *Registry) string {
 	b.WriteString("- Orphaned projects are automatically cleaned up\n\n")
 	b.WriteString("## Important\n\n")
 	b.WriteString("⚠️  Do not manually edit files in this directory. Use otto-stack CLI commands.\n\n")
-	b.WriteString(fmt.Sprintf("*Last updated: %s*\n", time.Now().Format("2006-01-02 15:04:05")))
+	fmt.Fprintf(&b, "*Last updated: %s*\n", time.Now().Format("2006-01-02 15:04:05"))
 
 	return b.String()
 }
 
-// remove removes a value from a string slice
-func remove(slice []string, value string) []string {
-	result := make([]string, 0, len(slice))
-	for _, item := range slice {
-		if item != value {
-			result = append(result, item)
+// removeProject removes the ProjectRef with the given name from a slice.
+func removeProject(projects []ProjectRef, name string) []ProjectRef {
+	result := make([]ProjectRef, 0, len(projects))
+	for _, ref := range projects {
+		if ref.Name != name {
+			result = append(result, ref)
 		}
 	}
 	return result
+}
+
+// cleanupOrphans removes registry entries for projects whose ConfigDir no longer exists on disk.
+// This is called inside Register to keep the registry accurate across project lifecycle events.
+func (m *Manager) cleanupOrphans(reg *Registry) {
+	for service, info := range reg.Containers {
+		info.Projects = filterLiveProjectRefs(info.Projects)
+		if len(info.Projects) == 0 {
+			delete(reg.Containers, service)
+		}
+	}
+}
+
+// filterLiveProjectRefs returns only refs whose ConfigDir still exists on disk.
+// Refs without a ConfigDir (produced by rebuildFromDocker) are kept unconditionally.
+func filterLiveProjectRefs(projects []ProjectRef) []ProjectRef {
+	live := make([]ProjectRef, 0, len(projects))
+	for _, ref := range projects {
+		if ref.ConfigDir == "" {
+			// ConfigDir is unknown (e.g., rebuilt from Docker labels) — keep the entry.
+			live = append(live, ref)
+			continue
+		}
+		if _, err := os.Stat(ref.ConfigDir); err == nil {
+			live = append(live, ref)
+		}
+	}
+	return live
 }

@@ -6,12 +6,20 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
+// ProjectRef identifies a project that uses a shared container.
+// ConfigDir is the absolute path to the project's .otto-stack directory and
+// is used for precise filesystem-based orphan detection.
+type ProjectRef struct {
+	Name      string `yaml:"name" json:"name"`
+	ConfigDir string `yaml:"config_dir" json:"config_dir"`
+}
+
 // ContainerInfo represents a shared container in the registry
 type ContainerInfo struct {
-	Name      string    `yaml:"name" json:"name"`
-	Projects  []string  `yaml:"projects" json:"projects"`
-	CreatedAt time.Time `yaml:"created_at" json:"created_at"`
-	UpdatedAt time.Time `yaml:"updated_at" json:"updated_at"`
+	Name      string       `yaml:"name" json:"name"`
+	Projects  []ProjectRef `yaml:"projects" json:"projects"`
+	CreatedAt time.Time    `yaml:"created_at" json:"created_at"`
+	UpdatedAt time.Time    `yaml:"updated_at" json:"updated_at"`
 }
 
 // Registry represents the shared container registry

@@ -2,7 +2,10 @@ package docker
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log/slog"
+	"sync"
 
 	"github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/cli/cli/command"
@@ -11,6 +14,7 @@ import (
 	"github.com/docker/compose/v5/pkg/compose"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 )
 
 // Manager wraps the official Docker Compose SDK
@@ -111,16 +115,86 @@ func (m *Manager) Exec(ctx context.Context, projectName string, options api.RunO
 	return m.service.Exec(ctx, projectName, options)
 }
 
-type SimpleLogConsumer struct{}
-
-func (s *SimpleLogConsumer) Log(containerName, message string) {
-	slog.Info("Container log", "container", containerName, "message", message)
+// logColorPalette is the ordered set of ANSI colors assigned to service name
+// prefixes when tailing logs from multiple services. Red is intentionally
+// omitted — it is reserved for error lines.
+var logColorPalette = []string{
+	ui.ColorCyan,
+	ui.ColorBlue,
+	ui.ColorYellow,
+	ui.ColorMagenta,
+	ui.ColorGreen,
 }
 
-func (s *SimpleLogConsumer) Err(containerName, message string) {
-	slog.Error("Container error", "container", containerName, "message", message)
+// ServiceLogConsumer writes container log lines to an io.Writer, optionally
+// prefixing each line with a color-coded service name when multiple services
+// are being tailed.
+type ServiceLogConsumer struct {
+	writer       io.Writer
+	noColor      bool
+	multiService bool
+	mu           sync.Mutex
+	serviceColor map[string]string
+	nextColorIdx int
 }
 
-func (s *SimpleLogConsumer) Status(container, msg string) {
-	slog.Info("Container status", "container", container, "status", msg)
+// NewServiceLogConsumer creates a ServiceLogConsumer. When serviceCount is 1
+// no per-service prefix is printed; when serviceCount > 1 each service gets
+// a distinct color and its name is prepended to every line.
+func NewServiceLogConsumer(writer io.Writer, noColor bool, serviceCount int) *ServiceLogConsumer {
+	return &ServiceLogConsumer{
+		writer:       writer,
+		noColor:      noColor,
+		multiService: serviceCount > 1,
+		serviceColor: make(map[string]string),
+	}
+}
+
+func (c *ServiceLogConsumer) Log(containerName, message string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	_, _ = fmt.Fprintln(c.writer, c.formatLine(containerName, message, false))
+}
+
+func (c *ServiceLogConsumer) Err(containerName, message string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	_, _ = fmt.Fprintln(c.writer, c.formatLine(containerName, message, true))
+}
+
+// Status carries container lifecycle events (e.g. "container started").
+// These are debug-level noise and are not shown to the user.
+func (c *ServiceLogConsumer) Status(container, msg string) {
+	slog.Debug("Container status", "container", container, "status", msg)
+}
+
+// formatLine builds the output line for a single log entry. When isErr is
+// true the message itself is colored red to distinguish stderr from stdout.
+func (c *ServiceLogConsumer) formatLine(containerName, message string, isErr bool) string {
+	if isErr && !c.noColor {
+		message = ui.ColorRed + message + ui.ColorReset
+	}
+
+	if !c.multiService {
+		return message
+	}
+
+	prefix := c.prefixFor(containerName)
+	return prefix + " | " + message
+}
+
+// prefixFor returns a color-coded service name prefix, assigning a new color
+// from the palette on first encounter.
+func (c *ServiceLogConsumer) prefixFor(containerName string) string {
+	color, ok := c.serviceColor[containerName]
+	if !ok {
+		color = logColorPalette[c.nextColorIdx%len(logColorPalette)]
+		c.serviceColor[containerName] = color
+		c.nextColorIdx++
+	}
+
+	if c.noColor {
+		return containerName
+	}
+	return color + containerName + ui.ColorReset
 }

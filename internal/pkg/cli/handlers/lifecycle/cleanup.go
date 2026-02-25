@@ -34,6 +34,12 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	}
 
 	ciFlags := ci.GetFlags(cmd)
+	if ciFlags.DryRun {
+		base.Output.Info("%s", messages.DryRunShowingWhatWouldHappen)
+		base.Output.Info(messages.DryRunWouldClean, flags.Project)
+		return nil
+	}
+
 	if !ciFlags.Quiet {
 		base.Output.Header(messages.LifecycleCleaning)
 	}
@@ -48,7 +54,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	if err := h.reconcileRegistry(ctx, base, &ciFlags); err != nil {
 		// Log but don't fail - reconciliation is best-effort
 		if !ciFlags.Quiet {
-			base.Output.Warning("Failed to reconcile registry: %v", err)
+			base.Output.Warning(messages.WarningsRegistryReconcileFailed, err)
 		}
 	}
 
@@ -111,10 +117,11 @@ func (h *CleanupHandler) performCleanup(ctx context.Context, setup *common.CoreS
 	}
 
 	err = stackService.Cleanup(ctx, services.CleanupRequest{
-		Project:       projectName,
-		Force:         flags.Force,
-		RemoveVolumes: flags.Volumes,
-		RemoveImages:  flags.Images,
+		Project:        projectName,
+		Force:          flags.Force,
+		RemoveVolumes:  flags.Volumes,
+		RemoveImages:   flags.Images,
+		RemoveNetworks: flags.Networks,
 	})
 	if err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, projectName, messages.ErrorsServiceCleanupFailed, err)
@@ -205,7 +212,7 @@ func (h *CleanupHandler) cleanOrphans(ctx context.Context, setup *common.CoreSet
 	if !ciFlags.Quiet {
 		base.Output.Success(messages.OrphanRemovedFromRegistry, len(cleaned))
 		for _, service := range cleaned {
-			base.Output.Info("  - %s", service)
+			base.Output.Info(messages.InfoListItem, service)
 		}
 	}
 
@@ -214,17 +221,19 @@ func (h *CleanupHandler) cleanOrphans(ctx context.Context, setup *common.CoreSet
 
 // getRegistry creates a registry manager
 func (h *CleanupHandler) getRegistry() (*registry.Manager, error) {
-	detector, err := clicontext.NewDetector()
+	execCtx, err := common.DetectExecutionContext()
 	if err != nil {
 		return nil, err
 	}
 
-	execCtx, err := detector.Detect()
-	if err != nil {
-		return nil, err
+	switch m := execCtx.(type) {
+	case *clicontext.ProjectMode:
+		return registry.NewManager(m.Shared.Root), nil
+	case *clicontext.SharedMode:
+		return registry.NewManager(m.Shared.Root), nil
+	default:
+		return nil, pkgerrors.NewSystemErrorf(pkgerrors.ErrCodeInternal, messages.ErrorsContextUnknownMode, execCtx)
 	}
-
-	return registry.NewManager(execCtx.SharedContainers.Root), nil
 }
 
 // reconcileRegistry syncs registry with actual Docker container state
@@ -246,7 +255,13 @@ func (h *CleanupHandler) reconcileRegistry(ctx context.Context, base *base.BaseC
 	}
 
 	if len(result.Removed) > 0 && !ciFlags.Quiet {
-		base.Output.Info("Reconciled registry: removed %d stale entries", len(result.Removed))
+		base.Output.Info(messages.InfoReconciledRegistry, len(result.Removed))
+	}
+
+	if warnings := reg.ValidateAgainstDocker(ctx, svc.DockerClient); len(warnings) > 0 && !ciFlags.Quiet {
+		for _, w := range warnings {
+			base.Output.Warning(w)
+		}
 	}
 
 	return nil
@@ -256,7 +271,7 @@ func (h *CleanupHandler) reconcileRegistry(ctx context.Context, base *base.BaseC
 func (h *CleanupHandler) confirmOrphanCleanup(base *base.BaseCommand, orphans []registry.OrphanInfo) bool {
 	base.Output.Warning(messages.OrphanWillRemove)
 	for _, orphan := range orphans {
-		base.Output.Info("  - %s", orphan.Service)
+		base.Output.Info(messages.InfoListItem, orphan.Service)
 	}
 	return h.confirmCleanup(base)
 }

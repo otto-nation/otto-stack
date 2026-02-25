@@ -36,7 +36,7 @@ func (d *OrphanDisplay) displayCritical(orphans []OrphanInfo) {
 	}
 	d.output.Error(messages.OrphanSeverityCritical, len(orphans))
 	for _, o := range orphans {
-		d.output.Info("    - %s: %s", o.Service, o.Reason)
+		d.output.Info(messages.InfoListItemWithReason, o.Service, o.Reason)
 	}
 }
 
@@ -46,7 +46,7 @@ func (d *OrphanDisplay) displayWarning(orphans []OrphanInfo) {
 	}
 	d.output.Warning(messages.OrphanSeverityWarning, len(orphans))
 	for _, o := range orphans {
-		d.output.Info("    - %s: %s", o.Service, o.Reason)
+		d.output.Info(messages.InfoListItemWithReason, o.Service, o.Reason)
 		if len(o.ProjectsFound) > 0 {
 			d.output.Info("      "+messages.OrphanRemainingProjects, o.ProjectsFound)
 		}
@@ -59,7 +59,7 @@ func (d *OrphanDisplay) displaySafe(orphans []OrphanInfo) {
 	}
 	d.output.Info(messages.OrphanSeveritySafe, len(orphans))
 	for _, o := range orphans {
-		d.output.Info("    - %s: %s", o.Service, o.Reason)
+		d.output.Info(messages.InfoListItemWithReason, o.Service, o.Reason)
 	}
 }
 

@@ -87,6 +87,26 @@ func (b *ServiceConfigBuilder) WithEntrypoint(entrypoint []string) *ServiceConfi
 	return b
 }
 
+func (b *ServiceConfigBuilder) WithRequired(deps ...string) *ServiceConfigBuilder {
+	b.config.Service.Dependencies.Required = deps
+	return b
+}
+
+func (b *ServiceConfigBuilder) WithSoft(deps ...string) *ServiceConfigBuilder {
+	b.config.Service.Dependencies.Soft = deps
+	return b
+}
+
+func (b *ServiceConfigBuilder) WithConflicts(conflicts ...string) *ServiceConfigBuilder {
+	b.config.Service.Dependencies.Conflicts = conflicts
+	return b
+}
+
+func (b *ServiceConfigBuilder) WithProvides(caps ...string) *ServiceConfigBuilder {
+	b.config.Service.Dependencies.Provides = caps
+	return b
+}
+
 func (b *ServiceConfigBuilder) Build() types.ServiceConfig {
 	return b.config
 }

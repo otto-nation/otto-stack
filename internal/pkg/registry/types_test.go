@@ -11,7 +11,7 @@ import (
 func TestRegistry_FindOrphans_EmptyProjects(t *testing.T) {
 	registry := &Registry{
 		Containers: map[string]*ContainerInfo{
-			"orphan": {Name: "otto-stack-orphan", Projects: []string{}},
+			"orphan": {Name: "otto-stack-orphan", Projects: []ProjectRef{}},
 		},
 	}
 	orphans := registry.FindOrphans()
@@ -22,7 +22,7 @@ func TestRegistry_FindOrphans_EmptyProjects(t *testing.T) {
 func TestRegistry_FindOrphans_NoOrphans(t *testing.T) {
 	registry := &Registry{
 		Containers: map[string]*ContainerInfo{
-			"active": {Name: "otto-stack-active", Projects: []string{"p1"}},
+			"active": {Name: "otto-stack-active", Projects: []ProjectRef{{Name: "p1", ConfigDir: t.TempDir()}}},
 		},
 	}
 	orphans := registry.FindOrphans()
@@ -42,7 +42,7 @@ func TestRegistry_FindOrphans_NilProjects(t *testing.T) {
 func TestContainerInfo(t *testing.T) {
 	info := &ContainerInfo{
 		Name:     "otto-stack-test",
-		Projects: []string{"p1", "p2"},
+		Projects: []ProjectRef{{Name: "p1", ConfigDir: t.TempDir()}, {Name: "p2", ConfigDir: t.TempDir()}},
 	}
 	assert.Equal(t, "otto-stack-test", info.Name)
 	assert.Len(t, info.Projects, 2)

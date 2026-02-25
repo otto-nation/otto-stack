@@ -29,10 +29,15 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 				"volumes",
 			},
 		},
+		"conflicts": {
+			handlerPath: "internal/pkg/cli/handlers/project/conflicts.go",
+			flags: []string{
+				"check-ports",
+			},
+		},
 		"doctor": {
 			handlerPath: "internal/pkg/cli/handlers/project/doctor.go",
 			flags: []string{
-				"fix",
 				"format",
 			},
 		},
@@ -40,7 +45,6 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 			handlerPath: "internal/pkg/cli/handlers/lifecycle/down.go",
 			flags: []string{
 				"all",
-				"remove",
 				"remove-orphans",
 				"shared",
 				"timeout",
@@ -55,6 +59,15 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 				"project-name",
 				"services",
 				"shared-services",
+			},
+		},
+		"logs": {
+			handlerPath: "internal/pkg/cli/handlers/operations/logs.go",
+			flags: []string{
+				"follow",
+				"since",
+				"tail",
+				"timestamps",
 			},
 		},
 		"restart": {
@@ -93,8 +106,6 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 		"validate": {
 			handlerPath: "internal/pkg/cli/handlers/project/validate.go",
 			flags: []string{
-				"fix",
-				"format",
 				"strict",
 			},
 		},

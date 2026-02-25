@@ -30,7 +30,7 @@ tasks:
   # DEFAULT
   # ============================================================================
   default:
-    desc: "🚀 Build the binary (default task)"
+    desc: "Build the binary (default task)"
     silent: true
     cmds:
       - task: build
@@ -39,21 +39,21 @@ tasks:
   # SETUP
   # ============================================================================
   setup:
-    desc: "🔧 Install all dependencies (Go modules + npm packages)"
+    desc: "Install all dependencies (Go modules + npm packages)"
     deps: [setup:go, setup:npm]
     silent: true
     cmds:
-      - echo "✅ All dependencies installed"
+      - echo "  ✓ All dependencies ready"
 
   setup:go:
-    desc: "📦 Install Go dependencies"
+    desc: "Install Go dependencies"
     silent: true
     cmds:
-      - echo "📦 Installing Go dependencies..."
       - go mod download
+      - echo "  ✓ Go dependencies ready"
 
   setup:npm:
-    desc: "📦 Install npm dependencies"
+    desc: "Install npm dependencies"
     sources:
       - "docs-site/package.json"
       - "docs-site/package-lock.json"
@@ -61,23 +61,23 @@ tasks:
       - "docs-site/node_modules/.package-lock.json"
     silent: true
     cmds:
-      - echo "📦 Installing npm dependencies..."
-      - cd docs-site && npm install
+      - cd docs-site && npm install --silent
+      - echo "  ✓ npm dependencies ready"
 
   # ============================================================================
   # GENERATE
   # ============================================================================
   generate:
-    desc: "🔧 Generate code from YAML configs"
+    desc: "Generate code from YAML configs"
     deps: [generate:cli, generate:services, generate:messages]
     silent: true
     cmds:
       - gofmt -w $(find internal -name '*_generated.go')
       - task: generate:docs
-      - echo "✅ Generated code from YAML configs"
+      - echo "  ✓ Generated all code"
 
   generate:cli:
-    desc: "🔧 Generate CLI code"
+    desc: "Generate CLI code"
     sources:
       - "internal/config/commands.yaml"
       - "cmd/generate-cli/main.go"
@@ -86,11 +86,10 @@ tasks:
       - "internal/pkg/cli/commands_generated.go"
     silent: true
     cmds:
-      - echo "🔧 Running generate-cli..."
       - go run ./cmd/generate-cli
 
   generate:services:
-    desc: "🔧 Generate service code"
+    desc: "Generate service code"
     sources:
       - "internal/config/services/**/*.yaml"
       - "cmd/generate-services/main.go"
@@ -101,11 +100,10 @@ tasks:
       - "internal/pkg/services/schema_generated.go"
     silent: true
     cmds:
-      - echo "🔧 Running generate-services..."
       - go run ./cmd/generate-services
 
   generate:messages:
-    desc: "🔧 Generate message constants"
+    desc: "Generate message constants"
     sources:
       - "internal/config/messages.yaml"
       - "cmd/generate-messages/main.go"
@@ -114,11 +112,10 @@ tasks:
       - "internal/pkg/messages/messages_generated.go"
     silent: true
     cmds:
-      - echo "🔧 Running generate-messages..."
       - go run ./cmd/generate-messages
 
   generate:docs:
-    desc: "📚 Generate documentation"
+    desc: "Generate documentation"
     deps: [setup:npm]
     sources:
       - "internal/config/schema.yaml"
@@ -131,14 +128,13 @@ tasks:
       - "docs-site/content/cli-reference.md"
     silent: true
     cmds:
-      - echo "📚 Generating documentation..."
-      - cd docs-site && npm run docs:generate
+      - cd docs-site && npm run docs:generate --silent
 
   # ============================================================================
   # BUILD
   # ============================================================================
   build:
-    desc: "🔨 Build the Go binary for current platform"
+    desc: "Build the Go binary for current platform"
     deps: [sync-go-version, generate, lint:go]
     sources:
       - "**/*.go"
@@ -148,60 +144,55 @@ tasks:
       - "{{.BUILD_DIR}}/{{.BINARY_NAME}}"
     silent: true
     cmds:
-      - echo "🔨 Building {{.BINARY_NAME}}..."
       - mkdir -p {{.BUILD_DIR}}
       - go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}} ./cmd/otto-stack
-      - echo "✅ Built at {{.BUILD_DIR}}/{{.BINARY_NAME}}"
+      - echo "  ✓ {{.BUILD_DIR}}/{{.BINARY_NAME}}"
 
   build-all:
-    desc: "🌍 Build binaries for all supported platforms"
+    desc: "Build binaries for all supported platforms"
     deps: [lint]
     silent: true
     cmds:
-      - echo "🌍 Building {{.BINARY_NAME}} for all platforms..."
       - mkdir -p {{.BUILD_DIR}}
-      - GOOS=linux GOARCH=amd64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-linux-amd64 ./cmd/otto-stack
-      - GOOS=linux GOARCH=arm64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-linux-arm64 ./cmd/otto-stack
-      - GOOS=darwin GOARCH=amd64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-darwin-amd64 ./cmd/otto-stack
-      - GOOS=darwin GOARCH=arm64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-darwin-arm64 ./cmd/otto-stack
+      - GOOS=linux   GOARCH=amd64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-linux-amd64   ./cmd/otto-stack
+      - GOOS=linux   GOARCH=arm64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-linux-arm64   ./cmd/otto-stack
+      - GOOS=darwin  GOARCH=amd64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-darwin-amd64  ./cmd/otto-stack
+      - GOOS=darwin  GOARCH=arm64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-darwin-arm64  ./cmd/otto-stack
       - GOOS=windows GOARCH=amd64 go build {{.LDFLAGS}} -o {{.BUILD_DIR}}/{{.BINARY_NAME}}-windows-amd64.exe ./cmd/otto-stack
-      - echo "✅ All binaries built in {{.BUILD_DIR}}/"
+      - echo "  ✓ All binaries in {{.BUILD_DIR}}/"
 
   install:
-    desc: "📦 Install the binary to GOPATH/bin"
+    desc: "Install the binary to GOPATH/bin"
     deps: [build]
     silent: true
     cmds:
-      - echo "📦 Installing {{.BINARY_NAME}}..."
       - go install {{.LDFLAGS}} ./cmd/otto-stack > /dev/null 2>&1
-      - echo "✅ Installed to $(go env GOPATH)/bin/{{.BINARY_NAME}}"
+      - echo "  ✓ Installed to $(go env GOPATH)/bin/{{.BINARY_NAME}}"
 
   # ============================================================================
   # DEVELOPMENT
   # ============================================================================
   dev:
-    desc: "🚀 Quick start - build and show help"
+    desc: "Quick start - build and show help"
     deps: [build]
     silent: true
     cmds:
-      - echo "🚀 Running {{.BINARY_NAME}} in development mode..."
       - ./{{.BUILD_DIR}}/{{.BINARY_NAME}} --help
 
   watch:
-    desc: "👀 Watch for changes and rebuild automatically"
+    desc: "Watch for changes and rebuild automatically"
     watch: true
     sources:
       - "**/*.go"
     silent: true
     cmds:
-      - echo "👀 Rebuilding due to changes..."
       - task: build
 
   # ============================================================================
   # DEPENDENCIES
   # ============================================================================
   deps:
-    desc: "📥 Download and tidy Go dependencies"
+    desc: "Download and tidy Go dependencies"
     sources:
       - "go.mod"
       - "go.sum"
@@ -214,74 +205,67 @@ tasks:
   # GIT AUTOMATION
   # ============================================================================
   pre-commit:
-    desc: "🔒 Run all pre-commit checks"
+    desc: "Run all pre-commit checks"
     silent: true
     cmds:
-      - echo "🔒 Running pre-commit checks..."
       - task: generate
       - |
-        echo "🔧 Auto-fixing formatting and modules..."
         CHANGES_MADE=false
 
-        # Check if generated files need formatting
         git diff --quiet && BEFORE_FMT_CLEAN=true || BEFORE_FMT_CLEAN=false
         task fmt
         if [ "$BEFORE_FMT_CLEAN" = "true" ] && ! git diff --quiet; then
-          echo "❌ Formatting changes detected"
+          echo "  ✗ Formatting changes detected"
           CHANGES_MADE=true
         fi
 
-        # Check if go mod tidy makes changes
         git diff --quiet && BEFORE_MOD_CLEAN=true || BEFORE_MOD_CLEAN=false
         go mod tidy
         if [ "$BEFORE_MOD_CLEAN" = "true" ] && ! git diff --quiet; then
-          echo "❌ Go module changes detected"
+          echo "  ✗ Go module changes detected"
           CHANGES_MADE=true
         fi
 
         if [ "$CHANGES_MADE" = "true" ]; then
           echo ""
-          echo "📋 Modified files:"
-          git diff --name-only | sed 's/^/  - /'
+          echo "  Modified files:"
+          git diff --name-only | sed 's/^/    /'
           echo ""
-          echo "🔧 Please stage these changes and commit again:"
-          echo "   git add <files>"
-          echo "   git commit"
+          echo "  Stage these changes and commit again:"
+          echo "    git add <files>"
+          echo "    git commit"
           echo ""
           exit 1
         fi
-      - echo "✅ Verifying fixes..."
       - task: lint
-      - echo "✅ Pre-commit checks passed"
+      - echo "  ✓ Pre-commit checks passed"
 
   pre-push:
-    desc: "🚀 Run all pre-push checks"
+    desc: "Run all pre-push checks"
     deps: [build, test]
     silent: true
     cmds:
-      - echo "🚀 Running pre-push checks..."
       - task: validate:commits
       - task: deadcode
       - task: docs
       - |
-        # Check if docs generation made any changes
         if ! git diff --quiet; then
           echo ""
-          echo "❌ Pre-push failed: Documentation was out of sync"
+          echo "  ✗ Documentation was out of sync"
           echo ""
-          echo "📋 Modified files:"
-          git diff --name-only
+          echo "  Modified files:"
+          git diff --name-only | sed 's/^/    /'
           echo ""
-          echo "🔧 Please add these changes and commit again:"
-          echo "   git add ."
-          echo "   git commit"
+          echo "  Stage these changes and commit again:"
+          echo "    git add ."
+          echo "    git commit"
           echo ""
           exit 1
         fi
-      - echo "✅ Pre-push checks passed"
+      - echo "  ✓ Pre-push checks passed"
 
   docs-lastmod-update:
-    desc: "🗓️ Update lastmod dates for changed documentation files"
+    desc: "Update lastmod dates for changed documentation files"
     sources:
       - "docs-site/content/**/*.md"
     silent: true
@@ -289,16 +273,17 @@ tasks:
       - ./scripts/update-docs-lastmod.sh
 
   setup-hooks:
-    desc: "🪝 Install Git hooks for pre-commit and pre-push checks"
+    desc: "Install Git hooks for pre-commit and pre-push checks"
     sources:
       - "scripts/setup-hooks.sh"
       - ".git/hooks/*"
     silent: true
     cmds:
       - ./scripts/setup-hooks.sh
+      - echo "  ✓ Git hooks installed"
 
   sync-go-version:
-    desc: "🔄 Sync Go version across all configuration files"
+    desc: "Sync Go version across all configuration files"
     sources:
       - ".go-version"
       - ".github/workflows/*.yml"
@@ -310,7 +295,7 @@ tasks:
       - GOTOOLCHAIN=local go mod tidy
 
   check-go-version:
-    desc: "✅ Check if Go versions are consistent across files"
+    desc: "Check if Go versions are consistent across files"
     sources:
       - ".go-version"
       - ".github/workflows/*.yml"
@@ -324,14 +309,14 @@ tasks:
   # TESTING
   # ============================================================================
   test:
-    desc: "🧪 Run all tests with coverage"
+    desc: "Run all tests with coverage"
     deps: [test-unit]
     silent: true
     cmds:
-      - echo "✅ Coverage report at coverage.out"
+      - echo "  ✓ Coverage report at coverage.out"
 
   test-unit:
-    desc: "🧪 Run unit tests only (fast)"
+    desc: "Run unit tests only (fast)"
     deps: [deps]
     sources:
       - "**/*.go"
@@ -339,36 +324,37 @@ tasks:
       - "go.sum"
     generates:
       - "coverage.out"
+    silent: true
     cmds:
-      - echo "🧪 Running unit tests..."
       - |
         if [ "${CGO_ENABLED:-1}" = "0" ]; then
           go test -v -tags=unit -coverprofile=coverage.out -covermode=atomic ./internal/...
         else
           go test -v -race -tags=unit -coverprofile=coverage.out -covermode=atomic ./internal/...
         fi
-      - echo "✅ Unit tests passed"
 
   test-e2e:
-    desc: "🔗 Run end-to-end integration tests only"
+    desc: "Run end-to-end integration tests only"
     deps: [deps]
+    silent: true
     preconditions:
       - sh: docker info
         msg: "Docker is required for E2E tests"
     cmds:
-      - echo "🔗 Running E2E integration tests..."
       - go test -tags=integration -v -timeout=10m -parallel=1 -count=1 ./test/e2e/... | tee
 
   test-coverage:
-    desc: "📊 View test coverage report in browser"
+    desc: "View test coverage report in browser"
     deps: [test]
     silent: true
     cmds:
-      - echo "📊 Opening coverage report..."
       - go tool cover -html=coverage.out
 
+  # ============================================================================
+  # QUALITY
+  # ============================================================================
   lint:
-    desc: "🔍 Run comprehensive linting (vet + fmt + golangci-lint)"
+    desc: "Run comprehensive linting (vet + fmt + golangci-lint)"
     deps: [lint:go]
     sources:
       - "**/*.go"
@@ -378,10 +364,10 @@ tasks:
     silent: true
     cmds:
       - task: lint:docs
-      - echo "✅ All linting checks passed!"
+      - echo "  ✓ All linting checks passed"
 
   lint:go:
-    desc: "🔍 Run Go-only linting (vet + golangci-lint) - for CI"
+    desc: "Run Go-only linting (vet + golangci-lint) - for CI"
     deps: [deps, fmt]
     sources:
       - "**/*.go"
@@ -397,23 +383,23 @@ tasks:
         EXPECTED_VERSION="{{.GOLANGCI_LINT_VERSION}}"
 
         if [ ! -f "$GOLANGCI_PATH" ]; then
+          printf "  → Installing golangci-lint %s...\n" "$EXPECTED_VERSION"
           curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION > /dev/null 2>&1
         else
           CURRENT_VERSION="v$($GOLANGCI_PATH version 2>/dev/null | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 || echo "unknown")"
           if [ "$CURRENT_VERSION" != "$EXPECTED_VERSION" ]; then
+            printf "  → Updating golangci-lint to %s...\n" "$EXPECTED_VERSION"
             curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $EXPECTED_VERSION > /dev/null 2>&1
           fi
         fi
 
         $GOLANGCI_PATH config verify
         $GOLANGCI_PATH run ./cmd/otto-stack/... ./internal/...
-      - |
-        # Verify code compiles (catches unused imports in generated code)
-        go build -o /dev/null ./cmd/otto-stack
+      - go build -o /dev/null ./cmd/otto-stack
       - touch .task/go-lint-timestamp
 
   lint:docs:
-    desc: "📝 Lint documentation files"
+    desc: "Lint documentation files"
     sources:
       - "docs-site/content/**/*.md"
       - "docs-site/README.md"
@@ -421,29 +407,25 @@ tasks:
       - "docs-site/.mlc_config.json"
     silent: true
     cmds:
-      - echo "📝 Linting documentation..."
       - |
         cd docs-site
-        # Run markdown lint and link check in parallel
         npm run lint:md &
         LINT_PID=$!
         npm run lint:links &
         LINKS_PID=$!
 
-        # Wait for both to complete
         wait $LINT_PID
         LINT_EXIT=$?
         wait $LINKS_PID
         LINKS_EXIT=$?
 
-        # Check if either failed
         if [ $LINT_EXIT -ne 0 ] || [ $LINKS_EXIT -ne 0 ]; then
-          echo "❌ Documentation linting failed"
+          echo "  ✗ Documentation linting failed"
           exit 1
         fi
 
   fmt:
-    desc: "✨ Format Go code with gofmt and goimports"
+    desc: "Format Go code with gofmt and goimports"
     sources:
       - "**/*.go"
       - "go.mod"
@@ -452,13 +434,14 @@ tasks:
     cmds:
       - |
         if [ ! -f $(go env GOPATH)/bin/goimports ]; then
+          echo "  → Installing goimports..."
           go install golang.org/x/tools/cmd/goimports@latest > /dev/null 2>&1
         fi
       - go fmt ./... > /dev/null 2>&1
       - $(go env GOPATH)/bin/goimports -w . > /dev/null 2>&1
 
   security:
-    desc: "🔒 Run security vulnerability scan"
+    desc: "Run security vulnerability scan"
     deps: [deps]
     sources:
       - "**/*.go"
@@ -466,48 +449,31 @@ tasks:
       - "go.sum"
     silent: true
     cmds:
-      - echo "🔒 Running security scan..."
       - |
-        # Install security tools if needed
         if ! command -v govulncheck >/dev/null 2>&1; then
-          echo "📦 Installing govulncheck..."
+          echo "  → Installing govulncheck..."
           go install golang.org/x/vuln/cmd/govulncheck@latest
         fi
-      - echo "🔍 Running vulnerability scan..."
       - govulncheck ./...
-      - echo "🔍 Running basic security checks..."
       - |
-        # Check for hardcoded secrets patterns (excluding test files and generated code)
         if grep -r -E "(password|pwd|secret|key|token)\s*[:=]\s*['\"][^'\"]{8,}" --include="*.go" --exclude="*_test.go" --exclude="*_generated.go" . ; then
-          echo "⚠️ Potential hardcoded secrets found"
+          echo "  ✗ Potential hardcoded secrets found"
           exit 1
         fi
-
-        echo "✅ Basic security checks passed"
-      - echo "✅ Security scan complete"
+      - echo "  ✓ Security scan passed"
 
   deadcode:
-    desc: "🔍 Check for unreachable code (informational by default, strict with DEADCODE_STRICT=true)"
+    desc: "Check for unreachable code (informational; set DEADCODE_STRICT=true for strict mode)"
     sources:
       - "**/*.go"
       - "go.mod"
       - "go.sum"
     silent: true
     cmds:
-      - echo "🔍 Checking for dead code..."
       - |
-        # Run deadcode analysis
-        # Note: Deadcode tool reports functions as unreachable if they're only called from:
-        # - Test code (test helpers, mocks, DI constructors)
-        # - Excluded packages (e2e framework, code generators)
-        # - Future features not yet exposed via CLI
         DEADCODE_OUTPUT=$(go run golang.org/x/tools/cmd/deadcode@latest ./... 2>&1)
 
         if [ -n "$DEADCODE_OUTPUT" ]; then
-          # Filter out acceptable dead code:
-          # - test helpers and e2e framework
-          # - code generators (cmd/codegen, cmd/generate-*)
-          # - internal/cli (old CLI code being phased out)
           FILTERED=$(echo "$DEADCODE_OUTPUT" | \
             grep -v "test/e2e/framework" | \
             grep -v "test/testhelpers" | \
@@ -518,38 +484,37 @@ tasks:
 
           if [ -n "$FILTERED" ]; then
             DEADCODE_COUNT=$(echo "$FILTERED" | wc -l | tr -d ' ')
-            echo "ℹ️  Found $DEADCODE_COUNT unreachable functions"
+            printf "  → %s unreachable functions found\n" "$DEADCODE_COUNT"
 
             if [ "${DEADCODE_STRICT:-false}" = "true" ]; then
               echo ""
-              echo "⚠️  Dead code detected (strict mode):"
+              echo "  ✗ Dead code detected (strict mode):"
               echo "$FILTERED"
               echo ""
-              echo "💡 Review DEAD_CODE_AUDIT.md for analysis"
+              echo "  Review DEAD_CODE_AUDIT.md for analysis"
               exit 1
             else
-              echo "💡 Run 'DEADCODE_STRICT=true task deadcode' to see details"
-              echo "   Or review DEAD_CODE_AUDIT.md for full analysis"
+              echo "  → Run DEADCODE_STRICT=true task deadcode to see details"
             fi
           else
-            echo "✅ No dead code found"
+            echo "  ✓ No dead code found"
           fi
         else
-          echo "✅ No dead code found"
+          echo "  ✓ No dead code found"
         fi
 
   # ============================================================================
   # VALIDATION
   # ============================================================================
   validate:
-    desc: "✅ Run all validation checks"
+    desc: "Run all validation checks"
     deps: [validate:code, validate:docs, validate:homebrew]
     silent: true
     cmds:
-      - echo "✅ All validation checks passed"
+      - echo "  ✓ All validation checks passed"
 
   validate:code:
-    desc: "✅ Validate Go code (lint + test)"
+    desc: "Validate Go code (lint + test)"
     sources:
       - "**/*.go"
       - "go.mod"
@@ -557,13 +522,12 @@ tasks:
       - ".golangci.yml"
     silent: true
     cmds:
-      - echo "🔍 Validating Go code..."
       - task: lint:go
       - task: test
-      - echo "✅ Code validation passed"
+      - echo "  ✓ Code validation passed"
 
   validate:docs:
-    desc: "✅ Validate documentation (Hugo build + linting)"
+    desc: "Validate documentation (Hugo build + linting)"
     deps: [setup:npm]
     sources:
       - "docs-site/content/**/*.md"
@@ -572,14 +536,13 @@ tasks:
       - "docs-site/templates/**/*.md"
     silent: true
     cmds:
-      - echo "🔍 Validating documentation..."
       - cd docs-site && hugo --gc --minify --destination public-test
       - cd docs-site && rm -rf public-test
-      - echo "✅ Hugo build successful"
       - task: lint:docs
+      - echo "  ✓ Documentation valid"
 
   validate:homebrew:
-    desc: "🍺 Validate Homebrew formula syntax and style"
+    desc: "Validate Homebrew formula syntax and style"
     sources:
       - "Formula/otto-stack.rb"
     silent: true
@@ -587,176 +550,153 @@ tasks:
       - test ! -f "Formula/otto-stack.rb"
       - test ! command -v brew >/dev/null 2>&1
     cmds:
-      - echo "🍺 Validating Homebrew formula..."
       - ruby -c Formula/otto-stack.rb
-      - echo "✅ Homebrew formula syntax valid"
+      - echo "  ✓ Homebrew formula valid"
 
   validate:commits:
-    desc: "📝 Validate commit message format using commitlint (same as CI)"
+    desc: "Validate commit message format using commitlint (same as CI)"
     silent: true
     cmds:
       - |
-        echo "📝 Validating commit messages with commitlint..."
         BRANCH=$(git rev-parse --abbrev-ref HEAD)
         BASE_BRANCH=${BASE_BRANCH:-main}
 
-        # Get commit range
         if git rev-parse --verify origin/$BASE_BRANCH >/dev/null 2>&1; then
           FROM="origin/$BASE_BRANCH"
         else
           FROM="$BASE_BRANCH"
         fi
 
-        # Run commitlint using commitlint.config.js (which loads .github/.commitlintrc.json)
-        # This ensures the same config as CI while allowing proper module resolution
         npx --yes -p @commitlint/config-conventional -p @commitlint/cli commitlint --from "$FROM" --to HEAD
-
-        echo "✅ All commit messages valid"
+        echo "  ✓ Commit messages valid"
 
   # ============================================================================
   # DOCUMENTATION
   # ============================================================================
   docs:
-    desc: "📚 Generate and serve documentation"
+    desc: "Generate and validate documentation"
     deps: [generate:docs]
     silent: true
     cmds:
-      - echo "✅ Documentation generated"
+      - echo "  ✓ Documentation generated"
 
   docs-serve:
-    desc: "🌐 Serve documentation locally"
+    desc: "Serve documentation locally"
     deps: [generate:docs]
     silent: true
     cmds:
-      - echo "🌐 Starting documentation server..."
       - cd docs-site && npm run docs:serve
 
   # ============================================================================
   # DOCKER
   # ============================================================================
   docker-build:
-    desc: "🐳 Build Docker image"
+    desc: "Build Docker image"
     deps: [build]
     silent: true
     cmds:
-      - echo "🐳 Building Docker image..."
       - docker build -t {{.BINARY_NAME}}:{{.VERSION}} .
-      - echo "✅ Docker image built at {{.BINARY_NAME}}:{{.VERSION}}"
+      - echo "  ✓ {{.BINARY_NAME}}:{{.VERSION}}"
 
   docker-run:
-    desc: "🐳 Run Docker container interactively"
+    desc: "Run Docker container interactively"
     deps: [docker-build]
     silent: true
     cmds:
-      - echo "🐳 Running Docker container..."
       - docker run --rm -it {{.BINARY_NAME}}:{{.VERSION}}
 
-  # ----------------------------------------------------------------------------
+  # ============================================================================
   # CLEANUP
-  # ----------------------------------------------------------------------------
+  # ============================================================================
   clean:
-    desc: "🧹 Remove build artifacts and generated files"
+    desc: "Remove build artifacts and generated files"
     silent: true
     cmds:
-      - echo "🧹 Cleaning build artifacts..."
       - rm -rf {{.BUILD_DIR}}/
       - rm -f coverage.out *.test *.prof
       - rm -f .deps-timestamp .lint-timestamp .fmt-timestamp .docs-fmt-timestamp
-      - echo "🧹 Cleaning generated code..."
       - find internal/ -name '*_generated.go' -type f -delete
-      - echo "🧹 Cleaning Go build cache..."
       - go clean -cache
-      - echo "📚 Cleaning documentation..."
       - cd docs-site && npm run docs:clean
-      - echo "✅ Clean complete"
+      - echo "  ✓ Clean complete"
 
   clean-all:
-    desc: "🧹 Deep clean - remove all generated files including dependencies"
+    desc: "Deep clean - remove all generated files including dependencies"
     deps: [clean]
     silent: true
     cmds:
-      - echo "🧹 Deep cleaning..."
       - go clean -modcache
       - rm -rf vendor/
-      - echo "✅ Deep clean complete"
+      - echo "  ✓ Deep clean complete"
 
-  # ----------------------------------------------------------------------------
+  # ============================================================================
   # UTILITY
-  # ----------------------------------------------------------------------------
+  # ============================================================================
   version:
-    desc: "ℹ️  Show version information"
+    desc: "Show version information"
     silent: true
     cmds:
-      - echo "📋 Version Information:"
-      - echo "   Version:" {{.VERSION}}
-      - echo "   Commit:"  {{.COMMIT}}
-      - echo "   Date:"    {{.BUILD_DATE}}
+      - |
+        printf "  version  %s\n" "{{.VERSION}}"
+        printf "  commit   %s\n" "{{.COMMIT}}"
+        printf "  date     %s\n" "{{.BUILD_DATE}}"
 
   help:
-    desc: "❓ Show this help message"
+    desc: "Show this help message"
     silent: true
     cmds:
-      - echo "🛠️  otto-stack Task Runner"
-      - echo ""
-      - echo "📋 Quick Start:"
-      - echo "   task build     - Build the binary"
-      - echo "   task dev       - Build and run"
-      - echo "   task test      - Run tests"
-      - echo "   task lint      - Check code quality"
-      - echo ""
-      - echo "🔨 Build Tasks:"
-      - echo "   build          - Build binary for current platform"
-      - echo "   build-all      - Build for all platforms"
-      - echo "   install        - Install to GOPATH/bin"
-      - echo ""
-      - echo "🚀 Development:"
-      - echo "   dev            - Quick start (build + help)"
-      - echo "   watch          - Auto-rebuild on changes"
-      - echo ""
-      - echo "🧪 Testing:"
-      - echo "   test           - Run all tests with coverage"
-      - echo "   test-unit      - Run unit tests only (fast)"
-      - echo "   test-e2e       - Run end-to-end tests only"
-      - echo "   test-coverage  - View coverage in browser"
-      - echo ""
-      - echo "🔍 Quality:"
-      - echo "   lint           - Run all linting checks"
-      - echo "   fmt            - Format code"
-      - echo "   security       - Security vulnerability scan"
-      - echo "   deadcode       - Check for unreachable code"
-      - echo ""
-      - echo "📚 Documentation:"
-      - echo "   docs           - Generate documentation"
-      - echo "   docs-serve     - Serve documentation locally"
-      - echo ""
-      - echo "🐳 Docker:"
-      - echo "   docker-build   - Build Docker image"
-      - echo "   docker-run     - Run in container"
-      - echo ""
-      - echo "🧹 Cleanup:"
-      - echo "   clean          - Remove build artifacts"
-      - echo "   clean-all      - Deep clean everything"
-      - echo ""
-      - echo "🛠️ Development:"
-      - echo "   setup-hooks    - Install Git hooks"
-      - echo "   sync-go-version - Sync Go version across config files"
-      - echo "   check-go-version - Check Go version consistency"
-      - echo "   deps           - Update dependencies"
-      - echo ""
-      - echo "ℹ️  Info:"
-      - echo "   version        - Show version info"
-      - echo "   help           - Show this help"
-      - echo ""
-      - echo "🤖 AI-Powered Git Automation:"
-      - echo "   commit         - AI-generated commit messages"
-      - echo "   create-pr      - AI-generated PR title/description"
-      - echo "   push-and-pr    - Push branch and create AI PR"
-      - echo "   pre-commit     - Run all pre-commit checks"
-      - echo "   pre-push       - Run all pre-push checks"
-      - echo ""
-      - echo "💡 Examples:"
-      - echo "   task build && ./build/otto-stack --help"
-      - echo "   task watch  (Auto-rebuild on file changes)"
-      - echo "   task test && task lint"
-      - echo ""
-      - echo "For detailed task list:" "task --list"
+      - |
+        echo "otto-stack  task runner"
+        echo ""
+        echo "  Build:"
+        echo "    task build              Build binary for current platform"
+        echo "    task build-all          Build for all platforms"
+        echo "    task install            Install to GOPATH/bin"
+        echo ""
+        echo "  Development:"
+        echo "    task dev                Build and run --help"
+        echo "    task watch              Auto-rebuild on file changes"
+        echo "    task deps               Update Go dependencies"
+        echo ""
+        echo "  Generate:"
+        echo "    task generate           Regenerate all code from YAML configs"
+        echo "    task generate:cli       Regenerate CLI commands and flags"
+        echo "    task generate:messages  Regenerate message constants"
+        echo "    task generate:docs      Regenerate documentation"
+        echo ""
+        echo "  Test:"
+        echo "    task test               Run all tests with coverage"
+        echo "    task test-unit          Run unit tests only (fast)"
+        echo "    task test-e2e           Run end-to-end tests"
+        echo "    task test-coverage      Open coverage report in browser"
+        echo ""
+        echo "  Quality:"
+        echo "    task lint               Run all linting checks"
+        echo "    task lint:go            Run Go linting only (for CI)"
+        echo "    task fmt                Format Go code"
+        echo "    task security           Run security vulnerability scan"
+        echo "    task deadcode           Check for unreachable code"
+        echo ""
+        echo "  Validate:"
+        echo "    task validate           Run all validation checks"
+        echo "    task validate:commits   Validate commit message format"
+        echo ""
+        echo "  Docs:"
+        echo "    task docs               Generate documentation"
+        echo "    task docs-serve         Serve docs locally at localhost:1313"
+        echo ""
+        echo "  Git:"
+        echo "    task setup-hooks        Install pre-commit and pre-push hooks"
+        echo "    task pre-commit         Run pre-commit checks"
+        echo "    task pre-push           Run pre-push checks"
+        echo "    task sync-go-version    Sync Go version across config files"
+        echo ""
+        echo "  Docker:"
+        echo "    task docker-build       Build Docker image"
+        echo "    task docker-run         Run in container"
+        echo ""
+        echo "  Cleanup:"
+        echo "    task clean              Remove build artifacts"
+        echo "    task clean-all          Deep clean everything"
+        echo ""
+        echo "  For all tasks: task --list"

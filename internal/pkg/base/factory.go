@@ -18,9 +18,10 @@ func NewBaseCommand(cmd *cobra.Command) *BaseCommand {
 	}
 
 	// Create output with proper configuration
+	// TTY detection sets NoColor; the --no-color flag can additionally force it on
 	output := ui.NewOutput()
 	output.Quiet = quiet
-	output.NoColor = noColor
+	output.NoColor = output.NoColor || noColor
 
 	return &BaseCommand{
 		Output: output,

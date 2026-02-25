@@ -23,3 +23,9 @@ type InterfacesOutput struct {
 	Interfaces []any `json:"interfaces"`
 	Count      int   `json:"count"`
 }
+
+// ServicesOutput represents catalog services output
+type ServicesOutput struct {
+	Services []any `json:"services"`
+	Count    int   `json:"count"`
+}

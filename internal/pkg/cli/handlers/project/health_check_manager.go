@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -14,12 +13,71 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 )
 
+// CheckResult holds the outcome of a single health check for structured output.
+type CheckResult struct {
+	Name    string `json:"name"`
+	Passed  bool   `json:"passed"`
+	Message string `json:"message"`
+}
+
 // HealthCheckManager handles system health checks
 type HealthCheckManager struct{}
 
 // NewHealthCheckManager creates a new health check manager
 func NewHealthCheckManager() *HealthCheckManager {
 	return &HealthCheckManager{}
+}
+
+// collectResults runs all checks without printing and returns structured results.
+func (hcm *HealthCheckManager) collectResults(ctx context.Context) []CheckResult {
+	const numChecks = 4
+	results := make([]CheckResult, 0, numChecks)
+
+	// Docker availability
+	dockerPassed := false
+	dockerMsg := messages.DoctorDockerNotFound
+	if isCommandAvailable(docker.DockerCmd) {
+		stackService, err := common.NewServiceManager(false)
+		if err == nil {
+			if err = stackService.CheckDockerHealth(ctx); err == nil {
+				dockerPassed = true
+				dockerMsg = messages.DoctorDockerAvailable
+			} else {
+				dockerMsg = messages.DoctorDockerDaemonNotRunning
+			}
+		}
+	}
+	results = append(results, CheckResult{Name: "docker", Passed: dockerPassed, Message: dockerMsg})
+
+	// Docker Compose availability
+	composePassed := hcm.hasDockerComposePlugin() ||
+		isCommandAvailable(fmt.Sprintf("%s %s", docker.DockerCmd, docker.DockerComposeCmd))
+	composeMsg := messages.DoctorDockerComposeAvailable
+	if !composePassed {
+		composeMsg = messages.DoctorDockerComposeNotFound
+	}
+	results = append(results, CheckResult{Name: "docker-compose", Passed: composePassed, Message: composeMsg})
+
+	// Project initialization
+	_, statErr := os.Stat(core.OttoStackDir)
+	projectPassed := !os.IsNotExist(statErr)
+	projectMsg := messages.DoctorProjectInitialized
+	if !projectPassed {
+		projectMsg = messages.DoctorProjectNotInitialized
+	}
+	results = append(results, CheckResult{Name: "project-init", Passed: projectPassed, Message: projectMsg})
+
+	// Configuration file
+	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
+	_, statErr = os.Stat(configPath)
+	configPassed := !os.IsNotExist(statErr)
+	configMsg := messages.DoctorConfigValid
+	if !configPassed {
+		configMsg = messages.DoctorConfigDirMissing
+	}
+	results = append(results, CheckResult{Name: "configuration", Passed: configPassed, Message: configMsg})
+
+	return results
 }
 
 // RunAllChecks executes all health checks and returns overall status
@@ -34,7 +92,7 @@ func (hcm *HealthCheckManager) RunAllChecks(ctx context.Context, base *base.Base
 func (hcm *HealthCheckManager) CheckDocker(ctx context.Context, base *base.BaseCommand) bool {
 	base.Output.Info(messages.DoctorCheckingDocker)
 
-	if !hcm.isCommandAvailable(docker.DockerCmd) {
+	if !isCommandAvailable(docker.DockerCmd) {
 		base.Output.Error(messages.DoctorDockerNotFound)
 		base.Output.Info(messages.DoctorDockerInstallHelp, "https://docs.docker.com/get-docker/")
 		return false
@@ -43,7 +101,7 @@ func (hcm *HealthCheckManager) CheckDocker(ctx context.Context, base *base.BaseC
 	// Use StackService to run docker info command
 	stackService, err := common.NewServiceManager(false)
 	if err != nil {
-		base.Output.Error("Failed to create stack service: %v", err)
+		base.Output.Error(messages.ErrorsStackCreateFailed, err)
 		return false
 	}
 
@@ -69,7 +127,7 @@ func (hcm *HealthCheckManager) CheckDockerCompose(base *base.BaseCommand) bool {
 
 	// Check if docker compose command is available
 	composeCommand := fmt.Sprintf("%s %s", docker.DockerCmd, docker.DockerComposeCmd)
-	if hcm.isCommandAvailable(composeCommand) {
+	if isCommandAvailable(composeCommand) {
 		base.Output.Success(messages.DoctorDockerComposeAvailable)
 		return true
 	}
@@ -100,18 +158,12 @@ func (hcm *HealthCheckManager) CheckConfiguration(base *base.BaseCommand) bool {
 	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		base.Output.Error(messages.DoctorConfigDirMissing)
-		base.Output.Info("   Expected: %s", configPath)
+		base.Output.Info(messages.InfoExpectedPath, configPath)
 		return false
 	}
 
 	base.Output.Success(messages.DoctorConfigValid)
 	return true
-}
-
-// isCommandAvailable checks if a command is available in PATH
-func (hcm *HealthCheckManager) isCommandAvailable(command string) bool {
-	_, err := exec.LookPath(command)
-	return err == nil
 }
 
 // hasDockerComposePlugin checks if Docker Compose plugin is available

@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"context"
+	"path/filepath"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -11,6 +12,7 @@ import (
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
+	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
@@ -30,12 +32,7 @@ func NewUpHandler() *UpHandler {
 
 // Handle executes the up command
 func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	detector, err := clicontext.NewDetector()
-	if err != nil {
-		return err
-	}
-
-	execCtx, err := detector.DetectContext()
+	execCtx, err := common.DetectExecutionContext()
 	if err != nil {
 		return err
 	}
@@ -72,21 +69,22 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	// Register shared containers before starting
 	sharedConfigs := h.filterSharedServices(serviceConfigs, setup.Config)
 	if len(sharedConfigs) > 0 {
-		if err := h.registerSharedContainersForProject(sharedConfigs, setup.Config.Project.Name, execCtx.Shared.Root, base); err != nil {
+		configDir, _ := filepath.Abs(core.OttoStackDir)
+		project := registry.ProjectRef{Name: setup.Config.Project.Name, ConfigDir: configDir}
+		if err := h.registerSharedContainersForProject(sharedConfigs, project, execCtx.Shared.Root, base); err != nil {
 			return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceRegisterSharedFailed, err)
 		}
 	}
-
-	// Filter out shared services for local compose file generation
-	localConfigs := h.filterNonSharedServices(serviceConfigs, setup.Config)
 
 	service, err := common.NewServiceManager(false)
 	if err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStartFailed, err)
 	}
 
-	upFlags, _ := core.ParseUpFlags(cmd)
-	force, _ := cmd.Flags().GetBool(pkgerrors.FieldFlags)
+	upFlags, err := core.ParseUpFlags(cmd)
+	if err != nil {
+		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailedParseFlags, err)
+	}
 
 	const defaultTimeout = 30 * time.Second
 	timeout, err := time.ParseDuration(upFlags.Timeout)
@@ -96,8 +94,8 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 
 	startRequest := services.StartRequest{
 		Project:        setup.Config.Project.Name,
-		ServiceConfigs: localConfigs,
-		Build:          upFlags.Build || force, // force implies build
+		ServiceConfigs: serviceConfigs,
+		Build:          upFlags.Build,
 		ForceRecreate:  upFlags.ForceRecreate,
 		Detach:         upFlags.Detach,
 		NoDeps:         upFlags.NoDeps,
@@ -105,13 +103,19 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	}
 
 	if err = service.Start(ctx, startRequest); err != nil {
-		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStartFailed, err)
+		return err
 	}
 
 	base.Output.Success(messages.SuccessServicesStarted)
-	base.Output.Info(messages.InfoProjectInfo, setup.Config.Project.Name)
-	for _, svc := range serviceConfigs {
-		base.Output.Info("  %s %s", ui.IconSuccess, svc.Name)
+	base.Output.Muted(messages.InfoProjectInfo, setup.Config.Project.Name)
+
+	filteredNames := filterStatusQueryNames(serviceConfigs)
+	if statuses, err := service.Status(ctx, services.StatusRequest{
+		Project:  setup.Config.Project.Name,
+		Services: filteredNames,
+	}); err == nil {
+		// Silent fallback: if Status() fails, the command already succeeded — skip the table
+		_ = display.RenderStatusTable(base.Output.Writer(), statuses, serviceConfigs, true, base.Output.GetNoColor())
 	}
 
 	return nil
@@ -126,6 +130,10 @@ func (h *UpHandler) handleGlobalContext(_ context.Context, _ *cobra.Command, arg
 
 	serviceConfigs, err := h.loadServiceConfigs(args)
 	if err != nil {
+		return err
+	}
+
+	if err := h.validateShareableServices(serviceConfigs); err != nil {
 		return err
 	}
 
@@ -155,20 +163,58 @@ func (h *UpHandler) loadServiceConfigs(serviceNames []string) ([]types.ServiceCo
 }
 
 func (h *UpHandler) registerSharedContainers(serviceConfigs []types.ServiceConfig, execCtx *clicontext.SharedMode, base *base.BaseCommand) error {
-	return h.registerSharedContainersForProject(serviceConfigs, "global", execCtx.Shared.Root, base)
+	project := registry.ProjectRef{Name: "global", ConfigDir: execCtx.Shared.Root}
+	return h.registerSharedContainersForProject(serviceConfigs, project, execCtx.Shared.Root, base)
 }
 
-func (h *UpHandler) registerSharedContainersForProject(serviceConfigs []types.ServiceConfig, projectName string, sharedRoot string, base *base.BaseCommand) error {
+func (h *UpHandler) registerSharedContainersForProject(serviceConfigs []types.ServiceConfig, project registry.ProjectRef, sharedRoot string, base *base.BaseCommand) error {
 	reg := registry.NewManager(sharedRoot)
 
+	// Auto-heal: purge any non-shareable entries from previous bugs
+	if shareableMap, err := h.buildShareableMap(); err == nil {
+		if err := reg.PurgeNonShareable(shareableMap); err != nil {
+			base.Output.Warning(messages.WarningsRegistryCleanFailed, err)
+		}
+	}
+
 	for _, svc := range serviceConfigs {
+		if !svc.Shareable {
+			continue // defense in depth: validateShareableServices should catch this first
+		}
 		containerName := core.SharedContainerPrefix + svc.Name
-		if err := reg.Register(svc.Name, containerName, projectName); err != nil {
-			base.Output.Warning("Failed to register %s: %v", svc.Name, err)
+		if err := reg.Register(svc.Name, containerName, project); err != nil {
+			base.Output.Warning(messages.WarningsRegistryRegisterFailed, svc.Name, err)
 		}
 	}
 
 	return nil
+}
+
+func (h *UpHandler) validateShareableServices(serviceConfigs []types.ServiceConfig) error {
+	for _, svc := range serviceConfigs {
+		if !svc.Shareable {
+			return pkgerrors.NewValidationErrorf(
+				pkgerrors.ErrCodeInvalid,
+				pkgerrors.FieldServiceName,
+				messages.ValidationServiceNotShareable,
+				svc.Name,
+			)
+		}
+	}
+	return nil
+}
+
+func (h *UpHandler) buildShareableMap() (map[string]bool, error) {
+	mgr, err := services.New()
+	if err != nil {
+		return nil, err
+	}
+	allServices := mgr.GetAllServices()
+	shareableMap := make(map[string]bool, len(allServices))
+	for name, cfg := range allServices {
+		shareableMap[name] = cfg.Shareable
+	}
+	return shareableMap, nil
 }
 
 func (h *UpHandler) filterSharedServices(serviceConfigs []types.ServiceConfig, cfg *config.Config) []types.ServiceConfig {
@@ -197,37 +243,24 @@ func (h *UpHandler) filterSharedServices(serviceConfigs []types.ServiceConfig, c
 	return shared
 }
 
-func (h *UpHandler) filterNonSharedServices(serviceConfigs []types.ServiceConfig, cfg *config.Config) []types.ServiceConfig {
-	if !cfg.Sharing.Enabled {
-		return serviceConfigs
-	}
-
-	var nonShared []types.ServiceConfig
-	for _, svc := range serviceConfigs {
-		// Include non-shareable services
-		if !svc.Shareable {
-			nonShared = append(nonShared, svc)
-			continue
-		}
-
-		// If no specific services listed, exclude all shareable services
-		if len(cfg.Sharing.Services) == 0 {
-			continue
-		}
-
-		// Exclude if explicitly listed in sharing config
-		if !cfg.Sharing.Services[svc.Name] {
-			nonShared = append(nonShared, svc)
-		}
-	}
-	return nonShared
-}
-
 func (h *UpHandler) displaySuccess(base *base.BaseCommand, serviceConfigs []types.ServiceConfig) {
 	base.Output.Success(messages.SharedRegistered)
 	for _, svc := range serviceConfigs {
-		base.Output.Info("  %s %s (shared)", ui.IconSuccess, svc.Name)
+		base.Output.Info(messages.SharedRegisteredItem, ui.IconOK, svc.Name)
 	}
+}
+
+// filterStatusQueryNames returns service names to include in a Docker status query.
+// It excludes init containers (RestartPolicy: no) which have no persistent running containers,
+// but includes hidden services since they may act as providers for other services.
+func filterStatusQueryNames(configs []types.ServiceConfig) []string {
+	names := make([]string, 0, len(configs))
+	for _, cfg := range configs {
+		if cfg.Container.Restart != types.RestartPolicyNo {
+			names = append(names, cfg.Name)
+		}
+	}
+	return names
 }
 
 // ValidateArgs validates the command arguments

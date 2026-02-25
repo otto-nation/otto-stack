@@ -81,7 +81,7 @@ func TestE2E_ErrorMessages_MatchMessagesYAML(t *testing.T) {
 		lines := strings.Split(errorOutput, "\n")
 		errorCount := 0
 		for _, line := range lines {
-			if strings.Contains(line, "❌") || strings.Contains(line, "Error:") {
+			if strings.Contains(line, "✗") || strings.Contains(line, "Error:") {
 				errorCount++
 			}
 		}

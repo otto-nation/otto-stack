@@ -101,19 +101,6 @@ func TestWebInterfacesHandler_formatStatus(t *testing.T) {
 	assert.Contains(t, result, "Not Available")
 }
 
-func TestWebInterfacesHandler_formatStatusFromResponse(t *testing.T) {
-	handler := NewWebInterfacesHandler()
-
-	result := handler.formatStatusFromResponse(200)
-	assert.Contains(t, result, "Available")
-
-	result = handler.formatStatusFromResponse(404)
-	assert.Contains(t, result, "Not Available")
-
-	result = handler.formatStatusFromResponse(500)
-	assert.Contains(t, result, "Not Available")
-}
-
 func TestWebInterfacesHandler_ValidateArgs(t *testing.T) {
 	handler := NewWebInterfacesHandler()
 

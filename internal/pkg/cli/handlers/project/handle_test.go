@@ -34,6 +34,7 @@ func (m *MockOutput) Info(msg string, args ...any)    {}
 func (m *MockOutput) Header(msg string, args ...any)  {}
 func (m *MockOutput) Muted(msg string, args ...any)   {}
 func (m *MockOutput) Writer() io.Writer               { return os.Stdout }
+func (m *MockOutput) GetNoColor() bool                { return false }
 
 func TestHandle_DirectoryValidation(t *testing.T) {
 	cleanup := setupTestDir(t)

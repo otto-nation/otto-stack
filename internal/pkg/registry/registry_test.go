@@ -12,6 +12,10 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 )
 
+func containsProjectName(projects []ProjectRef, name string) bool {
+	return slices.ContainsFunc(projects, func(r ProjectRef) bool { return r.Name == name })
+}
+
 func TestNewRegistry(t *testing.T) {
 	reg := NewRegistry()
 	if reg == nil {
@@ -71,7 +75,7 @@ func TestManager_SaveAndLoad(t *testing.T) {
 	registry := NewRegistry()
 	registry.Containers["postgres"] = &ContainerInfo{
 		Name:      "otto-stack-postgres",
-		Projects:  []string{"project1"},
+		Projects:  []ProjectRef{{Name: "project1"}},
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
@@ -96,7 +100,7 @@ func TestManager_SaveAndLoad(t *testing.T) {
 	if container.Name != "otto-stack-postgres" {
 		t.Errorf("expected name otto-stack-postgres, got %s", container.Name)
 	}
-	if len(container.Projects) != 1 || container.Projects[0] != "project1" {
+	if len(container.Projects) != 1 || container.Projects[0].Name != "project1" {
 		t.Errorf("expected projects [project1], got %v", container.Projects)
 	}
 }
@@ -105,7 +109,8 @@ func TestManager_Register(t *testing.T) {
 	tmpDir := t.TempDir()
 	mgr := NewManager(tmpDir)
 
-	err := mgr.Register("postgres", "otto-stack-postgres", "project1")
+	project := ProjectRef{Name: "project1", ConfigDir: t.TempDir()}
+	err := mgr.Register("postgres", "otto-stack-postgres", project)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -120,7 +125,7 @@ func TestManager_Register(t *testing.T) {
 	if container.Name != "otto-stack-postgres" {
 		t.Errorf("expected name otto-stack-postgres, got %s", container.Name)
 	}
-	if len(container.Projects) != 1 || container.Projects[0] != "project1" {
+	if len(container.Projects) != 1 || container.Projects[0].Name != "project1" {
 		t.Errorf("expected projects [project1], got %v", container.Projects)
 	}
 }
@@ -129,8 +134,8 @@ func TestManager_RegisterMultipleProjects(t *testing.T) {
 	tmpDir := t.TempDir()
 	mgr := NewManager(tmpDir)
 
-	mgr.Register("postgres", "otto-stack-postgres", "project1")
-	mgr.Register("postgres", "otto-stack-postgres", "project2")
+	mgr.Register("postgres", "otto-stack-postgres", ProjectRef{Name: "project1", ConfigDir: t.TempDir()})
+	mgr.Register("postgres", "otto-stack-postgres", ProjectRef{Name: "project2", ConfigDir: t.TempDir()})
 
 	container, err := mgr.Get("postgres")
 	if err != nil {
@@ -139,10 +144,10 @@ func TestManager_RegisterMultipleProjects(t *testing.T) {
 	if len(container.Projects) != 2 {
 		t.Errorf("expected 2 projects, got %d", len(container.Projects))
 	}
-	if !slices.Contains(container.Projects, "project1") {
+	if !containsProjectName(container.Projects, "project1") {
 		t.Error("expected project1 in projects")
 	}
-	if !slices.Contains(container.Projects, "project2") {
+	if !containsProjectName(container.Projects, "project2") {
 		t.Error("expected project2 in projects")
 	}
 }
@@ -151,8 +156,9 @@ func TestManager_RegisterDuplicate(t *testing.T) {
 	tmpDir := t.TempDir()
 	mgr := NewManager(tmpDir)
 
-	mgr.Register("postgres", "otto-stack-postgres", "project1")
-	mgr.Register("postgres", "otto-stack-postgres", "project1")
+	project := ProjectRef{Name: "project1", ConfigDir: t.TempDir()}
+	mgr.Register("postgres", "otto-stack-postgres", project)
+	mgr.Register("postgres", "otto-stack-postgres", project)
 
 	container, err := mgr.Get("postgres")
 	if err != nil {
@@ -167,8 +173,8 @@ func TestManager_Unregister(t *testing.T) {
 	tmpDir := t.TempDir()
 	mgr := NewManager(tmpDir)
 
-	mgr.Register("postgres", "otto-stack-postgres", "project1")
-	mgr.Register("postgres", "otto-stack-postgres", "project2")
+	mgr.Register("postgres", "otto-stack-postgres", ProjectRef{Name: "project1", ConfigDir: t.TempDir()})
+	mgr.Register("postgres", "otto-stack-postgres", ProjectRef{Name: "project2", ConfigDir: t.TempDir()})
 
 	err := mgr.Unregister("postgres", "project1")
 	if err != nil {
@@ -182,8 +188,8 @@ func TestManager_Unregister(t *testing.T) {
 	if len(container.Projects) != 1 {
 		t.Errorf("expected 1 project, got %d", len(container.Projects))
 	}
-	if container.Projects[0] != "project2" {
-		t.Errorf("expected project2, got %s", container.Projects[0])
+	if container.Projects[0].Name != "project2" {
+		t.Errorf("expected project2, got %s", container.Projects[0].Name)
 	}
 }
 
@@ -191,7 +197,7 @@ func TestManager_UnregisterLastProject(t *testing.T) {
 	tmpDir := t.TempDir()
 	mgr := NewManager(tmpDir)
 
-	mgr.Register("postgres", "otto-stack-postgres", "project1")
+	mgr.Register("postgres", "otto-stack-postgres", ProjectRef{Name: "project1", ConfigDir: t.TempDir()})
 	mgr.Unregister("postgres", "project1")
 
 	container, err := mgr.Get("postgres")
@@ -207,8 +213,8 @@ func TestManager_List(t *testing.T) {
 	tmpDir := t.TempDir()
 	mgr := NewManager(tmpDir)
 
-	mgr.Register("postgres", "otto-stack-postgres", "project1")
-	mgr.Register("redis", "otto-stack-redis", "project1")
+	mgr.Register("postgres", "otto-stack-postgres", ProjectRef{Name: "project1", ConfigDir: t.TempDir()})
+	mgr.Register("redis", "otto-stack-redis", ProjectRef{Name: "project1", ConfigDir: t.TempDir()})
 
 	containers, err := mgr.List()
 	if err != nil {
@@ -223,7 +229,7 @@ func TestManager_IsShared(t *testing.T) {
 	tmpDir := t.TempDir()
 	mgr := NewManager(tmpDir)
 
-	mgr.Register("postgres", "otto-stack-postgres", "project1")
+	mgr.Register("postgres", "otto-stack-postgres", ProjectRef{Name: "project1", ConfigDir: t.TempDir()})
 
 	shared, err := mgr.IsShared("postgres")
 	if err != nil {
@@ -246,7 +252,7 @@ func TestManager_RegistryFilePath(t *testing.T) {
 	tmpDir := t.TempDir()
 	mgr := NewManager(tmpDir)
 
-	mgr.Register("postgres", "otto-stack-postgres", "project1")
+	mgr.Register("postgres", "otto-stack-postgres", ProjectRef{Name: "project1", ConfigDir: t.TempDir()})
 
 	expectedPath := filepath.Join(tmpDir, core.SharedRegistryFile)
 	if _, err := os.Stat(expectedPath); os.IsNotExist(err) {
@@ -261,9 +267,9 @@ func TestManager_Reconcile(t *testing.T) {
 	mgr := NewManager(tmpDir)
 
 	// Register some services
-	_ = mgr.Register("postgres", "otto-stack-postgres", "project1")
-	_ = mgr.Register("redis", "otto-stack-redis", "project2")
-	_ = mgr.Register("mysql", "otto-stack-mysql", "project3")
+	_ = mgr.Register("postgres", "otto-stack-postgres", ProjectRef{Name: "project1", ConfigDir: t.TempDir()})
+	_ = mgr.Register("redis", "otto-stack-redis", ProjectRef{Name: "project2", ConfigDir: t.TempDir()})
+	_ = mgr.Register("mysql", "otto-stack-mysql", ProjectRef{Name: "project3", ConfigDir: t.TempDir()})
 
 	// Mock Docker client that only has postgres and redis
 	mockClient := &docker.Client{}

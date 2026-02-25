@@ -8,6 +8,7 @@ import (
 
 	"github.com/briandowns/spinner"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
+	"golang.org/x/term"
 )
 
 // Output handles all user-facing output with consistent styling
@@ -16,14 +17,20 @@ type Output struct {
 	NoColor bool
 }
 
-// NewOutput creates a new output handler
+// NewOutput creates a new output handler with TTY detection
 func NewOutput() *Output {
-	return &Output{}
+	noColor := !term.IsTerminal(int(os.Stdout.Fd()))
+	return &Output{NoColor: noColor}
 }
 
 // Writer returns the underlying writer (stdout)
 func (o *Output) Writer() io.Writer {
 	return os.Stdout
+}
+
+// GetNoColor returns whether color output is disabled
+func (o *Output) GetNoColor() bool {
+	return o.NoColor
 }
 
 // Success prints a success message
@@ -61,7 +68,7 @@ func (o *Output) SubHeader(msg string, args ...any) {
 	if o.NoColor {
 		o.print("\n--- "+formatted+" ---\n", "SubHeader")
 	} else {
-		o.print(formatColored("\n"+IconBox+" "+formatted+"\n", ColorGreen+ColorBold, o.NoColor), "SubHeader")
+		o.print(formatColored("\n"+formatted+"\n", ColorGreen+ColorBold, o.NoColor), "SubHeader")
 	}
 }
 

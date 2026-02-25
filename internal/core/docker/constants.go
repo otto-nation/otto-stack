@@ -42,6 +42,8 @@ const (
 	FlagFollow        = "follow"
 	FlagTimestamps    = "timestamps"
 	FlagTail          = "tail"
+	FlagSince         = "since"
+	FlagUntil         = "until"
 	FlagAll           = "all"
 	FlagShared        = "shared"
 	FlagProject       = "project"

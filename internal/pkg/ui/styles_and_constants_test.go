@@ -9,12 +9,10 @@ import (
 )
 
 func TestUIConstants(t *testing.T) {
-	assert.NotEmpty(t, IconSuccess)
-	assert.NotEmpty(t, IconError)
-	assert.NotEmpty(t, IconWarning)
-	assert.NotEmpty(t, IconInfo)
-	assert.NotEmpty(t, IconBox)
-	assert.NotEmpty(t, IconHeader)
+	assert.NotEmpty(t, IconOK)
+	assert.NotEmpty(t, IconFail)
+	assert.NotEmpty(t, IconWarn)
+	assert.NotEmpty(t, IconUnknown)
 
 	assert.NotEmpty(t, ColorGreen)
 	assert.NotEmpty(t, ColorRed)
@@ -44,43 +42,41 @@ func TestStyleFunctions(t *testing.T) {
 
 	result = formatSuccess("success", false)
 	assert.Contains(t, result, "success")
-	assert.Contains(t, result, IconSuccess)
+	assert.Contains(t, result, IconOK)
 
 	resultNoColor = formatSuccess("success", true)
 	assert.Contains(t, resultNoColor, "success")
-	assert.Contains(t, resultNoColor, IconSuccess)
+	assert.Contains(t, resultNoColor, IconOK)
 
 	result = formatError("error", false)
 	assert.Contains(t, result, "error")
-	assert.Contains(t, result, IconError)
+	assert.Contains(t, result, IconFail)
 
 	resultNoColor = formatError("error", true)
 	assert.Contains(t, resultNoColor, "error")
-	assert.Contains(t, resultNoColor, IconError)
+	assert.Contains(t, resultNoColor, IconFail)
 
 	result = formatWarning("warning", false)
 	assert.Contains(t, result, "warning")
-	assert.Contains(t, result, IconWarning)
+	assert.Contains(t, result, IconWarn)
 
 	resultNoColor = formatWarning("warning", true)
 	assert.Contains(t, resultNoColor, "warning")
-	assert.Contains(t, resultNoColor, IconWarning)
+	assert.Contains(t, resultNoColor, IconWarn)
 
+	// formatInfo has no icon prefix — color only
 	result = formatInfo("info", false)
 	assert.Contains(t, result, "info")
-	assert.Contains(t, result, IconInfo)
 
 	resultNoColor = formatInfo("info", true)
 	assert.Contains(t, resultNoColor, "info")
-	assert.Contains(t, resultNoColor, IconInfo)
 
+	// formatHeader has no icon prefix
 	result = formatHeader("header", false)
 	assert.Contains(t, result, "header")
-	assert.Contains(t, result, IconHeader)
 
 	resultNoColor = formatHeader("header", true)
 	assert.Contains(t, resultNoColor, "header")
-	assert.Contains(t, resultNoColor, "===")
 
 	result = formatMuted("muted", false)
 	assert.Contains(t, result, "muted")

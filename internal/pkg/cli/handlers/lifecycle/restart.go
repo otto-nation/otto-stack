@@ -12,6 +12,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
@@ -40,7 +41,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return nil
 	}
 
-	execCtx, err := h.detectContext()
+	execCtx, err := common.DetectExecutionContext()
 	if err != nil {
 		return err
 	}
@@ -53,14 +54,6 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	default:
 		return pkgerrors.NewSystemErrorf(pkgerrors.ErrCodeInternal, messages.ErrorsContextUnknownMode, execCtx)
 	}
-}
-
-func (h *RestartHandler) detectContext() (clicontext.ExecutionMode, error) {
-	detector, err := clicontext.NewDetector()
-	if err != nil {
-		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, messages.ErrorsContextDetectorCreateFailed, err)
-	}
-	return detector.DetectContext()
 }
 
 func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
@@ -90,6 +83,19 @@ func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Co
 	}
 
 	base.Output.Success(messages.LifecycleRestartSuccess)
+	base.Output.Muted(messages.InfoProjectInfo, setup.Config.Project.Name)
+
+	if svc, err := common.NewServiceManager(false); err == nil {
+		filteredNames := filterStatusQueryNames(serviceConfigs)
+		if statuses, err := svc.Status(ctx, services.StatusRequest{
+			Project:  setup.Config.Project.Name,
+			Services: filteredNames,
+		}); err == nil {
+			// Silent fallback: if Status() fails, the command already succeeded — skip the table
+			_ = display.RenderStatusTable(base.Output.Writer(), statuses, serviceConfigs, true, base.Output.GetNoColor())
+		}
+	}
+
 	return nil
 }
 
@@ -103,7 +109,7 @@ func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Com
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
 	}
 
-	if err := h.verifyServicesInRegistry(args, reg); err != nil {
+	if err := common.VerifyServicesInRegistry(args, reg); err != nil {
 		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ErrorsServiceNotInRegistry, err)
 	}
 
@@ -121,10 +127,11 @@ func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Com
 	stopOpts := container.StopOptions{Timeout: &timeout}
 
 	for _, serviceName := range args {
-		if err := dockerClient.GetDockerClient().ContainerRestart(ctx, serviceName, stopOpts); err != nil {
+		containerInfo := reg.Containers[serviceName]
+		if err := dockerClient.GetDockerClient().ContainerRestart(ctx, containerInfo.Name, stopOpts); err != nil {
 			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, serviceName, messages.ErrorsServiceRestartFailed, err)
 		}
-		base.Output.Success("Restarted %s", serviceName)
+		base.Output.Success(messages.SuccessRestartedService, serviceName)
 	}
 
 	return nil
@@ -133,15 +140,6 @@ func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Com
 func (h *RestartHandler) loadRegistry(sharedRoot string) (*registry.Registry, error) {
 	reg := registry.NewManager(sharedRoot)
 	return reg.Load()
-}
-
-func (h *RestartHandler) verifyServicesInRegistry(serviceNames []string, reg *registry.Registry) error {
-	for _, serviceName := range serviceNames {
-		if _, exists := reg.Containers[serviceName]; !exists {
-			return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, fmt.Sprintf(messages.SharedServiceNotInRegistry, serviceName), nil)
-		}
-	}
-	return nil
 }
 
 // restartServices performs the stop and start operations using new stack service
@@ -167,6 +165,7 @@ func (h *RestartHandler) restartServices(ctx context.Context, setup *common.Core
 	startRequest := services.StartRequest{
 		Project:        setup.Config.Project.Name,
 		ServiceConfigs: serviceConfigs,
+		NoDeps:         flags.NoDeps,
 	}
 	if err := stackService.Start(ctx, startRequest); err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStartFailed, err)

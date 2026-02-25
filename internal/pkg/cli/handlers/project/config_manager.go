@@ -36,7 +36,7 @@ func (cm *ConfigManager) CreateConfigFile(ctx clicontext.Context, base *base.Bas
 		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, configPath, messages.ErrorsConfigWriteFailed, err)
 	}
 
-	base.Output.Success("Created configuration file: %s", configPath)
+	base.Output.Success(messages.SuccessCreatedConfigFile, configPath)
 	return nil
 }
 
@@ -51,7 +51,7 @@ func (cm *ConfigManager) GenerateServiceConfigs(serviceConfigs []types.ServiceCo
 			continue
 		}
 		if err := cm.generateServiceConfig(config.Name); err != nil {
-			base.Output.Warning("Failed to generate config for service %s: %v", config.Name, err)
+			base.Output.Warning(messages.WarningsConfigGenerateFailed, config.Name, err)
 		}
 	}
 }

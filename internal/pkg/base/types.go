@@ -17,6 +17,7 @@ type Output interface {
 	Header(msg string, args ...any)
 	Muted(msg string, args ...any)
 	Writer() io.Writer
+	GetNoColor() bool
 }
 
 // BaseCommand provides common dependencies for command handlers

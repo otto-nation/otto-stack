@@ -102,8 +102,8 @@ func (pm *PromptManager) ConfirmInitialization(projectName string, services []st
 func (pm *PromptManager) confirmInitializationWithConfig(conf InitConfirmation) (string, error) {
 	// Display summary
 	conf.Base.Output.Info(messages.InfoProjectConfigSummary)
-	conf.Base.Output.Info("  Project Name: %s", conf.ProjectName)
-	conf.Base.Output.Info("  Services: %s", strings.Join(conf.Services, ", "))
+	conf.Base.Output.Info(messages.InfoProjectNameLabel, conf.ProjectName)
+	conf.Base.Output.Info(messages.InfoServicesLabel, strings.Join(conf.Services, ", "))
 
 	if len(conf.Validation) > 0 {
 		conf.Base.Output.Info(messages.InfoValidationOptions)
@@ -113,7 +113,7 @@ func (pm *PromptManager) confirmInitializationWithConfig(conf InitConfirmation) 
 			keys = append(keys, k)
 		}
 		for _, option := range keys {
-			conf.Base.Output.Info("    - %s", option)
+			conf.Base.Output.Info(messages.InfoListItemIndented, option)
 		}
 	}
 

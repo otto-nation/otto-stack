@@ -39,7 +39,7 @@ func TestManager_GetListIsShared(t *testing.T) {
 
 		registry.Containers["postgres"] = &ContainerInfo{
 			Name:     "postgres-shared",
-			Projects: []string{"project1"},
+			Projects: []ProjectRef{{Name: "project1"}},
 		}
 
 		err = manager.Save(registry)
@@ -57,7 +57,7 @@ func TestManager_GetListIsShared(t *testing.T) {
 
 		registry.Containers["redis"] = &ContainerInfo{
 			Name:     "redis-shared",
-			Projects: []string{"project2"},
+			Projects: []ProjectRef{{Name: "project2"}},
 		}
 
 		err = manager.Save(registry)
@@ -91,7 +91,7 @@ func TestManager_LoadSave(t *testing.T) {
 		registry := NewRegistry()
 		registry.Containers["test"] = &ContainerInfo{
 			Name:     "test-shared",
-			Projects: []string{"proj1"},
+			Projects: []ProjectRef{{Name: "proj1", ConfigDir: t.TempDir()}},
 		}
 
 		err := manager.Save(registry)
@@ -120,30 +120,33 @@ func TestManager_RegisterUnregister(t *testing.T) {
 	tmpDir := t.TempDir()
 	manager := NewManager(tmpDir)
 
+	proj1Dir := t.TempDir()
+	proj2Dir := t.TempDir()
+
 	t.Run("Register adds new container", func(t *testing.T) {
-		err := manager.Register("postgres", "postgres-shared-123", "project1")
+		err := manager.Register("postgres", "postgres-shared-123", ProjectRef{Name: "project1", ConfigDir: proj1Dir})
 		require.NoError(t, err)
 
 		info, err := manager.Get("postgres")
 		require.NoError(t, err)
 		assert.NotNil(t, info)
 		assert.Equal(t, "postgres-shared-123", info.Name)
-		assert.Contains(t, info.Projects, "project1")
+		assert.Contains(t, info.Projects, ProjectRef{Name: "project1", ConfigDir: proj1Dir})
 	})
 
 	t.Run("Register adds project to existing container", func(t *testing.T) {
-		err := manager.Register("postgres", "postgres-shared-123", "project2")
+		err := manager.Register("postgres", "postgres-shared-123", ProjectRef{Name: "project2", ConfigDir: proj2Dir})
 		require.NoError(t, err)
 
 		info, err := manager.Get("postgres")
 		require.NoError(t, err)
 		assert.Len(t, info.Projects, 2)
-		assert.Contains(t, info.Projects, "project1")
-		assert.Contains(t, info.Projects, "project2")
+		assert.Contains(t, info.Projects, ProjectRef{Name: "project1", ConfigDir: proj1Dir})
+		assert.Contains(t, info.Projects, ProjectRef{Name: "project2", ConfigDir: proj2Dir})
 	})
 
 	t.Run("Register doesn't duplicate projects", func(t *testing.T) {
-		err := manager.Register("postgres", "postgres-shared-123", "project1")
+		err := manager.Register("postgres", "postgres-shared-123", ProjectRef{Name: "project1", ConfigDir: proj1Dir})
 		require.NoError(t, err)
 
 		info, err := manager.Get("postgres")
@@ -159,7 +162,7 @@ func TestManager_RegisterUnregister(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, info)
 		assert.Len(t, info.Projects, 1)
-		assert.Contains(t, info.Projects, "project2")
+		assert.Contains(t, info.Projects, ProjectRef{Name: "project2", ConfigDir: proj2Dir})
 	})
 
 	t.Run("Unregister removes container when no projects remain", func(t *testing.T) {
@@ -177,16 +180,115 @@ func TestManager_RegisterUnregister(t *testing.T) {
 	})
 }
 
+func TestManager_PurgeNonShareable(t *testing.T) {
+	t.Run("RemovesBadEntries", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		manager := NewManager(tmpDir)
+
+		err := manager.Register("localstack-sqs", "otto-stack-localstack-sqs", ProjectRef{Name: "global", ConfigDir: t.TempDir()})
+		require.NoError(t, err)
+
+		shareableMap := map[string]bool{
+			"redis":    true,
+			"postgres": true,
+		}
+		err = manager.PurgeNonShareable(shareableMap)
+		require.NoError(t, err)
+
+		info, err := manager.Get("localstack-sqs")
+		require.NoError(t, err)
+		assert.Nil(t, info, "non-shareable entry should be removed")
+	})
+
+	t.Run("KeepsValidEntries", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		manager := NewManager(tmpDir)
+
+		err := manager.Register("redis", "otto-stack-redis", ProjectRef{Name: "project1", ConfigDir: t.TempDir()})
+		require.NoError(t, err)
+
+		shareableMap := map[string]bool{
+			"redis": true,
+		}
+		err = manager.PurgeNonShareable(shareableMap)
+		require.NoError(t, err)
+
+		info, err := manager.Get("redis")
+		require.NoError(t, err)
+		assert.NotNil(t, info, "shareable entry should be kept")
+	})
+
+	t.Run("NoChanges", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		manager := NewManager(tmpDir)
+
+		err := manager.Register("redis", "otto-stack-redis", ProjectRef{Name: "project1", ConfigDir: t.TempDir()})
+		require.NoError(t, err)
+
+		shareableMap := map[string]bool{
+			"redis":    true,
+			"postgres": true,
+		}
+		// No error and no write needed when nothing changes
+		err = manager.PurgeNonShareable(shareableMap)
+		require.NoError(t, err)
+
+		info, err := manager.Get("redis")
+		require.NoError(t, err)
+		assert.NotNil(t, info)
+	})
+
+	t.Run("EmptyRegistry", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		manager := NewManager(tmpDir)
+
+		shareableMap := map[string]bool{"redis": true}
+		err := manager.PurgeNonShareable(shareableMap)
+		require.NoError(t, err)
+	})
+
+	t.Run("EmptyShareableMap", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		manager := NewManager(tmpDir)
+
+		err := manager.Register("redis", "otto-stack-redis", ProjectRef{Name: "project1", ConfigDir: t.TempDir()})
+		require.NoError(t, err)
+		err = manager.Register("postgres", "otto-stack-postgres", ProjectRef{Name: "project1", ConfigDir: t.TempDir()})
+		require.NoError(t, err)
+
+		err = manager.PurgeNonShareable(map[string]bool{})
+		require.NoError(t, err)
+
+		containers, err := manager.List()
+		require.NoError(t, err)
+		assert.Empty(t, containers, "all entries should be removed when shareable map is empty")
+	})
+}
+
+func TestManager_ValidateAgainstDocker(t *testing.T) {
+	t.Skip("Skipping ValidateAgainstDocker tests that require a running Docker daemon")
+}
+
 func TestManager_LoadWithCorruptedFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	manager := NewManager(tmpDir)
 
-	t.Run("handles corrupted registry file", func(t *testing.T) {
+	t.Run("heals corrupted registry file via Docker rebuild", func(t *testing.T) {
 		// Create a corrupted file
 		err := os.WriteFile(manager.registryPath, []byte("invalid yaml {{{"), 0644)
 		require.NoError(t, err)
 
-		_, err = manager.Load()
-		assert.Error(t, err)
+		// Load should no longer error — it calls rebuildFromDocker instead.
+		// If Docker is unavailable (common in CI), rebuildFromDocker returns NewRegistry().
+		reg, err := manager.Load()
+		require.NoError(t, err)
+		assert.NotNil(t, reg, "should return a valid registry even from corrupt file")
+		assert.NotNil(t, reg.Containers)
+	})
+}
+
+func TestManager_rebuildFromDocker(t *testing.T) {
+	t.Run("SkippedDockerDependentCases", func(t *testing.T) {
+		t.Skip("Skipping rebuildFromDocker tests that require a running Docker daemon")
 	})
 }

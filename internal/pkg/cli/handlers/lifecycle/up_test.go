@@ -8,9 +8,11 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 )
@@ -126,6 +128,89 @@ func TestDownHandler_Handle(t *testing.T) {
 
 	err := handler.Handle(ctx, cmd, args, base)
 	assert.NoError(t, err, "Down handler should handle global context without error")
+}
+
+func TestUpHandler_validateShareableServices_AllShareable(t *testing.T) {
+	handler := NewUpHandler()
+	serviceConfigs := []types.ServiceConfig{
+		{Name: "redis", Shareable: true},
+		{Name: "postgres", Shareable: true},
+	}
+	err := handler.validateShareableServices(serviceConfigs)
+	require.NoError(t, err)
+}
+
+func TestUpHandler_validateShareableServices_NonShareable(t *testing.T) {
+	handler := NewUpHandler()
+	serviceConfigs := []types.ServiceConfig{
+		{Name: "localstack-sqs", Shareable: false},
+	}
+	err := handler.validateShareableServices(serviceConfigs)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "localstack-sqs")
+}
+
+func TestUpHandler_validateShareableServices_Mixed(t *testing.T) {
+	handler := NewUpHandler()
+	serviceConfigs := []types.ServiceConfig{
+		{Name: "redis", Shareable: true},
+		{Name: "localstack-sqs", Shareable: false},
+	}
+	err := handler.validateShareableServices(serviceConfigs)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "localstack-sqs")
+}
+
+func TestUpHandler_validateShareableServices_Empty(t *testing.T) {
+	handler := NewUpHandler()
+	err := handler.validateShareableServices([]types.ServiceConfig{})
+	require.NoError(t, err)
+}
+
+func TestFilterStatusQueryNames(t *testing.T) {
+	tests := []struct {
+		name     string
+		configs  []types.ServiceConfig
+		expected []string
+	}{
+		{
+			name:     "empty",
+			configs:  []types.ServiceConfig{},
+			expected: []string{},
+		},
+		{
+			name: "all persistent",
+			configs: []types.ServiceConfig{
+				{Name: "postgres"},
+				{Name: "redis"},
+			},
+			expected: []string{"postgres", "redis"},
+		},
+		{
+			name: "hidden provider included",
+			configs: []types.ServiceConfig{
+				{Name: "redis"},
+				{Name: "localstack", Hidden: true},
+			},
+			expected: []string{"redis", "localstack"},
+		},
+		{
+			name: "init container excluded",
+			configs: []types.ServiceConfig{
+				{Name: "postgres"},
+				{Name: "init-job", Container: types.ContainerSpec{Restart: types.RestartPolicyNo}},
+				{Name: "redis"},
+			},
+			expected: []string{"postgres", "redis"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := filterStatusQueryNames(tt.configs)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
 
 // TODO: Add unit tests for buildContext method with various flag combinations

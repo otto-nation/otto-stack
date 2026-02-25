@@ -3,7 +3,7 @@ title: CLI Reference
 description: Complete command reference for otto-stack CLI
 lead: Comprehensive reference for all otto-stack CLI commands and their usage
 date: "2025-10-01"
-lastmod: "2026-02-23"
+lastmod: "2026-02-25"
 draft: false
 weight: 50
 toc: true
@@ -165,7 +165,6 @@ Stop services with custom timeout
 
 - `--shared` (`bool`): Stop all shared containers (default: `false`)
 - `--all` (`bool`): Stop both project and shared containers (default: `false`)
-- `--remove` (`bool`): Remove containers (default: false, just stops them) (default: `false`)
 - `--volumes` (`bool`): Remove named volumes and anonymous volumes (default: `false`)
 - `--remove-orphans` (`bool`): Remove containers for services not in compose file (default: `false`)
 - `--timeout` (`int`): Shutdown timeout in seconds (default: `10`)
@@ -297,7 +296,7 @@ color-coded for easy identification.
 otto-stack logs
 ```
 
-Show logs from all services
+Show the last 100 lines from all services
 
 ```bash
 otto-stack logs postgres redis
@@ -305,11 +304,31 @@ otto-stack logs postgres redis
 
 Show logs from specific services
 
+```bash
+otto-stack logs --follow postgres
+```
+
+Stream live logs from postgres
+
+```bash
+otto-stack logs --since 30m
+```
+
+Show logs from the last 30 minutes
+
+**Flags:**
+
+- `--follow` (`bool`): Follow log output in real-time (default: `false`)
+- `--timestamps` (`bool`): Show timestamps (default: `false`)
+- `--tail` (`string`): Number of lines to show from the end of the logs (default: `100`)
+- `--since` (`string`): Show logs since a relative duration (e.g. 30m, 1h) or timestamp (default: ``)
+
 **Related Commands:** [`status`](#status)
 
 **Tips:**
 
 - Logs from multiple services are color-coded for identification
+- Use --follow to stream logs in real-time; interrupt with Ctrl+C
 
 ### `doctor`
 
@@ -335,15 +354,8 @@ otto-stack doctor postgres
 
 Diagnose a specific service
 
-```bash
-otto-stack doctor --fix
-```
-
-Attempt to fix detected issues
-
 **Flags:**
 
-- `--fix` (`bool`): Attempt to automatically fix issues (default: `false`)
 - `--format` (`string`): Output format (table|json) (default: `table`) (options: `table`, `json`)
 
 **Related Commands:** [`status`](#status), [`logs`](#logs)
@@ -351,7 +363,7 @@ Attempt to fix detected issues
 **Tips:**
 
 - Run doctor when services aren't behaving as expected
-- Use --fix to attempt automatic resolution of common issues
+- Use --format json for programmatic access to health check results
 
 ### `cleanup`
 
@@ -522,65 +534,86 @@ List services in table format
 
 ### `deps`
 
-Show dependency tree for a service
+Show dependency information for enabled project services
 
-Display the complete dependency tree for a service, showing all required
-dependencies and the resolved start order. Helps understand service
-relationships and startup sequences.
+Display full dependency information for services in your project stack.
+Shows required dependencies, soft dependencies, declared conflicts, and
+provided capabilities for each enabled service. Columns with no data are
+hidden automatically. Optionally filter to a specific service by name.
 
-**Usage:** `otto-stack deps <service>`
+**Usage:** `otto-stack deps [service]`
 
 **Examples:**
 
 ```bash
-otto-stack deps kafka-ui
+otto-stack deps
 ```
 
-Show dependencies for kafka-ui service
+Show dependency info for all enabled services
 
 ```bash
 otto-stack deps postgres
 ```
 
-Show dependencies for postgres service
+Show dependency info for a specific service
+
+```bash
+otto-stack deps kafka
+```
+
+Show what kafka requires and provides
 
 **Related Commands:** [`services`](#services), [`conflicts`](#conflicts), [`up`](#up)
 
 ### `conflicts`
 
-Check for conflicts between services
+Detect service conflicts in the project stack
 
-Check if the specified services have any conflicts that would prevent
-them from running together. Identifies port conflicts, resource conflicts,
-and incompatible service combinations.
+Analyze the enabled services in your project stack for conflicts.
+Checks declared service incompatibilities and shared capability overlaps.
+Use --check-ports to also verify that required host ports are available.
+Returns exit code 1 when conflicts are found, making it safe to use in scripts.
 
-**Usage:** `otto-stack conflicts <service1> <service2> [service...]`
+**Usage:** `otto-stack conflicts [--check-ports]`
 
 **Examples:**
 
 ```bash
-otto-stack conflicts postgres mysql
+otto-stack conflicts
 ```
 
-Check if postgres and mysql conflict
+Check for semantic conflicts in the project stack
 
 ```bash
-otto-stack conflicts postgres redis kafka-broker
+otto-stack conflicts --check-ports
 ```
 
-Check conflicts between multiple services
+Also check if required ports are available on the host
+
+```bash
+otto-stack conflicts && otto-stack up
+```
+
+Fail fast if conflicts exist before starting services
+
+**Flags:**
+
+- `--check-ports` (`bool`): Also check if required service ports are available on the host (default: `false`)
 
 **Related Commands:** [`services`](#services), [`deps`](#deps), [`up`](#up)
 
 ### `validate`
 
-Validate configurations and manifests
+Validate project configuration and service definitions
 
-Validate otto-stack configurations, service definitions, and YAML
-manifests. Checks for syntax errors, missing dependencies, and
-configuration inconsistencies.
+Validate the otto-stack project configuration, project name, and service
+definitions. Checks configuration syntax, validates that all enabled
+services exist in the catalog, and resolves their dependencies.
 
-**Usage:** `otto-stack validate [file...]`
+With --strict, also verifies that Docker is available and warns when
+the project is not inside a git repository.
+
+**Usage:** `otto-stack validate`
 
 **Examples:**
 
@@ -588,27 +621,19 @@ configuration inconsistencies.
 otto-stack validate
 ```
 
-Validate all configuration files
-
-```bash
-otto-stack validate otto-stack-config.yaml
-```
-
-Validate specific configuration file
+Validate configuration and service definitions
 
 ```bash
 otto-stack validate --strict
 ```
 
-Use strict validation rules
+Also check Docker availability and git repository
 
 **Flags:**
 
-- `--strict` (`bool`): Use strict validation rules (default: `false`)
-- `--format` (`string`): Output format (table|json) (default: `table`) (options: `table`, `json`)
-- `--fix` (`bool`): Attempt to fix validation errors (default: `false`)
+- `--strict` (`bool`): Also check Docker availability and git repository (default: `false`)
 
-**Related Commands:** [`doctor`](#doctor)
+**Related Commands:** [`doctor`](#doctor), [`deps`](#deps)
 
 ### `version`
 
