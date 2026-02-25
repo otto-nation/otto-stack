@@ -111,6 +111,10 @@ func TestDownHandler_GetRequiredFlags(t *testing.T) {
 }
 
 func TestDownHandler_Handle(t *testing.T) {
+	// Redirect HOME to a fresh temp dir so DetectExecutionContext uses an empty
+	// registry instead of the developer's real ~/.otto-stack/shared directory.
+	t.Setenv("HOME", t.TempDir())
+
 	handler := NewDownHandler()
 	cmd := &cobra.Command{
 		Use: core.CommandDown,

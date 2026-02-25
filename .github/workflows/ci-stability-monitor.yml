@@ -17,7 +17,7 @@ jobs:
     steps:
       - name: Check recent workflow runs
         id: check
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const owner = context.repo.owner;
@@ -90,7 +90,7 @@ jobs:
 
       - name: Create issue if stability drops
         if: steps.check.outputs.success_rate < 90
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const successRate = '${{ steps.check.outputs.success_rate }}';
