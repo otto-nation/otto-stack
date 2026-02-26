@@ -7,26 +7,30 @@ import "fmt"
 var docs docsConfig
 
 type docsConfig struct {
-	Pages      map[string]pageConfig     `yaml:"pages"`
-	Categories map[string]categoryConfig `yaml:"categories"`
-	Examples   exampleConfig             `yaml:"examples"`
-	Labels     labelsConfig              `yaml:"labels"`
+	Pages            map[string]pageConfig     `yaml:"pages"`
+	Categories       map[string]categoryConfig `yaml:"categories"`
+	Examples         exampleConfig             `yaml:"examples"`
+	Labels           labelsConfig              `yaml:"labels"`
+	Date             string                    `yaml:"date"`
+	CLISections      cliSections               `yaml:"cli_sections"`
+	ServicesSections servicesSections          `yaml:"services_sections"`
+	ConfigSections   configSections            `yaml:"config_sections"`
 }
 
-// pageConfig holds all content for one generated page: frontmatter, body heading,
-// page-level intro text, and page-specific section content.
+// pageConfig holds frontmatter and page-level content common to all pages.
+// Page-specific section content lives in the typed *Sections fields on docsConfig.
 type pageConfig struct {
-	Output        string         `yaml:"output"`
-	Title         string         `yaml:"title"`
-	Heading       string         `yaml:"heading"`
-	Description   string         `yaml:"description"`
-	Lead          string         `yaml:"lead"`
-	Weight        int            `yaml:"weight"`
-	Intro         string         `yaml:"intro"`
-	FileStructure string         `yaml:"file_structure"`
-	NextSteps     []nextStepLink `yaml:"next_steps"`
-	ServiceCount  string         `yaml:"service_count"`
-	Sections      pageSections   `yaml:"sections"`
+	Output             string         `yaml:"output"`
+	Title              string         `yaml:"title"`
+	Heading            string         `yaml:"heading"`
+	Description        string         `yaml:"description"`
+	Lead               string         `yaml:"lead"`
+	Weight             int            `yaml:"weight"`
+	Intro              string         `yaml:"intro"`
+	FileStructure      string         `yaml:"file_structure"`
+	NextSteps          []nextStepLink `yaml:"next_steps"`
+	ServiceCount       string         `yaml:"service_count"`
+	DefaultDescription string         `yaml:"default_description"`
 }
 
 // nextStepLink is a labelled link used in "Next Steps" sections.
@@ -36,23 +40,24 @@ type nextStepLink struct {
 	Description string `yaml:"description"`
 }
 
-// pageSections is a union of all page-specific section content.
-// Each generator reads only the fields relevant to its page; unused fields
-// are zero-valued and ignored.
-type pageSections struct {
-	// cli-reference sections
+// cliSections holds section headings and descriptions for the CLI reference page.
+type cliSections struct {
 	CommandCategories string `yaml:"command_categories"`
 	Commands          string `yaml:"commands"`
 	GlobalFlags       string `yaml:"global_flags"`
 	GlobalFlagsDesc   string `yaml:"global_flags_description"`
+}
 
-	// services sections
+// servicesSections holds section headings for the services page.
+type servicesSections struct {
 	ConfigOptions   string `yaml:"configuration_options"`
 	ExampleConfig   string `yaml:"example_configuration"`
 	UseCases        string `yaml:"use_cases"`
 	ExamplesHeading string `yaml:"examples"`
+}
 
-	// configuration sections (each is a dedicated struct due to nested content)
+// configSections holds all section content for the configuration guide page.
+type configSections struct {
 	FileStructure    configFileStructureSection   `yaml:"file_structure"`
 	MainConfig       configMainConfigSection      `yaml:"main_config"`
 	Sharing          configSharingSection         `yaml:"sharing"`
@@ -136,6 +141,8 @@ type exampleConfig struct {
 	CompleteServices      []string `yaml:"complete_services"`
 	EnvVarDisplayLimit    int      `yaml:"env_var_display_limit"`
 	CustomEnvDisplayLimit int      `yaml:"custom_env_display_limit"`
+	CustomEnvValue        string   `yaml:"custom_env_value"`
+	CompleteEnvValue      string   `yaml:"complete_env_value"`
 }
 
 var requiredPages = []string{

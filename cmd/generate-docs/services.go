@@ -180,7 +180,7 @@ func renderServiceSection(svc loadedService) string {
 }
 
 func renderServiceSchemaSection(fields []*schemaField) string {
-	sections := docs.Pages["services"].Sections
+	sections := docs.ServicesSections
 	var sb strings.Builder
 	sb.WriteString(sections.ConfigOptions + "\n\n")
 	for _, field := range fields {
@@ -196,14 +196,12 @@ func renderServiceSchemaSection(fields []*schemaField) string {
 		return sb.String()
 	}
 	sb.WriteString("\n" + sections.ExampleConfig + "\n\n")
-	sb.WriteString("```yaml\n")
-	sb.WriteString(strings.TrimRight(exYAML, "\n"))
-	sb.WriteString("\n```\n\n")
+	codeBlock(&sb, "yaml", exYAML)
 	return sb.String()
 }
 
 func renderServiceDocumentation(svcDocs *serviceDocumentation) string {
-	sections := docs.Pages["services"].Sections
+	sections := docs.ServicesSections
 	var sb strings.Builder
 	if len(svcDocs.UseCases) > 0 {
 		sb.WriteString(sections.UseCases + "\n\n")
@@ -214,9 +212,7 @@ func renderServiceDocumentation(svcDocs *serviceDocumentation) string {
 	if len(svcDocs.Examples) > 0 {
 		sb.WriteString(sections.ExamplesHeading + "\n\n")
 		for _, ex := range svcDocs.Examples {
-			sb.WriteString("```bash\n")
-			sb.WriteString(ex)
-			sb.WriteString("\n```\n\n")
+			codeBlock(&sb, "bash", ex)
 		}
 	}
 	return sb.String()

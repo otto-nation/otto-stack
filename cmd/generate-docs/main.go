@@ -17,7 +17,6 @@ const (
 	contributingPath = "CONTRIBUTING.md"
 	readmePath       = "README.md"
 	outputDirPath    = "docs-site/content"
-	staticDate       = "2025-10-01"
 )
 
 // loadYAML reads path and unmarshals its contents into out.

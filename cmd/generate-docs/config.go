@@ -45,7 +45,6 @@ func generateConfigurationGuide() error {
 	schemaNode := nodeGet(&schemaRoot, keySchema)
 	sections := extractSchemaSections(schemaNode)
 
-	const fence = "```"
 	var sb strings.Builder
 
 	sb.WriteString(htmlComment(
@@ -58,13 +57,13 @@ func generateConfigurationGuide() error {
 	sb.WriteString("# " + docs.Pages["configuration"].Heading + "\n\n")
 	sb.WriteString(docs.Pages["configuration"].Intro + "\n\n")
 
-	writeFileStructureSection(&sb, fence)
-	writeMainConfigSection(&sb, fence, generateConfigStructure(sections))
+	writeFileStructureSection(&sb)
+	writeMainConfigSection(&sb, generateConfigStructure(sections))
 	writeConfigSections(&sb, sections)
-	writeSharingSection(&sb, fence)
-	writeServiceConfigSection(&sb, fence, generateServiceConfigExample(svcMap), generateCustomEnvExample(svcMap))
-	writeServiceMetadataSection(&sb, fence)
-	writeCompleteExampleSection(&sb, fence, generateCompleteExample(schemaNode), generateCompleteEnvExample(svcMap))
+	writeSharingSection(&sb)
+	writeServiceConfigSection(&sb, generateServiceConfigExample(svcMap), generateCustomEnvExample(svcMap))
+	writeServiceMetadataSection(&sb)
+	writeCompleteExampleSection(&sb, generateCompleteExample(schemaNode), generateCompleteEnvExample(svcMap))
 	writeNextStepsSection(&sb)
 
 	out, err := formatDocument(pageFM("configuration"), sb.String())
@@ -74,22 +73,18 @@ func generateConfigurationGuide() error {
 	return writeOutput(pageOutput("configuration"), out)
 }
 
-func writeFileStructureSection(sb *strings.Builder, fence string) {
-	s := docs.Pages["configuration"].Sections.FileStructure
+func writeFileStructureSection(sb *strings.Builder) {
+	s := docs.ConfigSections.FileStructure
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.Intro + "\n\n")
-	sb.WriteString(fence + "\n")
-	sb.WriteString(docs.Pages["configuration"].FileStructure + "\n")
-	sb.WriteString(fence + "\n\n")
+	codeBlock(sb, "", docs.Pages["configuration"].FileStructure)
 }
 
-func writeMainConfigSection(sb *strings.Builder, fence, configStructure string) {
-	s := docs.Pages["configuration"].Sections.MainConfig
+func writeMainConfigSection(sb *strings.Builder, configStructure string) {
+	s := docs.ConfigSections.MainConfig
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.FileLabel + "\n\n")
-	sb.WriteString(fence + "yaml\n")
-	sb.WriteString(strings.TrimRight(configStructure, "\n") + "\n")
-	sb.WriteString(fence + "\n\n")
+	codeBlock(sb, "yaml", configStructure)
 }
 
 func writeConfigSections(sb *strings.Builder, sections []schemaSection) {
@@ -97,8 +92,8 @@ func writeConfigSections(sb *strings.Builder, sections []schemaSection) {
 	sb.WriteString("\n\n")
 }
 
-func writeSharingSection(sb *strings.Builder, fence string) {
-	s := docs.Pages["configuration"].Sections.Sharing
+func writeSharingSection(sb *strings.Builder) {
+	s := docs.ConfigSections.Sharing
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.Intro + "\n")
 	for i, behavior := range s.Behaviors {
@@ -106,54 +101,42 @@ func writeSharingSection(sb *strings.Builder, fence string) {
 	}
 	sb.WriteString("\n")
 	sb.WriteString(s.ExampleLabel + "\n\n")
-	sb.WriteString(fence + "yaml\n")
-	sb.WriteString(strings.TrimRight(s.Examples, "\n") + "\n")
-	sb.WriteString(fence + "\n\n")
+	codeBlock(sb, "yaml", s.Examples)
 	sb.WriteString(s.RegistryNote + "\n\n")
 }
 
-func writeServiceConfigSection(sb *strings.Builder, fence, serviceConfigExample, customEnvExample string) {
-	s := docs.Pages["configuration"].Sections.ServiceConfig
+func writeServiceConfigSection(sb *strings.Builder, serviceConfigExample, customEnvExample string) {
+	s := docs.ConfigSections.ServiceConfig
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.Intro + "\n\n")
 	sb.WriteString(s.EnvGeneratedLabel + "\n\n")
-	sb.WriteString(fence + "bash\n")
-	sb.WriteString("# " + serviceConfigExample + "\n")
-	sb.WriteString(fence + "\n\n")
+	codeBlock(sb, "bash", "# "+serviceConfigExample)
 	sb.WriteString(s.CustomizingHeading + "\n\n")
 	sb.WriteString(s.CustomizingIntro + "\n\n")
-	sb.WriteString(fence + "bash\n")
-	sb.WriteString(customEnvExample + "\n")
-	sb.WriteString(fence + "\n\n")
+	codeBlock(sb, "bash", customEnvExample)
 	sb.WriteString(s.CustomizingNote + "\n\n")
 }
 
-func writeServiceMetadataSection(sb *strings.Builder, fence string) {
-	s := docs.Pages["configuration"].Sections.ServiceMetadata
+func writeServiceMetadataSection(sb *strings.Builder) {
+	s := docs.ConfigSections.ServiceMetadata
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.Intro + "\n\n")
 	sb.WriteString(s.ExampleLabel + "\n\n")
-	sb.WriteString(fence + "yaml\n")
-	sb.WriteString(strings.TrimRight(s.ExampleContent, "\n") + "\n")
-	sb.WriteString(fence + "\n\n")
+	codeBlock(sb, "yaml", s.ExampleContent)
 	sb.WriteString(s.Note + "\n\n")
 }
 
-func writeCompleteExampleSection(sb *strings.Builder, fence, completeExample, completeEnvExample string) {
-	s := docs.Pages["configuration"].Sections.CompleteExample
+func writeCompleteExampleSection(sb *strings.Builder, completeExample, completeEnvExample string) {
+	s := docs.ConfigSections.CompleteExample
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.ConfigLabel + "\n\n")
-	sb.WriteString(fence + "yaml\n")
-	sb.WriteString(strings.TrimRight(completeExample, "\n") + "\n")
-	sb.WriteString(fence + "\n\n")
+	codeBlock(sb, "yaml", completeExample)
 	sb.WriteString(s.EnvLabel + "\n\n")
-	sb.WriteString(fence + "bash\n")
-	sb.WriteString(completeEnvExample + "\n")
-	sb.WriteString(fence + "\n\n")
+	codeBlock(sb, "bash", completeEnvExample)
 }
 
 func writeNextStepsSection(sb *strings.Builder) {
-	sb.WriteString(docs.Pages["configuration"].Sections.NextStepsSection + "\n\n")
+	sb.WriteString(docs.ConfigSections.NextStepsSection + "\n\n")
 	for _, link := range docs.Pages["configuration"].NextSteps {
 		sb.WriteString(fmt.Sprintf("- **[%s](%s)** - %s\n", link.Label, link.URL, link.Description))
 	}
@@ -337,14 +320,14 @@ func generateServiceConfigExample(svcMap map[string]loadedService) string {
 func generateCustomEnvExample(svcMap map[string]loadedService) string {
 	return envExample(svcMap, docs.Examples.Services, docs.Examples.CustomEnvDisplayLimit,
 		func(s string) string { return strings.ToUpper(s[:1]) + s[1:] },
-		func(_ loadedService, _ string) string { return "my_custom_value" },
+		func(_ loadedService, _ string) string { return docs.Examples.CustomEnvValue },
 	)
 }
 
 func generateCompleteEnvExample(svcMap map[string]loadedService) string {
 	return envExample(svcMap, docs.Examples.Services, docs.Examples.CustomEnvDisplayLimit,
 		func(s string) string { return strings.ToUpper(s[:1]) + s[1:] },
-		func(_ loadedService, _ string) string { return "production_value" },
+		func(_ loadedService, _ string) string { return docs.Examples.CompleteEnvValue },
 	)
 }
 

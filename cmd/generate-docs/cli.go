@@ -22,11 +22,11 @@ func generateCLIReference() error {
 	metadataNode := nodeGet(&rootNode, keyMetadata)
 	description := nodeStr(nodeGet(metadataNode, keyDescription))
 	if description == "" {
-		description = "A powerful development stack management tool for streamlined local development automation"
+		description = docs.Pages["cli-reference"].DefaultDescription
 	}
 
 	page := docs.Pages["cli-reference"]
-	sections := page.Sections
+	sections := docs.CLISections
 
 	var sb strings.Builder
 	sb.WriteString(htmlComment(
@@ -105,7 +105,7 @@ func renderCommandExamples(examplesNode *yaml.Node) string {
 	for _, exNode := range examplesNode.Content {
 		cmd := nodeStr(nodeGet(exNode, keyCommand))
 		desc := nodeStr(nodeGet(exNode, keyDescription))
-		sb.WriteString(fmt.Sprintf("```bash\n%s\n```\n\n", cmd))
+		codeBlock(&sb, "bash", cmd)
 		if desc != "" {
 			sb.WriteString(desc + "\n\n")
 		}

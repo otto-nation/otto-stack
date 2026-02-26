@@ -28,7 +28,7 @@ func newFrontmatter(title, description, lead string, weight int) frontmatter {
 		Title:       title,
 		Description: description,
 		Lead:        lead,
-		Date:        staticDate,
+		Date:        docs.Date,
 		Lastmod:     today(),
 		Draft:       false,
 		Weight:      weight,
@@ -54,4 +54,14 @@ func htmlComment(lines ...string) string {
 	}
 	sb.WriteString("-->\n\n")
 	return sb.String()
+}
+
+// codeBlock writes content inside a fenced code block with the given language specifier.
+// content is trimmed of trailing newlines before writing so the closing fence is always
+// on its own line regardless of whether the source string has a trailing newline.
+func codeBlock(sb *strings.Builder, lang, content string) {
+	const fence = "```"
+	sb.WriteString(fence + lang + "\n")
+	sb.WriteString(strings.TrimRight(content, "\n") + "\n")
+	sb.WriteString(fence + "\n\n")
 }
