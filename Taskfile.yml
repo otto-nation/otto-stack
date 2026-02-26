@@ -118,14 +118,19 @@ tasks:
     desc: "Generate documentation"
     deps: [setup:npm]
     sources:
+      - "README.md"
+      - "CONTRIBUTING.md"
       - "internal/config/schema.yaml"
       - "internal/config/commands.yaml"
       - "internal/config/services/**/*.yaml"
       - "docs-site/generators/**/*.js"
       - "docs-site/templates/**/*.md"
     generates:
-      - "docs-site/content/configuration.md"
+      - "docs-site/content/_index.md"
       - "docs-site/content/cli-reference.md"
+      - "docs-site/content/configuration.md"
+      - "docs-site/content/contributing.md"
+      - "docs-site/content/services.md"
     silent: true
     cmds:
       - cd docs-site && npm run docs:generate --silent
@@ -168,6 +173,13 @@ tasks:
     cmds:
       - go install {{.LDFLAGS}} ./cmd/otto-stack > /dev/null 2>&1
       - echo "  ✓ Installed to $(go env GOPATH)/bin/{{.BINARY_NAME}}"
+
+  uninstall:
+    desc: "Remove the binary from GOPATH/bin"
+    silent: true
+    cmds:
+      - rm -f $(go env GOPATH)/bin/{{.BINARY_NAME}}
+      - echo "  ✓ Removed $(go env GOPATH)/bin/{{.BINARY_NAME}}"
 
   # ============================================================================
   # DEVELOPMENT
