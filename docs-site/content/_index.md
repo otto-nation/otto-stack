@@ -7,7 +7,7 @@ lead: >-
   Streamline your local development with powerful CLI tools and automated
   service management
 date: "2025-10-01"
-lastmod: "2026-02-25"
+lastmod: "2026-02-26"
 draft: false
 weight: 50
 toc: true
@@ -27,28 +27,23 @@ A powerful development stack management tool built in Go for streamlined local d
 
 ### Installation
 
-#### Quick Install (Recommended)
+#### Homebrew (Recommended)
+
+```bash
+brew install otto-nation/tap/otto-stack
+```
+
+#### Script Install
 
 ```bash
 # Install latest version
 curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts/install.sh | bash
-```
 
-#### Custom Installation
-
-```bash
 # Install to custom directory
 curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts/install.sh | bash -s -- --dir ~/.local/bin
-
-# Or download and run locally
-curl -fsSL -o install.sh https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts/install.sh
-chmod +x install.sh
-./install.sh --help
 ```
 
-#### Manual Installation
-
-**macOS/Linux:**
+#### Manual Install
 
 ```bash
 # Download the latest release
@@ -57,27 +52,14 @@ chmod +x otto-stack
 sudo mv otto-stack /usr/local/bin/
 ```
 
-**Windows:**
-
-```powershell
-# Download from releases page
-# https://github.com/otto-nation/otto-stack/releases/latest
-```
-
-#### Uninstallation
+#### Uninstall
 
 ```bash
-# Remove otto-stack from your system
+# Homebrew
+brew uninstall otto-stack
+
+# Script install
 curl -fsSL https://raw.githubusercontent.com/otto-nation/otto-stack/main/scripts/uninstall.sh | bash
-```
-
-#### Package Managers
-
-**Homebrew (macOS):**
-
-```bash
-# Coming soon
-brew install otto-nation/tap/otto-stack
 ```
 
 ### Basic Usage
