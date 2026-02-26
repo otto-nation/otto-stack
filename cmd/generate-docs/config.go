@@ -55,8 +55,8 @@ func generateConfigurationGuide() error {
 		"- To regenerate, run: task generate:docs",
 	))
 
-	sb.WriteString("# Configuration Guide\n\n")
-	sb.WriteString("Otto-stack uses `.otto-stack/config.yaml` to define your development stack.\n\n")
+	sb.WriteString("# " + docs.Pages["configuration"].Heading + "\n\n")
+	sb.WriteString(docs.Pages["configuration"].Intro + "\n\n")
 
 	writeFileStructureSection(&sb, fence)
 	writeMainConfigSection(&sb, fence, generateConfigStructure(sections))
@@ -75,16 +75,18 @@ func generateConfigurationGuide() error {
 }
 
 func writeFileStructureSection(sb *strings.Builder, fence string) {
-	sb.WriteString("## File Structure\n\n")
-	sb.WriteString("After running `otto-stack init`, you'll have:\n\n")
+	s := docs.Pages["configuration"].Sections.FileStructure
+	sb.WriteString(s.Heading + "\n\n")
+	sb.WriteString(s.Intro + "\n\n")
 	sb.WriteString(fence + "\n")
-	sb.WriteString(generateFileStructure() + "\n")
+	sb.WriteString(docs.Pages["configuration"].FileStructure + "\n")
 	sb.WriteString(fence + "\n\n")
 }
 
 func writeMainConfigSection(sb *strings.Builder, fence, configStructure string) {
-	sb.WriteString("## Main Configuration\n\n")
-	sb.WriteString("**`.otto-stack/config.yaml`:**\n\n")
+	s := docs.Pages["configuration"].Sections.MainConfig
+	sb.WriteString(s.Heading + "\n\n")
+	sb.WriteString(s.FileLabel + "\n\n")
 	sb.WriteString(fence + "yaml\n")
 	sb.WriteString(strings.TrimRight(configStructure, "\n") + "\n")
 	sb.WriteString(fence + "\n\n")
@@ -96,70 +98,65 @@ func writeConfigSections(sb *strings.Builder, sections []schemaSection) {
 }
 
 func writeSharingSection(sb *strings.Builder, fence string) {
-	sb.WriteString("### Sharing Configuration Details\n\n")
-	sb.WriteString("When sharing is enabled:\n")
-	sb.WriteString("1. Containers are prefixed with `otto-stack-` (e.g., `otto-stack-redis`)\n")
-	sb.WriteString("2. A registry at `~/.otto-stack/shared/containers.yaml` tracks which projects use each shared container\n")
-	sb.WriteString("3. The `down` command prompts before stopping shared containers used by other projects\n")
-	sb.WriteString("4. Shared containers persist across project switches\n\n")
-
-	sb.WriteString("**Example configurations:**\n\n")
+	s := docs.Pages["configuration"].Sections.Sharing
+	sb.WriteString(s.Heading + "\n\n")
+	sb.WriteString(s.Intro + "\n")
+	for i, behavior := range s.Behaviors {
+		sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, behavior))
+	}
+	sb.WriteString("\n")
+	sb.WriteString(s.ExampleLabel + "\n\n")
 	sb.WriteString(fence + "yaml\n")
-	sb.WriteString("# Share all services (default)\n")
-	sb.WriteString("sharing:\n  enabled: true\n\n")
-	sb.WriteString("# Share specific services only\n")
-	sb.WriteString("sharing:\n  enabled: true\n  services:\n    postgres: true\n    redis: true\n    kafka: false  # Not shared\n\n")
-	sb.WriteString("# Disable sharing completely\n")
-	sb.WriteString("sharing:\n  enabled: false\n")
+	sb.WriteString(strings.TrimRight(s.Examples, "\n") + "\n")
 	sb.WriteString(fence + "\n\n")
-
-	sb.WriteString("**Registry location:** `~/.otto-stack/shared/containers.yaml`\n\n")
+	sb.WriteString(s.RegistryNote + "\n\n")
 }
 
 func writeServiceConfigSection(sb *strings.Builder, fence, serviceConfigExample, customEnvExample string) {
-	sb.WriteString("## Service Configuration\n\n")
-	sb.WriteString("Services are configured through environment variables. Otto-stack generates `.otto-stack/generated/.env.generated` showing all available variables with defaults:\n\n")
-	sb.WriteString("**Example `.env.generated`:**\n\n")
+	s := docs.Pages["configuration"].Sections.ServiceConfig
+	sb.WriteString(s.Heading + "\n\n")
+	sb.WriteString(s.Intro + "\n\n")
+	sb.WriteString(s.EnvGeneratedLabel + "\n\n")
 	sb.WriteString(fence + "bash\n")
 	sb.WriteString("# " + serviceConfigExample + "\n")
 	sb.WriteString(fence + "\n\n")
-
-	sb.WriteString("### Customizing Services\n\n")
-	sb.WriteString("Create a `.env` file in your project root to override defaults:\n\n")
+	sb.WriteString(s.CustomizingHeading + "\n\n")
+	sb.WriteString(s.CustomizingIntro + "\n\n")
 	sb.WriteString(fence + "bash\n")
 	sb.WriteString(customEnvExample + "\n")
 	sb.WriteString(fence + "\n\n")
-	sb.WriteString("These values will be used by Docker Compose when starting services.\n\n")
+	sb.WriteString(s.CustomizingNote + "\n\n")
 }
 
 func writeServiceMetadataSection(sb *strings.Builder, fence string) {
-	sb.WriteString("## Service Metadata Files\n\n")
-	sb.WriteString("Files in `.otto-stack/services/` contain service metadata:\n\n")
-	sb.WriteString("**`.otto-stack/services/postgres.yml`:**\n\n")
+	s := docs.Pages["configuration"].Sections.ServiceMetadata
+	sb.WriteString(s.Heading + "\n\n")
+	sb.WriteString(s.Intro + "\n\n")
+	sb.WriteString(s.ExampleLabel + "\n\n")
 	sb.WriteString(fence + "yaml\n")
-	sb.WriteString("name: postgres\ndescription: Configuration for postgres service\n")
+	sb.WriteString(strings.TrimRight(s.ExampleContent, "\n") + "\n")
 	sb.WriteString(fence + "\n\n")
-	sb.WriteString("These are informational and don't affect service behavior. Configuration happens via environment variables.\n\n")
+	sb.WriteString(s.Note + "\n\n")
 }
 
 func writeCompleteExampleSection(sb *strings.Builder, fence, completeExample, completeEnvExample string) {
-	sb.WriteString("## Complete Example\n\n")
-	sb.WriteString("**`.otto-stack/config.yaml`:**\n\n")
+	s := docs.Pages["configuration"].Sections.CompleteExample
+	sb.WriteString(s.Heading + "\n\n")
+	sb.WriteString(s.ConfigLabel + "\n\n")
 	sb.WriteString(fence + "yaml\n")
 	sb.WriteString(strings.TrimRight(completeExample, "\n") + "\n")
 	sb.WriteString(fence + "\n\n")
-
-	sb.WriteString("**`.env` (your customizations):**\n\n")
+	sb.WriteString(s.EnvLabel + "\n\n")
 	sb.WriteString(fence + "bash\n")
 	sb.WriteString(completeEnvExample + "\n")
 	sb.WriteString(fence + "\n\n")
 }
 
 func writeNextStepsSection(sb *strings.Builder) {
-	sb.WriteString("## Next Steps\n\n")
-	sb.WriteString("- **[Services Guide](/otto-stack/services/)** - Available services and environment variables\n")
-	sb.WriteString("- **[CLI Reference](/otto-stack/cli-reference/)** - Command usage\n")
-	sb.WriteString("- **[Troubleshooting](/otto-stack/troubleshooting/)** - Common issues\n")
+	sb.WriteString(docs.Pages["configuration"].Sections.NextStepsSection + "\n\n")
+	for _, link := range docs.Pages["configuration"].NextSteps {
+		sb.WriteString(fmt.Sprintf("- **[%s](%s)** - %s\n", link.Label, link.URL, link.Description))
+	}
 }
 
 func extractSchemaSections(schemaNode *yaml.Node) []schemaSection {
@@ -201,19 +198,6 @@ func extractSchemaProp(key string, propNode *yaml.Node) *schemaSectionProp {
 		defaultVal:  defaultVal,
 		isTemplate:  strings.HasPrefix(defaultVal, "{{"),
 	}
-}
-
-func generateFileStructure() string {
-	return `.otto-stack/
-├── config.yaml              # Main configuration
-├── generated/
-│   ├── .env.generated       # Available environment variables
-│   └── docker-compose.yml   # Generated Docker Compose
-├── services/                # Service metadata
-│   ├── postgres.yml
-│   └── redis.yml
-├── .gitignore
-└── README.md`
 }
 
 func generateConfigStructure(sections []schemaSection) string {

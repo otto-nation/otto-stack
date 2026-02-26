@@ -120,9 +120,11 @@ func generateServicesGuide() error {
 	byCategory := groupByCategory(services)
 	categories := sortedCategories(byCategory)
 
+	page := docs.Pages["services"]
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("# Available Services\n\n%d services available for your development stack.\n\n", len(services)))
-	sb.WriteString("Each service can be configured through the `service_configuration` section in your `otto-stack-config.yaml` file. For detailed configuration instructions, see the [Configuration Guide](/otto-stack/configuration/).\n\n")
+	sb.WriteString("# " + page.Heading + "\n\n")
+	sb.WriteString(fmt.Sprintf(page.ServiceCount, len(services)) + "\n\n")
+	sb.WriteString(page.Intro + "\n\n")
 
 	for _, cat := range categories {
 		catCfg := getCategoryConfig(cat)
@@ -169,8 +171,8 @@ func renderServiceSection(svc loadedService) string {
 	if len(svc.config.configSchemaFields) > 0 {
 		sb.WriteString(renderServiceSchemaSection(svc.config.configSchemaFields))
 	}
-	if docs := svc.config.Documentation; docs != nil {
-		sb.WriteString(renderServiceDocumentation(docs))
+	if svc.config.Documentation != nil {
+		sb.WriteString(renderServiceDocumentation(svc.config.Documentation))
 	}
 
 	sb.WriteString("---\n\n")
@@ -178,8 +180,9 @@ func renderServiceSection(svc loadedService) string {
 }
 
 func renderServiceSchemaSection(fields []*schemaField) string {
+	sections := docs.Pages["services"].Sections
 	var sb strings.Builder
-	sb.WriteString("#### Configuration Options\n\n")
+	sb.WriteString(sections.ConfigOptions + "\n\n")
 	for _, field := range fields {
 		sb.WriteString(renderSchemaField(field, "####"))
 	}
@@ -192,24 +195,25 @@ func renderServiceSchemaSection(fields []*schemaField) string {
 	if err != nil || strings.TrimSpace(exYAML) == "" {
 		return sb.String()
 	}
-	sb.WriteString("\n##### Example Configuration\n\n")
+	sb.WriteString("\n" + sections.ExampleConfig + "\n\n")
 	sb.WriteString("```yaml\n")
 	sb.WriteString(strings.TrimRight(exYAML, "\n"))
 	sb.WriteString("\n```\n\n")
 	return sb.String()
 }
 
-func renderServiceDocumentation(docs *serviceDocumentation) string {
+func renderServiceDocumentation(svcDocs *serviceDocumentation) string {
+	sections := docs.Pages["services"].Sections
 	var sb strings.Builder
-	if len(docs.UseCases) > 0 {
-		sb.WriteString("#### Use Cases\n\n")
-		for _, uc := range docs.UseCases {
+	if len(svcDocs.UseCases) > 0 {
+		sb.WriteString(sections.UseCases + "\n\n")
+		for _, uc := range svcDocs.UseCases {
 			sb.WriteString(fmt.Sprintf("- %s\n\n", uc))
 		}
 	}
-	if len(docs.Examples) > 0 {
-		sb.WriteString("#### Examples\n\n")
-		for _, ex := range docs.Examples {
+	if len(svcDocs.Examples) > 0 {
+		sb.WriteString(sections.ExamplesHeading + "\n\n")
+		for _, ex := range svcDocs.Examples {
 			sb.WriteString("```bash\n")
 			sb.WriteString(ex)
 			sb.WriteString("\n```\n\n")
@@ -219,29 +223,30 @@ func renderServiceDocumentation(docs *serviceDocumentation) string {
 }
 
 func renderSchemaField(field *schemaField, headingLevel string) string {
+	labels := docs.Labels
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("%s %s\n\n", headingLevel, field.Name))
 	if field.Description != "" {
 		sb.WriteString(field.Description + "\n\n")
 	}
-	sb.WriteString(fmt.Sprintf("- Type: `%s`\n", field.Type))
+	sb.WriteString(fmt.Sprintf("- %s: `%s`\n", labels.FieldType, field.Type))
 	if field.Default != nil && field.Default.Value != "" {
-		sb.WriteString(fmt.Sprintf("- Default: `%s`\n", field.Default.Value))
+		sb.WriteString(fmt.Sprintf("- %s: `%s`\n", labels.FieldDefault, field.Default.Value))
 	}
 	if field.Required {
-		sb.WriteString("- Required: Yes\n")
+		sb.WriteString("- " + labels.FieldRequiredYes + "\n")
 	}
 	sb.WriteString("\n")
 
 	if field.Items != nil && len(field.Items.Properties) > 0 {
-		sb.WriteString("**Items:**\n\n")
+		sb.WriteString(labels.Items + "\n\n")
 		for _, itemProp := range field.Items.Properties {
 			sb.WriteString(renderItemProperty(itemProp))
 		}
 		sb.WriteString("\n")
 	}
 	if len(field.Properties) > 0 {
-		sb.WriteString("**Properties:**\n\n")
+		sb.WriteString(labels.Properties + "\n\n")
 		for _, subProp := range field.Properties {
 			sb.WriteString(renderItemProperty(subProp))
 		}
@@ -251,10 +256,11 @@ func renderSchemaField(field *schemaField, headingLevel string) string {
 }
 
 func renderItemProperty(p *schemaField) string {
+	labels := docs.Labels
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("- **%s** (`%s`)", p.Name, p.Type))
 	if p.Required {
-		sb.WriteString(" _required_")
+		sb.WriteString(" " + labels.FieldRequiredIndicator)
 	}
 	if p.Default != nil && p.Default.Value != "" {
 		sb.WriteString(fmt.Sprintf(" = `%s`", p.Default.Value))

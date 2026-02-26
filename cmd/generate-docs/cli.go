@@ -25,16 +25,19 @@ func generateCLIReference() error {
 		description = "A powerful development stack management tool for streamlined local development automation"
 	}
 
+	page := docs.Pages["cli-reference"]
+	sections := page.Sections
+
 	var sb strings.Builder
 	sb.WriteString(htmlComment(
 		"\u26a0\ufe0f  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY",
 		"This file is generated from "+commandsYAMLPath,
 		"To make changes, edit the source file and run: task generate:docs",
 	))
-	sb.WriteString("# otto-stack CLI Reference\n\n")
+	sb.WriteString("# " + page.Heading + "\n\n")
 	sb.WriteString(description + "\n\n")
 
-	sb.WriteString("## Command Categories\n\n")
+	sb.WriteString(sections.CommandCategories + "\n\n")
 	categoriesNode := nodeGet(&rootNode, keyCategories)
 	for _, catKey := range nodeKeys(categoriesNode) {
 		catNode := nodeGet(categoriesNode, catKey)
@@ -42,11 +45,11 @@ func generateCLIReference() error {
 		name := nodeStr(nodeGet(catNode, keyName))
 		desc := nodeStr(nodeGet(catNode, keyDescription))
 		cmds := nodeStringSlice(nodeGet(catNode, keyCommands))
-		sb.WriteString(fmt.Sprintf("### %s %s\n\n%s\n\n**Commands:** %s\n\n",
-			icon, name, desc, strings.Join(quoteEach(cmds), ", ")))
+		sb.WriteString(fmt.Sprintf("### %s %s\n\n%s\n\n%s %s\n\n",
+			icon, name, desc, docs.Labels.CommandsList, strings.Join(quoteEach(cmds), ", ")))
 	}
 
-	sb.WriteString("## Commands\n\n")
+	sb.WriteString(sections.Commands + "\n\n")
 	commandsNode := nodeGet(&rootNode, keyCommands)
 	for _, cmdKey := range nodeKeys(commandsNode) {
 		sb.WriteString(renderCommandSection(cmdKey, nodeGet(commandsNode, cmdKey)))
@@ -54,7 +57,8 @@ func generateCLIReference() error {
 
 	globalFlagsNode := nodeGet(&rootNode, keyGlobalFlags)
 	if globalFlagsNode != nil {
-		sb.WriteString("## Global Flags\n\nThese flags are available for all commands:\n\n")
+		sb.WriteString(sections.GlobalFlags + "\n\n")
+		sb.WriteString(sections.GlobalFlagsDesc + "\n\n")
 		sb.WriteString(renderFlagLines(globalFlagsNode))
 	}
 
@@ -78,10 +82,10 @@ func renderCommandSection(name string, cmdNode *yaml.Node) string {
 		sb.WriteString(strings.TrimSpace(longDesc) + "\n\n")
 	}
 	if usage != "" {
-		sb.WriteString(fmt.Sprintf("**Usage:** `otto-stack %s`\n\n", usage))
+		sb.WriteString(fmt.Sprintf("%s `otto-stack %s`\n\n", docs.Labels.Usage, usage))
 	}
 	if len(aliases) > 0 {
-		sb.WriteString("**Aliases:** " + strings.Join(quoteEach(aliases), ", ") + "\n\n")
+		sb.WriteString(docs.Labels.Aliases + " " + strings.Join(quoteEach(aliases), ", ") + "\n\n")
 	}
 
 	sb.WriteString(renderCommandExamples(nodeGet(cmdNode, keyExamples)))
@@ -97,7 +101,7 @@ func renderCommandExamples(examplesNode *yaml.Node) string {
 		return ""
 	}
 	var sb strings.Builder
-	sb.WriteString("**Examples:**\n\n")
+	sb.WriteString(docs.Labels.Examples + "\n\n")
 	for _, exNode := range examplesNode.Content {
 		cmd := nodeStr(nodeGet(exNode, keyCommand))
 		desc := nodeStr(nodeGet(exNode, keyDescription))
@@ -113,7 +117,7 @@ func renderCommandFlags(flagsNode *yaml.Node) string {
 	if flagsNode == nil || len(nodeKeys(flagsNode)) == 0 {
 		return ""
 	}
-	return "**Flags:**\n\n" + renderFlagLines(flagsNode)
+	return docs.Labels.Flags + "\n\n" + renderFlagLines(flagsNode)
 }
 
 func renderFlagLines(flagsNode *yaml.Node) string {
@@ -158,7 +162,7 @@ func renderCommandRelated(relatedNode *yaml.Node) string {
 	for i, r := range related {
 		links[i] = fmt.Sprintf("[`%s`](#%s)", r, r)
 	}
-	return "**Related Commands:** " + strings.Join(links, ", ") + "\n\n"
+	return docs.Labels.RelatedCommands + " " + strings.Join(links, ", ") + "\n\n"
 }
 
 func renderCommandTips(tipsNode *yaml.Node) string {
@@ -167,7 +171,7 @@ func renderCommandTips(tipsNode *yaml.Node) string {
 		return ""
 	}
 	var sb strings.Builder
-	sb.WriteString("**Tips:**\n\n")
+	sb.WriteString(docs.Labels.Tips + "\n\n")
 	for _, tip := range tips {
 		sb.WriteString("- " + tip + "\n")
 	}

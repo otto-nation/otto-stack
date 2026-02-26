@@ -1,7 +1,9 @@
 # docs.yaml — documentation generator configuration
 #
-# This file is the single source of truth for:
+# This file is the single source of truth for all generated documentation content:
 #   - Page frontmatter (title, description, lead, weight) for each generated page
+#   - Page headings, section headings, intro text, and prose
+#   - Rendering labels shared across generators (Examples, Flags, Tips, etc.)
 #   - Service category display configuration (icon, sort order)
 #   - Example values used in generated code samples
 #
@@ -18,23 +20,116 @@ pages:
   cli-reference:
     output: cli-reference.md
     title: CLI Reference
+    heading: otto-stack CLI Reference
     description: Complete command reference for otto-stack CLI
     lead: Comprehensive reference for all otto-stack CLI commands and their usage
     weight: 50
+    sections:
+      command_categories: "## Command Categories"
+      commands: "## Commands"
+      global_flags: "## Global Flags"
+      global_flags_description: "These flags are available for all commands:"
 
   services:
     output: services.md
     title: Services
+    heading: Available Services
     description: Available services and configuration options
     lead: Explore all the services you can use with otto-stack
     weight: 30
+    service_count: "%d services available for your development stack."
+    intro: >-
+      Each service can be configured through the `service_configuration` section
+      in your `otto-stack-config.yaml` file. For detailed configuration
+      instructions, see the [Configuration Guide](/otto-stack/configuration/).
+    sections:
+      configuration_options: "#### Configuration Options"
+      example_configuration: "##### Example Configuration"
+      use_cases: "#### Use Cases"
+      examples: "#### Examples"
 
   configuration:
     output: configuration.md
     title: Configuration Guide
+    heading: Configuration Guide
     description: Configure your otto-stack development environment
     lead: Learn how to configure your development stack
     weight: 25
+    intro: "Otto-stack uses `.otto-stack/config.yaml` to define your development stack."
+    file_structure: |-
+      .otto-stack/
+      ├── config.yaml              # Main configuration
+      ├── generated/
+      │   ├── .env.generated       # Available environment variables
+      │   └── docker-compose.yml   # Generated Docker Compose
+      ├── services/                # Service metadata
+      │   ├── postgres.yml
+      │   └── redis.yml
+      ├── .gitignore
+      └── README.md
+    next_steps:
+      - label: Services Guide
+        url: /otto-stack/services/
+        description: Available services and environment variables
+      - label: CLI Reference
+        url: /otto-stack/cli-reference/
+        description: Command usage
+      - label: Troubleshooting
+        url: /otto-stack/troubleshooting/
+        description: Common issues
+    sections:
+      file_structure:
+        heading: "## File Structure"
+        intro: "After running `otto-stack init`, you'll have:"
+      main_config:
+        heading: "## Main Configuration"
+        file_label: "**`.otto-stack/config.yaml`:**"
+      sharing:
+        heading: "### Sharing Configuration Details"
+        intro: "When sharing is enabled:"
+        behaviors:
+          - "Containers are prefixed with `otto-stack-` (e.g., `otto-stack-redis`)"
+          - "A registry at `~/.otto-stack/shared/containers.yaml` tracks which projects use each shared container"
+          - "The `down` command prompts before stopping shared containers used by other projects"
+          - "Shared containers persist across project switches"
+        example_label: "**Example configurations:**"
+        examples: |
+          # Share all services (default)
+          sharing:
+            enabled: true
+
+          # Share specific services only
+          sharing:
+            enabled: true
+            services:
+              postgres: true
+              redis: true
+              kafka: false  # Not shared
+
+          # Disable sharing completely
+          sharing:
+            enabled: false
+        registry_note: "**Registry location:** `~/.otto-stack/shared/containers.yaml`"
+      service_config:
+        heading: "## Service Configuration"
+        intro: "Services are configured through environment variables. Otto-stack generates `.otto-stack/generated/.env.generated` showing all available variables with defaults:"
+        env_generated_label: "**Example `.env.generated`:**"
+        customizing_heading: "### Customizing Services"
+        customizing_intro: "Create a `.env` file in your project root to override defaults:"
+        customizing_note: "These values will be used by Docker Compose when starting services."
+      service_metadata:
+        heading: "## Service Metadata Files"
+        intro: "Files in `.otto-stack/services/` contain service metadata:"
+        example_label: "**`.otto-stack/services/postgres.yml`:**"
+        example_content: |
+          name: postgres
+          description: Configuration for postgres service
+        note: "These are informational and don't affect service behavior. Configuration happens via environment variables."
+      complete_example:
+        heading: "## Complete Example"
+        config_label: "**`.otto-stack/config.yaml`:**"
+        env_label: "**`.env` (your customizations):**"
+      next_steps_section: "## Next Steps"
 
   contributing:
     output: contributing.md
@@ -85,3 +180,21 @@ examples:
 
   # Maximum env vars shown per service in customization/override examples.
   custom_env_display_limit: 2
+
+labels:
+  # Command detail labels used in CLI reference rendering.
+  usage: "**Usage:**"
+  aliases: "**Aliases:**"
+  examples: "**Examples:**"
+  flags: "**Flags:**"
+  tips: "**Tips:**"
+  related_commands: "**Related Commands:**"
+  commands_list: "**Commands:**"
+
+  # Service schema field labels used in services rendering.
+  items: "**Items:**"
+  properties: "**Properties:**"
+  field_type: "Type"
+  field_default: "Default"
+  field_required_yes: "Required: Yes"
+  field_required_indicator: "_required_"
