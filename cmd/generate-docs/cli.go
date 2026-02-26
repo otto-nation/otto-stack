@@ -26,11 +26,11 @@ func generateCLIReference() error {
 	}
 
 	var sb strings.Builder
-	sb.WriteString("<!--\n")
-	sb.WriteString("  \u26a0\ufe0f  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY\n")
-	sb.WriteString("  This file is generated from internal/config/commands.yaml\n")
-	sb.WriteString("  To make changes, edit the source file and run: task generate:docs\n")
-	sb.WriteString("-->\n\n")
+	sb.WriteString(htmlComment(
+		"\u26a0\ufe0f  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY",
+		"This file is generated from "+commandsYAMLPath,
+		"To make changes, edit the source file and run: task generate:docs",
+	))
 	sb.WriteString("# otto-stack CLI Reference\n\n")
 	sb.WriteString(description + "\n\n")
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -41,4 +42,16 @@ func formatDocument(fm frontmatter, content string) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("---\n%s---\n\n%s", fmBytes, content), nil
+}
+
+// htmlComment renders lines as an HTML comment block, suitable for embedding
+// in generated markdown files to warn editors that content is auto-generated.
+func htmlComment(lines ...string) string {
+	var sb strings.Builder
+	sb.WriteString("<!--\n")
+	for _, line := range lines {
+		sb.WriteString("  " + line + "\n")
+	}
+	sb.WriteString("-->\n\n")
+	return sb.String()
 }

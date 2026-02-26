@@ -45,24 +45,15 @@ func generateConfigurationGuide() error {
 	schemaNode := nodeGet(&schemaRoot, keySchema)
 	sections := extractSchemaSections(schemaNode)
 
-	fmBytes, err := yaml.Marshal(pageFM("configuration"))
-	if err != nil {
-		return err
-	}
-
 	const fence = "```"
 	var sb strings.Builder
 
-	sb.WriteString("---\n")
-	sb.WriteString(string(fmBytes))
-	sb.WriteString("---\n\n")
-
-	sb.WriteString("<!--\n")
-	sb.WriteString("  \u26a0\ufe0f  PARTIALLY GENERATED FILE\n")
-	sb.WriteString("  - Sections marked with triple braces are auto-generated from internal/config/schema.yaml\n")
-	sb.WriteString("  - Custom content (like \"Sharing Configuration Details\") is maintained in docs-site/templates/configuration-guide.md\n")
-	sb.WriteString("  - To regenerate, run: task generate:docs\n")
-	sb.WriteString("-->\n\n")
+	sb.WriteString(htmlComment(
+		"\u26a0\ufe0f  PARTIALLY GENERATED FILE",
+		"- Sections marked with triple braces are auto-generated from "+schemaYAMLPath,
+		`- Custom content (like "Sharing Configuration Details") is maintained in docs-site/templates/configuration-guide.md`,
+		"- To regenerate, run: task generate:docs",
+	))
 
 	sb.WriteString("# Configuration Guide\n\n")
 	sb.WriteString("Otto-stack uses `.otto-stack/config.yaml` to define your development stack.\n\n")
@@ -76,7 +67,11 @@ func generateConfigurationGuide() error {
 	writeCompleteExampleSection(&sb, fence, generateCompleteExample(schemaNode), generateCompleteEnvExample(svcMap))
 	writeNextStepsSection(&sb)
 
-	return writeOutput(pageOutput("configuration"), sb.String())
+	out, err := formatDocument(pageFM("configuration"), sb.String())
+	if err != nil {
+		return err
+	}
+	return writeOutput(pageOutput("configuration"), out)
 }
 
 func writeFileStructureSection(sb *strings.Builder, fence string) {
