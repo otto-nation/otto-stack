@@ -54,23 +54,24 @@ func generateConfigurationGuide() error {
 		"- To regenerate, run: task generate:docs",
 	))
 
-	sb.WriteString("# " + docs.Pages["configuration"].Heading + "\n\n")
-	sb.WriteString(docs.Pages["configuration"].Intro + "\n\n")
+	sb.WriteString("# " + docs.Pages[pageConfiguration].Heading + "\n\n")
+	sb.WriteString(docs.Pages[pageConfiguration].Intro + "\n\n")
 
 	writeFileStructureSection(&sb)
 	writeMainConfigSection(&sb, generateConfigStructure(sections))
-	writeConfigSections(&sb, sections)
+	sb.WriteString(generateConfigSections(sections))
+	sb.WriteString("\n\n")
 	writeSharingSection(&sb)
 	writeServiceConfigSection(&sb, generateServiceConfigExample(svcMap), generateCustomEnvExample(svcMap))
 	writeServiceMetadataSection(&sb)
 	writeCompleteExampleSection(&sb, generateCompleteExample(schemaNode), generateCompleteEnvExample(svcMap))
 	writeNextStepsSection(&sb)
 
-	out, err := formatDocument(pageFM("configuration"), sb.String())
+	out, err := formatDocument(pageFM(pageConfiguration), sb.String())
 	if err != nil {
 		return err
 	}
-	return writeOutput(pageOutput("configuration"), out)
+	return writeOutput(pageOutput(pageConfiguration), out)
 }
 
 func writeFileStructureSection(sb *strings.Builder) {
@@ -85,11 +86,6 @@ func writeMainConfigSection(sb *strings.Builder, configStructure string) {
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.FileLabel + "\n\n")
 	codeBlock(sb, "yaml", configStructure)
-}
-
-func writeConfigSections(sb *strings.Builder, sections []schemaSection) {
-	sb.WriteString(generateConfigSections(sections))
-	sb.WriteString("\n\n")
 }
 
 func writeSharingSection(sb *strings.Builder) {
@@ -137,7 +133,7 @@ func writeCompleteExampleSection(sb *strings.Builder, completeExample, completeE
 
 func writeNextStepsSection(sb *strings.Builder) {
 	sb.WriteString(docs.ConfigSections.NextStepsSection + "\n\n")
-	for _, link := range docs.Pages["configuration"].NextSteps {
+	for _, link := range docs.Pages[pageConfiguration].NextSteps {
 		sb.WriteString(fmt.Sprintf("- **[%s](%s)** - %s\n", link.Label, link.URL, link.Description))
 	}
 }
@@ -250,15 +246,20 @@ func buildArrayValueNode(sectionName string) *yaml.Node {
 }
 
 func generateConfigSections(sections []schemaSection) string {
-	var parts []string
-	for _, section := range sections {
-		var propLines []string
-		for _, prop := range section.properties {
-			propLines = append(propLines, fmt.Sprintf("- **%s**: %s", prop.key, prop.description))
+	var sb strings.Builder
+	for i, section := range sections {
+		if i > 0 {
+			sb.WriteString("\n\n")
 		}
-		parts = append(parts, fmt.Sprintf("### %s\n\n%s\n\n%s", titleCase(section.name), section.description, strings.Join(propLines, "\n")))
+		fmt.Fprintf(&sb, "### %s\n\n%s\n\n", titleCase(section.name), section.description)
+		for j, prop := range section.properties {
+			if j > 0 {
+				sb.WriteString("\n")
+			}
+			fmt.Fprintf(&sb, "- **%s**: %s", prop.key, prop.description)
+		}
 	}
-	return strings.Join(parts, "\n\n")
+	return sb.String()
 }
 
 func titleCase(s string) string {

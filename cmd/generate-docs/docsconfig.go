@@ -2,6 +2,15 @@ package main
 
 import "fmt"
 
+// Page name constants — keys into docs.Pages matching the entries in docs.yaml.
+const (
+	pageHomepage      = "homepage"
+	pageCLI           = "cli-reference"
+	pageServices      = "services"
+	pageConfiguration = "configuration"
+	pageContributing  = "contributing"
+)
+
 // docs is the loaded configuration from docs-site/docs.yaml.
 // It is populated by loadDocsConfig before any generator runs.
 var docs docsConfig
@@ -146,11 +155,11 @@ type exampleConfig struct {
 }
 
 var requiredPages = []string{
-	"homepage",
-	"cli-reference",
-	"services",
-	"configuration",
-	"contributing",
+	pageHomepage,
+	pageCLI,
+	pageServices,
+	pageConfiguration,
+	pageContributing,
 }
 
 func loadDocsConfig() error {

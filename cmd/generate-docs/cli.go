@@ -22,10 +22,10 @@ func generateCLIReference() error {
 	metadataNode := nodeGet(&rootNode, keyMetadata)
 	description := nodeStr(nodeGet(metadataNode, keyDescription))
 	if description == "" {
-		description = docs.Pages["cli-reference"].DefaultDescription
+		description = docs.Pages[pageCLI].DefaultDescription
 	}
 
-	page := docs.Pages["cli-reference"]
+	page := docs.Pages[pageCLI]
 	sections := docs.CLISections
 
 	var sb strings.Builder
@@ -62,11 +62,11 @@ func generateCLIReference() error {
 		sb.WriteString(renderFlagLines(globalFlagsNode))
 	}
 
-	out, err := formatDocument(pageFM("cli-reference"), sb.String())
+	out, err := formatDocument(pageFM(pageCLI), sb.String())
 	if err != nil {
 		return err
 	}
-	return writeOutput(pageOutput("cli-reference"), out)
+	return writeOutput(pageOutput(pageCLI), out)
 }
 
 func renderCommandSection(name string, cmdNode *yaml.Node) string {

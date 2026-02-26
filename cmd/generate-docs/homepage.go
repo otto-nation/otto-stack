@@ -16,11 +16,11 @@ func generateHomepage() error {
 	content := extractFromFirstHeading(string(data))
 	content = fixHomepageLinks(content)
 
-	out, err := formatDocument(pageFM("homepage"), content)
+	out, err := formatDocument(pageFM(pageHomepage), content)
 	if err != nil {
 		return err
 	}
-	return writeOutput(pageOutput("homepage"), out)
+	return writeOutput(pageOutput(pageHomepage), out)
 }
 
 // extractFromFirstHeading trims content before the first top-level heading.
