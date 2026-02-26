@@ -31,24 +31,15 @@ type loadedService struct {
 }
 
 type categoryConfig struct {
-	icon  string
-	order int
-}
-
-var categoryConfigs = map[string]categoryConfig{
-	"database":      {icon: "🗄️", order: 1},
-	"cache":         {icon: "⚡", order: 2},
-	"messaging":     {icon: "📨", order: 3},
-	"cloud":         {icon: "☁️", order: 4},
-	"observability": {icon: "🔍", order: 5},
-	"other":         {icon: "🔧", order: 99},
+	Icon  string `yaml:"icon"`
+	Order int    `yaml:"order"`
 }
 
 func getCategoryConfig(name string) categoryConfig {
-	if c, ok := categoryConfigs[name]; ok {
+	if c, ok := docs.Categories[name]; ok {
 		return c
 	}
-	return categoryConfigs["other"]
+	return docs.Categories["other"]
 }
 
 func loadAllServices() ([]loadedService, error) {
@@ -136,7 +127,7 @@ func generateServicesGuide() error {
 	for _, cat := range categories {
 		catCfg := getCategoryConfig(cat)
 		catTitle := strings.ToUpper(cat[:1]) + cat[1:]
-		sb.WriteString(fmt.Sprintf("## %s %s\n\n", catCfg.icon, catTitle))
+		sb.WriteString(fmt.Sprintf("## %s %s\n\n", catCfg.Icon, catTitle))
 
 		svcs := byCategory[cat]
 		sort.Slice(svcs, func(i, j int) bool { return svcs[i].name < svcs[j].name })
@@ -145,17 +136,11 @@ func generateServicesGuide() error {
 		}
 	}
 
-	fm := newFrontmatter(
-		"Services",
-		"Available services and configuration options",
-		"Explore all the services you can use with otto-stack",
-		30,
-	)
-	out, err := formatDocument(fm, sb.String())
+	out, err := formatDocument(pageFM("services"), sb.String())
 	if err != nil {
 		return err
 	}
-	return writeOutput("services.md", out)
+	return writeOutput(pageOutput("services"), out)
 }
 
 func groupByCategory(services []loadedService) map[string][]loadedService {
@@ -172,7 +157,7 @@ func sortedCategories(byCategory map[string][]loadedService) []string {
 		categories = append(categories, cat)
 	}
 	sort.Slice(categories, func(i, j int) bool {
-		return getCategoryConfig(categories[i]).order < getCategoryConfig(categories[j]).order
+		return getCategoryConfig(categories[i]).Order < getCategoryConfig(categories[j]).Order
 	})
 	return categories
 }

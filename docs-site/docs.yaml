@@ -1,0 +1,87 @@
+# docs.yaml — documentation generator configuration
+#
+# This file is the single source of truth for:
+#   - Page frontmatter (title, description, lead, weight) for each generated page
+#   - Service category display configuration (icon, sort order)
+#   - Example values used in generated code samples
+#
+# Run `task generate:docs` after making changes.
+
+pages:
+  homepage:
+    output: _index.md
+    title: otto-stack
+    description: A powerful development stack management tool built in Go for streamlined local development automation
+    lead: Streamline your local development with powerful CLI tools and automated service management
+    weight: 50
+
+  cli-reference:
+    output: cli-reference.md
+    title: CLI Reference
+    description: Complete command reference for otto-stack CLI
+    lead: Comprehensive reference for all otto-stack CLI commands and their usage
+    weight: 50
+
+  services:
+    output: services.md
+    title: Services
+    description: Available services and configuration options
+    lead: Explore all the services you can use with otto-stack
+    weight: 30
+
+  configuration:
+    output: configuration.md
+    title: Configuration Guide
+    description: Configure your otto-stack development environment
+    lead: Learn how to configure your development stack
+    weight: 25
+
+  contributing:
+    output: contributing.md
+    title: Contributing
+    description: Guide for contributing to otto-stack development
+    lead: Learn how to contribute to otto-stack development
+    weight: 60
+
+categories:
+  database:
+    icon: "🗄️"
+    order: 1
+  cache:
+    icon: "⚡"
+    order: 2
+  messaging:
+    icon: "📨"
+    order: 3
+  cloud:
+    icon: "☁️"
+    order: 4
+  observability:
+    icon: "🔍"
+    order: 5
+  other:
+    icon: "🔧"
+    order: 99
+
+examples:
+  # Values injected into generated configuration guide code samples.
+  project_name: my-app
+  fullstack_project_name: my-fullstack-app
+  project_type: docker
+
+  # Services shown in the basic config structure example.
+  services:
+    - postgres
+    - redis
+
+  # Services shown in the complete config example (more comprehensive).
+  complete_services:
+    - postgres
+    - redis
+    - kafka
+
+  # Maximum env vars shown per service in the full .env.generated example.
+  env_var_display_limit: 4
+
+  # Maximum env vars shown per service in customization/override examples.
+  custom_env_display_limit: 2

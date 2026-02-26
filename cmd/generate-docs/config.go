@@ -2,23 +2,10 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
-)
-
-// Example values used in the generated configuration guide.
-const (
-	exampleProjectName          = "my-app"
-	exampleFullstackProjectName = "my-fullstack-app"
-	exampleProjectType          = "docker"
-
-	// envVarDisplayLimit is the number of env vars shown in the full service config example.
-	envVarDisplayLimit = 4
-	// customEnvDisplayLimit is the number of env vars shown in customization examples.
-	customEnvDisplayLimit = 2
 )
 
 // Schema section name constants used for conditional example generation.
@@ -26,12 +13,6 @@ const (
 	schemaSectionProject = "project"
 	schemaSectionStack   = "stack"
 	schemaPropName       = "name"
-)
-
-// Example services used in config examples (order matters for readability).
-var (
-	exampleServices         = []string{"postgres", "redis"}
-	completeExampleServices = []string{"postgres", "redis", "kafka"}
 )
 
 // schemaSection holds an ordered set of properties parsed from schema.yaml.
@@ -64,13 +45,7 @@ func generateConfigurationGuide() error {
 	schemaNode := nodeGet(&schemaRoot, keySchema)
 	sections := extractSchemaSections(schemaNode)
 
-	fm := newFrontmatter(
-		"Configuration Guide",
-		"Configure your otto-stack development environment",
-		"Learn how to configure your development stack",
-		25,
-	)
-	fmBytes, err := yaml.Marshal(fm)
+	fmBytes, err := yaml.Marshal(pageFM("configuration"))
 	if err != nil {
 		return err
 	}
@@ -101,7 +76,7 @@ func generateConfigurationGuide() error {
 	writeCompleteExampleSection(&sb, fence, generateCompleteExample(schemaNode), generateCompleteEnvExample(svcMap))
 	writeNextStepsSection(&sb)
 
-	return writeOutput("configuration.md", sb.String())
+	return writeOutput(pageOutput("configuration"), sb.String())
 }
 
 func writeFileStructureSection(sb *strings.Builder, fence string) {
@@ -294,7 +269,7 @@ func buildSectionPropValueNode(sectionName string, prop *schemaSectionProp) *yam
 
 func buildStringValueNode(sectionName string, prop *schemaSectionProp) *yaml.Node {
 	if sectionName == schemaSectionProject && prop.key == schemaPropName {
-		return &yaml.Node{Kind: yaml.ScalarNode, Value: exampleProjectName}
+		return &yaml.Node{Kind: yaml.ScalarNode, Value: docs.Examples.ProjectName}
 	}
 	if prop.defaultVal != "" && !prop.isTemplate {
 		return &yaml.Node{Kind: yaml.ScalarNode, Value: prop.defaultVal}
@@ -305,7 +280,7 @@ func buildStringValueNode(sectionName string, prop *schemaSectionProp) *yaml.Nod
 func buildArrayValueNode(sectionName string) *yaml.Node {
 	seq := &yaml.Node{Kind: yaml.SequenceNode}
 	if sectionName == schemaSectionStack {
-		for _, s := range exampleServices {
+		for _, s := range docs.Examples.Services {
 			seq.Content = append(seq.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: s})
 		}
 	}
@@ -374,21 +349,21 @@ func envExample(
 }
 
 func generateServiceConfigExample(svcMap map[string]loadedService) string {
-	return envExample(svcMap, completeExampleServices, envVarDisplayLimit,
+	return envExample(svcMap, docs.Examples.CompleteServices, docs.Examples.EnvVarDisplayLimit,
 		strings.ToUpper,
 		func(svc loadedService, k string) string { return svc.config.Environment[k] },
 	)
 }
 
 func generateCustomEnvExample(svcMap map[string]loadedService) string {
-	return envExample(svcMap, exampleServices, customEnvDisplayLimit,
+	return envExample(svcMap, docs.Examples.Services, docs.Examples.CustomEnvDisplayLimit,
 		func(s string) string { return strings.ToUpper(s[:1]) + s[1:] },
 		func(_ loadedService, _ string) string { return "my_custom_value" },
 	)
 }
 
 func generateCompleteEnvExample(svcMap map[string]loadedService) string {
-	return envExample(svcMap, exampleServices, customEnvDisplayLimit,
+	return envExample(svcMap, docs.Examples.Services, docs.Examples.CustomEnvDisplayLimit,
 		func(s string) string { return strings.ToUpper(s[:1]) + s[1:] },
 		func(_ loadedService, _ string) string { return "production_value" },
 	)
@@ -416,9 +391,9 @@ func buildCompleteExampleMapping(schemaNode *yaml.Node) *yaml.Node {
 func projectExampleNodes() []*yaml.Node {
 	projectMapping := &yaml.Node{Kind: yaml.MappingNode, Content: []*yaml.Node{
 		{Kind: yaml.ScalarNode, Value: keyName},
-		{Kind: yaml.ScalarNode, Value: exampleFullstackProjectName},
+		{Kind: yaml.ScalarNode, Value: docs.Examples.FullstackProjectName},
 		{Kind: yaml.ScalarNode, Value: keyType},
-		{Kind: yaml.ScalarNode, Value: exampleProjectType},
+		{Kind: yaml.ScalarNode, Value: docs.Examples.ProjectType},
 	}}
 	return []*yaml.Node{
 		{Kind: yaml.ScalarNode, Value: schemaSectionProject},
@@ -428,7 +403,7 @@ func projectExampleNodes() []*yaml.Node {
 
 func stackExampleNodes() []*yaml.Node {
 	stackSeq := &yaml.Node{Kind: yaml.SequenceNode}
-	for _, s := range completeExampleServices {
+	for _, s := range docs.Examples.CompleteServices {
 		stackSeq.Content = append(stackSeq.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: s})
 	}
 	stackMapping := &yaml.Node{Kind: yaml.MappingNode, Content: []*yaml.Node{
@@ -456,16 +431,4 @@ func validationExampleNodes() []*yaml.Node {
 		{Kind: yaml.ScalarNode, Value: keyValidation},
 		validationMapping,
 	}
-}
-
-// loadYAML reads a YAML file and unmarshals it into the given node.
-func loadYAML(path string, out *yaml.Node) error {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return fmt.Errorf("read %s: %w", path, err)
-	}
-	if err := yaml.Unmarshal(data, out); err != nil {
-		return fmt.Errorf("parse %s: %w", path, err)
-	}
-	return nil
 }

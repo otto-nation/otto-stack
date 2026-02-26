@@ -122,7 +122,8 @@ tasks:
       - "internal/config/schema.yaml"
       - "internal/config/commands.yaml"
       - "internal/config/services/**/*.yaml"
-      - "cmd/generate-docs/main.go"
+      - "docs-site/docs.yaml"
+      - "cmd/generate-docs/*.go"
     generates:
       - "docs-site/content/_index.md"
       - "docs-site/content/cli-reference.md"

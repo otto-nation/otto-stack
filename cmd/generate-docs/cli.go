@@ -58,17 +58,11 @@ func generateCLIReference() error {
 		sb.WriteString(renderFlagLines(globalFlagsNode))
 	}
 
-	fm := newFrontmatter(
-		"CLI Reference",
-		"Complete command reference for otto-stack CLI",
-		"Comprehensive reference for all otto-stack CLI commands and their usage",
-		50,
-	)
-	out, err := formatDocument(fm, sb.String())
+	out, err := formatDocument(pageFM("cli-reference"), sb.String())
 	if err != nil {
 		return err
 	}
-	return writeOutput("cli-reference.md", out)
+	return writeOutput(pageOutput("cli-reference"), out)
 }
 
 func renderCommandSection(name string, cmdNode *yaml.Node) string {

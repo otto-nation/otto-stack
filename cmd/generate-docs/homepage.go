@@ -5,8 +5,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-
-	"gopkg.in/yaml.v3"
 )
 
 func generateHomepage() error {
@@ -18,22 +16,11 @@ func generateHomepage() error {
 	content := extractFromFirstHeading(string(data))
 	content = fixHomepageLinks(content)
 
-	fm := frontmatter{
-		Title:       "otto-stack",
-		Description: "A powerful development stack management tool built in Go for streamlined local development automation",
-		Lead:        "Streamline your local development with powerful CLI tools and automated service management",
-		Date:        staticDate,
-		Lastmod:     today(),
-		Draft:       false,
-		Weight:      50,
-		Toc:         true,
-	}
-	fmBytes, err := yaml.Marshal(fm)
+	out, err := formatDocument(pageFM("homepage"), content)
 	if err != nil {
 		return err
 	}
-	out := fmt.Sprintf("---\n%s---\n\n%s", fmBytes, content)
-	return writeOutput("_index.md", out)
+	return writeOutput(pageOutput("homepage"), out)
 }
 
 // extractFromFirstHeading trims content before the first top-level heading.

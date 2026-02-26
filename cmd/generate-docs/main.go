@@ -5,17 +5,32 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
 	commandsYAMLPath = "internal/config/commands.yaml"
 	schemaYAMLPath   = "internal/config/schema.yaml"
 	servicesDirPath  = "internal/config/services"
+	docsConfigPath   = "docs-site/docs.yaml"
 	contributingPath = "CONTRIBUTING.md"
 	readmePath       = "README.md"
 	outputDirPath    = "docs-site/content"
 	staticDate       = "2025-10-01"
 )
+
+// loadYAML reads path and unmarshals its contents into out.
+func loadYAML(path string, out any) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", path, err)
+	}
+	if err := yaml.Unmarshal(data, out); err != nil {
+		return fmt.Errorf("parse %s: %w", path, err)
+	}
+	return nil
+}
 
 func writeOutput(filename, content string) error {
 	outPath := filepath.Join(outputDirPath, filename)
@@ -32,6 +47,11 @@ func writeOutput(filename, content string) error {
 func main() {
 	generatorFlag := flag.String("generator", "", "Run a specific generator by name")
 	flag.Parse()
+
+	if err := loadDocsConfig(); err != nil {
+		fmt.Fprintf(os.Stderr, "load docs.yaml: %v\n", err)
+		os.Exit(1)
+	}
 
 	type generatorFn struct {
 		name string
