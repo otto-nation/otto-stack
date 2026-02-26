@@ -58,7 +58,7 @@ advanced:
   pull_latest_images: false
   cleanup_on_recreate: false
 version_config:
-  required_version: ">=1.0.0"
+  required_version: '>=1.0.0'
 ```
 
 ### Project
@@ -104,7 +104,6 @@ Version management and update settings
 ### Sharing Configuration Details
 
 When sharing is enabled:
-
 1. Containers are prefixed with `otto-stack-` (e.g., `otto-stack-redis`)
 2. A registry at `~/.otto-stack/shared/containers.yaml` tracks which projects use each shared container
 3. The `down` command prompts before stopping shared containers used by other projects

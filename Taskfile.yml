@@ -116,15 +116,13 @@ tasks:
 
   generate:docs:
     desc: "Generate documentation"
-    deps: [setup:npm]
     sources:
       - "README.md"
       - "CONTRIBUTING.md"
       - "internal/config/schema.yaml"
       - "internal/config/commands.yaml"
       - "internal/config/services/**/*.yaml"
-      - "docs-site/generators/**/*.js"
-      - "docs-site/templates/**/*.md"
+      - "cmd/generate-docs/main.go"
     generates:
       - "docs-site/content/_index.md"
       - "docs-site/content/cli-reference.md"
@@ -133,7 +131,7 @@ tasks:
       - "docs-site/content/services.md"
     silent: true
     cmds:
-      - cd docs-site && npm run docs:generate --silent
+      - go run ./cmd/generate-docs
 
   # ============================================================================
   # BUILD
@@ -544,8 +542,6 @@ tasks:
     sources:
       - "docs-site/content/**/*.md"
       - "docs-site/config/**/*"
-      - "docs-site/generators/**/*.js"
-      - "docs-site/templates/**/*.md"
     silent: true
     cmds:
       - cd docs-site && hugo --gc --minify --destination public-test
@@ -597,7 +593,7 @@ tasks:
     deps: [generate:docs]
     silent: true
     cmds:
-      - cd docs-site && npm run docs:serve
+      - cd docs-site && hugo server --disableFastRender --noHTTPCache
 
   # ============================================================================
   # DOCKER

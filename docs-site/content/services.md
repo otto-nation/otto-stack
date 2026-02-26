@@ -54,6 +54,7 @@ Additional databases to create
 
 - **name** (`string`)
 
+
 #### users
 
 Additional users to create
@@ -67,6 +68,8 @@ Additional users to create
 - **password** (`string`)
 
 - **database** (`string`)
+
+
 
 ##### Example Configuration
 
@@ -119,6 +122,7 @@ Database user
 - Type: `string`
 - Default: `postgres`
 
+
 ##### Example Configuration
 
 ```yaml
@@ -168,6 +172,7 @@ Number of databases
 - Type: `integer`
 - Default: `16`
 
+
 ##### Example Configuration
 
 ```yaml
@@ -212,6 +217,8 @@ Kafka topics to create
 
 - **replication_factor** (`integer`) = `1`: Replication factor
 
+
+
 ##### Example Configuration
 
 ```yaml
@@ -254,6 +261,8 @@ Kafka topics to create on startup
 - **partitions** (`integer`) = `3`: Number of partitions
 
 - **replication_factor** (`integer`) = `1`: Replication factor
+
+
 
 ##### Example Configuration
 
@@ -334,6 +343,8 @@ DynamoDB tables to create
 
 - **write_capacity** (`integer`) = `5`: Write capacity units
 
+
+
 ##### Example Configuration
 
 ```yaml
@@ -373,9 +384,11 @@ S3 buckets to create
 
 - **name** (`string`): Bucket name
 
-- **versioning** (`boolean`): Enable versioning
+- **versioning** (`boolean`) = `false`: Enable versioning
 
-- **public_read** (`boolean`): Allow public read access
+- **public_read** (`boolean`) = `false`: Allow public read access
+
+
 
 ##### Example Configuration
 
@@ -416,6 +429,8 @@ SNS topics to create
 
 - **subscriptions** (`array`): Topic subscriptions
 
+
+
 ##### Example Configuration
 
 ```yaml
@@ -453,11 +468,13 @@ SQS queues to create
 
 - **visibility_timeout** (`integer`) = `30`: Message visibility timeout in seconds
 
-- **dead_letter_queue** (`boolean`): Enable dead letter queue (creates {name}-dlq)
+- **dead_letter_queue** (`boolean`) = `false`: Enable dead letter queue (creates {name}-dlq)
 
 - **max_receive_count** (`integer`) = `3`: Max receive count before moving to DLQ
 
-- **subscription** (`object`) _required_
+- **subscription** (`object`)
+
+
 
 ##### Example Configuration
 
@@ -499,6 +516,7 @@ Jaeger sampling configuration
 
 - **max_traces_per_second** (`integer`) = `100`: Maximum traces per second
 
+
 #### storage
 
 Storage configuration
@@ -508,6 +526,8 @@ Storage configuration
 **Properties:**
 
 - **type** (`string`) = `memory`: Storage backend type
+
+
 
 ##### Example Configuration
 
@@ -551,6 +571,8 @@ Prometheus scrape configurations
 
 - **scrape_interval** (`string`) = `15s`: Scrape interval
 
+
+
 ##### Example Configuration
 
 ```yaml
@@ -568,3 +590,4 @@ scrape_configs:
 - Alerting and notifications
 
 ---
+

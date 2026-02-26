@@ -1,8 +1,6 @@
 title = "otto-stack"
 baseURL = "https://otto-nation.github.io/otto-stack/"
 languageCode = "en-US"
-theme = "doks"
-
 # Content directory - use content folder
 contentDir = "content"
 

@@ -52,7 +52,6 @@ Information and development tools
 Start development stack services
 
 Start one or more services in the development stack. The command is context-aware:
-
 - **In a project directory**: Starts project services (including shared containers)
 - **Outside a project**: Starts only shared containers (requires service names)
 
@@ -110,7 +109,6 @@ Build images and start services in background
 Stop development stack services
 
 Stop one or more services in the development stack. The command is context-aware:
-
 - **In a project directory**: Stops project services, prompts before stopping shared containers
 - **Outside a project**: Stops shared containers (requires service names)
 - **With --shared flag**: Stops all shared containers from any location
@@ -218,7 +216,6 @@ Restart with custom timeout
 Show status of development stack services
 
 Display comprehensive status information for services. The command is context-aware:
-
 - **In a project directory**: Shows project services status
 - **Outside a project**: Use --all or --shared flag to see shared containers
 - **Specific project**: Use --project flag to see what a project uses
@@ -669,3 +666,4 @@ Check for available updates
 - `--full` (`bool`): Show detailed version information (default: `false`)
 - `--check-updates` (`bool`): Check for available updates (default: `false`)
 - `--format` (`string`): Output format (text, json, yaml) (default: `text`)
+
