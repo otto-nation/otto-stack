@@ -90,8 +90,8 @@ cd ~/workbench && ./install.sh
 Then use from any project:
 ```bash
 task --global commit      # AI-generated commit messages
-task --global create-pr   # AI-generated pull requests
-task --global update-pr   # Update PR descriptions
+task --global pr:create   # AI-generated pull requests
+task --global pr:update   # Update PR descriptions
 ```
 
 **otto-workbench** also provides shell aliases, development utilities, and AWS/Kubernetes helpers.
