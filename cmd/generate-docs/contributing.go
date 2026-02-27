@@ -11,9 +11,5 @@ func generateContributingGuide() error {
 		return fmt.Errorf("read CONTRIBUTING.md: %w", err)
 	}
 
-	out, err := formatDocument(pageFM(pageContributing), string(data))
-	if err != nil {
-		return err
-	}
-	return writeOutput(pageOutput(pageContributing), out)
+	return writePage(pageContributing, string(data))
 }

@@ -23,18 +23,14 @@ func generateServicesGuide() error {
 		categoriesSection(byCategory, categories),
 	}, "")
 
-	out, err := formatDocument(pageFM(pageServices), content)
-	if err != nil {
-		return err
-	}
-	return writeOutput(pageOutput(pageServices), out)
+	return writePage(pageServices, content)
 }
 
 func categoriesSection(byCategory map[string][]loadedService, categories []string) string {
 	var sb strings.Builder
 	for _, cat := range categories {
 		catCfg := getCategoryConfig(cat)
-		catTitle := strings.ToUpper(cat[:1]) + cat[1:]
+		catTitle := capitalizeFirst(cat)
 		fmt.Fprintf(&sb, "## %s %s\n\n", catCfg.Icon, catTitle)
 
 		svcs := byCategory[cat]

@@ -63,11 +63,7 @@ func generateConfigurationGuide() error {
 		nextStepsSection(),
 	}, "")
 
-	out, err := formatDocument(pageFM(pageConfiguration), content)
-	if err != nil {
-		return err
-	}
-	return writeOutput(pageOutput(pageConfiguration), out)
+	return writePage(pageConfiguration, content)
 }
 
 func fileStructureSection() string {
@@ -128,16 +124,12 @@ func nextStepsSection() string {
 }
 
 func extractSchemaSections(schemaNode *yaml.Node) []schemaSection {
-	if schemaNode == nil {
-		return nil
-	}
 	var sections []schemaSection
-	for i := 0; i+1 < len(schemaNode.Content); i += 2 {
-		section, ok := extractSchemaSection(schemaNode.Content[i].Value, schemaNode.Content[i+1])
-		if ok {
+	eachEntry(schemaNode, func(key string, val *yaml.Node) {
+		if section, ok := extractSchemaSection(key, val); ok {
 			sections = append(sections, section)
 		}
-	}
+	})
 	return sections
 }
 
@@ -148,21 +140,20 @@ func extractSchemaSection(name string, sectionNode *yaml.Node) (schemaSection, b
 	}
 	section := schemaSection{
 		name:        name,
-		description: nodeStr(nodeGet(sectionNode, keyDescription)),
+		description: nodeGetStr(sectionNode, keyDescription),
 	}
-	for j := 0; j+1 < len(propsNode.Content); j += 2 {
-		section.properties = append(section.properties,
-			extractSchemaProp(propsNode.Content[j].Value, propsNode.Content[j+1]))
-	}
+	eachEntry(propsNode, func(key string, val *yaml.Node) {
+		section.properties = append(section.properties, extractSchemaProp(key, val))
+	})
 	return section, true
 }
 
 func extractSchemaProp(key string, propNode *yaml.Node) *schemaSectionProp {
-	defaultVal := nodeStr(nodeGet(propNode, keyDefault))
+	defaultVal := nodeGetStr(propNode, keyDefault)
 	return &schemaSectionProp{
 		key:         key,
-		propType:    nodeStr(nodeGet(propNode, keyType)),
-		description: nodeStr(nodeGet(propNode, keyDescription)),
+		propType:    nodeGetStr(propNode, keyType),
+		description: nodeGetStr(propNode, keyDescription),
 		defaultVal:  defaultVal,
 		isTemplate:  strings.HasPrefix(defaultVal, "{{"),
 	}
@@ -175,10 +166,7 @@ func generateConfigStructure(sections []schemaSection) string {
 		if len(sectionMapping.Content) == 0 {
 			continue
 		}
-		mapping.Content = append(mapping.Content,
-			&yaml.Node{Kind: yaml.ScalarNode, Value: section.name},
-			sectionMapping,
-		)
+		appendMappingEntry(mapping, section.name, sectionMapping)
 	}
 	result, err := marshalYAML(mapping)
 	if err != nil {
@@ -195,10 +183,7 @@ func buildSectionMapping(section schemaSection) *yaml.Node {
 		if valNode == nil {
 			continue
 		}
-		mapping.Content = append(mapping.Content,
-			&yaml.Node{Kind: yaml.ScalarNode, Value: prop.key},
-			valNode,
-		)
+		appendMappingEntry(mapping, prop.key, valNode)
 	}
 	return mapping
 }
@@ -210,26 +195,26 @@ func buildSectionPropValueNode(sectionName string, prop *schemaSectionProp) *yam
 	case "array":
 		return buildArrayValueNode(sectionName)
 	case "boolean":
-		return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: "false"}
+		return taggedScalarNode("!!bool", "false")
 	}
 	return nil
 }
 
 func buildStringValueNode(sectionName string, prop *schemaSectionProp) *yaml.Node {
 	if sectionName == schemaSectionProject && prop.key == schemaPropName {
-		return &yaml.Node{Kind: yaml.ScalarNode, Value: docs.Examples.ProjectName}
+		return scalarNode(docs.Examples.ProjectName)
 	}
 	if prop.defaultVal != "" && !prop.isTemplate {
-		return &yaml.Node{Kind: yaml.ScalarNode, Value: prop.defaultVal}
+		return scalarNode(prop.defaultVal)
 	}
-	return &yaml.Node{Kind: yaml.ScalarNode, Value: ""}
+	return scalarNode("")
 }
 
 func buildArrayValueNode(sectionName string) *yaml.Node {
 	seq := &yaml.Node{Kind: yaml.SequenceNode}
 	if sectionName == schemaSectionStack {
 		for _, s := range docs.Examples.Services {
-			seq.Content = append(seq.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: s})
+			seq.Content = append(seq.Content, scalarNode(s))
 		}
 	}
 	return seq
@@ -273,11 +258,6 @@ func sortedEnvKeys(env map[string]string) []string {
 	return keys
 }
 
-// titleLabel capitalises the first letter of s, used as an env var comment header.
-func titleLabel(s string) string {
-	return strings.ToUpper(s[:1]) + s[1:]
-}
-
 // envExample builds a block of env var lines from the named services.
 // limit caps the number of vars shown per service.
 // label formats the service name for the comment header.
@@ -318,14 +298,14 @@ func generateServiceConfigExample(svcMap map[string]loadedService) string {
 
 func generateCustomEnvExample(svcMap map[string]loadedService) string {
 	return envExample(svcMap, docs.Examples.Services, docs.Examples.CustomEnvDisplayLimit,
-		titleLabel,
+		capitalizeFirst,
 		func(_ loadedService, _ string) string { return docs.Examples.CustomEnvValue },
 	)
 }
 
 func generateCompleteEnvExample(svcMap map[string]loadedService) string {
 	return envExample(svcMap, docs.Examples.Services, docs.Examples.CustomEnvDisplayLimit,
-		titleLabel,
+		capitalizeFirst,
 		func(_ loadedService, _ string) string { return docs.Examples.CompleteEnvValue },
 	)
 }
@@ -351,46 +331,27 @@ func buildCompleteExampleMapping(schemaNode *yaml.Node) *yaml.Node {
 }
 
 func projectExampleNodes() []*yaml.Node {
-	projectMapping := &yaml.Node{Kind: yaml.MappingNode, Content: []*yaml.Node{
-		{Kind: yaml.ScalarNode, Value: keyName},
-		{Kind: yaml.ScalarNode, Value: docs.Examples.FullstackProjectName},
-		{Kind: yaml.ScalarNode, Value: keyType},
-		{Kind: yaml.ScalarNode, Value: docs.Examples.ProjectType},
-	}}
-	return []*yaml.Node{
-		{Kind: yaml.ScalarNode, Value: schemaSectionProject},
-		projectMapping,
-	}
+	projectMapping := &yaml.Node{Kind: yaml.MappingNode}
+	appendMappingEntry(projectMapping, keyName, scalarNode(docs.Examples.FullstackProjectName))
+	appendMappingEntry(projectMapping, keyType, scalarNode(docs.Examples.ProjectType))
+	return []*yaml.Node{scalarNode(schemaSectionProject), projectMapping}
 }
 
 func stackExampleNodes() []*yaml.Node {
 	stackSeq := &yaml.Node{Kind: yaml.SequenceNode}
 	for _, s := range docs.Examples.CompleteServices {
-		stackSeq.Content = append(stackSeq.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: s})
+		stackSeq.Content = append(stackSeq.Content, scalarNode(s))
 	}
-	stackMapping := &yaml.Node{Kind: yaml.MappingNode, Content: []*yaml.Node{
-		{Kind: yaml.ScalarNode, Value: "enabled"},
-		stackSeq,
-	}}
-	return []*yaml.Node{
-		{Kind: yaml.ScalarNode, Value: schemaSectionStack},
-		stackMapping,
-	}
+	stackMapping := &yaml.Node{Kind: yaml.MappingNode}
+	appendMappingEntry(stackMapping, "enabled", stackSeq)
+	return []*yaml.Node{scalarNode(schemaSectionStack), stackMapping}
 }
 
 func validationExampleNodes() []*yaml.Node {
-	optionsMapping := &yaml.Node{Kind: yaml.MappingNode, Content: []*yaml.Node{
-		{Kind: yaml.ScalarNode, Value: "config-syntax"},
-		{Kind: yaml.ScalarNode, Tag: "!!bool", Value: "true"},
-		{Kind: yaml.ScalarNode, Value: "docker"},
-		{Kind: yaml.ScalarNode, Tag: "!!bool", Value: "true"},
-	}}
-	validationMapping := &yaml.Node{Kind: yaml.MappingNode, Content: []*yaml.Node{
-		{Kind: yaml.ScalarNode, Value: "options"},
-		optionsMapping,
-	}}
-	return []*yaml.Node{
-		{Kind: yaml.ScalarNode, Value: keyValidation},
-		validationMapping,
-	}
+	optionsMapping := &yaml.Node{Kind: yaml.MappingNode}
+	appendMappingEntry(optionsMapping, "config-syntax", taggedScalarNode("!!bool", "true"))
+	appendMappingEntry(optionsMapping, "docker", taggedScalarNode("!!bool", "true"))
+	validationMapping := &yaml.Node{Kind: yaml.MappingNode}
+	appendMappingEntry(validationMapping, "options", optionsMapping)
+	return []*yaml.Node{scalarNode(keyValidation), validationMapping}
 }

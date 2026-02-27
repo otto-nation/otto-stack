@@ -19,32 +19,22 @@ type schemaItems struct {
 
 // extractSchemaFields extracts ordered fields from a configuration_schema node.
 func extractSchemaFields(schemaNode *yaml.Node) []*schemaField {
-	if schemaNode == nil {
-		return nil
-	}
-	propsNode := nodeGet(schemaNode, keyProperties)
-	if propsNode == nil || propsNode.Kind != yaml.MappingNode {
-		return nil
-	}
-	return extractPropertiesNode(propsNode)
+	return extractPropertiesNode(nodeGet(schemaNode, keyProperties))
 }
 
 func extractPropertiesNode(propsNode *yaml.Node) []*schemaField {
-	if propsNode == nil || propsNode.Kind != yaml.MappingNode {
-		return nil
-	}
 	var fields []*schemaField
-	for i := 0; i+1 < len(propsNode.Content); i += 2 {
-		fields = append(fields, extractField(propsNode.Content[i].Value, propsNode.Content[i+1]))
-	}
+	eachEntry(propsNode, func(key string, val *yaml.Node) {
+		fields = append(fields, extractField(key, val))
+	})
 	return fields
 }
 
 func extractField(name string, valNode *yaml.Node) *schemaField {
 	field := &schemaField{
 		Name:        name,
-		Type:        nodeStr(nodeGet(valNode, keyType)),
-		Description: nodeStr(nodeGet(valNode, keyDescription)),
+		Type:        nodeGetStr(valNode, keyType),
+		Description: nodeGetStr(valNode, keyDescription),
 		Default:     nodeGet(valNode, keyDefault),
 	}
 	if reqNode := nodeGet(valNode, keyRequired); reqNode != nil {
@@ -52,7 +42,7 @@ func extractField(name string, valNode *yaml.Node) *schemaField {
 	}
 	if itemsNode := nodeGet(valNode, keyItems); itemsNode != nil {
 		field.Items = &schemaItems{
-			Type:       nodeStr(nodeGet(itemsNode, keyType)),
+			Type:       nodeGetStr(itemsNode, keyType),
 			Properties: extractPropertiesNode(nodeGet(itemsNode, keyProperties)),
 		}
 	}
@@ -70,10 +60,7 @@ func buildExamplesNode(fields []*schemaField) *yaml.Node {
 		if valNode == nil {
 			continue
 		}
-		mapping.Content = append(mapping.Content,
-			&yaml.Node{Kind: yaml.ScalarNode, Value: f.Name},
-			valNode,
-		)
+		appendMappingEntry(mapping, f.Name, valNode)
 	}
 	if len(mapping.Content) == 0 {
 		return nil
@@ -85,15 +72,15 @@ func buildFieldExampleNode(f *schemaField) *yaml.Node {
 	switch f.Type {
 	case "string":
 		if f.Default != nil && f.Default.Value != "" {
-			return &yaml.Node{Kind: yaml.ScalarNode, Value: f.Default.Value}
+			return scalarNode(f.Default.Value)
 		}
 	case "integer":
 		if f.Default != nil {
-			return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!int", Value: f.Default.Value}
+			return taggedScalarNode("!!int", f.Default.Value)
 		}
 	case "boolean":
 		if f.Default != nil {
-			return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: f.Default.Value}
+			return taggedScalarNode("!!bool", f.Default.Value)
 		}
 	case "array":
 		if f.Items != nil {
@@ -129,25 +116,22 @@ func buildObjectExampleNode(props []*schemaField) *yaml.Node {
 		if valNode == nil {
 			continue
 		}
-		mapping.Content = append(mapping.Content,
-			&yaml.Node{Kind: yaml.ScalarNode, Value: p.Name},
-			valNode,
-		)
+		appendMappingEntry(mapping, p.Name, valNode)
 	}
 	return mapping
 }
 
 func buildObjectPropNode(p *schemaField) *yaml.Node {
 	if p.Default != nil {
-		return &yaml.Node{Kind: yaml.ScalarNode, Tag: p.Default.Tag, Value: p.Default.Value}
+		return taggedScalarNode(p.Default.Tag, p.Default.Value)
 	}
 	switch p.Type {
 	case "string":
-		return &yaml.Node{Kind: yaml.ScalarNode, Value: "example-" + p.Name}
+		return scalarNode("example-" + p.Name)
 	case "integer":
-		return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!int", Value: "1"}
+		return taggedScalarNode("!!int", "1")
 	case "boolean":
-		return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!bool", Value: "true"}
+		return taggedScalarNode("!!bool", "true")
 	}
 	return nil
 }

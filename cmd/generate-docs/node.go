@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -59,15 +60,50 @@ func nodeGet(n *yaml.Node, key string) *yaml.Node {
 
 // nodeKeys returns the keys of a mapping node in document order.
 func nodeKeys(n *yaml.Node) []string {
+	var keys []string
+	eachEntry(n, func(key string, _ *yaml.Node) {
+		keys = append(keys, key)
+	})
+	return keys
+}
+
+// nodeGetStr returns the string value of key in a mapping node.
+func nodeGetStr(n *yaml.Node, key string) string {
+	return nodeStr(nodeGet(n, key))
+}
+
+// eachEntry calls f for each key-value pair in a mapping node, in document order.
+func eachEntry(n *yaml.Node, f func(key string, val *yaml.Node)) {
 	n = nodeDoc(n)
 	if n == nil || n.Kind != yaml.MappingNode {
-		return nil
+		return
 	}
-	keys := make([]string, 0, len(n.Content)/2)
-	for i := 0; i < len(n.Content); i += 2 {
-		keys = append(keys, n.Content[i].Value)
+	for i := 0; i+1 < len(n.Content); i += 2 {
+		f(n.Content[i].Value, n.Content[i+1])
 	}
-	return keys
+}
+
+// appendMappingEntry appends a key-value pair to a YAML mapping node.
+func appendMappingEntry(m *yaml.Node, key string, val *yaml.Node) {
+	m.Content = append(m.Content, scalarNode(key), val)
+}
+
+// scalarNode returns a YAML scalar node with the given value.
+func scalarNode(value string) *yaml.Node {
+	return &yaml.Node{Kind: yaml.ScalarNode, Value: value}
+}
+
+// taggedScalarNode returns a YAML scalar node with the given tag and value.
+func taggedScalarNode(tag, value string) *yaml.Node {
+	return &yaml.Node{Kind: yaml.ScalarNode, Tag: tag, Value: value}
+}
+
+// capitalizeFirst uppercases the first character of s.
+func capitalizeFirst(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
 }
 
 // nodeStr returns the string value of a scalar node.

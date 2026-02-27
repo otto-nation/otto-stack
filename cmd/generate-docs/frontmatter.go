@@ -56,6 +56,15 @@ func htmlComment(lines ...string) string {
 	return sb.String()
 }
 
+// writePage formats content with frontmatter for the named page and writes it to disk.
+func writePage(pageID, content string) error {
+	out, err := formatDocument(pageFM(pageID), content)
+	if err != nil {
+		return err
+	}
+	return writeOutput(pageOutput(pageID), out)
+}
+
 // codeBlock returns content inside a fenced code block with the given language specifier.
 // content is trimmed of trailing newlines so the closing fence is always on its own line.
 func codeBlock(lang, content string) string {

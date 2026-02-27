@@ -20,7 +20,7 @@ func generateCLIReference() error {
 	}
 
 	metadataNode := nodeGet(&rootNode, keyMetadata)
-	description := nodeStr(nodeGet(metadataNode, keyDescription))
+	description := nodeGetStr(metadataNode, keyDescription)
 	if description == "" {
 		description = docs.Pages[pageCLI].DefaultDescription
 	}
@@ -38,11 +38,7 @@ func generateCLIReference() error {
 		globalFlagsSection(nodeGet(&rootNode, keyGlobalFlags)),
 	}, "")
 
-	out, err := formatDocument(pageFM(pageCLI), content)
-	if err != nil {
-		return err
-	}
-	return writeOutput(pageOutput(pageCLI), out)
+	return writePage(pageCLI, content)
 }
 
 func commandCategoriesSection(categoriesNode *yaml.Node) string {
@@ -50,9 +46,9 @@ func commandCategoriesSection(categoriesNode *yaml.Node) string {
 	sb.WriteString(docs.CLISections.CommandCategories + "\n\n")
 	for _, catKey := range nodeKeys(categoriesNode) {
 		catNode := nodeGet(categoriesNode, catKey)
-		icon := nodeStr(nodeGet(catNode, keyIcon))
-		name := nodeStr(nodeGet(catNode, keyName))
-		desc := nodeStr(nodeGet(catNode, keyDescription))
+		icon := nodeGetStr(catNode, keyIcon)
+		name := nodeGetStr(catNode, keyName)
+		desc := nodeGetStr(catNode, keyDescription)
 		cmds := nodeStringSlice(nodeGet(catNode, keyCommands))
 		fmt.Fprintf(&sb, "### %s %s\n\n%s\n\n%s %s\n\n",
 			icon, name, desc, docs.Labels.CommandsList, strings.Join(quoteEach(cmds), ", "))
@@ -81,9 +77,9 @@ func globalFlagsSection(globalFlagsNode *yaml.Node) string {
 func renderCommandSection(name string, cmdNode *yaml.Node) string {
 	var sb strings.Builder
 
-	desc := nodeStr(nodeGet(cmdNode, keyDescription))
-	longDesc := nodeStr(nodeGet(cmdNode, keyLongDescription))
-	usage := nodeStr(nodeGet(cmdNode, keyUsage))
+	desc := nodeGetStr(cmdNode, keyDescription)
+	longDesc := nodeGetStr(cmdNode, keyLongDescription)
+	usage := nodeGetStr(cmdNode, keyUsage)
 	aliases := nodeStringSlice(nodeGet(cmdNode, keyAliases))
 
 	sb.WriteString(fmt.Sprintf("### `%s`\n\n%s\n\n", name, desc))
@@ -112,8 +108,8 @@ func renderCommandExamples(examplesNode *yaml.Node) string {
 	var sb strings.Builder
 	sb.WriteString(docs.Labels.Examples + "\n\n")
 	for _, exNode := range examplesNode.Content {
-		cmd := nodeStr(nodeGet(exNode, keyCommand))
-		desc := nodeStr(nodeGet(exNode, keyDescription))
+		cmd := nodeGetStr(exNode, keyCommand)
+		desc := nodeGetStr(exNode, keyDescription)
 		sb.WriteString(codeBlock("bash", cmd))
 		if desc != "" {
 			sb.WriteString(desc + "\n\n")
@@ -139,9 +135,9 @@ func renderFlagLines(flagsNode *yaml.Node) string {
 }
 
 func renderFlagLine(flagKey string, flagNode *yaml.Node) string {
-	short := nodeStr(nodeGet(flagNode, keyShort))
-	flagType := nodeStr(nodeGet(flagNode, keyType))
-	desc := nodeStr(nodeGet(flagNode, keyDescription))
+	short := nodeGetStr(flagNode, keyShort)
+	flagType := nodeGetStr(flagNode, keyType)
+	desc := nodeGetStr(flagNode, keyDescription)
 	defaultNode := nodeGet(flagNode, keyDefault)
 	optionsNode := nodeGet(flagNode, keyOptions)
 
