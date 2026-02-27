@@ -10,10 +10,9 @@ toc: true
 ---
 
 <!--
-  ⚠️  PARTIALLY GENERATED FILE
-  - Sections marked with triple braces are auto-generated from internal/config/schema.yaml
-  - Custom content (like "Sharing Configuration Details") is maintained in docs-site/templates/configuration-guide.md
-  - To regenerate, run: task generate:docs
+  ⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+  This file is generated from internal/config/schema.yaml and docs-site/docs.yaml
+  To make changes, edit source files and run: task generate:docs
 -->
 
 # Configuration Guide

@@ -16,15 +16,26 @@ func generateServicesGuide() error {
 	categories := sortedCategories(byCategory)
 
 	page := docs.Pages[pageServices]
-	var sb strings.Builder
-	sb.WriteString("# " + page.Heading + "\n\n")
-	sb.WriteString(fmt.Sprintf(page.ServiceCount, len(services)) + "\n\n")
-	sb.WriteString(page.Intro + "\n\n")
+	content := strings.Join([]string{
+		"# " + page.Heading + "\n\n",
+		fmt.Sprintf(page.ServiceCount, len(services)) + "\n\n",
+		page.Intro + "\n\n",
+		categoriesSection(byCategory, categories),
+	}, "")
 
+	out, err := formatDocument(pageFM(pageServices), content)
+	if err != nil {
+		return err
+	}
+	return writeOutput(pageOutput(pageServices), out)
+}
+
+func categoriesSection(byCategory map[string][]loadedService, categories []string) string {
+	var sb strings.Builder
 	for _, cat := range categories {
 		catCfg := getCategoryConfig(cat)
 		catTitle := strings.ToUpper(cat[:1]) + cat[1:]
-		sb.WriteString(fmt.Sprintf("## %s %s\n\n", catCfg.Icon, catTitle))
+		fmt.Fprintf(&sb, "## %s %s\n\n", catCfg.Icon, catTitle)
 
 		svcs := byCategory[cat]
 		sort.Slice(svcs, func(i, j int) bool { return svcs[i].name < svcs[j].name })
@@ -32,12 +43,7 @@ func generateServicesGuide() error {
 			sb.WriteString(renderServiceSection(svc))
 		}
 	}
-
-	out, err := formatDocument(pageFM(pageServices), sb.String())
-	if err != nil {
-		return err
-	}
-	return writeOutput(pageOutput(pageServices), out)
+	return sb.String()
 }
 
 func renderServiceSection(svc loadedService) string {

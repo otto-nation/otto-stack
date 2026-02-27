@@ -26,47 +26,56 @@ func generateCLIReference() error {
 	}
 
 	page := docs.Pages[pageCLI]
-	sections := docs.CLISections
+	content := strings.Join([]string{
+		htmlComment(
+			"\u26a0\ufe0f  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY",
+			"This file is generated from "+commandsYAMLPath,
+			"To make changes, edit the source file and run: task generate:docs",
+		),
+		"# " + page.Heading + "\n\n" + description + "\n\n",
+		commandCategoriesSection(nodeGet(&rootNode, keyCategories)),
+		commandsSection(nodeGet(&rootNode, keyCommands)),
+		globalFlagsSection(nodeGet(&rootNode, keyGlobalFlags)),
+	}, "")
 
+	out, err := formatDocument(pageFM(pageCLI), content)
+	if err != nil {
+		return err
+	}
+	return writeOutput(pageOutput(pageCLI), out)
+}
+
+func commandCategoriesSection(categoriesNode *yaml.Node) string {
 	var sb strings.Builder
-	sb.WriteString(htmlComment(
-		"\u26a0\ufe0f  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY",
-		"This file is generated from "+commandsYAMLPath,
-		"To make changes, edit the source file and run: task generate:docs",
-	))
-	sb.WriteString("# " + page.Heading + "\n\n")
-	sb.WriteString(description + "\n\n")
-
-	sb.WriteString(sections.CommandCategories + "\n\n")
-	categoriesNode := nodeGet(&rootNode, keyCategories)
+	sb.WriteString(docs.CLISections.CommandCategories + "\n\n")
 	for _, catKey := range nodeKeys(categoriesNode) {
 		catNode := nodeGet(categoriesNode, catKey)
 		icon := nodeStr(nodeGet(catNode, keyIcon))
 		name := nodeStr(nodeGet(catNode, keyName))
 		desc := nodeStr(nodeGet(catNode, keyDescription))
 		cmds := nodeStringSlice(nodeGet(catNode, keyCommands))
-		sb.WriteString(fmt.Sprintf("### %s %s\n\n%s\n\n%s %s\n\n",
-			icon, name, desc, docs.Labels.CommandsList, strings.Join(quoteEach(cmds), ", ")))
+		fmt.Fprintf(&sb, "### %s %s\n\n%s\n\n%s %s\n\n",
+			icon, name, desc, docs.Labels.CommandsList, strings.Join(quoteEach(cmds), ", "))
 	}
+	return sb.String()
+}
 
-	sb.WriteString(sections.Commands + "\n\n")
-	commandsNode := nodeGet(&rootNode, keyCommands)
+func commandsSection(commandsNode *yaml.Node) string {
+	var sb strings.Builder
+	sb.WriteString(docs.CLISections.Commands + "\n\n")
 	for _, cmdKey := range nodeKeys(commandsNode) {
 		sb.WriteString(renderCommandSection(cmdKey, nodeGet(commandsNode, cmdKey)))
 	}
+	return sb.String()
+}
 
-	globalFlagsNode := nodeGet(&rootNode, keyGlobalFlags)
-	if globalFlagsNode != nil {
-		sb.WriteString(sections.GlobalFlags + "\n\n")
-		sb.WriteString(sections.GlobalFlagsDesc + "\n\n")
-		sb.WriteString(renderFlagLines(globalFlagsNode))
+func globalFlagsSection(globalFlagsNode *yaml.Node) string {
+	if globalFlagsNode == nil {
+		return ""
 	}
-
-	out, err := formatDocument(pageFM(pageCLI), sb.String())
-	if err != nil {
-		return err
-	}
-	return writeOutput(pageOutput(pageCLI), out)
+	return docs.CLISections.GlobalFlags + "\n\n" +
+		docs.CLISections.GlobalFlagsDesc + "\n\n" +
+		renderFlagLines(globalFlagsNode)
 }
 
 func renderCommandSection(name string, cmdNode *yaml.Node) string {

@@ -43,99 +43,109 @@ func generateConfigurationGuide() error {
 	svcMap := indexServices(services)
 
 	schemaNode := nodeGet(&schemaRoot, keySchema)
-	sections := extractSchemaSections(schemaNode)
+	schemaSections := extractSchemaSections(schemaNode)
 
-	var sb strings.Builder
+	page := docs.Pages[pageConfiguration]
+	content := strings.Join([]string{
+		htmlComment(
+			"\u26a0\ufe0f  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY",
+			"This file is generated from "+schemaYAMLPath+" and "+docsConfigPath,
+			"To make changes, edit source files and run: task generate:docs",
+		),
+		"# " + page.Heading + "\n\n" + page.Intro + "\n\n",
+		fileStructureSection(),
+		mainConfigSection(generateConfigStructure(schemaSections)),
+		configSchemaSections(schemaSections),
+		sharingSection(),
+		serviceConfigSection(generateServiceConfigExample(svcMap), generateCustomEnvExample(svcMap)),
+		serviceMetadataSection(),
+		completeExampleSection(generateCompleteExample(schemaNode), generateCompleteEnvExample(svcMap)),
+		nextStepsSection(),
+	}, "")
 
-	sb.WriteString(htmlComment(
-		"\u26a0\ufe0f  PARTIALLY GENERATED FILE",
-		"- Sections marked with triple braces are auto-generated from "+schemaYAMLPath,
-		`- Custom content (like "Sharing Configuration Details") is maintained in docs-site/templates/configuration-guide.md`,
-		"- To regenerate, run: task generate:docs",
-	))
-
-	sb.WriteString("# " + docs.Pages[pageConfiguration].Heading + "\n\n")
-	sb.WriteString(docs.Pages[pageConfiguration].Intro + "\n\n")
-
-	writeFileStructureSection(&sb)
-	writeMainConfigSection(&sb, generateConfigStructure(sections))
-	sb.WriteString(generateConfigSections(sections))
-	sb.WriteString("\n\n")
-	writeSharingSection(&sb)
-	writeServiceConfigSection(&sb, generateServiceConfigExample(svcMap), generateCustomEnvExample(svcMap))
-	writeServiceMetadataSection(&sb)
-	writeCompleteExampleSection(&sb, generateCompleteExample(schemaNode), generateCompleteEnvExample(svcMap))
-	writeNextStepsSection(&sb)
-
-	out, err := formatDocument(pageFM(pageConfiguration), sb.String())
+	out, err := formatDocument(pageFM(pageConfiguration), content)
 	if err != nil {
 		return err
 	}
 	return writeOutput(pageOutput(pageConfiguration), out)
 }
 
-func writeFileStructureSection(sb *strings.Builder) {
+func fileStructureSection() string {
+	var sb strings.Builder
 	s := docs.ConfigSections.FileStructure
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.Intro + "\n\n")
-	codeBlock(sb, "", docs.Pages[pageConfiguration].FileStructure)
+	codeBlock(&sb, "", docs.Pages[pageConfiguration].FileStructure)
+	return sb.String()
 }
 
-func writeMainConfigSection(sb *strings.Builder, configStructure string) {
+func mainConfigSection(configStructure string) string {
+	var sb strings.Builder
 	s := docs.ConfigSections.MainConfig
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.FileLabel + "\n\n")
-	codeBlock(sb, "yaml", configStructure)
+	codeBlock(&sb, "yaml", configStructure)
+	return sb.String()
 }
 
-func writeSharingSection(sb *strings.Builder) {
+func sharingSection() string {
+	var sb strings.Builder
 	s := docs.ConfigSections.Sharing
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.Intro + "\n")
 	for i, behavior := range s.Behaviors {
-		sb.WriteString(fmt.Sprintf("%d. %s\n", i+1, behavior))
+		fmt.Fprintf(&sb, "%d. %s\n", i+1, behavior)
 	}
 	sb.WriteString("\n")
 	sb.WriteString(s.ExampleLabel + "\n\n")
-	codeBlock(sb, "yaml", s.Examples)
+	codeBlock(&sb, "yaml", s.Examples)
 	sb.WriteString(s.RegistryNote + "\n\n")
+	return sb.String()
 }
 
-func writeServiceConfigSection(sb *strings.Builder, serviceConfigExample, customEnvExample string) {
+func serviceConfigSection(serviceConfigExample, customEnvExample string) string {
+	var sb strings.Builder
 	s := docs.ConfigSections.ServiceConfig
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.Intro + "\n\n")
 	sb.WriteString(s.EnvGeneratedLabel + "\n\n")
-	codeBlock(sb, "bash", "# "+serviceConfigExample)
+	codeBlock(&sb, "bash", "# "+serviceConfigExample)
 	sb.WriteString(s.CustomizingHeading + "\n\n")
 	sb.WriteString(s.CustomizingIntro + "\n\n")
-	codeBlock(sb, "bash", customEnvExample)
+	codeBlock(&sb, "bash", customEnvExample)
 	sb.WriteString(s.CustomizingNote + "\n\n")
+	return sb.String()
 }
 
-func writeServiceMetadataSection(sb *strings.Builder) {
+func serviceMetadataSection() string {
+	var sb strings.Builder
 	s := docs.ConfigSections.ServiceMetadata
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.Intro + "\n\n")
 	sb.WriteString(s.ExampleLabel + "\n\n")
-	codeBlock(sb, "yaml", s.ExampleContent)
+	codeBlock(&sb, "yaml", s.ExampleContent)
 	sb.WriteString(s.Note + "\n\n")
+	return sb.String()
 }
 
-func writeCompleteExampleSection(sb *strings.Builder, completeExample, completeEnvExample string) {
+func completeExampleSection(completeExample, completeEnvExample string) string {
+	var sb strings.Builder
 	s := docs.ConfigSections.CompleteExample
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.ConfigLabel + "\n\n")
-	codeBlock(sb, "yaml", completeExample)
+	codeBlock(&sb, "yaml", completeExample)
 	sb.WriteString(s.EnvLabel + "\n\n")
-	codeBlock(sb, "bash", completeEnvExample)
+	codeBlock(&sb, "bash", completeEnvExample)
+	return sb.String()
 }
 
-func writeNextStepsSection(sb *strings.Builder) {
+func nextStepsSection() string {
+	var sb strings.Builder
 	sb.WriteString(docs.ConfigSections.NextStepsSection + "\n\n")
 	for _, link := range docs.Pages[pageConfiguration].NextSteps {
-		sb.WriteString(fmt.Sprintf("- **[%s](%s)** - %s\n", link.Label, link.URL, link.Description))
+		fmt.Fprintf(&sb, "- **[%s](%s)** - %s\n", link.Label, link.URL, link.Description)
 	}
+	return sb.String()
 }
 
 func extractSchemaSections(schemaNode *yaml.Node) []schemaSection {
@@ -193,6 +203,7 @@ func generateConfigStructure(sections []schemaSection) string {
 	}
 	result, err := marshalYAML(mapping)
 	if err != nil {
+		// marshalYAML on an in-memory node tree cannot fail in practice.
 		return ""
 	}
 	return result
@@ -245,7 +256,8 @@ func buildArrayValueNode(sectionName string) *yaml.Node {
 	return seq
 }
 
-func generateConfigSections(sections []schemaSection) string {
+// configSchemaSections renders schema.yaml sections as ### headings with property lists.
+func configSchemaSections(sections []schemaSection) string {
 	var sb strings.Builder
 	for i, section := range sections {
 		if i > 0 {
@@ -259,6 +271,7 @@ func generateConfigSections(sections []schemaSection) string {
 			fmt.Fprintf(&sb, "- **%s**: %s", prop.key, prop.description)
 		}
 	}
+	sb.WriteString("\n\n")
 	return sb.String()
 }
 
@@ -342,6 +355,7 @@ func generateCompleteExample(schemaNode *yaml.Node) string {
 	mapping := buildCompleteExampleMapping(schemaNode)
 	result, err := marshalYAML(mapping)
 	if err != nil {
+		// marshalYAML on an in-memory node tree cannot fail in practice.
 		return ""
 	}
 	return result
