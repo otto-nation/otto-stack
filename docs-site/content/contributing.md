@@ -9,6 +9,11 @@ weight: 60
 toc: true
 ---
 
+<!--
+  ⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+  To make changes, edit source files and run: task generate:docs
+-->
+
 # Contributing to otto-stack
 
 Thank you for contributing! This guide covers the essentials to get you started.

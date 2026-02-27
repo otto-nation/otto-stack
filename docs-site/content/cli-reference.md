@@ -11,8 +11,7 @@ toc: true
 
 <!--
   ⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
-  This file is generated from internal/config/commands.yaml
-  To make changes, edit the source file and run: task generate:docs
+  To make changes, edit source files and run: task generate:docs
 -->
 
 # otto-stack CLI Reference

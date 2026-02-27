@@ -27,11 +27,6 @@ func generateCLIReference() error {
 
 	page := docs.Pages[pageCLI]
 	content := strings.Join([]string{
-		htmlComment(
-			"\u26a0\ufe0f  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY",
-			"This file is generated from "+commandsYAMLPath,
-			"To make changes, edit the source file and run: task generate:docs",
-		),
 		"# " + page.Heading + "\n\n" + description + "\n\n",
 		commandCategoriesSection(nodeGet(&rootNode, keyCategories)),
 		commandsSection(nodeGet(&rootNode, keyCommands)),

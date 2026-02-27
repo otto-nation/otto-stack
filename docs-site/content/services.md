@@ -9,6 +9,11 @@ weight: 30
 toc: true
 ---
 
+<!--
+  ⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+  To make changes, edit source files and run: task generate:docs
+-->
+
 # Available Services
 
 13 services available for your development stack.

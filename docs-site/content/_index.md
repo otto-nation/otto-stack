@@ -9,6 +9,11 @@ weight: 50
 toc: true
 ---
 
+<!--
+  ⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+  To make changes, edit source files and run: task generate:docs
+-->
+
 # otto-stack
 
 A powerful development stack management tool built in Go for streamlined local development automation

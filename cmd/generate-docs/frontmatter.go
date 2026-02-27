@@ -57,8 +57,13 @@ func htmlComment(lines ...string) string {
 }
 
 // writePage formats content with frontmatter for the named page and writes it to disk.
+// A standard auto-generated warning comment is prepended to every page.
 func writePage(pageID, content string) error {
-	out, err := formatDocument(pageFM(pageID), content)
+	header := htmlComment(
+		"\u26a0\ufe0f  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY",
+		"To make changes, edit source files and run: task generate:docs",
+	)
+	out, err := formatDocument(pageFM(pageID), header+content)
 	if err != nil {
 		return err
 	}

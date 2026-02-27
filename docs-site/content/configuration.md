@@ -11,7 +11,6 @@ toc: true
 
 <!--
   ⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
-  This file is generated from internal/config/schema.yaml and docs-site/docs.yaml
   To make changes, edit source files and run: task generate:docs
 -->
 
@@ -103,6 +102,7 @@ Version management and update settings
 ### Sharing Configuration Details
 
 When sharing is enabled:
+
 1. Containers are prefixed with `otto-stack-` (e.g., `otto-stack-redis`)
 2. A registry at `~/.otto-stack/shared/containers.yaml` tracks which projects use each shared container
 3. The `down` command prompts before stopping shared containers used by other projects

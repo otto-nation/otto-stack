@@ -47,11 +47,6 @@ func generateConfigurationGuide() error {
 
 	page := docs.Pages[pageConfiguration]
 	content := strings.Join([]string{
-		htmlComment(
-			"\u26a0\ufe0f  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY",
-			"This file is generated from "+schemaYAMLPath+" and "+docsConfigPath,
-			"To make changes, edit source files and run: task generate:docs",
-		),
 		"# " + page.Heading + "\n\n" + page.Intro + "\n\n",
 		fileStructureSection(),
 		mainConfigSection(generateConfigStructure(schemaSections)),
@@ -80,7 +75,7 @@ func mainConfigSection(configStructure string) string {
 func sharingSection() string {
 	s := docs.ConfigSections.Sharing
 	var sb strings.Builder
-	sb.WriteString(s.Heading + "\n\n" + s.Intro + "\n")
+	sb.WriteString(s.Heading + "\n\n" + s.Intro + "\n\n")
 	for i, behavior := range s.Behaviors {
 		fmt.Fprintf(&sb, "%d. %s\n", i+1, behavior)
 	}
