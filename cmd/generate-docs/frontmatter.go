@@ -56,12 +56,9 @@ func htmlComment(lines ...string) string {
 	return sb.String()
 }
 
-// codeBlock writes content inside a fenced code block with the given language specifier.
-// content is trimmed of trailing newlines before writing so the closing fence is always
-// on its own line regardless of whether the source string has a trailing newline.
-func codeBlock(sb *strings.Builder, lang, content string) {
+// codeBlock returns content inside a fenced code block with the given language specifier.
+// content is trimmed of trailing newlines so the closing fence is always on its own line.
+func codeBlock(lang, content string) string {
 	const fence = "```"
-	sb.WriteString(fence + lang + "\n")
-	sb.WriteString(strings.TrimRight(content, "\n") + "\n")
-	sb.WriteString(fence + "\n\n")
+	return fence + lang + "\n" + strings.TrimRight(content, "\n") + "\n" + fence + "\n\n"
 }

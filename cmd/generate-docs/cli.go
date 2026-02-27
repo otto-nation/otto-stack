@@ -114,7 +114,7 @@ func renderCommandExamples(examplesNode *yaml.Node) string {
 	for _, exNode := range examplesNode.Content {
 		cmd := nodeStr(nodeGet(exNode, keyCommand))
 		desc := nodeStr(nodeGet(exNode, keyDescription))
-		codeBlock(&sb, "bash", cmd)
+		sb.WriteString(codeBlock("bash", cmd))
 		if desc != "" {
 			sb.WriteString(desc + "\n\n")
 		}

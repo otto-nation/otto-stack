@@ -78,7 +78,7 @@ func renderServiceSchemaSection(fields []*schemaField) string {
 		return sb.String()
 	}
 	sb.WriteString("\n" + sections.ExampleConfig + "\n\n")
-	codeBlock(&sb, "yaml", exYAML)
+	sb.WriteString(codeBlock("yaml", exYAML))
 	return sb.String()
 }
 
@@ -94,7 +94,7 @@ func renderServiceDocumentation(svcDocs *serviceDocumentation) string {
 	if len(svcDocs.Examples) > 0 {
 		sb.WriteString(sections.ExamplesHeading + "\n\n")
 		for _, ex := range svcDocs.Examples {
-			codeBlock(&sb, "bash", ex)
+			sb.WriteString(codeBlock("bash", ex))
 		}
 	}
 	return sb.String()

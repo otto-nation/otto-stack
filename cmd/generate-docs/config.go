@@ -71,72 +71,51 @@ func generateConfigurationGuide() error {
 }
 
 func fileStructureSection() string {
-	var sb strings.Builder
 	s := docs.ConfigSections.FileStructure
-	sb.WriteString(s.Heading + "\n\n")
-	sb.WriteString(s.Intro + "\n\n")
-	codeBlock(&sb, "", docs.Pages[pageConfiguration].FileStructure)
-	return sb.String()
+	return s.Heading + "\n\n" + s.Intro + "\n\n" +
+		codeBlock("", docs.Pages[pageConfiguration].FileStructure)
 }
 
 func mainConfigSection(configStructure string) string {
-	var sb strings.Builder
 	s := docs.ConfigSections.MainConfig
-	sb.WriteString(s.Heading + "\n\n")
-	sb.WriteString(s.FileLabel + "\n\n")
-	codeBlock(&sb, "yaml", configStructure)
-	return sb.String()
+	return s.Heading + "\n\n" + s.FileLabel + "\n\n" + codeBlock("yaml", configStructure)
 }
 
 func sharingSection() string {
-	var sb strings.Builder
 	s := docs.ConfigSections.Sharing
-	sb.WriteString(s.Heading + "\n\n")
-	sb.WriteString(s.Intro + "\n")
+	var sb strings.Builder
+	sb.WriteString(s.Heading + "\n\n" + s.Intro + "\n")
 	for i, behavior := range s.Behaviors {
 		fmt.Fprintf(&sb, "%d. %s\n", i+1, behavior)
 	}
-	sb.WriteString("\n")
-	sb.WriteString(s.ExampleLabel + "\n\n")
-	codeBlock(&sb, "yaml", s.Examples)
+	sb.WriteString("\n" + s.ExampleLabel + "\n\n")
+	sb.WriteString(codeBlock("yaml", s.Examples))
 	sb.WriteString(s.RegistryNote + "\n\n")
 	return sb.String()
 }
 
 func serviceConfigSection(serviceConfigExample, customEnvExample string) string {
-	var sb strings.Builder
 	s := docs.ConfigSections.ServiceConfig
-	sb.WriteString(s.Heading + "\n\n")
-	sb.WriteString(s.Intro + "\n\n")
-	sb.WriteString(s.EnvGeneratedLabel + "\n\n")
-	codeBlock(&sb, "bash", "# "+serviceConfigExample)
-	sb.WriteString(s.CustomizingHeading + "\n\n")
-	sb.WriteString(s.CustomizingIntro + "\n\n")
-	codeBlock(&sb, "bash", customEnvExample)
-	sb.WriteString(s.CustomizingNote + "\n\n")
-	return sb.String()
+	return s.Heading + "\n\n" + s.Intro + "\n\n" + s.EnvGeneratedLabel + "\n\n" +
+		codeBlock("bash", "# "+serviceConfigExample) +
+		s.CustomizingHeading + "\n\n" + s.CustomizingIntro + "\n\n" +
+		codeBlock("bash", customEnvExample) +
+		s.CustomizingNote + "\n\n"
 }
 
 func serviceMetadataSection() string {
-	var sb strings.Builder
 	s := docs.ConfigSections.ServiceMetadata
-	sb.WriteString(s.Heading + "\n\n")
-	sb.WriteString(s.Intro + "\n\n")
-	sb.WriteString(s.ExampleLabel + "\n\n")
-	codeBlock(&sb, "yaml", s.ExampleContent)
-	sb.WriteString(s.Note + "\n\n")
-	return sb.String()
+	return s.Heading + "\n\n" + s.Intro + "\n\n" + s.ExampleLabel + "\n\n" +
+		codeBlock("yaml", s.ExampleContent) +
+		s.Note + "\n\n"
 }
 
 func completeExampleSection(completeExample, completeEnvExample string) string {
-	var sb strings.Builder
 	s := docs.ConfigSections.CompleteExample
-	sb.WriteString(s.Heading + "\n\n")
-	sb.WriteString(s.ConfigLabel + "\n\n")
-	codeBlock(&sb, "yaml", completeExample)
-	sb.WriteString(s.EnvLabel + "\n\n")
-	codeBlock(&sb, "bash", completeEnvExample)
-	return sb.String()
+	return s.Heading + "\n\n" + s.ConfigLabel + "\n\n" +
+		codeBlock("yaml", completeExample) +
+		s.EnvLabel + "\n\n" +
+		codeBlock("bash", completeEnvExample)
 }
 
 func nextStepsSection() string {
