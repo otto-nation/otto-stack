@@ -73,7 +73,7 @@ func renderServiceSchemaSection(fields []*schemaField) string {
 	if err != nil || strings.TrimSpace(exYAML) == "" {
 		return sb.String()
 	}
-	sb.WriteString("\n" + sections.ExampleConfig + "\n\n")
+	sb.WriteString(sections.ExampleConfig + "\n\n")
 	sb.WriteString(codeBlock("yaml", exYAML))
 	return sb.String()
 }
@@ -93,7 +93,9 @@ func renderServiceDocumentation(svcDocs *serviceDocumentation) string {
 			sb.WriteString(codeBlock("bash", ex))
 		}
 	}
-	return sb.String()
+	// Normalize: regardless of whether the field had items/properties, always end with
+	// exactly one blank line so callers can append the next section without guessing.
+	return strings.TrimRight(sb.String(), "\n") + "\n\n"
 }
 
 func renderSchemaField(field *schemaField, headingLevel string) string {
@@ -117,14 +119,12 @@ func renderSchemaField(field *schemaField, headingLevel string) string {
 		for _, itemProp := range field.Items.Properties {
 			sb.WriteString(renderItemProperty(itemProp))
 		}
-		sb.WriteString("\n")
 	}
 	if len(field.Properties) > 0 {
 		sb.WriteString(labels.Properties + "\n\n")
 		for _, subProp := range field.Properties {
 			sb.WriteString(renderItemProperty(subProp))
 		}
-		sb.WriteString("\n")
 	}
 	return sb.String()
 }
