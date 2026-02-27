@@ -78,7 +78,7 @@ func writeFileStructureSection(sb *strings.Builder) {
 	s := docs.ConfigSections.FileStructure
 	sb.WriteString(s.Heading + "\n\n")
 	sb.WriteString(s.Intro + "\n\n")
-	codeBlock(sb, "", docs.Pages["configuration"].FileStructure)
+	codeBlock(sb, "", docs.Pages[pageConfiguration].FileStructure)
 }
 
 func writeMainConfigSection(sb *strings.Builder, configStructure string) {
@@ -281,6 +281,11 @@ func sortedEnvKeys(env map[string]string) []string {
 	return keys
 }
 
+// titleLabel capitalises the first letter of s, used as an env var comment header.
+func titleLabel(s string) string {
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
 // envExample builds a block of env var lines from the named services.
 // limit caps the number of vars shown per service.
 // label formats the service name for the comment header.
@@ -292,23 +297,24 @@ func envExample(
 	label func(string) string,
 	value func(loadedService, string) string,
 ) string {
-	var lines []string
+	var sb strings.Builder
 	for _, name := range names {
 		svc, ok := svcMap[name]
 		if !ok || len(svc.config.Environment) == 0 {
 			continue
 		}
-		lines = append(lines, "# "+label(name))
+		sb.WriteString("# " + label(name) + "\n")
 		keys := sortedEnvKeys(svc.config.Environment)
 		n := limit
 		if len(keys) < n {
 			n = len(keys)
 		}
 		for _, k := range keys[:n] {
-			lines = append(lines, k+"="+value(svc, k))
+			sb.WriteString(k + "=" + value(svc, k) + "\n")
 		}
 	}
-	return strings.Join(lines, "\n")
+	// Trim trailing newline — callers wrap output in a code block which adds its own.
+	return strings.TrimRight(sb.String(), "\n")
 }
 
 func generateServiceConfigExample(svcMap map[string]loadedService) string {
@@ -320,14 +326,14 @@ func generateServiceConfigExample(svcMap map[string]loadedService) string {
 
 func generateCustomEnvExample(svcMap map[string]loadedService) string {
 	return envExample(svcMap, docs.Examples.Services, docs.Examples.CustomEnvDisplayLimit,
-		func(s string) string { return strings.ToUpper(s[:1]) + s[1:] },
+		titleLabel,
 		func(_ loadedService, _ string) string { return docs.Examples.CustomEnvValue },
 	)
 }
 
 func generateCompleteEnvExample(svcMap map[string]loadedService) string {
 	return envExample(svcMap, docs.Examples.Services, docs.Examples.CustomEnvDisplayLimit,
-		func(s string) string { return strings.ToUpper(s[:1]) + s[1:] },
+		titleLabel,
 		func(_ loadedService, _ string) string { return docs.Examples.CompleteEnvValue },
 	)
 }
