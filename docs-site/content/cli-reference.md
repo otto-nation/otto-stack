@@ -3,7 +3,7 @@ title: CLI Reference
 description: Complete command reference for otto-stack CLI
 lead: Comprehensive reference for all otto-stack CLI commands and their usage
 date: "2025-10-01"
-lastmod: "2026-02-26"
+lastmod: "2026-02-27"
 draft: false
 weight: 50
 toc: true
@@ -11,8 +11,7 @@ toc: true
 
 <!--
   ⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
-  This file is generated from internal/config/commands.yaml
-  To make changes, edit the source file and run: task generate:docs
+  To make changes, edit source files and run: task generate:docs
 -->
 
 # otto-stack CLI Reference
@@ -52,7 +51,6 @@ Information and development tools
 Start development stack services
 
 Start one or more services in the development stack. The command is context-aware:
-
 - **In a project directory**: Starts project services (including shared containers)
 - **Outside a project**: Starts only shared containers (requires service names)
 
@@ -110,7 +108,6 @@ Build images and start services in background
 Stop development stack services
 
 Stop one or more services in the development stack. The command is context-aware:
-
 - **In a project directory**: Stops project services, prompts before stopping shared containers
 - **Outside a project**: Stops shared containers (requires service names)
 - **With --shared flag**: Stops all shared containers from any location
@@ -218,7 +215,6 @@ Restart with custom timeout
 Show status of development stack services
 
 Display comprehensive status information for services. The command is context-aware:
-
 - **In a project directory**: Shows project services status
 - **Outside a project**: Use --all or --shared flag to see shared containers
 - **Specific project**: Use --project flag to see what a project uses
@@ -669,3 +665,4 @@ Check for available updates
 - `--full` (`bool`): Show detailed version information (default: `false`)
 - `--check-updates` (`bool`): Check for available updates (default: `false`)
 - `--format` (`string`): Output format (text, json, yaml) (default: `text`)
+

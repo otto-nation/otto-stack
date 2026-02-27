@@ -3,11 +3,16 @@ title: Services
 description: Available services and configuration options
 lead: Explore all the services you can use with otto-stack
 date: "2025-10-01"
-lastmod: "2026-02-26"
+lastmod: "2026-02-27"
 draft: false
 weight: 30
 toc: true
 ---
+
+<!--
+  ⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+  To make changes, edit source files and run: task generate:docs
+-->
 
 # Available Services
 
@@ -373,9 +378,9 @@ S3 buckets to create
 
 - **name** (`string`): Bucket name
 
-- **versioning** (`boolean`): Enable versioning
+- **versioning** (`boolean`) = `false`: Enable versioning
 
-- **public_read** (`boolean`): Allow public read access
+- **public_read** (`boolean`) = `false`: Allow public read access
 
 ##### Example Configuration
 
@@ -453,11 +458,11 @@ SQS queues to create
 
 - **visibility_timeout** (`integer`) = `30`: Message visibility timeout in seconds
 
-- **dead_letter_queue** (`boolean`): Enable dead letter queue (creates {name}-dlq)
+- **dead_letter_queue** (`boolean`) = `false`: Enable dead letter queue (creates {name}-dlq)
 
 - **max_receive_count** (`integer`) = `3`: Max receive count before moving to DLQ
 
-- **subscription** (`object`) _required_
+- **subscription** (`object`)
 
 ##### Example Configuration
 
@@ -568,3 +573,4 @@ scrape_configs:
 - Alerting and notifications
 
 ---
+

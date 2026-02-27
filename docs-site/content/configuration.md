@@ -3,17 +3,15 @@ title: Configuration Guide
 description: Configure your otto-stack development environment
 lead: Learn how to configure your development stack
 date: "2025-10-01"
-lastmod: "2026-02-26"
+lastmod: "2026-02-27"
 draft: false
 weight: 25
 toc: true
 ---
 
 <!--
-  ⚠️  PARTIALLY GENERATED FILE
-  - Sections marked with triple braces are auto-generated from internal/config/schema.yaml
-  - Custom content (like "Sharing Configuration Details") is maintained in docs-site/templates/configuration-guide.md
-  - To regenerate, run: task generate:docs
+  ⚠️  AUTO-GENERATED FILE - DO NOT EDIT DIRECTLY
+  To make changes, edit source files and run: task generate:docs
 -->
 
 # Configuration Guide
@@ -58,7 +56,7 @@ advanced:
   pull_latest_images: false
   cleanup_on_recreate: false
 version_config:
-  required_version: ">=1.0.0"
+  required_version: '>=1.0.0'
 ```
 
 ### Project

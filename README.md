@@ -76,7 +76,7 @@ otto-stack up
 ## Get Started
 
 1. **[Complete installation guide](docs-site/content/setup.md)**
-3. **[Explore available services](docs-site/content/services.md)**
+2. **[Explore available services](docs-site/content/services.md)**
 
 ## Git Workflow
 
