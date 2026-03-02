@@ -15,12 +15,12 @@
     "format": "prettier . -w -c"
   },
   "dependencies": {
-    "@tabler/icons": "^3.37.1",
-    "@thulite/doks-core": "^1.9.2",
+    "@tabler/icons": "^3.38.0",
+    "@thulite/doks-core": "^1.9.3",
     "@thulite/images": "^3.3.4",
     "@thulite/inline-svg": "^1.2.2",
     "@thulite/seo": "^2.4.3",
-    "thulite": "^2.6.4"
+    "thulite": "^2.6.5"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.4.2",
