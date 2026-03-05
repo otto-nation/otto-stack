@@ -29,6 +29,8 @@ docs-site/resources/
 docs-site/.hugo_build.lock
 docs-site/node_modules/
 docs-site/hugo_stats.json
+# Theme managed via npm (@thulite/doks-core) — not a submodule
+docs-site/themes/
 
 # Dependencies and node modules
 node_modules/

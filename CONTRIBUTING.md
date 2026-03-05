@@ -2,6 +2,39 @@
 
 Thank you for contributing! This guide covers the essentials to get you started.
 
+## Prerequisites
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| [Go](https://go.dev/dl/) | 1.25.7 (see `.go-version`) | Build and run the project |
+| [Task](https://taskfile.dev/installation/) | any | Build automation |
+| [Docker](https://docs.docker.com/get-started/get-docker/) | 24+ | Service management and E2E tests |
+| [Node.js](https://nodejs.org/) | >=18 | Documentation generation |
+| [Hugo](https://gohugo.io/installation/) | >=0.148.1 extended | Documentation site |
+
+**Go — install via [goenv](https://github.com/go-nv/goenv) (recommended):**
+
+```bash
+# macOS
+brew install goenv
+
+# then task setup will install and activate the correct version automatically
+```
+
+Or download directly from [go.dev/dl](https://go.dev/dl/) if you don't use a version manager.
+
+**Task — [taskfile.dev](https://taskfile.dev/installation/):**
+
+```bash
+# macOS
+brew install go-task
+
+# Linux / Windows: see https://taskfile.dev/installation/
+```
+
+> **Auto-installed by task:** `golangci-lint` and `goimports` are installed automatically
+> when you run `task lint` or `task fmt` — no manual installation needed.
+
 ## Quick Start
 
 ```bash
@@ -9,23 +42,18 @@ Thank you for contributing! This guide covers the essentials to get you started.
 git clone https://github.com/your-username/otto-stack.git
 cd otto-stack
 
-# 2. Setup and build
+# 2. Check prerequisites, install dependencies, and configure Git hooks
 task setup
+
+# 3. Build
 task build
 
-# 3. Run tests
+# 4. Run tests
 task test
 
-# 4. Verify
+# 5. Verify
 ./build/otto-stack version
 ```
-
-## Prerequisites
-
-- **Go**: Check `.go-version` for the required version.
-- **Task**: [Task runner](https://taskfile.dev/)
-- **Docker**: For service management
-- **Node.js**: For documentation generation
 
 ## Making Changes
 
