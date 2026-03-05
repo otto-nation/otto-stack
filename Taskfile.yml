@@ -502,22 +502,8 @@ tasks:
       - "docs-site/.mlc_config.json"
     silent: true
     cmds:
-      - |
-        cd docs-site
-        npm run lint:md &
-        LINT_PID=$!
-        npm run lint:links &
-        LINKS_PID=$!
-
-        wait $LINT_PID
-        LINT_EXIT=$?
-        wait $LINKS_PID
-        LINKS_EXIT=$?
-
-        if [ $LINT_EXIT -ne 0 ] || [ $LINKS_EXIT -ne 0 ]; then
-          echo "  ✗ Documentation linting failed"
-          exit 1
-        fi
+      - cd docs-site && npm run lint:md
+      - cd docs-site && npm run lint:links
 
   fmt:
     desc: "Format Go code with gofmt and goimports"

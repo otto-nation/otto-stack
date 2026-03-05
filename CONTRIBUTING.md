@@ -5,7 +5,7 @@ Thank you for contributing! This guide covers the essentials to get you started.
 ## Prerequisites
 
 | Tool | Version | Purpose |
-|------|---------|---------|
+| --- | --- | --- |
 | [Go](https://go.dev/dl/) | 1.25.7 (see `.go-version`) | Build and run the project |
 | [Task](https://taskfile.dev/installation/) | any | Build automation |
 | [Docker](https://docs.docker.com/get-started/get-docker/) | 24+ | Service management and E2E tests |
