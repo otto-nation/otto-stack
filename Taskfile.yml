@@ -39,11 +39,95 @@ tasks:
   # SETUP
   # ============================================================================
   setup:
-    desc: "Install all dependencies (Go modules + npm packages)"
-    deps: [setup:go, setup:npm]
+    desc: "Check prerequisites, install dependencies, and configure Git hooks"
+    deps: [setup:check, setup:go, setup:npm, setup-hooks]
     silent: true
     cmds:
       - echo "  ✓ All dependencies ready"
+
+  setup:check:
+    desc: "Verify required tools are installed at the correct versions"
+    silent: true
+    cmds:
+      - |
+        REQUIRED_GO=$(cat .go-version | tr -d '[:space:]')
+        if command -v goenv >/dev/null 2>&1; then
+          goenv install --skip-existing "$REQUIRED_GO"
+          goenv local "$REQUIRED_GO"
+          echo "  ✓ Go $REQUIRED_GO (via goenv)"
+        else
+          INSTALLED_GO=$(go version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+          if [ -z "$INSTALLED_GO" ]; then
+            echo "  ✗ Go is not installed (required: $REQUIRED_GO)"
+            echo "    → Install goenv (recommended): https://github.com/go-nv/goenv"
+            echo "    → Or download directly: https://go.dev/dl/"
+            exit 1
+          fi
+          if [ "$INSTALLED_GO" != "$REQUIRED_GO" ]; then
+            echo "  ✗ Go version mismatch (required: $REQUIRED_GO, installed: $INSTALLED_GO)"
+            echo "    → Install goenv (recommended): https://github.com/go-nv/goenv"
+            echo "    → Or download directly: https://go.dev/dl/"
+            exit 1
+          fi
+          echo "  ✓ Go $INSTALLED_GO"
+        fi
+      - |
+        INSTALLED_NODE=$(node --version 2>/dev/null | grep -oE '[0-9]+' | head -1)
+        if [ -z "$INSTALLED_NODE" ]; then
+          echo "  ✗ Node.js is not installed (required: >=18)"
+          echo "    → https://nodejs.org/"
+          exit 1
+        fi
+        if [ "$INSTALLED_NODE" -lt 18 ]; then
+          echo "  ✗ Node.js version too old (required: >=18, installed: v$INSTALLED_NODE)"
+          echo "    → https://nodejs.org/"
+          exit 1
+        fi
+        echo "  ✓ Node.js v$INSTALLED_NODE"
+      - |
+        if ! command -v docker >/dev/null 2>&1; then
+          echo "  ✗ Docker is not installed"
+          echo "    → https://docs.docker.com/get-started/get-docker/"
+          exit 1
+        fi
+        if ! docker info >/dev/null 2>&1; then
+          echo "  ⚠ Docker is installed but not running (required for E2E tests)"
+        else
+          echo "  ✓ Docker"
+        fi
+      - |
+        HUGO_MIN="0.148.1"
+        HUGO_OUTPUT=$(hugo version 2>/dev/null)
+        if [ -z "$HUGO_OUTPUT" ]; then
+          echo "  ✗ Hugo is not installed (required: >=$HUGO_MIN extended)"
+          echo "    → macOS: brew install hugo"
+          echo "    → Others: https://gohugo.io/installation/"
+          exit 1
+        fi
+        if ! echo "$HUGO_OUTPUT" | grep -q "extended"; then
+          echo "  ✗ Hugo extended variant is required (docs theme uses SCSS)"
+          echo "    → macOS: brew install hugo"
+          echo "    → Others: https://gohugo.io/installation/"
+          exit 1
+        fi
+        INSTALLED_HUGO=$(echo "$HUGO_OUTPUT" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        if [ "$(printf '%s\n' "$HUGO_MIN" "$INSTALLED_HUGO" | sort -V | head -1)" != "$HUGO_MIN" ]; then
+          echo "  ✗ Hugo version too old (required: >=$HUGO_MIN, installed: $INSTALLED_HUGO)"
+          echo "    → macOS: brew upgrade hugo"
+          echo "    → Others: https://gohugo.io/installation/"
+          exit 1
+        fi
+        echo "  ✓ Hugo $INSTALLED_HUGO (extended)"
+      - |
+        GIT_NAME=$(git config --global user.name 2>/dev/null)
+        GIT_EMAIL=$(git config --global user.email 2>/dev/null)
+        if [ -z "$GIT_NAME" ] || [ -z "$GIT_EMAIL" ]; then
+          echo "  ⚠ Git identity not configured (required for commits)"
+          echo "    → git config --global user.name \"Your Name\""
+          echo "    → git config --global user.email \"you@example.com\""
+        else
+          echo "  ✓ Git ($GIT_NAME <$GIT_EMAIL>)"
+        fi
 
   setup:go:
     desc: "Install Go dependencies"
@@ -418,22 +502,8 @@ tasks:
       - "docs-site/.mlc_config.json"
     silent: true
     cmds:
-      - |
-        cd docs-site
-        npm run lint:md &
-        LINT_PID=$!
-        npm run lint:links &
-        LINKS_PID=$!
-
-        wait $LINT_PID
-        LINT_EXIT=$?
-        wait $LINKS_PID
-        LINKS_EXIT=$?
-
-        if [ $LINT_EXIT -ne 0 ] || [ $LINKS_EXIT -ne 0 ]; then
-          echo "  ✗ Documentation linting failed"
-          exit 1
-        fi
+      - cd docs-site && npm run lint:md
+      - cd docs-site && npm run lint:links
 
   fmt:
     desc: "Format Go code with gofmt and goimports"
