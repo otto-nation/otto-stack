@@ -15,18 +15,18 @@
     "format": "prettier . -w -c"
   },
   "dependencies": {
-    "@tabler/icons": "^3.37.1",
-    "@thulite/doks-core": "^1.9.2",
+    "@tabler/icons": "^3.40.0",
+    "@thulite/doks-core": "^1.9.3",
     "@thulite/images": "^3.3.4",
     "@thulite/inline-svg": "^1.2.2",
     "@thulite/seo": "^2.4.3",
-    "thulite": "^2.6.4"
+    "thulite": "^2.6.5"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.4.2",
-    "@commitlint/config-conventional": "^20.4.2",
+    "@commitlint/cli": "^20.4.3",
+    "@commitlint/config-conventional": "^20.4.3",
     "markdown-link-check": "^3.14.2",
-    "markdownlint-cli": "^0.47.0",
+    "markdownlint-cli": "^0.48.0",
     "prettier": "^3.8.1",
     "vite": "^7.3.1"
   },
