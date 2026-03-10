@@ -3,6 +3,7 @@ package lifecycle
 import (
 	"context"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -107,6 +108,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 		if err := h.registerSharedContainersForProject(sharedConfigs, project, execCtx.Shared.Root, base); err != nil {
 			return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceRegisterSharedFailed, err)
 		}
+		base.Output.Info(messages.SharedProjectRegisteredShared, len(sharedConfigs))
 	}
 
 	base.Output.Success(messages.SuccessServicesStarted)
@@ -229,9 +231,17 @@ func (h *UpHandler) displaySharedStatus(ctx context.Context, sharedRoot string, 
 	}
 	defer func() { _ = dockerClient.Close() }()
 
+	// Sort service names so the table is displayed in a consistent order.
+	serviceNames := make([]string, 0, len(containers))
+	for service := range containers {
+		serviceNames = append(serviceNames, service)
+	}
+	sort.Strings(serviceNames)
+
 	now := time.Now()
 	statuses := make([]display.SharedContainerStatus, 0, len(containers))
-	for service, container := range containers {
+	for _, service := range serviceNames {
+		container := containers[service]
 		cs := dockerClient.InspectContainer(ctx, container.Name)
 		projectNames := make([]string, len(container.Projects))
 		for i, ref := range container.Projects {

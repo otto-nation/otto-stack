@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -265,10 +266,13 @@ func (h *DownHandler) determineServicesToStop(args []string, sharedInfo *clicont
 
 func (h *DownHandler) promptStopAll(containers map[string]*registry.ContainerInfo, base *base.BaseCommand, nonInteractive bool) []string {
 	base.Output.Warning(messages.SharedStopAllPrompt)
-	var services []string
-	for service, container := range containers {
-		base.Output.Info(messages.InfoListItemWithUsers, service, container.Projects)
+	services := make([]string, 0, len(containers))
+	for service := range containers {
 		services = append(services, service)
+	}
+	sort.Strings(services)
+	for _, service := range services {
+		base.Output.Info(messages.InfoListItemWithUsers, service, containers[service].Projects)
 	}
 
 	if nonInteractive || !h.promptStopShared(base) {

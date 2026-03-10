@@ -163,18 +163,25 @@ func loadLocalConfig() (*Config, error) {
 	return &config, nil
 }
 
-// mergeConfigs merges base config with local overrides
+// mergeConfigs merges base config with local overrides.
+// Local values override base values when set.
 func mergeConfigs(base, local *Config) *Config {
 	merged := *base // Copy base
 
-	// Override project settings
 	if local.Project.Name != "" {
 		merged.Project.Name = local.Project.Name
 	}
 
-	// Override stack settings
 	if len(local.Stack.Enabled) > 0 {
 		merged.Stack.Enabled = local.Stack.Enabled
+	}
+
+	if local.Sharing != nil {
+		merged.Sharing = local.Sharing
+	}
+
+	if local.Validation != nil {
+		merged.Validation = local.Validation
 	}
 
 	return &merged

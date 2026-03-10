@@ -412,6 +412,7 @@ shared:
   stopping: "Stopping shared containers"
   service_not_in_registry: "service '%s' not found in shared registry"
   registered: "Shared containers registered"
+  project_registered_shared: "Registered %d container(s) as shared (available to other projects)"
   stopped: "Shared containers stopped"
   no_services_specified: "No services specified. Use 'otto-stack up <service>' to start shared containers"
   no_containers: "No shared containers to stop"

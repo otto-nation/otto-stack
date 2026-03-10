@@ -260,13 +260,13 @@ func (h *CleanupHandler) reconcileRegistry(ctx context.Context, base *base.BaseC
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryGetFailed, err)
 	}
 
-	// Get service manager which has Docker client
-	svc, err := common.NewServiceManager(false)
+	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceManagerCreateFailed, err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
 	}
+	defer func() { _ = dockerClient.Close() }()
 
-	result, err := reg.Reconcile(ctx, svc.DockerClient)
+	result, err := reg.Reconcile(ctx, dockerClient)
 	if err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryReconcileFailed, err)
 	}
@@ -275,7 +275,7 @@ func (h *CleanupHandler) reconcileRegistry(ctx context.Context, base *base.BaseC
 		base.Output.Info(messages.InfoReconciledRegistry, len(result.Removed))
 	}
 
-	if warnings := reg.ValidateAgainstDocker(ctx, svc.DockerClient); len(warnings) > 0 && !ciFlags.Quiet {
+	if warnings := reg.ValidateAgainstDocker(ctx, dockerClient); len(warnings) > 0 && !ciFlags.Quiet {
 		for _, w := range warnings {
 			base.Output.Warning(w)
 		}

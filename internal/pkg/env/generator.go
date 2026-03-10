@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -22,8 +23,13 @@ func GenerateFile(projectName string, serviceConfigs []types.ServiceConfig, file
 	for _, config := range serviceConfigs {
 		if len(config.AllEnvironment) > 0 {
 			fmt.Fprintf(&content, "# %s\n", strings.ToUpper(config.Name))
-			for key, value := range config.AllEnvironment {
-				fmt.Fprintf(&content, "%s=%s\n", key, value)
+			keys := make([]string, 0, len(config.AllEnvironment))
+			for key := range config.AllEnvironment {
+				keys = append(keys, key)
+			}
+			sort.Strings(keys)
+			for _, key := range keys {
+				fmt.Fprintf(&content, "%s=%s\n", key, config.AllEnvironment[key])
 			}
 			content.WriteString("\n")
 		}
