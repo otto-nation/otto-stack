@@ -8,6 +8,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"gopkg.in/yaml.v3"
@@ -71,6 +72,7 @@ func LoadConfig() (*Config, error) {
 		if err := validateSharingPolicy(baseConfig); err != nil {
 			return nil, err
 		}
+		warnPhantomFields(baseConfig)
 		return baseConfig, nil
 	}
 
@@ -78,7 +80,15 @@ func LoadConfig() (*Config, error) {
 	if err := validateSharingPolicy(merged); err != nil {
 		return nil, err
 	}
+	warnPhantomFields(merged)
 	return merged, nil
+}
+
+// warnPhantomFields logs a warning for config fields that are parsed but have no effect.
+func warnPhantomFields(cfg *Config) {
+	if cfg.Validation != nil && len(cfg.Validation.Options) > 0 {
+		logger.Warn(messages.WarningsValidationOptionsIgnored)
+	}
 }
 
 // GenerateConfig creates a new otto-stack configuration file
@@ -104,11 +114,7 @@ func GenerateConfig(ctx clicontext.Context) ([]byte, error) {
 		}
 	}
 
-	if ctx.Options.Validation != nil {
-		config.Validation = &ValidationConfig{
-			Options: ctx.Options.Validation,
-		}
-	}
+	// validation.options is not yet implemented — omit it from generated configs.
 
 	return yaml.Marshal(config)
 }
