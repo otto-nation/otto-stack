@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	embeddedconfig "github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/core"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
@@ -197,32 +198,28 @@ func validateSharingPolicy(cfg *Config) error {
 	return nil
 }
 
-// loadServiceConfig loads a single service configuration
+// loadServiceConfig loads a single service configuration from the embedded FS.
 func loadServiceConfig(serviceName string) (*types.ServiceConfig, error) {
-	// Search for service file in subdirectories
-	var configPath string
-	err := filepath.Walk("internal/config/services", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() && filepath.Base(path) == serviceName+core.ExtYAML {
-			configPath = path
-			return filepath.SkipAll
-		}
-		return nil
-	})
-	if err != nil || configPath == "" {
+	target := serviceName + core.ExtYAML
+	const embeddedServicesDir = "services"
+	categories, err := embeddedconfig.EmbeddedServicesFS.ReadDir(embeddedServicesDir)
+	if err != nil {
 		return nil, os.ErrNotExist
 	}
-
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, err
+	for _, category := range categories {
+		if !category.IsDir() {
+			continue
+		}
+		filePath := embeddedServicesDir + "/" + category.Name() + "/" + target
+		data, err := embeddedconfig.EmbeddedServicesFS.ReadFile(filePath)
+		if err != nil {
+			continue
+		}
+		var cfg types.ServiceConfig
+		if err := yaml.Unmarshal(data, &cfg); err != nil {
+			return nil, err
+		}
+		return &cfg, nil
 	}
-
-	var cfg types.ServiceConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
-	return &cfg, nil
+	return nil, os.ErrNotExist
 }

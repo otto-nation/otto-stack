@@ -237,7 +237,7 @@ func (pm *ProjectManager) buildSharedServicesInfo(serviceConfigs []types.Service
 	}
 
 	homeDir, _ := os.UserHomeDir()
-	sharedPath := filepath.Join(homeDir, core.SharedDir)
+	sharedPath := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
 
 	info := fmt.Sprintf("\n### Shared Services\nThe following services are shared across projects:\n%s", pm.formatServicesList(sharedServices))
 
@@ -321,7 +321,9 @@ func GenerateSharedFiles(serviceConfigs []types.ServiceConfig, sharedRoot string
 	return nil
 }
 
-// filterProjectServices returns only non-shared services for project compose file
+// filterProjectServices returns services to include in the project compose file.
+// When sharing is enabled, shareable services are excluded — unless the per-service
+// sharing.Services map explicitly disables sharing for a service (value == false).
 func (pm *ProjectManager) filterProjectServices(serviceConfigs []types.ServiceConfig, sharing *clicontext.SharingSpec) []types.ServiceConfig {
 	if sharing == nil || !sharing.Enabled {
 		return serviceConfigs
@@ -329,7 +331,14 @@ func (pm *ProjectManager) filterProjectServices(serviceConfigs []types.ServiceCo
 
 	var projectServices []types.ServiceConfig
 	for _, config := range serviceConfigs {
+		// Non-shareable services always belong in the project compose.
 		if !config.Shareable {
+			projectServices = append(projectServices, config)
+			continue
+		}
+		// Shareable services are excluded (moved to shared compose) unless the
+		// per-service map explicitly opts them out of sharing.
+		if len(sharing.Services) > 0 && !sharing.Services[config.Name] {
 			projectServices = append(projectServices, config)
 		}
 	}

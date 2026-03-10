@@ -69,16 +69,6 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 		return err
 	}
 
-	// Register shared containers before starting
-	sharedConfigs := h.filterSharedServices(serviceConfigs, setup.Config)
-	if len(sharedConfigs) > 0 {
-		configDir, _ := filepath.Abs(core.OttoStackDir)
-		project := registry.ProjectRef{Name: setup.Config.Project.Name, ConfigDir: configDir}
-		if err := h.registerSharedContainersForProject(sharedConfigs, project, execCtx.Shared.Root, base); err != nil {
-			return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceRegisterSharedFailed, err)
-		}
-	}
-
 	service, err := common.NewServiceManager(false)
 	if err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStartFailed, err)
@@ -107,6 +97,16 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 
 	if err = service.Start(ctx, startRequest); err != nil {
 		return err
+	}
+
+	// Register shared containers only after a successful start to keep the registry consistent.
+	sharedConfigs := h.filterSharedServices(serviceConfigs, setup.Config)
+	if len(sharedConfigs) > 0 {
+		configDir, _ := filepath.Abs(core.OttoStackDir)
+		project := registry.ProjectRef{Name: setup.Config.Project.Name, ConfigDir: configDir}
+		if err := h.registerSharedContainersForProject(sharedConfigs, project, execCtx.Shared.Root, base); err != nil {
+			return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceRegisterSharedFailed, err)
+		}
 	}
 
 	base.Output.Success(messages.SuccessServicesStarted)
@@ -185,7 +185,23 @@ func (h *UpHandler) startSharedContainers(ctx context.Context, composePath strin
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, messages.ErrorsDockerLoadProjectFailed, err)
 	}
 
-	return composeManager.Up(ctx, proj, docker.UpOptions{Detach: true}.ToSDK())
+	dockerClient, err := docker.NewClient(nil)
+	if err != nil {
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
+	}
+	defer func() { _ = dockerClient.Close() }()
+
+	servicesToCreate, err := dockerClient.ResolveServicesToStart(ctx, proj)
+	if err != nil {
+		return err
+	}
+
+	if len(servicesToCreate) == 0 {
+		// All containers are already running or have been started directly.
+		return nil
+	}
+
+	return composeManager.Up(ctx, proj, docker.UpOptions{Detach: true, Services: servicesToCreate}.ToSDK())
 }
 
 func (h *UpHandler) promptConfirmStart() (bool, error) {
