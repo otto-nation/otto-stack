@@ -48,15 +48,6 @@ stack:
     - redis
 sharing:
   enabled: false
-validation:
-  skip_warnings: false
-  allow_multiple_databases: false
-advanced:
-  auto_start: false
-  pull_latest_images: false
-  cleanup_on_recreate: false
-version_config:
-  required_version: '>=1.0.0'
 ```
 
 ### Project
@@ -82,22 +73,7 @@ Container sharing configuration allows services to be shared across multiple pro
 
 Validation and safety settings
 
-- **skip_warnings**: Skip validation warnings during startup
-- **allow_multiple_databases**: Allow multiple database services
-
-### Advanced
-
-Advanced operational settings
-
-- **auto_start**: Start services automatically after setup
-- **pull_latest_images**: Pull latest Docker images
-- **cleanup_on_recreate**: Keep data when recreating services
-
-### Version Config
-
-Version management and update settings
-
-- **required_version**: Required otto-stack version
+- **options**: Named validation checks to enable or disable (e.g., config-syntax: true, docker: true)
 
 ### Sharing Configuration Details
 
