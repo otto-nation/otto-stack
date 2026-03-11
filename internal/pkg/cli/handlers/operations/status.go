@@ -149,6 +149,7 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 	if err != nil {
 		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
 	}
+	defer func() { _ = dockerClient.Close() }()
 
 	statuses := h.buildSharedStatuses(ctx, sharedContainers, dockerClient)
 
@@ -225,6 +226,7 @@ func (h *StatusHandler) handleProjectSharedStatusWithRequest(req statusRequest) 
 	if err != nil {
 		return err
 	}
+	defer func() { _ = dockerClient.Close() }()
 
 	statuses := h.buildSharedStatuses(req.ctx, projectContainers, dockerClient)
 

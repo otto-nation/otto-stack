@@ -3,6 +3,7 @@ package project
 import (
 	"errors"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -112,6 +113,7 @@ func (pm *PromptManager) confirmInitializationWithConfig(conf InitConfirmation) 
 		for k := range conf.Validation {
 			keys = append(keys, k)
 		}
+		sort.Strings(keys)
 		for _, option := range keys {
 			conf.Base.Output.Info(messages.InfoListItemIndented, option)
 		}

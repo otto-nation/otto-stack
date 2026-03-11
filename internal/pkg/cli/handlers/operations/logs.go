@@ -76,6 +76,7 @@ func (h *LogsHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 		Tail:           tail,
 		Since:          flags.Since,
 		NoColor:        base.Output.GetNoColor(),
+		Writer:         base.Output.Writer(),
 	}
 
 	return stackService.Logs(ctx, logReq)

@@ -2,8 +2,8 @@ package services
 
 import (
 	"context"
+	"io"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/docker/compose/v5/pkg/api"
@@ -106,6 +106,7 @@ type LogRequest struct {
 	Since          string
 	Until          string
 	NoColor        bool
+	Writer         io.Writer
 }
 
 // NewService creates a new stack service
@@ -234,7 +235,7 @@ func (s *Service) Logs(ctx context.Context, req LogRequest) error {
 		Since:      req.Since,
 		Until:      req.Until,
 	}
-	consumer := docker.NewServiceLogConsumer(os.Stdout, req.NoColor, len(serviceNames))
+	consumer := docker.NewServiceLogConsumer(req.Writer, req.NoColor, len(serviceNames))
 	err := s.compose.Logs(ctx, req.Project, consumer, options.ToSDK())
 	if err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackGetLogsFailed, err)
