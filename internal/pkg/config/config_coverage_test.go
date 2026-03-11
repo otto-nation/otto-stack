@@ -153,7 +153,6 @@ stack:
 	})
 }
 
-
 func TestGenerateConfig_WithSharing(t *testing.T) {
 	t.Run("generates config with sharing enabled", func(t *testing.T) {
 		ctx := clicontext.Context{
