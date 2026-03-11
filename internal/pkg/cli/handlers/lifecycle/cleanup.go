@@ -2,13 +2,14 @@ package lifecycle
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
-	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
@@ -236,21 +237,15 @@ func (h *CleanupHandler) cleanOrphans(ctx context.Context, dockerClient *docker.
 	return nil
 }
 
-// getRegistry creates a registry manager
+// getRegistry creates a registry manager pointed at the global shared root.
+// This works from any directory — no project config required.
 func (h *CleanupHandler) getRegistry() (*registry.Manager, error) {
-	execCtx, err := common.DetectExecutionContext()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, err
+		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, messages.ErrorsContextDetectFailed, err)
 	}
-
-	switch m := execCtx.(type) {
-	case *clicontext.ProjectMode:
-		return registry.NewManager(m.Shared.Root), nil
-	case *clicontext.SharedMode:
-		return registry.NewManager(m.Shared.Root), nil
-	default:
-		return nil, pkgerrors.NewSystemErrorf(pkgerrors.ErrCodeInternal, messages.ErrorsContextUnknownMode, execCtx)
-	}
+	sharedRoot := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
+	return registry.NewManager(sharedRoot), nil
 }
 
 // reconcileRegistry syncs registry with actual Docker container state
