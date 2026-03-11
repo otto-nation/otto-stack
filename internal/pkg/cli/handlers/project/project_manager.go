@@ -74,6 +74,10 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 		}
 	}
 
+	if err := pm.createComposeOverrideFile(base); err != nil {
+		base.Output.Warning(messages.WarningsComposeGenerateSharedFailed, err)
+	}
+
 	if err := pm.createGitignoreEntries(base); err != nil {
 		base.Output.Warning(messages.WarningsGitignoreCreateFailed, err)
 	}
@@ -128,6 +132,35 @@ func (pm *ProjectManager) generateDockerComposeWithSharing(serviceConfigs []type
 	return nil
 }
 
+// createComposeOverrideFile creates the user-owned docker-compose.override.yml stub.
+// It is never overwritten — if it already exists, this is a no-op.
+func (pm *ProjectManager) createComposeOverrideFile(base *base.BaseCommand) error {
+	if _, err := os.Stat(docker.DockerComposeOverrideFilePath); err == nil {
+		return nil
+	}
+
+	const content = "# docker-compose.override.yml\n" +
+		"# This file is yours — otto-stack never overwrites it.\n" +
+		"#\n" +
+		"# Add service customizations here. Docker Compose merges this file\n" +
+		"# with docker-compose.yml automatically on every `otto-stack up`.\n" +
+		"#\n" +
+		"# Example:\n" +
+		"#   services:\n" +
+		"#     postgres:\n" +
+		"#       volumes:\n" +
+		"#         - /my/local/data:/var/lib/postgresql/data\n" +
+		"#       environment:\n" +
+		"#         POSTGRES_PASSWORD: localonly\n"
+
+	if err := os.WriteFile(docker.DockerComposeOverrideFilePath, []byte(content), core.PermReadWrite); err != nil {
+		return err
+	}
+
+	base.Output.Success(messages.SuccessCreatedFile, docker.DockerComposeOverrideFilePath)
+	return nil
+}
+
 // createGitignoreEntries adds entries to .gitignore
 func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 	entries := []string{
@@ -135,6 +168,7 @@ func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 		core.OttoStackDir + "/logs/",
 		core.ExtENV + core.LocalFileExtension,
 		core.LocalConfigFileName,
+		docker.DockerComposeOverrideFileName,
 		"*.log",
 	}
 

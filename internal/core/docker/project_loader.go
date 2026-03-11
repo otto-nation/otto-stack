@@ -26,7 +26,7 @@ func NewDefaultProjectLoader() (*DefaultProjectLoader, error) {
 	}, nil
 }
 
-// Load loads a compose project by name
+// Load loads a compose project by name, merging the override file if present.
 func (l *DefaultProjectLoader) Load(projectName string) (*types.Project, error) {
 	logger.Debug("Loading compose project", "project", projectName)
 
@@ -40,7 +40,15 @@ func (l *DefaultProjectLoader) Load(projectName string) (*types.Project, error) 
 		logger.Debug("File not found at default path, trying working directory", "path", composePath)
 	}
 
-	project, err := l.manager.LoadProject(context.Background(), composePath, projectName)
+	configPaths := []string{composePath}
+
+	// Merge override file when present — it is user-owned and never regenerated.
+	if _, err := os.Stat(DockerComposeOverrideFilePath); err == nil {
+		configPaths = append(configPaths, DockerComposeOverrideFilePath)
+		logger.Debug("Found compose override file", "path", DockerComposeOverrideFilePath)
+	}
+
+	project, err := l.manager.LoadProject(context.Background(), configPaths, projectName)
 	if err != nil {
 		logger.Debug("Failed to load compose project", "error", err, "path", composePath)
 		return nil, err

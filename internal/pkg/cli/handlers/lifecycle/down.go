@@ -230,7 +230,7 @@ func (h *DownHandler) stopSharedContainersViaCompose(ctx context.Context, shared
 		return
 	}
 
-	proj, err := composeManager.LoadProject(ctx, composePath, "shared")
+	proj, err := composeManager.LoadProject(ctx, []string{composePath}, "shared")
 	if err != nil {
 		base.Output.Warning(messages.ErrorsDockerLoadProjectFailed, err)
 		return

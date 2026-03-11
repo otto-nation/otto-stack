@@ -82,11 +82,11 @@ func (m *Manager) GetService() api.Compose {
 	return m.service
 }
 
-// LoadProject loads a compose project using the official SDK method
-func (m *Manager) LoadProject(ctx context.Context, composePath string, projectName string) (*types.Project, error) {
-	// Use the official SDK LoadProject method as shown in documentation
+// LoadProject loads a compose project using the official SDK method.
+// configPaths is a list of compose files to load; later entries override earlier ones.
+func (m *Manager) LoadProject(ctx context.Context, configPaths []string, projectName string) (*types.Project, error) {
 	project, err := m.service.LoadProject(ctx, api.ProjectLoadOptions{
-		ConfigPaths: []string{composePath},
+		ConfigPaths: configPaths,
 		ProjectName: projectName,
 	})
 	if err != nil {

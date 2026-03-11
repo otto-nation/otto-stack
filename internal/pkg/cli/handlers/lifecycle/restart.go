@@ -123,7 +123,7 @@ func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Com
 		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerManagerCreateFailed, err)
 	}
 
-	proj, err := composeManager.LoadProject(ctx, composePath, "shared")
+	proj, err := composeManager.LoadProject(ctx, []string{composePath}, "shared")
 	if err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, messages.ErrorsDockerLoadProjectFailed, err)
 	}
