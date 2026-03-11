@@ -34,6 +34,8 @@ const (
 	keyType            = "type"
 	keyUsage           = "usage"
 	keyValidation      = "validation"
+
+	yamlIndent = 2
 )
 
 // nodeDoc unwraps a DocumentNode to its first child.
@@ -141,7 +143,7 @@ func marshalYAML(n *yaml.Node) (string, error) {
 	}
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)
-	enc.SetIndent(2)
+	enc.SetIndent(yamlIndent)
 	if err := enc.Encode(n); err != nil {
 		return "", err
 	}

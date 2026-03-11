@@ -8,15 +8,14 @@ import (
 	"testing"
 
 	composetypes "github.com/compose-spec/compose-go/v2/types"
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 )
 
 func TestClient_ListResources_Unit(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
-			return []types.Container{
+		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
+			return []container.Summary{
 				{ID: "container1", Names: []string{"/test-container"}},
 			}, nil
 		},
@@ -64,7 +63,7 @@ func TestClient_RemoveContainer_Unit(t *testing.T) {
 
 func TestClient_ResolveServicesToStart_AllRunning(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerInspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
 			return testhelpers.MockContainerJSON(containerID, containerID, "redis:7-alpine", "shared", true), nil
 		},
 	}
@@ -86,8 +85,8 @@ func TestClient_ResolveServicesToStart_AllRunning(t *testing.T) {
 
 func TestClient_ResolveServicesToStart_NoneExist(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerInspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
-			return types.ContainerJSON{}, errors.New("No such container")
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			return container.InspectResponse{}, errors.New("No such container")
 		},
 	}
 	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
@@ -109,7 +108,7 @@ func TestClient_ResolveServicesToStart_NoneExist(t *testing.T) {
 func TestClient_ResolveServicesToStart_StoppedContainer(t *testing.T) {
 	startCalled := false
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerInspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
 			return testhelpers.MockContainerJSON(containerID, containerID, "redis:7-alpine", "shared", false), nil
 		},
 		ContainerStartFunc: func(ctx context.Context, containerID string, options container.StartOptions) error {
@@ -139,9 +138,9 @@ func TestClient_ResolveServicesToStart_StoppedContainer(t *testing.T) {
 func TestClient_ResolveServicesToStart_FallbackContainerName(t *testing.T) {
 	inspectedName := ""
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerInspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
 			inspectedName = containerID
-			return types.ContainerJSON{}, errors.New("No such container")
+			return container.InspectResponse{}, errors.New("No such container")
 		},
 	}
 	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
@@ -166,11 +165,11 @@ func TestClient_ResolveServicesToStart_FallbackContainerName(t *testing.T) {
 
 func TestClient_ResolveServicesToStart_Mixed(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerInspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
 			if containerID == "otto-stack-redis" {
 				return testhelpers.MockContainerJSON(containerID, containerID, "redis:7-alpine", "shared", true), nil
 			}
-			return types.ContainerJSON{}, errors.New("No such container")
+			return container.InspectResponse{}, errors.New("No such container")
 		},
 	}
 	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
@@ -194,8 +193,8 @@ func TestClient_ResolveServicesToStart_Mixed(t *testing.T) {
 
 func TestClient_GetServiceStatus_Unit(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
-			return []types.Container{
+		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
+			return []container.Summary{
 				{
 					ID:    "web1",
 					Names: []string{"/test-project-web-1"},
@@ -207,11 +206,11 @@ func TestClient_GetServiceStatus_Unit(t *testing.T) {
 				},
 			}, nil
 		},
-		ContainerInspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
 			json := testhelpers.MockContainerJSON(containerID, "/test", "test:latest", "test-project", false)
 			json.Created = "2024-01-01T00:00:00Z"
 			json.State.StartedAt = "2024-01-01T00:00:01Z"
-			json.NetworkSettings = &types.NetworkSettings{}
+			json.NetworkSettings = &container.NetworkSettings{}
 			return json, nil
 		},
 	}

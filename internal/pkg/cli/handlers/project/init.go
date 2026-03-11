@@ -12,9 +12,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
@@ -78,7 +76,7 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedProcessInitMode, err)
 	}
 
-	if err := h.executeInit(ctx, projectCtx, base); err != nil {
+	if err := h.executeInit(projectCtx, base); err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedExecuteInit, err)
 	}
 
@@ -130,13 +128,15 @@ func (h *InitHandler) processMode(ciFlags ci.Flags, initFlags *core.InitFlags, b
 	return projectCtx, nil
 }
 
-func (h *InitHandler) executeInit(ctx context.Context, projectCtx clicontext.Context, base *base.BaseCommand) error {
-	initCommand := NewInitCommand(h.projectManager)
-	validationMiddleware := middleware.NewValidationMiddleware()
-	loggingMiddleware := middleware.NewLoggingMiddleware()
+func (h *InitHandler) executeInit(projectCtx clicontext.Context, base *base.BaseCommand) error {
+	_, dirExistedErr := os.Stat(core.OttoStackDir)
 
-	handler := command.NewHandler(initCommand, loggingMiddleware, validationMiddleware)
-	return handler.Execute(ctx, projectCtx, base)
+	err := h.projectManager.CreateProjectStructure(projectCtx, base)
+	if err != nil && os.IsNotExist(dirExistedErr) {
+		// Roll back the partially-created directory tree so the user can retry cleanly.
+		_ = os.RemoveAll(core.OttoStackDir)
+	}
+	return err
 }
 
 func (h *InitHandler) validateInitFlags(cmd *cobra.Command) error {

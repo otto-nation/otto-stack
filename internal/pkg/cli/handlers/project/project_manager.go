@@ -11,7 +11,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
-	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/env"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/filesystem"
@@ -23,23 +22,8 @@ import (
 // ProjectManager handles project creation logic
 type ProjectManager struct {
 	serviceUtils     *svc.ServiceUtils
-	configService    config.ConfigService
 	configManager    *ConfigManager
 	directoryManager *DirectoryManager
-}
-
-// OttoStackConfig represents the otto-stack configuration structure
-type OttoStackConfig struct {
-	Project struct {
-		Name string `yaml:"name"`
-		Type string `yaml:"type"`
-	} `yaml:"project"`
-	Stack struct {
-		Enabled []string `yaml:"enabled"`
-	} `yaml:"stack"`
-	Validation struct {
-		Options map[string]bool `yaml:"options"`
-	} `yaml:"validation"`
 }
 
 // ServiceConfig represents a service configuration file
@@ -52,7 +36,6 @@ type ServiceConfig struct {
 func NewProjectManager() *ProjectManager {
 	return &ProjectManager{
 		serviceUtils:     svc.NewServiceUtils(),
-		configService:    config.NewConfigService(),
 		configManager:    NewConfigManager(),
 		directoryManager: NewDirectoryManager(),
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/api/types/network"
@@ -17,8 +16,8 @@ func TestResourceManager_ListContainers(t *testing.T) {
 	ctx := context.Background()
 	mock := &testhelpers.MockDockerClient{}
 
-	mock.ContainerListFunc = func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
-		return []types.Container{
+	mock.ContainerListFunc = func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
+		return []container.Summary{
 			{ID: "container1"},
 			{ID: "container2"},
 		}, nil
@@ -232,7 +231,7 @@ func TestResourceManager_ListContainers_Error(t *testing.T) {
 	ctx := context.Background()
 	mock := &testhelpers.MockDockerClient{}
 
-	mock.ContainerListFunc = func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
+	mock.ContainerListFunc = func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
 		return nil, assert.AnError
 	}
 
