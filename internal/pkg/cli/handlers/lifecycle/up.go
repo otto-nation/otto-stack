@@ -130,13 +130,6 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 			return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceRegisterSharedFailed, err)
 		}
 		base.Output.Info(messages.SharedProjectRegisteredShared, len(sharedConfigs))
-
-		// Non-blocking: validate registry against Docker after registration to surface
-		// any drift between what was registered and what is actually running.
-		reg := registry.NewManager(execCtx.Shared.Root)
-		for _, w := range reg.ValidateAgainstDocker(ctx, setup.DockerClient) {
-			base.Output.Warning("%s", w)
-		}
 	}
 
 	base.Output.Success(messages.SuccessServicesStarted)
