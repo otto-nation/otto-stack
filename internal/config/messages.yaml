@@ -426,6 +426,8 @@ shared:
   will_stop: "The following shared containers will be stopped:"
   cancelled: "Cancelled"
   skipping: "Skipping shared containers"
+  skipping_non_interactive: "Skipping %d shared container(s) in non-interactive mode. Use --all to stop them."
+  stopping_non_interactive: "Stopping all shared containers (non-interactive mode)"
   no_services_to_stop: "No services to stop"
   confirm_stop: "Stop shared containers? (y/N): "
   registered_item: "  %s %s (shared)"

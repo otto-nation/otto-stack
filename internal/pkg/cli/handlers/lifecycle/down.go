@@ -155,7 +155,12 @@ func (h *DownHandler) promptAndFilterShared(base *base.BaseCommand, reg *registr
 		}
 	}
 
-	if nonInteractive || !h.promptStopShared(base) {
+	if nonInteractive {
+		base.Output.Info(messages.SharedSkippingNonInteractive, len(sharedServices))
+		return h.filterOutShared(sharedServices, serviceConfigs)
+	}
+
+	if !h.promptStopShared(base) {
 		base.Output.Info(messages.SharedSkipping)
 		return h.filterOutShared(sharedServices, serviceConfigs)
 	}
@@ -275,7 +280,12 @@ func (h *DownHandler) promptStopAll(containers map[string]*registry.ContainerInf
 		base.Output.Info(messages.InfoListItemWithUsers, service, containers[service].Projects)
 	}
 
-	if nonInteractive || !h.promptStopShared(base) {
+	if nonInteractive {
+		base.Output.Info(messages.SharedStoppingNonInteractive)
+		return services
+	}
+
+	if !h.promptStopShared(base) {
 		base.Output.Info(messages.SharedCancelled)
 		return nil
 	}
