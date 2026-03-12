@@ -129,10 +129,24 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 		sharedRoot = m.Shared.Root
 	}
 
-	reg := registry.NewManager(sharedRoot)
-	_, err := reg.Load()
+	dockerClient, err := docker.NewClient(h.logger)
 	if err != nil {
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
+	}
+	defer func() { _ = dockerClient.Close() }()
+
+	reg := registry.NewManager(sharedRoot)
+	if _, err := reg.Load(); err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
+	}
+
+	// Reconcile registry against Docker before displaying — prunes entries for
+	// containers that no longer exist (manual docker rm, machine restart, etc.).
+	if result, err := reg.Reconcile(ctx, dockerClient); err != nil {
+		// Non-fatal: warn and continue with whatever state we have.
+		base.Output.Warning(messages.WarningsRegistryReconcileFailed, err)
+	} else if len(result.Removed) > 0 {
+		base.Output.Info(messages.InfoReconciledRegistry, len(result.Removed))
 	}
 
 	sharedContainers, err := reg.List()
@@ -144,12 +158,6 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 		base.Output.Info(messages.InfoNoSharedContainers)
 		return nil
 	}
-
-	dockerClient, err := docker.NewClient(h.logger)
-	if err != nil {
-		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
-	}
-	defer func() { _ = dockerClient.Close() }()
 
 	statuses := h.buildSharedStatuses(ctx, sharedContainers, dockerClient)
 
