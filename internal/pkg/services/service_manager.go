@@ -187,8 +187,11 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 
 	s.logger.Debug("Services started successfully")
 
-	// Execute local init scripts for services that have them
+	// Execute local init scripts for services that have them.
+	// On failure, tear down the containers so the system is left in a clean state
+	// rather than partially running with a failed init.
 	if err := s.executeLocalInitScripts(ctx, req.ServiceConfigs, req.Project); err != nil {
+		_ = s.compose.Down(ctx, req.Project, api.DownOptions{RemoveOrphans: true})
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackInitScriptsFailed, err)
 	}
 

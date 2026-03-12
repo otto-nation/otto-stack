@@ -90,6 +90,7 @@ Build images and start services in background
 **Flags:**
 
 - `--global` (`bool`): Force shared (global) mode — start as shared containers regardless of current directory (default: `false`)
+- `--project` (`string`): Path to a project directory — operate on that project regardless of current directory (default: ``)
 - `--detach` (`bool`): Run services in background (detached mode) (default: `false`)
 - `--build` (`bool`): Build images before starting services (default: `false`)
 - `--force-recreate` (`bool`): Recreate containers even if config hasn't changed (default: `false`)
@@ -161,6 +162,7 @@ Stop services with custom timeout
 
 **Flags:**
 
+- `--project` (`string`): Path to a project directory — operate on that project regardless of current directory (default: ``)
 - `--shared` (`bool`): Stop all shared containers (default: `false`)
 - `--all` (`bool`): Stop both project and shared containers (default: `false`)
 - `--volumes` (`bool`): Remove named volumes and anonymous volumes (default: `false`)
@@ -213,6 +215,7 @@ Restart a shared container from inside a project directory
 **Flags:**
 
 - `--global` (`bool`): Force shared (global) mode — restart shared containers regardless of current directory (default: `false`)
+- `--project` (`string`): Path to a project directory — operate on that project regardless of current directory (default: ``)
 - `--timeout` (`int`): Restart timeout in seconds (default: `10`)
 - `--no-deps` (`bool`): Don't restart linked services (default: `false`)
 
