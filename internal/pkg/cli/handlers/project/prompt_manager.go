@@ -2,6 +2,7 @@ package project
 
 import (
 	"errors"
+	"fmt"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -67,20 +68,53 @@ func (pm *PromptManager) PromptForServiceConfigs() ([]types.ServiceConfig, error
 	return selector.SelectServices()
 }
 
-// PromptForAdvancedOptions prompts for validation and advanced options
-func (pm *PromptManager) PromptForAdvancedOptions() (map[string]bool, *clicontext.AdvancedSpec, error) {
+// PromptForAdvancedOptions prompts for validation, sharing, and advanced options.
+// It receives the resolved service configs so it can show which services are shareable.
+func (pm *PromptManager) PromptForAdvancedOptions(serviceConfigs []types.ServiceConfig) (map[string]bool, *clicontext.SharingSpec, *clicontext.AdvancedSpec, error) {
 	prompter := NewValidationPrompter()
 	validation, err := prompter.PromptForValidationOptions()
 	if err != nil {
-		return validation, nil, err
+		return validation, nil, nil, err
+	}
+
+	sharing, err := pm.promptForSharing(serviceConfigs)
+	if err != nil {
+		return validation, nil, nil, err
 	}
 
 	autoStart, err := pm.promptForAutoStart()
 	if err != nil {
-		return validation, nil, err
+		return validation, nil, nil, err
 	}
 
-	return validation, &clicontext.AdvancedSpec{AutoStart: autoStart}, nil
+	return validation, sharing, &clicontext.AdvancedSpec{AutoStart: autoStart}, nil
+}
+
+// promptForSharing prompts the user whether to enable shared containers for the
+// shareable services in their selection. Returns a SharingSpec with Enabled=false
+// if no shareable services are present (no prompt shown in that case).
+func (pm *PromptManager) promptForSharing(serviceConfigs []types.ServiceConfig) (*clicontext.SharingSpec, error) {
+	var shareableNames []string
+	for _, cfg := range serviceConfigs {
+		if cfg.Shareable {
+			shareableNames = append(shareableNames, cfg.Name)
+		}
+	}
+
+	if len(shareableNames) == 0 {
+		return &clicontext.SharingSpec{Enabled: false}, nil
+	}
+
+	prompt := &survey.Confirm{
+		Message: fmt.Sprintf(messages.PromptsEnableSharing, strings.Join(shareableNames, ", ")),
+		Help:    messages.PromptsEnableSharingHelp,
+		Default: true,
+	}
+	var enabled bool
+	if err := survey.AskOne(prompt, &enabled); err != nil {
+		return nil, err
+	}
+	return &clicontext.SharingSpec{Enabled: enabled}, nil
 }
 
 func (pm *PromptManager) promptForAutoStart() (bool, error) {

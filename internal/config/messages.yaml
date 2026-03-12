@@ -204,6 +204,8 @@ prompts:
   proceed_initialization: "Proceed with initialization?"
   auto_start: "Automatically run 'otto-stack up' after initialization?"
   auto_start_help: "Starts all configured services immediately after project setup"
+  enable_sharing: "Enable container sharing for %s?"
+  enable_sharing_help: "Shared containers (e.g. otto-stack-postgres) run globally and are reused across all projects, saving resources and startup time. Disable to run these as project-local instances instead."
 
 info:
   no_cleanup_options: "No cleanup options specified. Use --help for available options"

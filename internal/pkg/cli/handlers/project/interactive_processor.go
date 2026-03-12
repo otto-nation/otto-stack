@@ -27,11 +27,6 @@ func (p *InteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCom
 	// Extract original service names from configs for interactive mode
 	originalServiceNames := svc.ExtractServiceNames(result.ServiceConfigs)
 
-	// For interactive mode, default to sharing enabled
-	sharingSpec := &clicontext.SharingSpec{
-		Enabled: true,
-	}
-
 	ctx := clicontext.NewBuilder().
 		WithProject(projectName, "").
 		WithServices(originalServiceNames, result.ServiceConfigs).
@@ -39,7 +34,7 @@ func (p *InteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCom
 		WithAdvanced(map[string]bool{}).
 		WithAdvancedSpec(result.Advanced).
 		WithRuntimeFlags(flags, true).
-		WithSharing(sharingSpec).
+		WithSharing(result.Sharing).
 		Build()
 
 	return ctx, nil

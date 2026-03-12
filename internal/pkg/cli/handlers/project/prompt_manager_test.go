@@ -39,11 +39,12 @@ func TestPromptManager_PromptForServiceConfigs(t *testing.T) {
 
 func TestPromptManager_PromptForAdvancedOptions(t *testing.T) {
 	pm := &PromptManager{}
-	validation, advanced, err := pm.PromptForAdvancedOptions()
+	validation, sharing, advanced, err := pm.PromptForAdvancedOptions(nil)
 	if err != nil {
 		assert.Error(t, err)
 	} else {
 		assert.NotNil(t, validation)
+		assert.NotNil(t, sharing)
 		assert.NotNil(t, advanced)
 	}
 }

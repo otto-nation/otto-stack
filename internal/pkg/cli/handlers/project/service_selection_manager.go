@@ -21,6 +21,7 @@ type ServiceSelectionManager struct {
 type SelectionResult struct {
 	ServiceConfigs []types.ServiceConfig // User-selected services ONLY (not resolved with dependencies)
 	Validation     map[string]bool
+	Sharing        *clicontext.SharingSpec
 	Advanced       *clicontext.AdvancedSpec
 	Action         string
 	ProjectName    string
@@ -82,7 +83,7 @@ func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, proj
 		return nil, err
 	}
 
-	validation, advanced, err := ssm.promptManager.PromptForAdvancedOptions()
+	validation, sharing, advanced, err := ssm.promptManager.PromptForAdvancedOptions(serviceConfigs)
 	if err != nil {
 		return nil, err
 	}
@@ -101,6 +102,7 @@ func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, proj
 	return &SelectionResult{
 		ServiceConfigs: selectedConfigs,
 		Validation:     validation,
+		Sharing:        sharing,
 		Advanced:       advanced,
 		Action:         action,
 		ProjectName:    projectName,
