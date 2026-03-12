@@ -54,6 +54,7 @@ func (p *NonInteractiveProcessor) Process(flags *core.InitFlags, base *base.Base
 		WithServices(serviceNames, serviceConfigs).
 		WithValidation(getDefaultValidation()).
 		WithAdvanced(map[string]bool{}).
+		WithAdvancedSpec(&clicontext.AdvancedSpec{AutoStart: flags.AutoStart}).
 		WithRuntimeFlags(flags, false).
 		WithSharing(sharingConfig).
 		Build()

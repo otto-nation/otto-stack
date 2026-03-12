@@ -8,6 +8,8 @@ type Config struct {
 	Stack      StackConfig       `yaml:"stack" json:"stack"`
 	Sharing    *SharingConfig    `yaml:"sharing,omitempty" json:"sharing,omitempty"`
 	Validation *ValidationConfig `yaml:"validation,omitempty" json:"validation,omitempty"`
+	Advanced   *AdvancedConfig   `yaml:"advanced,omitempty" json:"advanced,omitempty"`
+	Version    *VersionConfig    `yaml:"version_config,omitempty" json:"version_config,omitempty"`
 }
 
 // ProjectConfig defines project-level configuration
@@ -35,4 +37,16 @@ type SharingConfig struct {
 // ValidationConfig defines validation settings
 type ValidationConfig struct {
 	Options map[string]bool `yaml:"options,omitempty" json:"options,omitempty"`
+}
+
+// AdvancedConfig defines advanced operational settings
+type AdvancedConfig struct {
+	AutoStart         bool `yaml:"auto_start" json:"auto_start"`
+	PullLatestImages  bool `yaml:"pull_latest_images" json:"pull_latest_images"`
+	CleanupOnRecreate bool `yaml:"cleanup_on_recreate" json:"cleanup_on_recreate"`
+}
+
+// VersionConfig defines version constraint settings
+type VersionConfig struct {
+	RequiredVersion string `yaml:"required_version,omitempty" json:"required_version,omitempty"`
 }

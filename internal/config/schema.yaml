@@ -61,3 +61,29 @@ schema:
         type: object
         default: {}
         description: "Named validation checks to enable or disable (e.g., config-syntax: true, docker: true)"
+
+  advanced:
+    type: object
+    description: "Advanced operational settings"
+    properties:
+      auto_start:
+        type: boolean
+        default: false
+        description: "Automatically run 'up' after initialization completes"
+      pull_latest_images:
+        type: boolean
+        default: false
+        description: "Pull the latest Docker images before starting services"
+      cleanup_on_recreate:
+        type: boolean
+        default: false
+        description: "Remove volumes when force-recreating services (full data reset)"
+
+  version_config:
+    type: object
+    description: "Version constraint settings"
+    properties:
+      required_version:
+        type: string
+        default: ""
+        description: "Semver constraint the running otto-stack binary must satisfy (e.g., '>=1.2.0')"

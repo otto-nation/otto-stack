@@ -9,6 +9,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
@@ -67,16 +68,32 @@ func (pm *PromptManager) PromptForServiceConfigs() ([]types.ServiceConfig, error
 }
 
 // PromptForAdvancedOptions prompts for validation and advanced options
-func (pm *PromptManager) PromptForAdvancedOptions() (map[string]bool, map[string]bool, error) {
-	advanced := make(map[string]bool)
-
+func (pm *PromptManager) PromptForAdvancedOptions() (map[string]bool, *clicontext.AdvancedSpec, error) {
 	prompter := NewValidationPrompter()
 	validation, err := prompter.PromptForValidationOptions()
 	if err != nil {
-		return validation, advanced, err
+		return validation, nil, err
 	}
 
-	return validation, advanced, nil
+	autoStart, err := pm.promptForAutoStart()
+	if err != nil {
+		return validation, nil, err
+	}
+
+	return validation, &clicontext.AdvancedSpec{AutoStart: autoStart}, nil
+}
+
+func (pm *PromptManager) promptForAutoStart() (bool, error) {
+	prompt := &survey.Confirm{
+		Message: messages.PromptsAutoStart,
+		Help:    messages.PromptsAutoStartHelp,
+		Default: false,
+	}
+	var autoStart bool
+	if err := survey.AskOne(prompt, &autoStart); err != nil {
+		return false, err
+	}
+	return autoStart, nil
 }
 
 // InitConfirmation encapsulates initialization confirmation parameters
@@ -84,24 +101,21 @@ type InitConfirmation struct {
 	ProjectName string
 	Services    []string
 	Validation  map[string]bool
-	Advanced    map[string]bool
 	Base        *base.BaseCommand
 }
 
 // ConfirmInitialization shows final confirmation with option to go back
-func (pm *PromptManager) ConfirmInitialization(projectName string, services []string, validation, advanced map[string]bool, base *base.BaseCommand) (string, error) {
+func (pm *PromptManager) ConfirmInitialization(projectName string, services []string, validation map[string]bool, base *base.BaseCommand) (string, error) {
 	conf := InitConfirmation{
 		ProjectName: projectName,
 		Services:    services,
 		Validation:  validation,
-		Advanced:    advanced,
 		Base:        base,
 	}
 	return pm.confirmInitializationWithConfig(conf)
 }
 
 func (pm *PromptManager) confirmInitializationWithConfig(conf InitConfirmation) (string, error) {
-	// Display summary
 	conf.Base.Output.Info(messages.InfoProjectConfigSummary)
 	conf.Base.Output.Info(messages.InfoProjectNameLabel, conf.ProjectName)
 	conf.Base.Output.Info(messages.InfoServicesLabel, strings.Join(conf.Services, ", "))

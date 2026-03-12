@@ -36,7 +36,8 @@ func (p *InteractiveProcessor) Process(flags *core.InitFlags, base *base.BaseCom
 		WithProject(projectName, "").
 		WithServices(originalServiceNames, result.ServiceConfigs).
 		WithValidation(result.Validation).
-		WithAdvanced(result.Advanced).
+		WithAdvanced(map[string]bool{}).
+		WithAdvancedSpec(result.Advanced).
 		WithRuntimeFlags(flags, true).
 		WithSharing(sharingSpec).
 		Build()

@@ -54,6 +54,7 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 		"init": {
 			handlerPath: "internal/pkg/cli/handlers/project/init.go",
 			flags: []string{
+				"auto-start",
 				"force",
 				"no-shared-containers",
 				"project-name",

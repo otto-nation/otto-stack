@@ -12,6 +12,7 @@ type Context struct {
 	Options  OptionSet
 	Runtime  RuntimeSpec
 	Sharing  *SharingSpec
+	Advanced *AdvancedSpec
 }
 
 // ProjectSpec contains project-related information
@@ -43,6 +44,11 @@ type RuntimeSpec struct {
 type SharingSpec struct {
 	Enabled  bool
 	Services map[string]bool
+}
+
+// AdvancedSpec contains advanced init-time options
+type AdvancedSpec struct {
+	AutoStart bool
 }
 
 // Builder provides fluent API for building Context
@@ -105,6 +111,12 @@ func (b *Builder) WithRuntimeFlags(flags *core.InitFlags, interactive bool) *Bui
 // WithSharing sets sharing configuration
 func (b *Builder) WithSharing(sharing *SharingSpec) *Builder {
 	b.ctx.Sharing = sharing
+	return b
+}
+
+// WithAdvancedSpec sets advanced options
+func (b *Builder) WithAdvancedSpec(advanced *AdvancedSpec) *Builder {
+	b.ctx.Advanced = advanced
 	return b
 }
 

@@ -48,6 +48,12 @@ stack:
     - redis
 sharing:
   enabled: false
+advanced:
+  auto_start: false
+  pull_latest_images: false
+  cleanup_on_recreate: false
+version_config:
+  required_version:
 ```
 
 ### Project
@@ -74,6 +80,20 @@ Container sharing configuration allows services to be shared across multiple pro
 Validation and safety settings
 
 - **options**: Named validation checks to enable or disable (e.g., config-syntax: true, docker: true)
+
+### Advanced
+
+Advanced operational settings
+
+- **auto_start**: Automatically run 'up' after initialization completes
+- **pull_latest_images**: Pull the latest Docker images before starting services
+- **cleanup_on_recreate**: Remove volumes when force-recreating services (full data reset)
+
+### Version Config
+
+Version constraint settings
+
+- **required_version**: Semver constraint the running otto-stack binary must satisfy (e.g., '>=1.2.0')
 
 ### Sharing Configuration Details
 

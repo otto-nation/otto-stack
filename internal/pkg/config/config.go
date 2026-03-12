@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
+	goversion "github.com/hashicorp/go-version"
 	embeddedconfig "github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/core"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
@@ -11,6 +12,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/version"
 	"gopkg.in/yaml.v3"
 )
 
@@ -72,7 +74,9 @@ func LoadConfig() (*Config, error) {
 		if err := validateSharingPolicy(baseConfig); err != nil {
 			return nil, err
 		}
-		warnPhantomFields(baseConfig)
+		if err := validateRequiredVersion(baseConfig); err != nil {
+			return nil, err
+		}
 		return baseConfig, nil
 	}
 
@@ -80,15 +84,40 @@ func LoadConfig() (*Config, error) {
 	if err := validateSharingPolicy(merged); err != nil {
 		return nil, err
 	}
-	warnPhantomFields(merged)
+	if err := validateRequiredVersion(merged); err != nil {
+		return nil, err
+	}
 	return merged, nil
 }
 
-// warnPhantomFields logs a warning for config fields that are parsed but have no effect.
-func warnPhantomFields(cfg *Config) {
-	if cfg.Validation != nil && len(cfg.Validation.Options) > 0 {
-		logger.Warn(messages.WarningsValidationOptionsIgnored)
+// validateRequiredVersion checks the running binary version satisfies the config constraint.
+func validateRequiredVersion(cfg *Config) error {
+	if cfg.Version == nil || cfg.Version.RequiredVersion == "" {
+		return nil
 	}
+
+	constraint, err := goversion.NewConstraint(cfg.Version.RequiredVersion)
+	if err != nil {
+		return pkgerrors.NewConfigError(pkgerrors.ErrCodeInvalid, "version_config.required_version", messages.VersionInvalidVersion, err)
+	}
+
+	current, err := goversion.NewVersion(version.GetAppVersion())
+	if err != nil {
+		// If the running version can't be parsed (e.g. dev build), skip the check rather than block.
+		logger.Warn("Could not parse running version for constraint check", "version", version.GetAppVersion())
+		return nil
+	}
+
+	if !constraint.Check(current) {
+		return pkgerrors.NewValidationErrorf(
+			pkgerrors.ErrCodeInvalid,
+			"version_config.required_version",
+			messages.VersionConstraintNotSatisfied,
+			version.GetAppVersion(),
+			cfg.Version.RequiredVersion,
+		)
+	}
+	return nil
 }
 
 // GenerateConfig creates a new otto-stack configuration file
@@ -114,7 +143,9 @@ func GenerateConfig(ctx clicontext.Context) ([]byte, error) {
 		}
 	}
 
-	// validation.options is not yet implemented — omit it from generated configs.
+	if ctx.Advanced != nil && ctx.Advanced.AutoStart {
+		config.Advanced = &AdvancedConfig{AutoStart: true}
+	}
 
 	return yaml.Marshal(config)
 }
@@ -182,6 +213,14 @@ func mergeConfigs(base, local *Config) *Config {
 
 	if local.Validation != nil {
 		merged.Validation = local.Validation
+	}
+
+	if local.Advanced != nil {
+		merged.Advanced = local.Advanced
+	}
+
+	if local.Version != nil {
+		merged.Version = local.Version
 	}
 
 	return &merged

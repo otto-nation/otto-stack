@@ -420,6 +420,10 @@ commands:
         type: "string"
         description: "Comma-separated list of services to share across projects (e.g., postgres,redis). Overrides global sharing setting for specified services."
         default: ""
+      auto-start:
+        type: "bool"
+        description: "Automatically run 'up' after initialization completes (non-interactive mode only; interactive mode prompts)"
+        default: false
     related_commands: ["validate"]
 
   web-interfaces:

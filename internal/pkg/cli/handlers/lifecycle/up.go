@@ -86,14 +86,22 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 		timeout = defaultTimeout
 	}
 
+	var pullLatest, cleanupOnRecreate bool
+	if setup.Config.Advanced != nil {
+		pullLatest = setup.Config.Advanced.PullLatestImages
+		cleanupOnRecreate = setup.Config.Advanced.CleanupOnRecreate
+	}
+
 	startRequest := services.StartRequest{
-		Project:        setup.Config.Project.Name,
-		ServiceConfigs: serviceConfigs,
-		Build:          upFlags.Build,
-		ForceRecreate:  upFlags.ForceRecreate,
-		Detach:         upFlags.Detach,
-		NoDeps:         upFlags.NoDeps,
-		Timeout:        timeout,
+		Project:           setup.Config.Project.Name,
+		ServiceConfigs:    serviceConfigs,
+		Build:             upFlags.Build,
+		ForceRecreate:     upFlags.ForceRecreate,
+		Detach:            upFlags.Detach,
+		NoDeps:            upFlags.NoDeps,
+		PullLatestImages:  pullLatest,
+		CleanupOnRecreate: cleanupOnRecreate,
+		Timeout:           timeout,
 	}
 
 	if err = service.Start(ctx, startRequest); err != nil {
@@ -203,7 +211,7 @@ func (h *UpHandler) startSharedContainers(ctx context.Context, composePath strin
 		return nil
 	}
 
-	return composeManager.Up(ctx, proj, docker.UpOptions{Detach: true, Services: servicesToCreate}.ToSDK())
+	return composeManager.Up(ctx, proj, docker.UpOptions{Detach: true, Services: servicesToCreate})
 }
 
 func (h *UpHandler) promptConfirmStart() (bool, error) {

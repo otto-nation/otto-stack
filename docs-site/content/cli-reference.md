@@ -446,6 +446,7 @@ Overwrite existing configuration
 - `--services` (`string`): Comma-separated list of services to include (required for non-interactive mode) (default: ``)
 - `--no-shared-containers` (`bool`): Disable shared containers for all services (default: `false`)
 - `--shared-services` (`string`): Comma-separated list of services to share across projects (e.g., postgres,redis). Overrides global sharing setting for specified services. (default: ``)
+- `--auto-start` (`bool`): Automatically run 'up' after initialization completes (non-interactive mode only; interactive mode prompts) (default: `false`)
 
 **Related Commands:** [`validate`](#validate)
 

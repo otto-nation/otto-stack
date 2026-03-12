@@ -65,7 +65,7 @@ type DockerClientInterface interface {
 
 // ComposeManagerInterface defines the interface for Compose operations
 type ComposeManagerInterface interface {
-	Up(ctx context.Context, project *types.Project, options api.UpOptions) error
+	Up(ctx context.Context, project *types.Project, options UpOptions) error
 	Down(ctx context.Context, project *types.Project, options api.DownOptions) error
 }
 

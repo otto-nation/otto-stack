@@ -3,6 +3,7 @@ package project
 import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
@@ -20,7 +21,7 @@ type ServiceSelectionManager struct {
 type SelectionResult struct {
 	ServiceConfigs []types.ServiceConfig // User-selected services ONLY (not resolved with dependencies)
 	Validation     map[string]bool
-	Advanced       map[string]bool
+	Advanced       *clicontext.AdvancedSpec
 	Action         string
 	ProjectName    string
 }
@@ -90,7 +91,7 @@ func (ssm *ServiceSelectionManager) runSelectionCycle(handler *InitHandler, proj
 		return nil, err
 	}
 
-	action, err := ssm.promptManager.ConfirmInitialization(projectName, serviceNames, validation, advanced, base)
+	action, err := ssm.promptManager.ConfirmInitialization(projectName, serviceNames, validation, base)
 	if err != nil {
 		return nil, err
 	}

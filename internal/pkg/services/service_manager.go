@@ -51,14 +51,16 @@ func ResolveUpServices(args []string, cfg *config.Config) ([]servicetypes.Servic
 
 // StartRequest defines parameters for starting a stack
 type StartRequest struct {
-	Project         string
-	ServiceConfigs  []servicetypes.ServiceConfig
-	Build           bool
-	ForceRecreate   bool
-	Detach          bool
-	NoDeps          bool
-	Timeout         time.Duration
-	Characteristics []string
+	Project           string
+	ServiceConfigs    []servicetypes.ServiceConfig
+	Build             bool
+	ForceRecreate     bool
+	Detach            bool
+	NoDeps            bool
+	PullLatestImages  bool
+	CleanupOnRecreate bool
+	Timeout           time.Duration
+	Characteristics   []string
 }
 
 // StopRequest defines parameters for stopping a stack
@@ -153,6 +155,18 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 	}
 
 	s.logger.Debug("Project loaded successfully", pkgerrors.ComponentProject, req.Project)
+
+	// Pull latest images before starting when requested.
+	if req.PullLatestImages {
+		if pullErr := s.compose.Pull(ctx, project, api.PullOptions{}); pullErr != nil {
+			s.logger.Warn("Failed to pull latest images", "error", pullErr)
+		}
+	}
+
+	// When force-recreating with cleanup enabled, remove volumes first for a full reset.
+	if req.ForceRecreate && req.CleanupOnRecreate {
+		_ = s.compose.Down(ctx, req.Project, api.DownOptions{Volumes: true, RemoveOrphans: true})
+	}
 
 	// Resolve characteristics to options and convert to SDK format
 	options := s.characteristics.ResolveUpOptions(req.Characteristics, req.ServiceConfigs, docker.UpOptions{

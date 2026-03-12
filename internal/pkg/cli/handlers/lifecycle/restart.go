@@ -133,7 +133,7 @@ func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Com
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsServiceRestartFailed, err)
 	}
 
-	if err := composeManager.Up(ctx, proj, docker.UpOptions{Detach: true, Services: args}.ToSDK()); err != nil {
+	if err := composeManager.Up(ctx, proj, docker.UpOptions{Detach: true, Services: args}); err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsServiceRestartFailed, err)
 	}
 

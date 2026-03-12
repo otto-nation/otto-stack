@@ -13,9 +13,11 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
@@ -81,6 +83,15 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	}
 
 	h.displaySuccessMessage(projectCtx.Project.Name, base)
+
+	if projectCtx.Advanced != nil && projectCtx.Advanced.AutoStart {
+		base.Output.Info("%s", messages.InfoAutoStarting)
+		// Non-fatal: init succeeded; auto-start is best-effort.
+		if err := h.autoStartServices(ctx, projectCtx); err != nil {
+			base.Output.Warning(messages.WarningsAutoStartFailed, err)
+		}
+	}
+
 	return nil
 }
 
@@ -235,6 +246,20 @@ func (h *InitHandler) validateServiceShareable(serviceName string, serviceConfig
 		)
 	}
 	return nil
+}
+
+// autoStartServices starts the project services after a successful init.
+// It loads the freshly-written config so the service manager sees the correct project name.
+func (h *InitHandler) autoStartServices(ctx context.Context, projectCtx clicontext.Context) error {
+	svc, err := common.NewServiceManager(false)
+	if err != nil {
+		return err
+	}
+	return svc.Start(ctx, services.StartRequest{
+		Project:        projectCtx.Project.Name,
+		ServiceConfigs: projectCtx.Services.Configs,
+		Detach:         true,
+	})
 }
 
 func (h *InitHandler) checkAlreadyInitialized(force bool) error {
