@@ -53,7 +53,7 @@ func TestPromptManager_ConfirmInitialization(t *testing.T) {
 	mockOutput := &MockOutput{}
 	base := &base.BaseCommand{Output: mockOutput}
 
-	result, err := pm.ConfirmInitialization("test-project", []string{services.ServicePostgres}, map[string]bool{}, map[string]bool{}, base)
+	result, err := pm.ConfirmInitialization("test-project", []string{services.ServicePostgres}, map[string]bool{}, base)
 	if err != nil {
 		assert.Error(t, err)
 	} else {
