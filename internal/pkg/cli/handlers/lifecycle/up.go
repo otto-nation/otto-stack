@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"sort"
 	"time"
@@ -36,6 +37,10 @@ func NewUpHandler() *UpHandler {
 
 // Handle executes the up command
 func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	if globalFlag, _ := cmd.Flags().GetBool(docker.FlagGlobal); globalFlag {
+		return h.handleGlobalContext(ctx, cmd, args, base, buildSharedMode())
+	}
+
 	execCtx, err := common.DetectExecutionContext()
 	if err != nil {
 		return err
@@ -422,6 +427,14 @@ func filterStatusQueryNames(configs []types.ServiceConfig) []string {
 		}
 	}
 	return names
+}
+
+// buildSharedMode constructs a SharedMode context pointing at the user's global
+// shared directory. Used when --global overrides automatic context detection.
+func buildSharedMode() *clicontext.SharedMode {
+	homeDir, _ := os.UserHomeDir()
+	sharedRoot := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
+	return &clicontext.SharedMode{Shared: &clicontext.SharedInfo{Root: sharedRoot}}
 }
 
 // ValidateArgs validates the command arguments

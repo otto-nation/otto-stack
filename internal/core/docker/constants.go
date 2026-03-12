@@ -48,6 +48,7 @@ const (
 	FlagUntil         = "until"
 	FlagAll           = "all"
 	FlagShared        = "shared"
+	FlagGlobal        = "global"
 	FlagProject       = "project"
 )
 

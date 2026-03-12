@@ -117,11 +117,15 @@ commands:
         description: "Start all configured services (in project context)"
       - command: "otto-stack up postgres redis"
         description: "Start specific services"
-      - command: "cd ~ && otto-stack up redis"
-        description: "Start shared containers from global context"
+      - command: "otto-stack up --global redis"
+        description: "Start a shared container from inside a project directory"
       - command: "otto-stack up --detach --build"
         description: "Build images and start services in background"
     flags:
+      global:
+        type: "bool"
+        description: "Force shared (global) mode — start as shared containers regardless of current directory"
+        default: false
       detach:
         type: "bool"
         description: "Run services in background (detached mode)"
@@ -214,7 +218,13 @@ commands:
         description: "Restart a specific service"
       - command: "otto-stack restart --timeout 5"
         description: "Restart with custom timeout"
+      - command: "otto-stack restart --global postgres"
+        description: "Restart a shared container from inside a project directory"
     flags:
+      global:
+        type: "bool"
+        description: "Force shared (global) mode — restart shared containers regardless of current directory"
+        default: false
       timeout:
         type: "int"
         description: "Restart timeout in seconds"

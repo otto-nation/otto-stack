@@ -40,6 +40,10 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return nil
 	}
 
+	if globalFlag, _ := cmd.Flags().GetBool(docker.FlagGlobal); globalFlag {
+		return h.handleSharedContext(ctx, cmd, args, base, buildSharedMode())
+	}
+
 	execCtx, err := common.DetectExecutionContext()
 	if err != nil {
 		return err

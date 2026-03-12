@@ -74,6 +74,7 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 		"restart": {
 			handlerPath: "internal/pkg/cli/handlers/lifecycle/restart.go",
 			flags: []string{
+				"global",
 				"no-deps",
 				"timeout",
 			},
@@ -100,6 +101,7 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 				"build",
 				"detach",
 				"force-recreate",
+				"global",
 				"no-deps",
 				"timeout",
 			},
