@@ -45,6 +45,7 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 			handlerPath: "internal/pkg/cli/handlers/lifecycle/down.go",
 			flags: []string{
 				"all",
+				"project",
 				"remove-orphans",
 				"shared",
 				"timeout",
@@ -76,6 +77,7 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 			flags: []string{
 				"global",
 				"no-deps",
+				"project",
 				"timeout",
 			},
 		},
@@ -103,6 +105,7 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 				"force-recreate",
 				"global",
 				"no-deps",
+				"project",
 				"timeout",
 			},
 		},

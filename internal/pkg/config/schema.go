@@ -28,9 +28,17 @@ type StackConfig struct {
 	Enabled []string `yaml:"enabled" json:"enabled"`
 }
 
-// SharingConfig defines container sharing configuration
+// SharingConfig defines container sharing configuration.
+//
+// Semantics for Services:
+//   - nil or empty map: all services marked shareable in the catalog are shared globally.
+//   - non-empty map: only entries with value true are shared; all other shareable services
+//     run as project-local containers.
 type SharingConfig struct {
-	Enabled  bool            `yaml:"enabled" json:"enabled"`
+	Enabled bool `yaml:"enabled" json:"enabled"`
+	// Services is an optional whitelist of service names to share globally.
+	// true = run as a shared container; false/absent = run project-local.
+	// An empty map shares every service the catalog marks as shareable.
 	Services map[string]bool `yaml:"services,omitempty" json:"services,omitempty"`
 }
 

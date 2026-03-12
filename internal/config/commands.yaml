@@ -126,6 +126,10 @@ commands:
         type: "bool"
         description: "Force shared (global) mode — start as shared containers regardless of current directory"
         default: false
+      project:
+        type: "string"
+        description: "Path to a project directory — operate on that project regardless of current directory"
+        default: ""
       detach:
         type: "bool"
         description: "Run services in background (detached mode)"
@@ -179,6 +183,10 @@ commands:
       - command: "otto-stack down --timeout 5"
         description: "Stop services with custom timeout"
     flags:
+      project:
+        type: "string"
+        description: "Path to a project directory — operate on that project regardless of current directory"
+        default: ""
       shared:
         type: "bool"
         description: "Stop all shared containers"
@@ -225,6 +233,10 @@ commands:
         type: "bool"
         description: "Force shared (global) mode — restart shared containers regardless of current directory"
         default: false
+      project:
+        type: "string"
+        description: "Path to a project directory — operate on that project regardless of current directory"
+        default: ""
       timeout:
         type: "int"
         description: "Restart timeout in seconds"

@@ -35,6 +35,14 @@ func NewDownHandler() *DownHandler {
 
 // Handle executes the down command
 func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
+	if projectDir, _ := cmd.Flags().GetString(docker.FlagProject); projectDir != "" {
+		mode, err := buildProjectMode(projectDir)
+		if err != nil {
+			return err
+		}
+		return h.handleProjectContext(ctx, cmd, args, base, mode)
+	}
+
 	execCtx, err := common.DetectExecutionContext()
 	if err != nil {
 		return err

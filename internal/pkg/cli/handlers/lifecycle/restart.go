@@ -44,6 +44,13 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return h.handleSharedContext(ctx, cmd, args, base, buildSharedMode())
 	}
 
+	if projectDir, _ := cmd.Flags().GetString(docker.FlagProject); projectDir != "" {
+		if _, err := buildProjectMode(projectDir); err != nil {
+			return err
+		}
+		return h.handleProjectContext(ctx, cmd, args, base)
+	}
+
 	execCtx, err := common.DetectExecutionContext()
 	if err != nil {
 		return err

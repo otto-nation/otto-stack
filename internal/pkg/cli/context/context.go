@@ -40,9 +40,14 @@ type RuntimeSpec struct {
 	DryRun      bool
 }
 
-// SharingSpec contains container sharing information
+// SharingSpec contains container sharing information.
+//
+// Services semantics: nil/empty = share all catalog-shareable services;
+// non-empty = whitelist where true entries are shared and false/absent entries run locally.
 type SharingSpec struct {
-	Enabled  bool
+	Enabled bool
+	// Services is the optional whitelist built during init. true = shared globally,
+	// false/absent = project-local. Empty means share all shareable catalog services.
 	Services map[string]bool
 }
 

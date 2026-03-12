@@ -85,6 +85,7 @@ validation:
   service_name_required: "service name is required"
   service_not_shareable: "service '%s' is marked as non-shareable and cannot be shared across projects"
   service_not_shareable_warning: "Warning: service '%s' is marked as non-shareable but will be shared (--force used)"
+  project_dir_not_initialized: "directory '%s' is not an otto-stack project (no .otto-stack/config.yaml found)"
 
 validate:
   check_config_syntax: "Configuration syntax valid"
@@ -251,6 +252,7 @@ notifications:
 
 errors:
   not_initialized: "project not initialized, run 'otto-stack init' first"
+  project_dir_change_failed: "failed to change into project directory '%s': %v"
   failed_load_config: "failed to load configuration: %w"
   failed_create_docker_client: "failed to create Docker client: %w"
   failed_check_updates: "failed to check for updates: %w"

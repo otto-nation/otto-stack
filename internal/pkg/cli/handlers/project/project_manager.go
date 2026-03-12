@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -82,7 +83,7 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 		base.Output.Warning(messages.WarningsGitignoreCreateFailed, err)
 	}
 
-	if err := pm.createReadme(projectCtx.Project.Name, projectCtx.Services.Configs, projectCtx.Sharing.Enabled, base); err != nil {
+	if err := pm.createReadme(projectCtx.Project.Name, projectCtx.Services.Configs, projectCtx.Sharing, base); err != nil {
 		base.Output.Warning(messages.WarningsFailedReadme, err)
 	}
 
@@ -184,7 +185,7 @@ func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 }
 
 // createReadme creates README file
-func (pm *ProjectManager) createReadme(projectName string, serviceConfigs []types.ServiceConfig, sharingEnabled bool, base *base.BaseCommand) error {
+func (pm *ProjectManager) createReadme(projectName string, serviceConfigs []types.ServiceConfig, sharing *clicontext.SharingSpec, base *base.BaseCommand) error {
 	const readmeTemplate = `# %s
 
 This project was initialized with %s.
@@ -212,7 +213,7 @@ This project was initialized with %s.
 %s
 `
 
-	sharedInfo, sharedSection := pm.buildSharedServicesInfo(serviceConfigs, sharingEnabled)
+	sharedInfo, sharedSection := pm.buildSharedServicesInfo(serviceConfigs, sharing)
 
 	readmeContent := fmt.Sprintf(readmeTemplate,
 		projectName,
@@ -236,13 +237,12 @@ This project was initialized with %s.
 }
 
 // buildSharedServicesInfo builds shared services information for README
-func (pm *ProjectManager) buildSharedServicesInfo(serviceConfigs []types.ServiceConfig, sharingEnabled bool) (string, string) {
-	if !sharingEnabled {
+func (pm *ProjectManager) buildSharedServicesInfo(serviceConfigs []types.ServiceConfig, sharing *clicontext.SharingSpec) (string, string) {
+	if sharing == nil || !sharing.Enabled {
 		return "", ""
 	}
 
 	var sharedServices []string
-
 	for _, config := range serviceConfigs {
 		if config.Shareable {
 			sharedServices = append(sharedServices, config.Name)
@@ -256,12 +256,29 @@ func (pm *ProjectManager) buildSharedServicesInfo(serviceConfigs []types.Service
 	homeDir, _ := os.UserHomeDir()
 	sharedPath := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
 
+	var sharingScope string
+	if len(sharing.Services) == 0 {
+		sharingScope = "All shareable services are shared globally (default)."
+	} else {
+		var whitelisted []string
+		for name, shared := range sharing.Services {
+			if shared {
+				whitelisted = append(whitelisted, name)
+			}
+		}
+		sort.Strings(whitelisted)
+		sharingScope = fmt.Sprintf("Only the following services are shared globally: %s.\nAll other shareable services run as project-local containers.", strings.Join(whitelisted, ", "))
+	}
+
 	info := fmt.Sprintf("\n### Shared Services\nThe following services are shared across projects:\n%s", pm.formatServicesList(sharedServices))
 
-	section := fmt.Sprintf("\n## Shared Services\nShared services are managed globally and located at:\n- `%s/`\n- Registry: `%s/containers.yaml`\n- Compose: `%s/generated/docker-compose.yml`\n",
+	section := fmt.Sprintf("\n## Shared Services\n%s\n\nShared services are managed globally and located at:\n- `%s/`\n- Registry: `%s/containers.yaml`\n- Compose: `%s/generated/docker-compose.yml`\n\nTo change which services are shared, edit the `sharing.services` map in `%s/%s`.\nAn empty map shares all shareable services; list specific services to whitelist only those.\n",
+		sharingScope,
 		sharedPath,
 		sharedPath,
 		sharedPath,
+		core.OttoStackDir,
+		core.ConfigFileName,
 	)
 
 	return info, section

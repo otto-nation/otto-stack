@@ -2,6 +2,7 @@ package lifecycle
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -40,6 +41,14 @@ func NewUpHandler() *UpHandler {
 func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
 	if globalFlag, _ := cmd.Flags().GetBool(docker.FlagGlobal); globalFlag {
 		return h.handleGlobalContext(ctx, cmd, args, base, buildSharedMode())
+	}
+
+	if projectDir, _ := cmd.Flags().GetString(docker.FlagProject); projectDir != "" {
+		mode, err := buildProjectMode(projectDir)
+		if err != nil {
+			return err
+		}
+		return h.handleProjectContext(ctx, cmd, args, base, mode)
 	}
 
 	execCtx, err := common.DetectExecutionContext()
@@ -441,6 +450,35 @@ func buildSharedMode() *clicontext.SharedMode {
 	homeDir, _ := os.UserHomeDir()
 	sharedRoot := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
 	return &clicontext.SharedMode{Shared: &clicontext.SharedInfo{Root: sharedRoot}}
+}
+
+// buildProjectMode constructs a ProjectMode context for the given directory.
+// It validates that the directory contains an otto-stack project, changes the
+// working directory so that config-relative paths resolve correctly, and returns
+// the populated ProjectMode. Used when --project overrides automatic detection.
+func buildProjectMode(dir string) (*clicontext.ProjectMode, error) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationProjectDirNotInitialized, dir)
+	}
+
+	configFile := filepath.Join(absDir, core.OttoStackDir, core.ConfigFileName)
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationProjectDirNotInitialized, dir)
+	}
+
+	if err := os.Chdir(absDir); err != nil {
+		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, fmt.Sprintf(messages.ErrorsProjectDirChangeFailed, absDir, err), err)
+	}
+
+	homeDir, _ := os.UserHomeDir()
+	sharedRoot := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
+	configDir := filepath.Join(absDir, core.OttoStackDir)
+
+	return &clicontext.ProjectMode{
+		Project: clicontext.NewProjectInfo(configDir),
+		Shared:  &clicontext.SharedInfo{Root: sharedRoot},
+	}, nil
 }
 
 // ValidateArgs validates the command arguments
