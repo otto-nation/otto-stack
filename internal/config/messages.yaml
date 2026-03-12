@@ -435,6 +435,7 @@ shared:
   compose_file_not_found: "Shared compose file not found — containers may still be running. Removing from registry only."
   context_requires_interactive: "Starting shared containers requires interactive mode. Use a project directory or run interactively."
   service_not_running: "Shared service '%s' is not running. Start it first: otto-stack up %s"
+  auto_starting: "Auto-starting shared container(s): %s"
 
 middleware:
   project_already_initialized: "Project already initialized. Use --force to overwrite"

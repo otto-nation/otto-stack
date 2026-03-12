@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -79,7 +80,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	// under their own compose project (otto-stack-<name>); including them in the
 	// project compose would cause container-name conflicts and ownership fights.
 	sharedConfigs := h.filterSharedServices(serviceConfigs, setup.Config)
-	if err := h.checkSharedContainersRunning(ctx, sharedConfigs, setup.DockerClient); err != nil {
+	if err := h.ensureSharedContainersRunning(ctx, sharedConfigs, execCtx.Shared.Root, base); err != nil {
 		return err
 	}
 	projectServiceConfigs := h.filterProjectServiceConfigs(serviceConfigs, setup.Config)
@@ -371,23 +372,28 @@ func (h *UpHandler) filterProjectServiceConfigs(serviceConfigs []types.ServiceCo
 	return project.FilterProjectServices(serviceConfigs, cfg.Sharing.Enabled, cfg.Sharing.Services)
 }
 
-// checkSharedContainersRunning verifies that every shared service has its container
-// already running in Docker. Shared containers must be started independently (via
-// `otto-stack up <service>` in shared mode) before a project can use them.
-func (h *UpHandler) checkSharedContainersRunning(ctx context.Context, sharedConfigs []types.ServiceConfig, dockerClient *docker.Client) error {
-	for _, svc := range sharedConfigs {
-		containerName := core.SharedContainerPrefix + svc.Name
-		cs := dockerClient.InspectContainer(ctx, containerName)
-		if cs.State != docker.HealthStatusRunning {
-			return pkgerrors.NewValidationErrorf(
-				pkgerrors.ErrCodeInvalid,
-				pkgerrors.FieldServiceName,
-				messages.SharedServiceNotRunning,
-				svc.Name, svc.Name,
-			)
+// ensureSharedContainersRunning starts any shared containers that are not yet running.
+// The compose file is generated only when it does not already exist; subsequent calls
+// reuse the existing file to avoid noisy output on every `otto-stack up`.
+func (h *UpHandler) ensureSharedContainersRunning(ctx context.Context, sharedConfigs []types.ServiceConfig, sharedRoot string, base *base.BaseCommand) error {
+	if len(sharedConfigs) == 0 {
+		return nil
+	}
+
+	names := make([]string, len(sharedConfigs))
+	for i, svc := range sharedConfigs {
+		names[i] = svc.Name
+	}
+	base.Output.Info(messages.SharedAutoStarting, strings.Join(names, ", "))
+
+	composePath := filepath.Join(sharedRoot, core.GeneratedDir, docker.DockerComposeFileName)
+	if _, err := os.Stat(composePath); os.IsNotExist(err) {
+		if err := project.GenerateSharedFiles(sharedConfigs, sharedRoot, base); err != nil {
+			return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.WarningsComposeGenerateSharedFailed, err)
 		}
 	}
-	return nil
+
+	return h.startSharedContainers(ctx, composePath)
 }
 
 func (h *UpHandler) filterSharedServices(serviceConfigs []types.ServiceConfig, cfg *config.Config) []types.ServiceConfig {
