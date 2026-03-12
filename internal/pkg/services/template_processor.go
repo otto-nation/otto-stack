@@ -60,8 +60,8 @@ func (tp *TemplateProcessor) serviceDependsOn(serviceConfig servicetypes.Service
 func (tp *TemplateProcessor) addConfigData(templateData map[string]any, serviceConfig servicetypes.ServiceConfig) {
 	v := reflect.ValueOf(serviceConfig)
 
-	for i := 0; i < v.NumField(); i++ {
-		tp.processServiceField(templateData, v.Field(i))
+	for _, field := range v.Fields() {
+		tp.processServiceField(templateData, field)
 	}
 }
 

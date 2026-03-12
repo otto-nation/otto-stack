@@ -273,7 +273,7 @@ func (h *CleanupHandler) reconcileRegistry(ctx context.Context, base *base.BaseC
 
 	if warnings := reg.ValidateAgainstDocker(ctx, dockerClient); len(warnings) > 0 && !ciFlags.Quiet {
 		for _, w := range warnings {
-			base.Output.Warning(w)
+			base.Output.Warning("%s", w)
 		}
 	}
 

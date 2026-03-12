@@ -2,7 +2,6 @@ package operations
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"slices"
 	"time"
@@ -198,7 +197,7 @@ func (h *StatusHandler) handleProjectSharedStatusWithRequest(req statusRequest) 
 	ciFlags := ci.GetFlags(req.cmd)
 
 	if !ciFlags.Quiet {
-		req.base.Output.Header(fmt.Sprintf(messages.InfoSharedContainersForProject, req.projectName))
+		req.base.Output.Header(messages.InfoSharedContainersForProject, req.projectName)
 	}
 
 	var sharedRoot string
@@ -227,7 +226,7 @@ func (h *StatusHandler) handleProjectSharedStatusWithRequest(req statusRequest) 
 	}
 
 	if len(projectContainers) == 0 {
-		req.base.Output.Info(fmt.Sprintf(messages.InfoNoSharedContainersForProject, req.projectName))
+		req.base.Output.Info(messages.InfoNoSharedContainersForProject, req.projectName)
 		return nil
 	}
 

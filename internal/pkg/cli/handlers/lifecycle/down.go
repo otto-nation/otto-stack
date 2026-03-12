@@ -240,7 +240,7 @@ func (h *DownHandler) stopSharedContainersViaCompose(ctx context.Context, shared
 
 	composeManager, err := docker.NewManager()
 	if err != nil {
-		base.Output.Warning(messages.ErrorsDockerManagerCreateFailed, err)
+		base.Output.Warning("%s: %v", messages.ErrorsDockerManagerCreateFailed, err)
 		return
 	}
 
