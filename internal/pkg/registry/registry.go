@@ -394,11 +394,16 @@ func (m *Manager) rebuildFromDocker(ctx context.Context) (*Registry, error) {
 			continue
 		}
 		name := strings.TrimPrefix(cont.Names[0], "/")
-		if !isSharedContainer(name) {
+		// Accept containers identified by label (authoritative) or by name prefix (legacy fallback).
+		isSharedByLabel := cont.Labels[docker.LabelOttoShared] == "true"
+		if !isSharedByLabel && !isSharedContainer(name) {
 			continue
 		}
 
-		serviceName := extractServiceName(name)
+		serviceName := cont.Labels[docker.LabelOttoService]
+		if serviceName == "" {
+			serviceName = extractServiceName(name)
+		}
 		project := cont.Labels[docker.LabelOttoProject]
 
 		entry, exists := registry.Containers[serviceName]

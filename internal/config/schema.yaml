@@ -46,7 +46,7 @@ schema:
     properties:
       enabled:
         type: boolean
-        default: true
+        default: false
         description: "Enable container sharing across projects. When enabled, containers are prefixed with 'otto-stack-' and tracked in ~/.otto-stack/shared/containers.yaml"
       services:
         type: object
