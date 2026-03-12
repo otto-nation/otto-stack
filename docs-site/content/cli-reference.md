@@ -3,7 +3,7 @@ title: CLI Reference
 description: Complete command reference for otto-stack CLI
 lead: Comprehensive reference for all otto-stack CLI commands and their usage
 date: "2025-10-01"
-lastmod: "2026-03-11"
+lastmod: "2026-03-12"
 draft: false
 weight: 50
 toc: true
@@ -76,10 +76,10 @@ otto-stack up postgres redis
 Start specific services
 
 ```bash
-cd ~ && otto-stack up redis
+otto-stack up --global redis
 ```
 
-Start shared containers from global context
+Start a shared container from inside a project directory
 
 ```bash
 otto-stack up --detach --build
@@ -89,6 +89,7 @@ Build images and start services in background
 
 **Flags:**
 
+- `--global` (`bool`): Force shared (global) mode — start as shared containers regardless of current directory (default: `false`)
 - `--detach` (`bool`): Run services in background (detached mode) (default: `false`)
 - `--build` (`bool`): Build images before starting services (default: `false`)
 - `--force-recreate` (`bool`): Recreate containers even if config hasn't changed (default: `false`)
@@ -203,8 +204,15 @@ otto-stack restart --timeout 5
 
 Restart with custom timeout
 
+```bash
+otto-stack restart --global postgres
+```
+
+Restart a shared container from inside a project directory
+
 **Flags:**
 
+- `--global` (`bool`): Force shared (global) mode — restart shared containers regardless of current directory (default: `false`)
 - `--timeout` (`int`): Restart timeout in seconds (default: `10`)
 - `--no-deps` (`bool`): Don't restart linked services (default: `false`)
 
