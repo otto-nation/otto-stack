@@ -10,6 +10,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
@@ -26,7 +27,7 @@ func NewLogsHandler() *LogsHandler {
 
 // Handle executes the logs command
 func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	execCtx, err := common.DetectExecutionContext()
+	execCtx, err := middleware.ExecContextOrDetect(ctx)
 	if err != nil {
 		return err
 	}
@@ -42,7 +43,7 @@ func (h *LogsHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 }
 
 func (h *LogsHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
+	setup, cleanup, err := middleware.CoreSetupOrCreate(ctx, base)
 	if err != nil {
 		return err
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
@@ -72,7 +73,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 
 	if flags.All || flags.Volumes || flags.Images || flags.Networks {
 		// Resource cleanup (volumes, images, networks) requires a project context.
-		setup, cleanup, err := common.SetupCoreCommand(ctx, base)
+		setup, cleanup, err := middleware.CoreSetupOrCreate(ctx, base)
 		if err != nil {
 			return ci.FormatError(ciFlags, err)
 		}

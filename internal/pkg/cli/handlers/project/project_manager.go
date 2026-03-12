@@ -22,9 +22,8 @@ import (
 
 // ProjectManager handles project creation logic
 type ProjectManager struct {
-	serviceUtils     *svc.ServiceUtils
-	configManager    *ConfigManager
-	directoryManager *DirectoryManager
+	serviceUtils  *svc.ServiceUtils
+	configManager *ConfigManager
 }
 
 // ServiceConfig represents a service configuration file
@@ -36,15 +35,30 @@ type ServiceConfig struct {
 // NewProjectManager creates a new project manager
 func NewProjectManager() *ProjectManager {
 	return &ProjectManager{
-		serviceUtils:     svc.NewServiceUtils(),
-		configManager:    NewConfigManager(),
-		directoryManager: NewDirectoryManager(),
+		serviceUtils:  svc.NewServiceUtils(),
+		configManager: NewConfigManager(),
 	}
+}
+
+// CreateDirectoryStructure creates the otto-stack directory structure
+func (pm *ProjectManager) CreateDirectoryStructure() error {
+	directories := []string{
+		core.OttoStackDir,
+		core.OttoStackDir + "/" + core.ServiceConfigsDir,
+	}
+
+	for _, dir := range directories {
+		if err := os.MkdirAll(dir, core.PermReadWriteExec); err != nil {
+			return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, dir, messages.ErrorsConfigWriteFailed, err)
+		}
+	}
+
+	return nil
 }
 
 // CreateProjectStructure creates the complete project structure
 func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, base *base.BaseCommand) error {
-	if err := pm.directoryManager.CreateDirectoryStructure(); err != nil {
+	if err := pm.CreateDirectoryStructure(); err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsDirectoryCreateFailed, err)
 	}
 

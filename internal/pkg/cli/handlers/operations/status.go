@@ -13,6 +13,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
@@ -38,7 +39,7 @@ func NewStatusHandler() *StatusHandler {
 
 // Handle executes the status command
 func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	execCtx, err := common.DetectExecutionContext()
+	execCtx, err := middleware.ExecContextOrDetect(ctx)
 	if err != nil {
 		return err
 	}
@@ -80,7 +81,7 @@ func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Comm
 		base.Output.Header(messages.LifecycleStatus)
 	}
 
-	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
+	setup, cleanup, err := middleware.CoreSetupOrCreate(ctx, base)
 	if err != nil {
 		return ci.FormatError(ciFlags, err)
 	}

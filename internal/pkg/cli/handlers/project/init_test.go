@@ -168,7 +168,7 @@ func TestCreateGitignoreEntries_ExistingContent(t *testing.T) {
 	defer cleanup()
 
 	// Create directory structure first
-	err := handler.projectManager.directoryManager.CreateDirectoryStructure()
+	err := handler.projectManager.CreateDirectoryStructure()
 	assert.NoError(t, err)
 
 	// Create .gitignore with existing content
@@ -188,7 +188,7 @@ func TestCreateReadme_WithServices(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.projectManager.directoryManager.CreateDirectoryStructure()
+	err := handler.projectManager.CreateDirectoryStructure()
 	assert.NoError(t, err)
 
 	serviceConfigs := []types.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServiceRedis}}

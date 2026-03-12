@@ -17,6 +17,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
@@ -43,7 +44,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 		return h.handleProjectContext(ctx, cmd, args, base, mode)
 	}
 
-	execCtx, err := common.DetectExecutionContext()
+	execCtx, err := middleware.ExecContextOrDetect(ctx)
 	if err != nil {
 		return err
 	}
@@ -81,7 +82,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ProjectMode) error {
 	base.Output.Header(messages.LifecycleStopping)
 
-	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
+	setup, cleanup, err := middleware.CoreSetupOrCreate(ctx, base)
 	if err != nil {
 		return err
 	}
