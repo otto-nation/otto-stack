@@ -250,14 +250,25 @@ func (h *InitHandler) validateServiceShareable(serviceName string, serviceConfig
 
 // autoStartServices starts the project services after a successful init.
 // It loads the freshly-written config so the service manager sees the correct project name.
+// Shared services are excluded — they run under their own compose project and must be
+// started separately via `otto-stack up <service>` in shared mode.
 func (h *InitHandler) autoStartServices(ctx context.Context, projectCtx clicontext.Context) error {
 	svc, err := common.NewServiceManager(false)
 	if err != nil {
 		return err
 	}
+
+	var sharingEnabled bool
+	var sharingServices map[string]bool
+	if projectCtx.Sharing != nil {
+		sharingEnabled = projectCtx.Sharing.Enabled
+		sharingServices = projectCtx.Sharing.Services
+	}
+	projectConfigs := FilterProjectServices(projectCtx.Services.Configs, sharingEnabled, sharingServices)
+
 	return svc.Start(ctx, services.StartRequest{
 		Project:        projectCtx.Project.Name,
-		ServiceConfigs: projectCtx.Services.Configs,
+		ServiceConfigs: projectConfigs,
 		Detach:         true,
 	})
 }

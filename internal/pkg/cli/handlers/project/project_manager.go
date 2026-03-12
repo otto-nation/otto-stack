@@ -338,11 +338,13 @@ func GenerateSharedFiles(serviceConfigs []types.ServiceConfig, sharedRoot string
 	return nil
 }
 
-// filterProjectServices returns services to include in the project compose file.
+// FilterProjectServices returns services to include in the project compose file.
 // When sharing is enabled, shareable services are excluded — unless the per-service
-// sharing.Services map explicitly disables sharing for a service (value == false).
-func (pm *ProjectManager) filterProjectServices(serviceConfigs []types.ServiceConfig, sharing *clicontext.SharingSpec) []types.ServiceConfig {
-	if sharing == nil || !sharing.Enabled {
+// sharingServices map explicitly disables sharing for a service (value == false).
+// This is called both during init and on every `otto-stack up` to ensure the
+// compose file never includes shared services.
+func FilterProjectServices(serviceConfigs []types.ServiceConfig, sharingEnabled bool, sharingServices map[string]bool) []types.ServiceConfig {
+	if !sharingEnabled {
 		return serviceConfigs
 	}
 
@@ -355,11 +357,20 @@ func (pm *ProjectManager) filterProjectServices(serviceConfigs []types.ServiceCo
 		}
 		// Shareable services are excluded (moved to shared compose) unless the
 		// per-service map explicitly opts them out of sharing.
-		if len(sharing.Services) > 0 && !sharing.Services[config.Name] {
+		if len(sharingServices) > 0 && !sharingServices[config.Name] {
 			projectServices = append(projectServices, config)
 		}
 	}
 	return projectServices
+}
+
+// filterProjectServices is an internal wrapper that calls FilterProjectServices
+// using the SharingSpec from the init context.
+func (pm *ProjectManager) filterProjectServices(serviceConfigs []types.ServiceConfig, sharing *clicontext.SharingSpec) []types.ServiceConfig {
+	if sharing == nil {
+		return FilterProjectServices(serviceConfigs, false, nil)
+	}
+	return FilterProjectServices(serviceConfigs, sharing.Enabled, sharing.Services)
 }
 
 // formatServicesList formats services for README

@@ -70,6 +70,15 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 		return err
 	}
 
+	// Separate shared services from project-local services. Shared services run
+	// under their own compose project (otto-stack-<name>); including them in the
+	// project compose would cause container-name conflicts and ownership fights.
+	sharedConfigs := h.filterSharedServices(serviceConfigs, setup.Config)
+	if err := h.checkSharedContainersRunning(ctx, sharedConfigs, setup.DockerClient); err != nil {
+		return err
+	}
+	projectServiceConfigs := h.filterProjectServiceConfigs(serviceConfigs, setup.Config)
+
 	service, err := common.NewServiceManager(false)
 	if err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsStackStartFailed, err)
@@ -94,7 +103,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 
 	startRequest := services.StartRequest{
 		Project:           setup.Config.Project.Name,
-		ServiceConfigs:    serviceConfigs,
+		ServiceConfigs:    projectServiceConfigs,
 		Build:             upFlags.Build,
 		ForceRecreate:     upFlags.ForceRecreate,
 		Detach:            upFlags.Detach,
@@ -109,7 +118,6 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 	}
 
 	// Register shared containers only after a successful start to keep the registry consistent.
-	sharedConfigs := h.filterSharedServices(serviceConfigs, setup.Config)
 	if len(sharedConfigs) > 0 {
 		configDir, _ := filepath.Abs(core.OttoStackDir)
 		project := registry.ProjectRef{Name: setup.Config.Project.Name, ConfigDir: configDir}
@@ -348,8 +356,37 @@ func (h *UpHandler) buildShareableMap() (map[string]bool, error) {
 	return shareableMap, nil
 }
 
+// filterProjectServiceConfigs returns only the services that belong in the project compose.
+// Shared services are excluded so that the project compose never conflicts with the
+// shared compose that owns those containers.
+func (h *UpHandler) filterProjectServiceConfigs(serviceConfigs []types.ServiceConfig, cfg *config.Config) []types.ServiceConfig {
+	if cfg.Sharing == nil {
+		return serviceConfigs
+	}
+	return project.FilterProjectServices(serviceConfigs, cfg.Sharing.Enabled, cfg.Sharing.Services)
+}
+
+// checkSharedContainersRunning verifies that every shared service has its container
+// already running in Docker. Shared containers must be started independently (via
+// `otto-stack up <service>` in shared mode) before a project can use them.
+func (h *UpHandler) checkSharedContainersRunning(ctx context.Context, sharedConfigs []types.ServiceConfig, dockerClient *docker.Client) error {
+	for _, svc := range sharedConfigs {
+		containerName := core.SharedContainerPrefix + svc.Name
+		cs := dockerClient.InspectContainer(ctx, containerName)
+		if cs.State != docker.HealthStatusRunning {
+			return pkgerrors.NewValidationErrorf(
+				pkgerrors.ErrCodeInvalid,
+				pkgerrors.FieldServiceName,
+				messages.SharedServiceNotRunning,
+				svc.Name, svc.Name,
+			)
+		}
+	}
+	return nil
+}
+
 func (h *UpHandler) filterSharedServices(serviceConfigs []types.ServiceConfig, cfg *config.Config) []types.ServiceConfig {
-	if !cfg.Sharing.Enabled {
+	if cfg.Sharing == nil || !cfg.Sharing.Enabled {
 		return nil
 	}
 
