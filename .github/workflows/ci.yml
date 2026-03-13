@@ -57,8 +57,21 @@ jobs:
           go mod tidy
           git diff --exit-code go.mod go.sum
 
-      - name: Lint code
+      - name: Lint Go
         run: task lint:go
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: docs-site/package-lock.json
+
+      - name: Install documentation dependencies
+        run: cd docs-site && npm ci
+
+      - name: Lint docs
+        run: task lint:docs
 
       - name: Build binary
         run: task build
@@ -88,11 +101,6 @@ jobs:
         uses: ./.github/actions/setup-environment
         with:
           install-task: "true"
-
-      - name: Validate Go modules
-        run: |
-          go mod tidy
-          git diff --exit-code go.mod go.sum
 
       - name: Run unit tests
         run: task test-unit
@@ -126,21 +134,11 @@ jobs:
           echo "Coverage report generated at coverage.html"
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v6
         with:
           name: coverage-report
           path: coverage.html
           retention-days: 30
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "18"
-          cache: "npm"
-          cache-dependency-path: docs-site/package-lock.json
-
-      - name: Install documentation dependencies
-        run: cd docs-site && npm ci
 
   get-go-matrix:
     name: Get Go Matrix
