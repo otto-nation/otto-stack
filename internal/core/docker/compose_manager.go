@@ -44,30 +44,42 @@ func NewManager() (*Manager, error) {
 }
 
 // Up starts services using the official Compose SDK
-func (m *Manager) Up(ctx context.Context, project *types.Project, options api.UpOptions) error {
+func (m *Manager) Up(ctx context.Context, project *types.Project, options UpOptions) error {
+	sdkOptions := options.ToSDK()
+
 	slog.Debug("Starting compose up",
 		"project", project.Name,
 		"services", len(project.Services),
 		"working_dir", project.WorkingDir,
-		"recreate", options.Create.Recreate,
-		"remove_orphans", options.Create.RemoveOrphans)
+		"recreate", sdkOptions.Create.Recreate,
+		"remove_orphans", sdkOptions.Create.RemoveOrphans,
+		"pull_latest", options.PullLatestImages)
+
+	// Pull latest images before starting when requested.
+	if options.PullLatestImages {
+		if err := m.service.Pull(ctx, project, api.PullOptions{}); err != nil {
+			slog.Warn("Failed to pull latest images", "error", err)
+		}
+	}
 
 	// Log service details at debug level
 	for name, service := range project.Services {
 		slog.Debug("Service configuration", "service", name, "image", service.Image)
 	}
 
-	// If force recreate is enabled, first try to remove existing containers
-	if options.Create.Recreate == api.RecreateForce {
+	// If force recreate is enabled, first try to remove existing containers.
+	// When cleanup_on_recreate is set, also purge volumes for a full reset.
+	if sdkOptions.Create.Recreate == api.RecreateForce {
 		slog.Debug("Force recreate enabled, removing existing containers", "project", project.Name)
 		downOptions := api.DownOptions{
 			RemoveOrphans: true,
+			Volumes:       options.CleanupOnRecreate,
 		}
-		// Ignore errors from down - containers might not exist
+		// Ignore errors from down — containers might not exist yet
 		_ = m.service.Down(ctx, project.Name, downOptions)
 	}
 
-	return m.service.Up(ctx, project, options)
+	return m.service.Up(ctx, project, sdkOptions)
 }
 
 // Down stops services using the official Compose SDK
@@ -82,11 +94,11 @@ func (m *Manager) GetService() api.Compose {
 	return m.service
 }
 
-// LoadProject loads a compose project using the official SDK method
-func (m *Manager) LoadProject(ctx context.Context, composePath string, projectName string) (*types.Project, error) {
-	// Use the official SDK LoadProject method as shown in documentation
+// LoadProject loads a compose project using the official SDK method.
+// configPaths is a list of compose files to load; later entries override earlier ones.
+func (m *Manager) LoadProject(ctx context.Context, configPaths []string, projectName string) (*types.Project, error) {
 	project, err := m.service.LoadProject(ctx, api.ProjectLoadOptions{
-		ConfigPaths: []string{composePath},
+		ConfigPaths: configPaths,
 		ProjectName: projectName,
 	})
 	if err != nil {

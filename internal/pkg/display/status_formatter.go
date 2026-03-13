@@ -3,6 +3,7 @@ package display
 import (
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"time"
 
@@ -76,6 +77,7 @@ func convertToServiceStatuses(
 		}
 		result = append(result, buildServiceStatus(cfg, serviceToContainer, containerMap))
 	}
+	sort.Slice(result, func(i, j int) bool { return result[i].Name < result[j].Name })
 	return result
 }
 
@@ -241,11 +243,17 @@ func (sf *StatusFormatter) hasProviders(services []ServiceStatus) bool {
 
 func (sf *StatusFormatter) formatResourceSummary(services []ServiceStatus) {
 	summary := sf.createSummary(services)
+	states := make([]string, 0, len(summary))
+	for state := range summary {
+		states = append(states, state)
+	}
+	sort.Strings(states)
+
 	_, _ = fmt.Fprintln(sf.writer)
 	_, _ = fmt.Fprintf(sf.writer, SummaryTotal, len(services))
-	for state, count := range summary {
-		if count > 0 {
-			_, _ = fmt.Fprintf(sf.writer, SummaryItem, count, state)
+	for _, state := range states {
+		if summary[state] > 0 {
+			_, _ = fmt.Fprintf(sf.writer, SummaryItem, summary[state], state)
 		}
 	}
 	_, _ = fmt.Fprintln(sf.writer)

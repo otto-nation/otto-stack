@@ -38,7 +38,7 @@ func (h *WebInterfacesHandler) Handle(ctx context.Context, cmd *cobra.Command, a
 
 	ciFlags := ci.GetFlags(cmd)
 	if !ciFlags.Quiet {
-		base.Output.Header(core.TitleCase(core.CommandWebInterfaces))
+		base.Output.Header("%s", core.TitleCase(core.CommandWebInterfaces))
 	}
 
 	setup, cleanup, err := common.SetupCoreCommand(ctx, base)

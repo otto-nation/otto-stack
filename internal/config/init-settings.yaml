@@ -8,11 +8,11 @@ validation:
 
 advanced:
   auto_start:
-    description: "Start services automatically after setup"
-    default: true
+    description: "Automatically run 'up' after initialization completes"
+    default: false
   pull_latest_images:
-    description: "Pull latest Docker images"
-    default: true
+    description: "Pull the latest Docker images before starting services"
+    default: false
   cleanup_on_recreate:
-    description: "Keep data when recreating services"
+    description: "Remove volumes when force-recreating services (full data reset)"
     default: false

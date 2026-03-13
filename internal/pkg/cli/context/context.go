@@ -12,6 +12,7 @@ type Context struct {
 	Options  OptionSet
 	Runtime  RuntimeSpec
 	Sharing  *SharingSpec
+	Advanced *AdvancedSpec
 }
 
 // ProjectSpec contains project-related information
@@ -39,10 +40,20 @@ type RuntimeSpec struct {
 	DryRun      bool
 }
 
-// SharingSpec contains container sharing information
+// SharingSpec contains container sharing information.
+//
+// Services semantics: nil/empty = share all catalog-shareable services;
+// non-empty = whitelist where true entries are shared and false/absent entries run locally.
 type SharingSpec struct {
-	Enabled  bool
+	Enabled bool
+	// Services is the optional whitelist built during init. true = shared globally,
+	// false/absent = project-local. Empty means share all shareable catalog services.
 	Services map[string]bool
+}
+
+// AdvancedSpec contains advanced init-time options
+type AdvancedSpec struct {
+	AutoStart bool
 }
 
 // Builder provides fluent API for building Context
@@ -105,6 +116,12 @@ func (b *Builder) WithRuntimeFlags(flags *core.InitFlags, interactive bool) *Bui
 // WithSharing sets sharing configuration
 func (b *Builder) WithSharing(sharing *SharingSpec) *Builder {
 	b.ctx.Sharing = sharing
+	return b
+}
+
+// WithAdvancedSpec sets advanced options
+func (b *Builder) WithAdvancedSpec(advanced *AdvancedSpec) *Builder {
+	b.ctx.Advanced = advanced
 	return b
 }
 

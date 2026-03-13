@@ -9,6 +9,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
+	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 	"github.com/otto-nation/otto-stack/internal/pkg/ui"
@@ -167,7 +168,7 @@ func TestCreateGitignoreEntries_ExistingContent(t *testing.T) {
 	defer cleanup()
 
 	// Create directory structure first
-	err := handler.projectManager.directoryManager.CreateDirectoryStructure()
+	err := handler.projectManager.CreateDirectoryStructure()
 	assert.NoError(t, err)
 
 	// Create .gitignore with existing content
@@ -187,11 +188,11 @@ func TestCreateReadme_WithServices(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.projectManager.directoryManager.CreateDirectoryStructure()
+	err := handler.projectManager.CreateDirectoryStructure()
 	assert.NoError(t, err)
 
 	serviceConfigs := []types.ServiceConfig{{Name: services.ServicePostgres}, {Name: services.ServiceRedis}}
-	err = handler.projectManager.createReadme(TestProjectName, serviceConfigs, false, &base.BaseCommand{Output: ui.NewOutput()})
+	err = handler.projectManager.createReadme(TestProjectName, serviceConfigs, &clicontext.SharingSpec{Enabled: false}, &base.BaseCommand{Output: ui.NewOutput()})
 	assert.NoError(t, err)
 
 	readmePath := filepath.Join(core.OttoStackDir, core.ReadmeFileName)

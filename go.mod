@@ -1,6 +1,6 @@
 module github.com/otto-nation/otto-stack
 
-go 1.25.7
+go 1.26.1
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.3.7
@@ -11,6 +11,7 @@ require (
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/go-playground/validator/v10 v10.30.1
+	github.com/hashicorp/go-version v1.8.0
 	github.com/jedib0t/go-pretty/v6 v6.7.8
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/spf13/cobra v1.10.2
@@ -66,7 +67,6 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/hashicorp/go-version v1.8.0 // indirect
 	github.com/in-toto/in-toto-golang v0.9.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/inhies/go-bytesize v0.0.0-20220417184213-4913239db9cf // indirect

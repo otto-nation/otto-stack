@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"path/filepath"
 	"slices"
 	"sort"
 
@@ -12,7 +11,7 @@ import (
 
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
@@ -94,10 +93,9 @@ func (h *ConflictsHandler) loadEnabledServices() ([]types.ServiceConfig, error) 
 		return nil, err
 	}
 
-	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
-	cfg, err := common.LoadProjectConfig(configPath)
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, messages.ErrorsConfigLoadFailed, err)
+		return nil, err
 	}
 
 	return services.ResolveUpServices(cfg.Stack.Enabled, cfg)

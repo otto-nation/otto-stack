@@ -44,7 +44,7 @@ func categoriesSection(byCategory map[string][]loadedService, categories []strin
 
 func renderServiceSection(svc loadedService) string {
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("### %s\n\n%s\n\n", svc.name, svc.config.Description))
+	fmt.Fprintf(&sb, "### %s\n\n%s\n\n", svc.name, svc.config.Description)
 
 	if len(svc.config.configSchemaFields) > 0 {
 		sb.WriteString(renderServiceSchemaSection(svc.config.configSchemaFields))
@@ -84,7 +84,7 @@ func renderServiceDocumentation(svcDocs *serviceDocumentation) string {
 	if len(svcDocs.UseCases) > 0 {
 		sb.WriteString(sections.UseCases + "\n\n")
 		for _, uc := range svcDocs.UseCases {
-			sb.WriteString(fmt.Sprintf("- %s\n\n", uc))
+			fmt.Fprintf(&sb, "- %s\n\n", uc)
 		}
 	}
 	if len(svcDocs.Examples) > 0 {
@@ -101,13 +101,13 @@ func renderServiceDocumentation(svcDocs *serviceDocumentation) string {
 func renderSchemaField(field *schemaField, headingLevel string) string {
 	labels := docs.Labels
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("%s %s\n\n", headingLevel, field.Name))
+	fmt.Fprintf(&sb, "%s %s\n\n", headingLevel, field.Name)
 	if field.Description != "" {
 		sb.WriteString(field.Description + "\n\n")
 	}
-	sb.WriteString(fmt.Sprintf("- %s: `%s`\n", labels.FieldType, field.Type))
+	fmt.Fprintf(&sb, "- %s: `%s`\n", labels.FieldType, field.Type)
 	if field.Default != nil && field.Default.Value != "" {
-		sb.WriteString(fmt.Sprintf("- %s: `%s`\n", labels.FieldDefault, field.Default.Value))
+		fmt.Fprintf(&sb, "- %s: `%s`\n", labels.FieldDefault, field.Default.Value)
 	}
 	if field.Required {
 		sb.WriteString("- " + labels.FieldRequiredYes + "\n")
@@ -132,12 +132,12 @@ func renderSchemaField(field *schemaField, headingLevel string) string {
 func renderItemProperty(p *schemaField) string {
 	labels := docs.Labels
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("- **%s** (`%s`)", p.Name, p.Type))
+	fmt.Fprintf(&sb, "- **%s** (`%s`)", p.Name, p.Type)
 	if p.Required {
 		sb.WriteString(" " + labels.FieldRequiredIndicator)
 	}
 	if p.Default != nil && p.Default.Value != "" {
-		sb.WriteString(fmt.Sprintf(" = `%s`", p.Default.Value))
+		fmt.Fprintf(&sb, " = `%s`", p.Default.Value)
 	}
 	if p.Description != "" {
 		sb.WriteString(": " + p.Description)
