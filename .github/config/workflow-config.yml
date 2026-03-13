@@ -3,7 +3,7 @@
 
 versions:
   hugo: "0.151.0"
-  node: "18"
+  node: "20"
   task: "latest"
 
 tools:
