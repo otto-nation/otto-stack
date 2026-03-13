@@ -1,13 +1,15 @@
-// Commitlint configuration for local validation
-// This mirrors .github/.commitlintrc.json but uses inline rules instead of extends
-// to avoid module resolution issues with npx
+// Commitlint configuration for local git hooks (commit-msg).
+// Uses inline rules instead of `extends` to avoid module resolution issues
+// when run via npx in the commit-msg hook.
 //
-// IMPORTANT: Keep this in sync with .github/.commitlintrc.json
-// The rules below are from @commitlint/config-conventional plus our custom overrides
+// IMPORTANT: Keep commit types and header-max-length in sync with
+// .github/.commitlintrc.mjs (used by CI).
 
 module.exports = {
+  ignores: [
+    (commit) => commit.includes('dependabot[bot]'),
+  ],
   rules: {
-    // From @commitlint/config-conventional
     'body-leading-blank': [1, 'always'],
     'body-max-line-length': [2, 'always', 100],
     'footer-leading-blank': [1, 'always'],

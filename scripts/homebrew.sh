@@ -96,8 +96,8 @@ EOF
         return 1
     fi
 
-    # Strip tag prefix to get clean semver (e.g. "otto-stack-v1.2.3" -> "1.2.3")
-    local version_clean="${version##*-v}"
+    # Strip leading "v" to get clean semver (e.g. "v1.2.3" -> "1.2.3")
+    local version_clean="${version#v}"
 
     if [[ "$OSTYPE" == "darwin"* ]]; then
         sed -i '' "s/version \".*\"/version \"$version_clean\"/" "$formula_path"

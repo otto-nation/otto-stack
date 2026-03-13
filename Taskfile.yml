@@ -257,19 +257,116 @@ tasks:
       - echo "  ✓ All binaries in {{.BUILD_DIR}}/"
 
   install:
-    desc: "Install the binary to GOPATH/bin"
+    desc: "Build and install dev binary to GOPATH/bin"
     deps: [build]
     silent: true
     cmds:
       - go install {{.LDFLAGS}} ./cmd/otto-stack > /dev/null 2>&1
-      - echo "  ✓ Installed to $(go env GOPATH)/bin/{{.BINARY_NAME}}"
+      - |
+        GOBIN="$(go env GOPATH)/bin"
+        INSTALLED="$GOBIN/{{.BINARY_NAME}}"
+        echo "  ✓ Installed dev build to $INSTALLED"
+        ACTIVE=$(command -v {{.BINARY_NAME}} 2>/dev/null || true)
+        if [[ -z "$ACTIVE" ]]; then
+          echo "  ⚠ '{{.BINARY_NAME}}' not found in PATH"
+          echo "    Add $GOBIN to your PATH: export PATH=\"\$PATH:$GOBIN\""
+        elif [[ "$ACTIVE" != "$INSTALLED" ]]; then
+          echo "  ⚠ Active binary is $ACTIVE (not your dev build)"
+          echo "    $GOBIN must come before $(dirname "$ACTIVE") in PATH to use your dev build"
+          echo "    Run 'task install:status' to see the full picture"
+        else
+          VERSION=$({{.BINARY_NAME}} --version 2>/dev/null || {{.BINARY_NAME}} version 2>/dev/null || echo "dev build")
+          echo "  ✓ Active: $ACTIVE ($VERSION)"
+        fi
 
-  uninstall:
-    desc: "Remove the binary from GOPATH/bin"
+  install:status:
+    desc: "Show which otto-stack binary is currently active and what is installed"
     silent: true
     cmds:
-      - rm -f $(go env GOPATH)/bin/{{.BINARY_NAME}}
-      - echo "  ✓ Removed $(go env GOPATH)/bin/{{.BINARY_NAME}}"
+      - |
+        GOBIN="$(go env GOPATH)/bin"
+        DEV_BINARY="$GOBIN/{{.BINARY_NAME}}"
+        ACTIVE=$(command -v {{.BINARY_NAME}} 2>/dev/null || true)
+
+        # Determine if brew actually manages this binary (not just path heuristic)
+        BREW_CMD=$(command -v brew 2>/dev/null || true)
+        BREW_MANAGED=false
+        if [[ -n "$BREW_CMD" ]]; then
+          if "$BREW_CMD" list --formula 2>/dev/null | grep -q "^{{.BINARY_NAME}}$"; then
+            BREW_MANAGED=true
+          fi
+        fi
+
+        echo "  Install status for {{.BINARY_NAME}}:"
+        echo ""
+
+        if [[ -z "$ACTIVE" ]]; then
+          echo "  Active : not found in PATH"
+        else
+          VERSION=$("$ACTIVE" --version 2>/dev/null || "$ACTIVE" version 2>/dev/null || echo "unknown")
+          if [[ "$ACTIVE" == "$DEV_BINARY" ]]; then
+            echo "  Active : $ACTIVE  [dev build]"
+          elif [[ "$BREW_MANAGED" == "true" ]]; then
+            echo "  Active : $ACTIVE  [Homebrew]"
+          else
+            echo "  Active : $ACTIVE  [unmanaged — not brew, not dev build]"
+          fi
+          echo "  Version: $VERSION"
+        fi
+
+        echo ""
+        echo "  Installed copies:"
+        if [[ -f "$DEV_BINARY" ]]; then
+          echo "    dev build  : $DEV_BINARY"
+        else
+          echo "    dev build  : not installed  (run 'task install')"
+        fi
+
+        if [[ -n "$BREW_CMD" ]]; then
+          if [[ "$BREW_MANAGED" == "true" ]]; then
+            BREW_BIN="$("$BREW_CMD" --prefix 2>/dev/null)/bin/{{.BINARY_NAME}}"
+            BREW_VERSION=$("$BREW_BIN" --version 2>/dev/null || "$BREW_BIN" version 2>/dev/null || echo "unknown")
+            echo "    Homebrew   : $BREW_BIN ($BREW_VERSION)"
+          else
+            echo "    Homebrew   : not installed via brew"
+          fi
+        fi
+
+  uninstall:
+    desc: "Remove the dev binary from GOPATH/bin"
+    silent: true
+    cmds:
+      - |
+        GOBIN="$(go env GOPATH)/bin"
+        BINARY="$GOBIN/{{.BINARY_NAME}}"
+        if [[ -f "$BINARY" ]]; then
+          rm -f "$BINARY"
+          echo "  ✓ Removed dev build from $BINARY"
+        else
+          echo "  ✓ Dev build was not installed ($BINARY not found)"
+        fi
+        ACTIVE=$(command -v {{.BINARY_NAME}} 2>/dev/null || true)
+        if [[ -n "$ACTIVE" ]]; then
+          VERSION=$("$ACTIVE" --version 2>/dev/null || "$ACTIVE" version 2>/dev/null || echo "unknown")
+          echo "  ✓ Active binary is now: $ACTIVE ($VERSION)"
+        else
+          echo "  ✗ No '{{.BINARY_NAME}}' binary remaining in PATH"
+        fi
+
+  # ============================================================================
+  # RELEASE
+  # ============================================================================
+  release:homebrew:
+    desc: "Manually deploy Homebrew formula for a tag (usage: task release:homebrew TAG=otto-stack-v1.2.0)"
+    silent: true
+    requires:
+      vars: [TAG]
+    cmds:
+      - |
+        echo "  🍺 Deploying Homebrew formula for {{.TAG}}..."
+        ./scripts/homebrew.sh update -v "{{.TAG}}"
+        ./scripts/homebrew.sh deploy -v "{{.TAG}}"
+        echo "  ✓ Formula deployed for {{.TAG}}"
 
   # ============================================================================
   # DEVELOPMENT
@@ -736,7 +833,9 @@ tasks:
         echo "  Build:"
         echo "    task build              Build binary for current platform"
         echo "    task build-all          Build for all platforms"
-        echo "    task install            Install to GOPATH/bin"
+        echo "    task install            Install dev build to GOPATH/bin"
+        echo "    task install:status     Show which binary is active (dev vs Homebrew)"
+        echo "    task uninstall          Remove dev build from GOPATH/bin"
         echo ""
         echo "  Development:"
         echo "    task dev                Build and run --help"
@@ -775,6 +874,9 @@ tasks:
         echo "    task pre-commit         Run pre-commit checks"
         echo "    task pre-push           Run pre-push checks"
         echo "    task sync-go-version    Sync Go version across config files"
+        echo ""
+        echo "  Release:"
+        echo "    task release:homebrew   Deploy Homebrew formula (TAG=otto-stack-vX.Y.Z)"
         echo ""
         echo "  Docker:"
         echo "    task docker-build       Build Docker image"
