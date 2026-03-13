@@ -1,12 +1,5 @@
 # Changelog
 
-## [1.1.0](https://github.com/otto-nation/otto-stack/compare/otto-stack-v1.0.0...otto-stack-v1.1.0) (2026-03-13)
-
-
-### Features
-
-* shared containers, middleware chain, registry reconciliation, and lifecycle fixes ([#44](https://github.com/otto-nation/otto-stack/issues/44)) ([3bd5417](https://github.com/otto-nation/otto-stack/commit/3bd54172f8240d3374af74faab697cf2118fdab2))
-
 ## 1.0.0 (2026-02-26)
 
 
