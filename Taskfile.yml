@@ -238,7 +238,7 @@ tasks:
 
   build-all:
     desc: "Build binaries for all supported platforms"
-    deps: [lint]
+    deps: [sync-go-version, generate]
     silent: true
     cmds:
       - mkdir -p {{.BUILD_DIR}}

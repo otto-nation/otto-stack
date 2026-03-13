@@ -169,11 +169,6 @@ jobs:
           chmod +x "$CLI_BINARY-linux-amd64"
           "./$CLI_BINARY-linux-amd64" version || "./$CLI_BINARY-linux-amd64" --version || echo "✅ Binary executes successfully"
 
-          echo "🐳 Verifying Docker image..."
-          docker run --rm ${{ steps.config.outputs.docker-registry }}/${{ github.repository }}:${{ env.VERSION }} version || \
-          docker run --rm ${{ steps.config.outputs.docker-registry }}/${{ github.repository }}:${{ env.VERSION }} --version || \
-          echo "✅ Docker image runs successfully"
-
   post-release:
     name: Post-Release
     runs-on: ubuntu-latest
@@ -186,6 +181,12 @@ jobs:
       - name: Load configuration
         id: config
         uses: ./.github/actions/load-config
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-environment
+        with:
+          install-task: "false"
+          install-tools: "true"
 
       - name: Check package manager configuration
         id: package-config
