@@ -3,6 +3,7 @@
   "packages": {
     ".": {
       "package-name": "otto-stack",
+      "include-component-in-tag": false,
       "changelog-sections": [
         {
           "type": "feat",

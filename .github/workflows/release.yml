@@ -237,9 +237,9 @@ jobs:
 
       - name: Verify deployment
         run: |
-          # Extract semver from tag (e.g. otto-stack-v1.2.0 → 1.2.0)
+          # Extract semver from tag (e.g. v1.2.0 → 1.2.0)
           TAG="${{ inputs.deploy_homebrew_tag }}"
-          VERSION="${TAG##*-v}"
+          VERSION="${TAG#v}"
           TAP_FORMULA_URL="https://raw.githubusercontent.com/otto-nation/homebrew-tap/main/Formula/otto-stack.rb"
 
           sleep 5
