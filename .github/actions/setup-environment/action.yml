@@ -79,10 +79,15 @@ runs:
         fi
         echo "jq version: $(jq --version)"
 
-    - name: Run code generation
+    - name: Generate Go source files
+      if: inputs.install-task == 'true'
+      shell: bash
+      run: task generate:go
+
+    - name: Run full code generation
       if: inputs.run-generate == 'true' && inputs.install-task == 'true'
       shell: bash
-      run: task generate
+      run: task generate:docs
 
     - name: Download Go dependencies
       shell: bash
