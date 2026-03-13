@@ -45,7 +45,7 @@ runs:
           echo "❌ Configuration file not found: $CONFIG_FILE"
           echo "Using default values..."
           echo "hugo-version=0.151.0" >> $GITHUB_OUTPUT
-          echo "node-version=18" >> $GITHUB_OUTPUT
+          echo "node-version=20" >> $GITHUB_OUTPUT
           echo "build-dir=build" >> $GITHUB_OUTPUT
           echo "docs-dir=docs-site" >> $GITHUB_OUTPUT
           echo "cli-binary=otto-stack" >> $GITHUB_OUTPUT

@@ -3,13 +3,6 @@ name: Validation
 on:
   pull_request:
     branches: [main, develop]
-  push:
-    branches: [main, develop]
-    paths:
-      - "docs-site/**"
-      - "*.md"
-      - ".github/.commitlintrc.json"
-      - ".github/.release-please-config.json"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
