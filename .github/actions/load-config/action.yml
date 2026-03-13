@@ -27,11 +27,17 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Cache yq binary
+      uses: actions/cache@v4
+      with:
+        path: /usr/bin/yq
+        key: yq-${{ runner.os }}-${{ runner.arch }}-v4.47.2
+
     - name: Install yq if needed
       shell: bash
       run: |
         if ! command -v yq >/dev/null 2>&1; then
-          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq
+          sudo wget -q "https://github.com/mikefarah/yq/releases/download/v4.47.2/yq_linux_amd64" -O /usr/bin/yq
           sudo chmod +x /usr/bin/yq
         fi
 

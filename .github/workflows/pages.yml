@@ -45,72 +45,27 @@ jobs:
         with:
           install-task: "true"
 
-      - name: Verify content structure
-        run: |
-          echo "🔍 Verifying content structure..."
-          DOCS_DIR="${{ steps.config.outputs.docs-dir }}"
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ steps.config.outputs.node-version }}
+          cache: "npm"
+          cache-dependency-path: ${{ steps.config.outputs.docs-dir }}/package-lock.json
 
-          if [ ! -d "$DOCS_DIR" ]; then
-            echo "❌ $DOCS_DIR directory not found"
-            exit 1
-          fi
-
-          if [ ! -d "$DOCS_DIR/content" ]; then
-            echo "❌ Content directory not found"
-            exit 1
-          fi
-
-          if [ ! -f "$DOCS_DIR/content/_index.md" ]; then
-            echo "❌ Homepage content not found"
-            exit 1
-          fi
-
-          echo "✅ Content structure verified"
-
-      - name: Verify CLI documentation exists
-        run: |
-          DOCS_DIR="${{ steps.config.outputs.docs-dir }}"
-          if [ ! -f "$DOCS_DIR/content/cli-reference.md" ]; then
-            echo "❌ CLI reference documentation not found"
-            echo "ℹ️  Run 'task generate:docs' to generate it"
-            exit 1
-          fi
-          echo "✅ CLI documentation found"
+      - name: Install Node.js dependencies
+        working-directory: ${{ steps.config.outputs.docs-dir }}
+        run: npm ci
 
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
-
-      - name: Check for Node.js dependencies
-        working-directory: ${{ steps.config.outputs.docs-dir }}
-        run: |
-          if [ -f package-lock.json ] || [ -f npm-shrinkwrap.json ]; then
-            npm ci
-          else
-            echo "No Node.js dependencies found, skipping"
-          fi
 
       - name: Build with Hugo
         working-directory: ${{ steps.config.outputs.docs-dir }}
         env:
           HUGO_ENVIRONMENT: production
           HUGO_ENV: production
-        run: |
-          echo "🔍 Hugo version:"
-          hugo version
-          echo ""
-          echo "🔍 Building Hugo site..."
-          if hugo --gc --minify --baseURL "${{ steps.pages.outputs.base_url }}/"; then
-            echo "✅ Hugo build completed successfully"
-            echo ""
-            echo "📋 Build summary:"
-            find public -name "*.html" | wc -l | xargs echo "HTML files:"
-            find public -name "*.css" | wc -l | xargs echo "CSS files:"
-            find public -name "*.js" | wc -l | xargs echo "JS files:"
-          else
-            echo "❌ Hugo build failed"
-            exit 1
-          fi
+        run: hugo --gc --minify --baseURL "${{ steps.pages.outputs.base_url }}/"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
