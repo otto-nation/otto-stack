@@ -48,7 +48,7 @@ runs:
       if: inputs.install-task == 'true'
       uses: actions/cache@v4
       with:
-        path: ~/.local/bin/task
+        path: ~/go/bin/task
         key: task-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.github/config/workflow-config.yml') }}
 
     - name: Install Task runner
@@ -61,8 +61,11 @@ runs:
           echo "installed=true" >> $GITHUB_OUTPUT
         else
           echo "Installing Task runner..."
-          curl -sSfL https://taskfile.dev/install.sh | sh -s -- -b ~/.local/bin
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          # Install to GOPATH/bin which is already in PATH via actions/setup-go
+          INSTALL_DIR="$(go env GOPATH)/bin"
+          INSTALL_DIR="${INSTALL_DIR//\\//}"
+          mkdir -p "$INSTALL_DIR"
+          curl -sSfL https://taskfile.dev/install.sh | sh -s -- -b "$INSTALL_DIR"
           echo "installed=true" >> $GITHUB_OUTPUT
           echo "Task installed: $(task --version)"
         fi
