@@ -161,11 +161,10 @@ tasks:
       - echo "  ✓ Generated all code"
 
   generate:go:
-    desc: "Generate Go source files only (no docs)"
+    desc: "Generate Go source files only (no docs, cross-platform)"
     deps: [generate:cli, generate:services, generate:messages]
     silent: true
     cmds:
-      - gofmt -w $(find internal -name '*_generated.go')
       - echo "  ✓ Generated Go code"
 
   generate:cli:
