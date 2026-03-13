@@ -65,9 +65,7 @@
           "hidden": true
         }
       ],
-      "extra-files": [
-        "internal/cli/version.go"
-      ]
+      "extra-files": []
     }
   }
 }

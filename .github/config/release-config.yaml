@@ -74,7 +74,9 @@ release:
 # Package managers to update
 package_managers:
   homebrew:
-    enabled: false
+    enabled: true
+    tap_repo: "otto-nation/homebrew-tap"
+    formula_path: "Formula/otto-stack.rb"
   scoop:
     enabled: false
 
