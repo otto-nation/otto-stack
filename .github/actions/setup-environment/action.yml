@@ -10,6 +10,10 @@ inputs:
     description: "Install additional tools (yq, jq)"
     required: false
     default: "false"
+  run-generate:
+    description: "Run code generation (task generate). Only needed in jobs that require fresh generated output."
+    required: false
+    default: "false"
   cache-key-suffix:
     description: "Additional suffix for cache key"
     required: false
@@ -26,16 +30,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Clean Go module cache
-      shell: bash
-      run: |
-        # Clean any corrupted cache to prevent tar extraction errors
-        if [ -d "$HOME/go/pkg/mod" ]; then
-          echo "Cleaning Go module cache..."
-          chmod -R u+w "$HOME/go/pkg/mod" 2>/dev/null || true
-          rm -rf "$HOME/go/pkg/mod" 2>/dev/null || true
-        fi
-
     - name: Setup Go
       id: setup-go
       uses: ./.github/actions/setup-go-version
@@ -50,6 +44,13 @@ runs:
           echo "config-exists=false" >> $GITHUB_OUTPUT
         fi
 
+    - name: Cache Task binary
+      if: inputs.install-task == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ~/go/bin/task
+        key: task-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.github/config/workflow-config.yml') }}
+
     - name: Install Task runner
       id: install-task
       if: inputs.install-task == 'true'
@@ -60,7 +61,11 @@ runs:
           echo "installed=true" >> $GITHUB_OUTPUT
         else
           echo "Installing Task runner..."
-          go install github.com/go-task/task/v3/cmd/task@latest
+          # Install to GOPATH/bin which is already in PATH via actions/setup-go
+          INSTALL_DIR="$(go env GOPATH)/bin"
+          INSTALL_DIR="${INSTALL_DIR//\\//}"
+          mkdir -p "$INSTALL_DIR"
+          curl -sSfL https://taskfile.dev/install.sh | sh -s -- -b "$INSTALL_DIR"
           echo "installed=true" >> $GITHUB_OUTPUT
           echo "Task installed: $(task --version)"
         fi
@@ -69,45 +74,32 @@ runs:
       if: inputs.install-tools == 'true'
       shell: bash
       run: |
-        echo "Installing additional tools..."
-
-        # Install yq
         if ! command -v yq >/dev/null 2>&1; then
           YQ_VERSION="v4.47.2"
           sudo wget -q "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" -O /usr/bin/yq
           sudo chmod +x /usr/bin/yq
           echo "yq installed: $(yq --version)"
-        else
-          echo "yq already installed: $(yq --version)"
         fi
-
-        # jq is pre-installed on GitHub runners
         echo "jq version: $(jq --version)"
 
-    - name: Run code generation
+    - name: Generate Go source files
       if: inputs.install-task == 'true'
       shell: bash
-      run: |
-        echo "Running code generation..."
-        task generate
+      run: task generate:go
+
+    - name: Run full code generation
+      if: inputs.run-generate == 'true' && inputs.install-task == 'true'
+      shell: bash
+      run: task generate:docs
 
     - name: Download Go dependencies
       shell: bash
-      run: |
-        echo "Downloading Go dependencies..."
-        go mod download
-        go mod verify
+      run: go mod download
 
     - name: Environment summary
       shell: bash
       run: |
-        echo "🔧 Development Environment Setup Complete"
         echo "Go version: $(go version)"
-        echo "Go path: $(go env GOPATH)"
         if command -v task >/dev/null 2>&1; then
           echo "Task version: $(task --version)"
         fi
-        if command -v yq >/dev/null 2>&1; then
-          echo "yq version: $(yq --version)"
-        fi
-        echo "jq version: $(jq --version)"

@@ -1,29 +1,30 @@
 class OttoStack < Formula
   desc "Development stack management tool for streamlined local development automation"
   homepage "https://github.com/otto-nation/otto-stack"
+  version "1.1.0"
   license "MIT"
 
   on_macos do
     on_intel do
-      url "https://github.com/otto-nation/otto-stack/releases/latest/download/otto-stack-darwin-amd64"
-      # sha256 will be updated automatically by release process
+      url "https://github.com/otto-nation/otto-stack/releases/download/otto-stack-v1.1.0/otto-stack-darwin-amd64"
+      sha256 "17730a7fe5798bdcd4375310d499b4ae7538229ec5b003c93ed61f0d3b808d14"
     end
 
     on_arm do
-      url "https://github.com/otto-nation/otto-stack/releases/latest/download/otto-stack-darwin-arm64"
-      # sha256 will be updated automatically by release process
+      url "https://github.com/otto-nation/otto-stack/releases/download/otto-stack-v1.1.0/otto-stack-darwin-arm64"
+      sha256 "636b0aa865fbd179e816f2f31f886b52cb9200ceef4c2d85c27413d223fe42c4"
     end
   end
 
   on_linux do
     on_intel do
-      url "https://github.com/otto-nation/otto-stack/releases/latest/download/otto-stack-linux-amd64"
-      # sha256 will be updated automatically by release process
+      url "https://github.com/otto-nation/otto-stack/releases/download/otto-stack-v1.1.0/otto-stack-linux-amd64"
+      sha256 "d11f901c9e2af3678d0686f86ceece403b529a69cca2e70e85ec2adcb53f98f8"
     end
 
     on_arm do
-      url "https://github.com/otto-nation/otto-stack/releases/latest/download/otto-stack-linux-arm64"
-      # sha256 will be updated automatically by release process
+      url "https://github.com/otto-nation/otto-stack/releases/download/otto-stack-v1.1.0/otto-stack-linux-arm64"
+      sha256 "2afc1c7808b9696e69c84e978deb53ae2852fed12adafae9884b6387edd82525"
     end
   end
 

@@ -119,6 +119,14 @@ func (c *CLIRunner) RunExpectSuccess(args ...string) *CLIResult {
 	return result
 }
 
+func (c *CLIRunner) RunExpectFailure(args ...string) *CLIResult {
+	c.t.Helper()
+
+	result := c.Run(args...)
+	require.Error(c.t, result.Error, "Command should have failed: %s", strings.Join(args, " "))
+	return result
+}
+
 func (c *CLIRunner) RunExpectSuccessWithBuilder(builder func() []string) *CLIResult {
 	return c.RunExpectSuccess(builder()...)
 }

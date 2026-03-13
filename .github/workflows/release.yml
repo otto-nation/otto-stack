@@ -20,6 +20,11 @@ on:
           - "patch"
           - "minor"
           - "major"
+      deploy_homebrew_tag:
+        description: "Re-deploy Homebrew formula for an existing tag (e.g. otto-stack-v1.1.0). Skips release creation."
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: write
@@ -133,16 +138,6 @@ jobs:
           echo "📤 Uploading release assets to ${{ env.TAG_NAME }}"
           gh release upload ${{ env.TAG_NAME }} ${{ steps.config.outputs.build-dir }}/* --clobber
 
-      - name: Calculate source tarball SHA256
-        id: source-sha
-        run: |
-          # Download the source tarball that GitHub creates
-          curl -L -o source.tar.gz "https://github.com/${{ github.repository }}/archive/refs/tags/${{ env.TAG_NAME }}.tar.gz"
-          SOURCE_SHA256=$(sha256sum source.tar.gz | cut -d' ' -f1)
-          echo "SOURCE_SHA256=$SOURCE_SHA256" >> $GITHUB_ENV
-          echo "source-sha256=$SOURCE_SHA256" >> $GITHUB_OUTPUT
-          echo "📦 Source tarball SHA256: $SOURCE_SHA256"
-
       - name: Update Homebrew tap
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
@@ -248,6 +243,23 @@ jobs:
             echo "⚠️ **Status**: Release completed with some issues" >> $GITHUB_STEP_SUMMARY
             echo "Build Status: ${{ needs.build.result }}" >> $GITHUB_STEP_SUMMARY
           fi
+
+  deploy-homebrew:
+    name: Deploy Homebrew Formula
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_homebrew_tag != ''
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Deploy formula for existing tag
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🍺 Re-deploying Homebrew formula for ${{ inputs.deploy_homebrew_tag }}..."
+          ./scripts/homebrew.sh update -v ${{ inputs.deploy_homebrew_tag }}
+          ./scripts/homebrew.sh deploy -v ${{ inputs.deploy_homebrew_tag }}
 
   notify-failure:
     name: Notify Failure

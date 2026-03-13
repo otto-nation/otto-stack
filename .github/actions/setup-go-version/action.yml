@@ -40,10 +40,6 @@ runs:
 
     - name: Verify Go installation
       shell: bash
-      run: |
-        echo "Go version installed:"
-        go version
-        echo "GOPATH: $(go env GOPATH)"
-        echo "GOROOT: $(go env GOROOT)"
+      run: go version
       env:
         GOTOOLCHAIN: local

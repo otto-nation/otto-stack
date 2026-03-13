@@ -31,6 +31,7 @@ jobs:
         with:
           install-task: "true"
           install-tools: "true"
+          run-generate: "false"
 
       - name: Validate conventional commits
         if: github.event_name == 'pull_request'
