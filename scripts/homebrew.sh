@@ -77,8 +77,10 @@ EOF
     declare -A platforms=(
         ["darwin-amd64"]="https://github.com/$REPO/releases/download/$version/$APP_NAME-darwin-amd64"
         ["darwin-arm64"]="https://github.com/$REPO/releases/download/$version/$APP_NAME-darwin-arm64"
+        ["linux-amd64"]="https://github.com/$REPO/releases/download/$version/$APP_NAME-linux-amd64"
+        ["linux-arm64"]="https://github.com/$REPO/releases/download/$version/$APP_NAME-linux-arm64"
     )
-    
+
     # Calculate checksums
     declare -A checksums
     for platform in "${!platforms[@]}"; do
@@ -86,27 +88,31 @@ EOF
         print_status "Calculating SHA256 for $platform..."
         checksums[$platform]=$(get_remote_sha256 "$url")
     done
-    
+
     # Update formula file
     local formula_path="$project_root/$FORMULA_FILE"
     if [[ ! -f "$formula_path" ]]; then
         print_error "Formula file not found: $formula_path"
         return 1
     fi
-    
-    # Update version and checksums in formula
-    local version_clean="${version#v}"
-    
+
+    # Strip tag prefix to get clean semver (e.g. "otto-stack-v1.2.3" -> "1.2.3")
+    local version_clean="${version##*-v}"
+
     if [[ "$OSTYPE" == "darwin"* ]]; then
         sed -i '' "s/version \".*\"/version \"$version_clean\"/" "$formula_path"
-        sed -i '' "s|url \"https://github.com/$REPO/releases/download/v[^/]*/|url \"https://github.com/$REPO/releases/download/$version/|" "$formula_path"
+        sed -i '' "s|/releases/download/[^/]*/|/releases/download/$version/|g" "$formula_path"
         sed -i '' "/darwin.*amd64/,/sha256/ s/sha256 \".*\"/sha256 \"${checksums[darwin-amd64]}\"/" "$formula_path"
         sed -i '' "/darwin.*arm64/,/sha256/ s/sha256 \".*\"/sha256 \"${checksums[darwin-arm64]}\"/" "$formula_path"
+        sed -i '' "/linux.*amd64/,/sha256/ s/sha256 \".*\"/sha256 \"${checksums[linux-amd64]}\"/" "$formula_path"
+        sed -i '' "/linux.*arm64/,/sha256/ s/sha256 \".*\"/sha256 \"${checksums[linux-arm64]}\"/" "$formula_path"
     else
         sed -i "s/version \".*\"/version \"$version_clean\"/" "$formula_path"
-        sed -i "s|url \"https://github.com/$REPO/releases/download/v[^/]*/|url \"https://github.com/$REPO/releases/download/$version/|" "$formula_path"
+        sed -i "s|/releases/download/[^/]*/|/releases/download/$version/|g" "$formula_path"
         sed -i "/darwin.*amd64/,/sha256/ s/sha256 \".*\"/sha256 \"${checksums[darwin-amd64]}\"/" "$formula_path"
         sed -i "/darwin.*arm64/,/sha256/ s/sha256 \".*\"/sha256 \"${checksums[darwin-arm64]}\"/" "$formula_path"
+        sed -i "/linux.*amd64/,/sha256/ s/sha256 \".*\"/sha256 \"${checksums[linux-amd64]}\"/" "$formula_path"
+        sed -i "/linux.*arm64/,/sha256/ s/sha256 \".*\"/sha256 \"${checksums[linux-arm64]}\"/" "$formula_path"
     fi
     
     print_success "Formula updated successfully"
