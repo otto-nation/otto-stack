@@ -272,10 +272,7 @@ func envExample(
 		}
 		sb.WriteString("# " + label(name) + "\n")
 		keys := sortedEnvKeys(svc.config.Environment)
-		n := limit
-		if len(keys) < n {
-			n = len(keys)
-		}
+		n := min(limit, len(keys))
 		for _, k := range keys[:n] {
 			sb.WriteString(k + "=" + value(svc, k) + "\n")
 		}

@@ -85,6 +85,7 @@ validation:
   service_name_required: "service name is required"
   service_not_shareable: "service '%s' is marked as non-shareable and cannot be shared across projects"
   service_not_shareable_warning: "Warning: service '%s' is marked as non-shareable but will be shared (--force used)"
+  project_dir_not_initialized: "directory '%s' is not an otto-stack project (no .otto-stack/config.yaml found)"
 
 validate:
   check_config_syntax: "Configuration syntax valid"
@@ -187,9 +188,12 @@ warnings:
   registry_register_failed: "Failed to register %s: %v"
   registry_unregister_failed: "Failed to unregister %s: %v"
   registry_reconcile_failed: "Failed to reconcile registry: %v"
+  orphan_remove_container_failed: "Failed to remove orphaned container %s: %v"
+  validation_options_ignored: "validation.options in config has no effect and will be removed in a future release"
   config_generate_failed: "Failed to generate config for service %s: %v"
   compose_generate_shared_failed: "Failed to generate shared compose file: %v"
   gitignore_create_failed: "Failed to create .gitignore entries: %v"
+  auto_start_failed: "auto-start failed (your project was initialized successfully): %v"
 
 prompts:
   cleanup_confirm: "Proceed with cleanup?"
@@ -199,6 +203,10 @@ prompts:
   select_validation_options: "Select validation options:"
   select_validation_options_help: "Choose which validations to run"
   proceed_initialization: "Proceed with initialization?"
+  auto_start: "Automatically run 'otto-stack up' after initialization?"
+  auto_start_help: "Starts all configured services immediately after project setup"
+  enable_sharing: "Enable container sharing for %s?"
+  enable_sharing_help: "Shared containers (e.g. otto-stack-postgres) run globally and are reused across all projects, saving resources and startup time. Disable to run these as project-local instances instead."
 
 info:
   no_cleanup_options: "No cleanup options specified. Use --help for available options"
@@ -211,6 +219,7 @@ info:
   shared_containers_status: "Shared containers status"
   cleaning_project: "Cleaning up project: %s"
   project_info: "Project: %s"
+  auto_starting: "Starting services automatically..."
   service_info: "Service: %s"
   context_info: "Context: %s"
   header_container: "CONTAINER"
@@ -243,6 +252,7 @@ notifications:
 
 errors:
   not_initialized: "project not initialized, run 'otto-stack init' first"
+  project_dir_change_failed: "failed to change into project directory '%s': %v"
   failed_load_config: "failed to load configuration: %w"
   failed_create_docker_client: "failed to create Docker client: %w"
   failed_check_updates: "failed to check for updates: %w"
@@ -410,6 +420,7 @@ shared:
   stopping: "Stopping shared containers"
   service_not_in_registry: "service '%s' not found in shared registry"
   registered: "Shared containers registered"
+  project_registered_shared: "Registered %d container(s) as shared (available to other projects)"
   stopped: "Shared containers stopped"
   no_services_specified: "No services specified. Use 'otto-stack up <service>' to start shared containers"
   no_containers: "No shared containers to stop"
@@ -417,12 +428,16 @@ shared:
   will_stop: "The following shared containers will be stopped:"
   cancelled: "Cancelled"
   skipping: "Skipping shared containers"
+  skipping_non_interactive: "Skipping %d shared container(s) in non-interactive mode. Use --all to stop them."
+  stopping_non_interactive: "Stopping all shared containers (non-interactive mode)"
   no_services_to_stop: "No services to stop"
   confirm_stop: "Stop shared containers? (y/N): "
   registered_item: "  %s %s (shared)"
   confirm_start: "You are outside a project directory. Start the above as shared containers available to all projects?"
   compose_file_not_found: "Shared compose file not found — containers may still be running. Removing from registry only."
   context_requires_interactive: "Starting shared containers requires interactive mode. Use a project directory or run interactively."
+  service_not_running: "Shared service '%s' is not running. Start it first: otto-stack up %s"
+  auto_starting: "Auto-starting shared container(s): %s"
 
 middleware:
   project_already_initialized: "Project already initialized. Use --force to overwrite"

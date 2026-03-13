@@ -3,7 +3,7 @@ title: Configuration Guide
 description: Configure your otto-stack development environment
 lead: Learn how to configure your development stack
 date: "2025-10-01"
-lastmod: "2026-03-05"
+lastmod: "2026-03-12"
 draft: false
 weight: 25
 toc: true
@@ -48,15 +48,12 @@ stack:
     - redis
 sharing:
   enabled: false
-validation:
-  skip_warnings: false
-  allow_multiple_databases: false
 advanced:
   auto_start: false
   pull_latest_images: false
   cleanup_on_recreate: false
 version_config:
-  required_version: '>=1.0.0'
+  required_version:
 ```
 
 ### Project
@@ -82,22 +79,21 @@ Container sharing configuration allows services to be shared across multiple pro
 
 Validation and safety settings
 
-- **skip_warnings**: Skip validation warnings during startup
-- **allow_multiple_databases**: Allow multiple database services
+- **options**: Named validation checks to enable or disable (e.g., config-syntax: true, docker: true)
 
 ### Advanced
 
 Advanced operational settings
 
-- **auto_start**: Start services automatically after setup
-- **pull_latest_images**: Pull latest Docker images
-- **cleanup_on_recreate**: Keep data when recreating services
+- **auto_start**: Automatically run 'up' after initialization completes
+- **pull_latest_images**: Pull the latest Docker images before starting services
+- **cleanup_on_recreate**: Remove volumes when force-recreating services (full data reset)
 
 ### Version Config
 
-Version management and update settings
+Version constraint settings
 
-- **required_version**: Required otto-stack version
+- **required_version**: Semver constraint the running otto-stack binary must satisfy (e.g., '>=1.2.0')
 
 ### Sharing Configuration Details
 

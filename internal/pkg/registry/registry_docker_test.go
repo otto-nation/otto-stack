@@ -6,7 +6,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,8 +15,8 @@ import (
 
 func TestOrphanDetection_Orphaned(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
-			return []types.Container{
+		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
+			return []container.Summary{
 				{
 					ID:     "orphan1",
 					Names:  []string{"/orphaned-service"},
@@ -38,7 +37,7 @@ func TestOrphanDetection_Orphaned(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, containers, 2)
 
-	var orphans []types.Container
+	var orphans []container.Summary
 	knownProjects := map[string]bool{"active-project": true}
 	for _, c := range containers {
 		project := c.Labels["com.docker.compose.project"]
@@ -53,8 +52,8 @@ func TestOrphanDetection_Orphaned(t *testing.T) {
 
 func TestOrphanDetection_Zombies(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
-			return []types.Container{
+		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
+			return []container.Summary{
 				{
 					ID:     "zombie1",
 					Names:  []string{"/zombie-service"},
@@ -74,7 +73,7 @@ func TestOrphanDetection_Zombies(t *testing.T) {
 	containers, err := mockDocker.ContainerList(context.Background(), container.ListOptions{All: true})
 	require.NoError(t, err)
 
-	var zombies []types.Container
+	var zombies []container.Summary
 	for _, c := range containers {
 		if c.State == "exited" {
 			zombies = append(zombies, c)
@@ -87,7 +86,7 @@ func TestOrphanDetection_Zombies(t *testing.T) {
 
 func TestRegistry_RegisterContainer(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerInspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
 			return testhelpers.MockContainerJSON(containerID, "/test-service", "postgres:15", "test", true), nil
 		},
 	}
@@ -115,8 +114,8 @@ func TestRegistry_UnregisterContainer(t *testing.T) {
 
 func TestRegistry_ListContainersByProject(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
-			return []types.Container{
+		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
+			return []container.Summary{
 				{
 					ID:     "c1",
 					Names:  []string{"/myproject-postgres"},
@@ -139,7 +138,7 @@ func TestRegistry_ListContainersByProject(t *testing.T) {
 	containers, err := mockDocker.ContainerList(context.Background(), container.ListOptions{})
 	require.NoError(t, err)
 
-	var projectContainers []types.Container
+	var projectContainers []container.Summary
 	for _, c := range containers {
 		if c.Labels["com.docker.compose.project"] == "myproject" {
 			projectContainers = append(projectContainers, c)
@@ -151,8 +150,8 @@ func TestRegistry_ListContainersByProject(t *testing.T) {
 
 func TestRegistry_CountContainersPerProject(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
-			return []types.Container{
+		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
+			return []container.Summary{
 				{ID: "c1", Labels: map[string]string{"com.docker.compose.project": "proj1"}},
 				{ID: "c2", Labels: map[string]string{"com.docker.compose.project": "proj1"}},
 				{ID: "c3", Labels: map[string]string{"com.docker.compose.project": "proj2"}},
@@ -175,7 +174,7 @@ func TestRegistry_CountContainersPerProject(t *testing.T) {
 
 func TestRegistry_ContainerHealth(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerInspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
 			return testhelpers.MockContainerJSONWithHealth(containerID, true, "healthy"), nil
 		},
 	}

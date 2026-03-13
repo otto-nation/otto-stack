@@ -3,7 +3,7 @@ title: CLI Reference
 description: Complete command reference for otto-stack CLI
 lead: Comprehensive reference for all otto-stack CLI commands and their usage
 date: "2025-10-01"
-lastmod: "2026-03-05"
+lastmod: "2026-03-12"
 draft: false
 weight: 50
 toc: true
@@ -76,10 +76,10 @@ otto-stack up postgres redis
 Start specific services
 
 ```bash
-cd ~ && otto-stack up redis
+otto-stack up --global redis
 ```
 
-Start shared containers from global context
+Start a shared container from inside a project directory
 
 ```bash
 otto-stack up --detach --build
@@ -89,6 +89,8 @@ Build images and start services in background
 
 **Flags:**
 
+- `--global` (`bool`): Force shared (global) mode — start as shared containers regardless of current directory (default: `false`)
+- `--project` (`string`): Path to a project directory — operate on that project regardless of current directory (default: ``)
 - `--detach` (`bool`): Run services in background (detached mode) (default: `false`)
 - `--build` (`bool`): Build images before starting services (default: `false`)
 - `--force-recreate` (`bool`): Recreate containers even if config hasn't changed (default: `false`)
@@ -160,6 +162,7 @@ Stop services with custom timeout
 
 **Flags:**
 
+- `--project` (`string`): Path to a project directory — operate on that project regardless of current directory (default: ``)
 - `--shared` (`bool`): Stop all shared containers (default: `false`)
 - `--all` (`bool`): Stop both project and shared containers (default: `false`)
 - `--volumes` (`bool`): Remove named volumes and anonymous volumes (default: `false`)
@@ -203,8 +206,16 @@ otto-stack restart --timeout 5
 
 Restart with custom timeout
 
+```bash
+otto-stack restart --global postgres
+```
+
+Restart a shared container from inside a project directory
+
 **Flags:**
 
+- `--global` (`bool`): Force shared (global) mode — restart shared containers regardless of current directory (default: `false`)
+- `--project` (`string`): Path to a project directory — operate on that project regardless of current directory (default: ``)
 - `--timeout` (`int`): Restart timeout in seconds (default: `10`)
 - `--no-deps` (`bool`): Don't restart linked services (default: `false`)
 
@@ -446,6 +457,7 @@ Overwrite existing configuration
 - `--services` (`string`): Comma-separated list of services to include (required for non-interactive mode) (default: ``)
 - `--no-shared-containers` (`bool`): Disable shared containers for all services (default: `false`)
 - `--shared-services` (`string`): Comma-separated list of services to share across projects (e.g., postgres,redis). Overrides global sharing setting for specified services. (default: ``)
+- `--auto-start` (`bool`): Automatically run 'up' after initialization completes (non-interactive mode only; interactive mode prompts) (default: `false`)
 
 **Related Commands:** [`validate`](#validate)
 

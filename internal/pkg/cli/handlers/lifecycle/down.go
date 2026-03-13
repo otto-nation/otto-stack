@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -16,6 +17,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
@@ -34,7 +36,15 @@ func NewDownHandler() *DownHandler {
 
 // Handle executes the down command
 func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	execCtx, err := common.DetectExecutionContext()
+	if projectDir, _ := cmd.Flags().GetString(docker.FlagProject); projectDir != "" {
+		mode, err := buildProjectMode(projectDir)
+		if err != nil {
+			return err
+		}
+		return h.handleProjectContext(ctx, cmd, args, base, mode)
+	}
+
+	execCtx, err := middleware.ExecContextOrDetect(ctx)
 	if err != nil {
 		return err
 	}
@@ -42,7 +52,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	showShared, _ := cmd.Flags().GetBool(docker.FlagShared)
 	showAll, _ := cmd.Flags().GetBool(docker.FlagAll)
 
-	if showShared || showAll {
+	if showShared {
 		switch mode := execCtx.(type) {
 		case *clicontext.ProjectMode:
 			return h.handleGlobalContext(ctx, cmd, args, base, mode.Shared)
@@ -53,6 +63,14 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 
 	switch mode := execCtx.(type) {
 	case *clicontext.ProjectMode:
+		if showAll {
+			// --all: stop project containers first (without prompting about shared),
+			// then stop all shared containers.
+			if err := h.handleProjectContext(ctx, cmd, args, base, mode); err != nil {
+				return err
+			}
+			return h.handleGlobalContext(ctx, cmd, args, base, mode.Shared)
+		}
 		return h.handleProjectContext(ctx, cmd, args, base, mode)
 	case *clicontext.SharedMode:
 		return h.handleGlobalContext(ctx, cmd, args, base, mode.Shared)
@@ -64,7 +82,7 @@ func (h *DownHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand, execCtx *clicontext.ProjectMode) error {
 	base.Output.Header(messages.LifecycleStopping)
 
-	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
+	setup, cleanup, err := middleware.CoreSetupOrCreate(ctx, base)
 	if err != nil {
 		return err
 	}
@@ -75,10 +93,14 @@ func (h *DownHandler) handleProjectContext(ctx context.Context, cmd *cobra.Comma
 		return err
 	}
 
+	stopAll, _ := cmd.Flags().GetBool(docker.FlagAll)
 	ciFlags := ci.GetFlags(cmd)
-	serviceConfigs, err = h.filterSharedIfNeeded(serviceConfigs, execCtx.Shared.Root, base, ciFlags.NonInteractive)
-	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceFilterSharedFailed, err)
+	// When --all is set, include shared containers without prompting — the user's intent is explicit.
+	if !stopAll {
+		serviceConfigs, err = h.filterSharedIfNeeded(serviceConfigs, execCtx.Shared.Root, base, ciFlags.NonInteractive)
+		if err != nil {
+			return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceFilterSharedFailed, err)
+		}
 	}
 
 	if len(serviceConfigs) == 0 {
@@ -142,7 +164,12 @@ func (h *DownHandler) promptAndFilterShared(base *base.BaseCommand, reg *registr
 		}
 	}
 
-	if nonInteractive || !h.promptStopShared(base) {
+	if nonInteractive {
+		base.Output.Info(messages.SharedSkippingNonInteractive, len(sharedServices))
+		return h.filterOutShared(sharedServices, serviceConfigs)
+	}
+
+	if !h.promptStopShared(base) {
 		base.Output.Info(messages.SharedSkipping)
 		return h.filterOutShared(sharedServices, serviceConfigs)
 	}
@@ -199,12 +226,12 @@ func (h *DownHandler) handleGlobalContext(ctx context.Context, cmd *cobra.Comman
 		return nil
 	}
 
-	h.stopSharedContainersViaCompose(ctx, sharedInfo.Root, base)
+	h.stopSharedContainersViaCompose(ctx, sharedInfo.Root, servicesToStop, base)
 
 	return h.unregisterSharedContainers(servicesToStop, sharedInfo, base)
 }
 
-func (h *DownHandler) stopSharedContainersViaCompose(ctx context.Context, sharedRoot string, base *base.BaseCommand) {
+func (h *DownHandler) stopSharedContainersViaCompose(ctx context.Context, sharedRoot string, services []string, base *base.BaseCommand) {
 	composePath := filepath.Join(sharedRoot, core.GeneratedDir, docker.DockerComposeFileName)
 	if _, err := os.Stat(composePath); os.IsNotExist(err) {
 		base.Output.Warning("%s", messages.SharedComposeFileNotFound)
@@ -213,18 +240,18 @@ func (h *DownHandler) stopSharedContainersViaCompose(ctx context.Context, shared
 
 	composeManager, err := docker.NewManager()
 	if err != nil {
-		base.Output.Warning(messages.ErrorsDockerManagerCreateFailed, err)
+		base.Output.Warning("%s: %v", messages.ErrorsDockerManagerCreateFailed, err)
 		return
 	}
 
-	proj, err := composeManager.LoadProject(ctx, composePath, "shared")
+	proj, err := composeManager.LoadProject(ctx, []string{composePath}, "shared")
 	if err != nil {
 		base.Output.Warning(messages.ErrorsDockerLoadProjectFailed, err)
 		return
 	}
 
 	// Ignore errors from down — containers may already be stopped
-	_ = composeManager.Down(ctx, proj, docker.DownOptions{RemoveOrphans: true}.ToSDK())
+	_ = composeManager.Down(ctx, proj, docker.DownOptions{Services: services, RemoveOrphans: true}.ToSDK())
 }
 
 func (h *DownHandler) determineServicesToStop(args []string, sharedInfo *clicontext.SharedInfo, base *base.BaseCommand, nonInteractive bool) ([]string, error) {
@@ -253,13 +280,21 @@ func (h *DownHandler) determineServicesToStop(args []string, sharedInfo *clicont
 
 func (h *DownHandler) promptStopAll(containers map[string]*registry.ContainerInfo, base *base.BaseCommand, nonInteractive bool) []string {
 	base.Output.Warning(messages.SharedStopAllPrompt)
-	var services []string
-	for _, container := range containers {
-		base.Output.Info(messages.InfoListItemWithUsers, container.Name, container.Projects)
-		services = append(services, container.Name)
+	services := make([]string, 0, len(containers))
+	for service := range containers {
+		services = append(services, service)
+	}
+	sort.Strings(services)
+	for _, service := range services {
+		base.Output.Info(messages.InfoListItemWithUsers, service, containers[service].Projects)
 	}
 
-	if nonInteractive || !h.promptStopShared(base) {
+	if nonInteractive {
+		base.Output.Info(messages.SharedStoppingNonInteractive)
+		return services
+	}
+
+	if !h.promptStopShared(base) {
 		base.Output.Info(messages.SharedCancelled)
 		return nil
 	}

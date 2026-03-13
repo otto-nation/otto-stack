@@ -3,18 +3,18 @@ package lifecycle
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
-	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
@@ -41,7 +41,18 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		return nil
 	}
 
-	execCtx, err := common.DetectExecutionContext()
+	if globalFlag, _ := cmd.Flags().GetBool(docker.FlagGlobal); globalFlag {
+		return h.handleSharedContext(ctx, cmd, args, base, buildSharedMode())
+	}
+
+	if projectDir, _ := cmd.Flags().GetString(docker.FlagProject); projectDir != "" {
+		if _, err := buildProjectMode(projectDir); err != nil {
+			return err
+		}
+		return h.handleProjectContext(ctx, cmd, args, base)
+	}
+
+	execCtx, err := middleware.ExecContextOrDetect(ctx)
 	if err != nil {
 		return err
 	}
@@ -57,7 +68,7 @@ func (h *RestartHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 }
 
 func (h *RestartHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
+	setup, cleanup, err := middleware.CoreSetupOrCreate(ctx, base)
 	if err != nil {
 		return err
 	}
@@ -118,19 +129,27 @@ func (h *RestartHandler) handleSharedContext(ctx context.Context, cmd *cobra.Com
 		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailedParseFlags, err)
 	}
 
-	dockerClient, err := docker.NewClient(logger.GetLogger())
+	composePath := filepath.Join(mode.Shared.Root, core.GeneratedDir, docker.DockerComposeFileName)
+	composeManager, err := docker.NewManager()
 	if err != nil {
-		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerManagerCreateFailed, err)
 	}
 
-	timeout := flags.Timeout
-	stopOpts := container.StopOptions{Timeout: &timeout}
+	proj, err := composeManager.LoadProject(ctx, []string{composePath}, "shared")
+	if err != nil {
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, messages.ErrorsDockerLoadProjectFailed, err)
+	}
+
+	timeout := time.Duration(flags.Timeout) * time.Second
+	if err := composeManager.Stop(ctx, "shared", docker.StopOptions{Services: args, Timeout: &timeout}.ToSDK()); err != nil {
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsServiceRestartFailed, err)
+	}
+
+	if err := composeManager.Up(ctx, proj, docker.UpOptions{Detach: true, Services: args}); err != nil {
+		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentStack, messages.ErrorsServiceRestartFailed, err)
+	}
 
 	for _, serviceName := range args {
-		containerInfo := reg.Containers[serviceName]
-		if err := dockerClient.GetDockerClient().ContainerRestart(ctx, containerInfo.Name, stopOpts); err != nil {
-			return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, serviceName, messages.ErrorsServiceRestartFailed, err)
-		}
 		base.Output.Success(messages.SuccessRestartedService, serviceName)
 	}
 

@@ -2,7 +2,11 @@ package lifecycle
 
 import (
 	"context"
+	"fmt"
+	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/AlecAivazis/survey/v2"
@@ -15,6 +19,7 @@ import (
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/project"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
@@ -35,7 +40,19 @@ func NewUpHandler() *UpHandler {
 
 // Handle executes the up command
 func (h *UpHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	execCtx, err := common.DetectExecutionContext()
+	if globalFlag, _ := cmd.Flags().GetBool(docker.FlagGlobal); globalFlag {
+		return h.handleGlobalContext(ctx, cmd, args, base, buildSharedMode())
+	}
+
+	if projectDir, _ := cmd.Flags().GetString(docker.FlagProject); projectDir != "" {
+		mode, err := buildProjectMode(projectDir)
+		if err != nil {
+			return err
+		}
+		return h.handleProjectContext(ctx, cmd, args, base, mode)
+	}
+
+	execCtx, err := middleware.ExecContextOrDetect(ctx)
 	if err != nil {
 		return err
 	}
@@ -58,7 +75,7 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationFailed, err)
 	}
 
-	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
+	setup, cleanup, err := middleware.CoreSetupOrCreate(ctx, base)
 	if err != nil {
 		return err
 	}
@@ -69,15 +86,14 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 		return err
 	}
 
-	// Register shared containers before starting
+	// Separate shared services from project-local services. Shared services run
+	// under their own compose project (otto-stack-<name>); including them in the
+	// project compose would cause container-name conflicts and ownership fights.
 	sharedConfigs := h.filterSharedServices(serviceConfigs, setup.Config)
-	if len(sharedConfigs) > 0 {
-		configDir, _ := filepath.Abs(core.OttoStackDir)
-		project := registry.ProjectRef{Name: setup.Config.Project.Name, ConfigDir: configDir}
-		if err := h.registerSharedContainersForProject(sharedConfigs, project, execCtx.Shared.Root, base); err != nil {
-			return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceRegisterSharedFailed, err)
-		}
+	if err := h.ensureSharedContainersRunning(ctx, sharedConfigs, execCtx.Shared.Root, base); err != nil {
+		return err
 	}
+	projectServiceConfigs := h.filterProjectServiceConfigs(serviceConfigs, setup.Config)
 
 	service, err := common.NewServiceManager(false)
 	if err != nil {
@@ -95,18 +111,36 @@ func (h *UpHandler) handleProjectContext(ctx context.Context, cmd *cobra.Command
 		timeout = defaultTimeout
 	}
 
+	var pullLatest, cleanupOnRecreate bool
+	if setup.Config.Advanced != nil {
+		pullLatest = setup.Config.Advanced.PullLatestImages
+		cleanupOnRecreate = setup.Config.Advanced.CleanupOnRecreate
+	}
+
 	startRequest := services.StartRequest{
-		Project:        setup.Config.Project.Name,
-		ServiceConfigs: serviceConfigs,
-		Build:          upFlags.Build,
-		ForceRecreate:  upFlags.ForceRecreate,
-		Detach:         upFlags.Detach,
-		NoDeps:         upFlags.NoDeps,
-		Timeout:        timeout,
+		Project:           setup.Config.Project.Name,
+		ServiceConfigs:    projectServiceConfigs,
+		Build:             upFlags.Build,
+		ForceRecreate:     upFlags.ForceRecreate,
+		Detach:            upFlags.Detach,
+		NoDeps:            upFlags.NoDeps,
+		PullLatestImages:  pullLatest,
+		CleanupOnRecreate: cleanupOnRecreate,
+		Timeout:           timeout,
 	}
 
 	if err = service.Start(ctx, startRequest); err != nil {
 		return err
+	}
+
+	// Register shared containers only after a successful start to keep the registry consistent.
+	if len(sharedConfigs) > 0 {
+		configDir, _ := filepath.Abs(core.OttoStackDir)
+		project := registry.ProjectRef{Name: setup.Config.Project.Name, ConfigDir: configDir}
+		if err := h.registerSharedContainersForProject(sharedConfigs, project, execCtx.Shared.Root, base); err != nil {
+			return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceRegisterSharedFailed, err)
+		}
+		base.Output.Info(messages.SharedProjectRegisteredShared, len(sharedConfigs))
 	}
 
 	base.Output.Success(messages.SuccessServicesStarted)
@@ -180,12 +214,28 @@ func (h *UpHandler) startSharedContainers(ctx context.Context, composePath strin
 		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerManagerCreateFailed, err)
 	}
 
-	proj, err := composeManager.LoadProject(ctx, composePath, "shared")
+	proj, err := composeManager.LoadProject(ctx, []string{composePath}, "shared")
 	if err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, messages.ErrorsDockerLoadProjectFailed, err)
 	}
 
-	return composeManager.Up(ctx, proj, docker.UpOptions{Detach: true}.ToSDK())
+	dockerClient, err := docker.NewClient(nil)
+	if err != nil {
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
+	}
+	defer func() { _ = dockerClient.Close() }()
+
+	servicesToCreate, err := dockerClient.ResolveServicesToStart(ctx, proj)
+	if err != nil {
+		return err
+	}
+
+	if len(servicesToCreate) == 0 {
+		// All containers are already running or have been started directly.
+		return nil
+	}
+
+	return composeManager.Up(ctx, proj, docker.UpOptions{Detach: true, Services: servicesToCreate})
 }
 
 func (h *UpHandler) promptConfirmStart() (bool, error) {
@@ -213,9 +263,17 @@ func (h *UpHandler) displaySharedStatus(ctx context.Context, sharedRoot string, 
 	}
 	defer func() { _ = dockerClient.Close() }()
 
+	// Sort service names so the table is displayed in a consistent order.
+	serviceNames := make([]string, 0, len(containers))
+	for service := range containers {
+		serviceNames = append(serviceNames, service)
+	}
+	sort.Strings(serviceNames)
+
 	now := time.Now()
 	statuses := make([]display.SharedContainerStatus, 0, len(containers))
-	for service, container := range containers {
+	for _, service := range serviceNames {
+		container := containers[service]
 		cs := dockerClient.InspectContainer(ctx, container.Name)
 		projectNames := make([]string, len(container.Projects))
 		for i, ref := range container.Projects {
@@ -314,8 +372,42 @@ func (h *UpHandler) buildShareableMap() (map[string]bool, error) {
 	return shareableMap, nil
 }
 
+// filterProjectServiceConfigs returns only the services that belong in the project compose.
+// Shared services are excluded so that the project compose never conflicts with the
+// shared compose that owns those containers.
+func (h *UpHandler) filterProjectServiceConfigs(serviceConfigs []types.ServiceConfig, cfg *config.Config) []types.ServiceConfig {
+	if cfg.Sharing == nil {
+		return serviceConfigs
+	}
+	return project.FilterProjectServices(serviceConfigs, cfg.Sharing.Enabled, cfg.Sharing.Services)
+}
+
+// ensureSharedContainersRunning starts any shared containers that are not yet running.
+// The compose file is generated only when it does not already exist; subsequent calls
+// reuse the existing file to avoid noisy output on every `otto-stack up`.
+func (h *UpHandler) ensureSharedContainersRunning(ctx context.Context, sharedConfigs []types.ServiceConfig, sharedRoot string, base *base.BaseCommand) error {
+	if len(sharedConfigs) == 0 {
+		return nil
+	}
+
+	names := make([]string, len(sharedConfigs))
+	for i, svc := range sharedConfigs {
+		names[i] = svc.Name
+	}
+	base.Output.Info(messages.SharedAutoStarting, strings.Join(names, ", "))
+
+	composePath := filepath.Join(sharedRoot, core.GeneratedDir, docker.DockerComposeFileName)
+	if _, err := os.Stat(composePath); os.IsNotExist(err) {
+		if err := project.GenerateSharedFiles(sharedConfigs, sharedRoot, base); err != nil {
+			return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.WarningsComposeGenerateSharedFailed, err)
+		}
+	}
+
+	return h.startSharedContainers(ctx, composePath)
+}
+
 func (h *UpHandler) filterSharedServices(serviceConfigs []types.ServiceConfig, cfg *config.Config) []types.ServiceConfig {
-	if !cfg.Sharing.Enabled {
+	if cfg.Sharing == nil || !cfg.Sharing.Enabled {
 		return nil
 	}
 
@@ -351,6 +443,43 @@ func filterStatusQueryNames(configs []types.ServiceConfig) []string {
 		}
 	}
 	return names
+}
+
+// buildSharedMode constructs a SharedMode context pointing at the user's global
+// shared directory. Used when --global overrides automatic context detection.
+func buildSharedMode() *clicontext.SharedMode {
+	homeDir, _ := os.UserHomeDir()
+	sharedRoot := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
+	return &clicontext.SharedMode{Shared: &clicontext.SharedInfo{Root: sharedRoot}}
+}
+
+// buildProjectMode constructs a ProjectMode context for the given directory.
+// It validates that the directory contains an otto-stack project, changes the
+// working directory so that config-relative paths resolve correctly, and returns
+// the populated ProjectMode. Used when --project overrides automatic detection.
+func buildProjectMode(dir string) (*clicontext.ProjectMode, error) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationProjectDirNotInitialized, dir)
+	}
+
+	configFile := filepath.Join(absDir, core.OttoStackDir, core.ConfigFileName)
+	if _, err := os.Stat(configFile); os.IsNotExist(err) {
+		return nil, pkgerrors.NewValidationErrorf(pkgerrors.ErrCodeInvalid, pkgerrors.FieldFlags, messages.ValidationProjectDirNotInitialized, dir)
+	}
+
+	if err := os.Chdir(absDir); err != nil {
+		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, fmt.Sprintf(messages.ErrorsProjectDirChangeFailed, absDir, err), err)
+	}
+
+	homeDir, _ := os.UserHomeDir()
+	sharedRoot := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
+	configDir := filepath.Join(absDir, core.OttoStackDir)
+
+	return &clicontext.ProjectMode{
+		Project: clicontext.NewProjectInfo(configDir),
+		Shared:  &clicontext.SharedInfo{Root: sharedRoot},
+	}, nil
 }
 
 // ValidateArgs validates the command arguments

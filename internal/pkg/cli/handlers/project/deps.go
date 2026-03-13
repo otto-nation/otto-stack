@@ -2,17 +2,14 @@ package project
 
 import (
 	"context"
-	"path/filepath"
 	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
 
-	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
-	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
@@ -54,10 +51,9 @@ func (h *DepsHandler) loadServices(args []string) ([]types.ServiceConfig, error)
 		return nil, err
 	}
 
-	configPath := filepath.Join(core.OttoStackDir, core.ConfigFileName)
-	cfg, err := common.LoadProjectConfig(configPath)
+	cfg, err := config.LoadConfig()
 	if err != nil {
-		return nil, pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentConfig, messages.ErrorsConfigLoadFailed, err)
+		return nil, err
 	}
 
 	if len(args) > 0 {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -11,7 +12,6 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/compose"
-	"github.com/otto-nation/otto-stack/internal/pkg/config"
 	"github.com/otto-nation/otto-stack/internal/pkg/env"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/filesystem"
@@ -22,24 +22,8 @@ import (
 
 // ProjectManager handles project creation logic
 type ProjectManager struct {
-	serviceUtils     *svc.ServiceUtils
-	configService    config.ConfigService
-	configManager    *ConfigManager
-	directoryManager *DirectoryManager
-}
-
-// OttoStackConfig represents the otto-stack configuration structure
-type OttoStackConfig struct {
-	Project struct {
-		Name string `yaml:"name"`
-		Type string `yaml:"type"`
-	} `yaml:"project"`
-	Stack struct {
-		Enabled []string `yaml:"enabled"`
-	} `yaml:"stack"`
-	Validation struct {
-		Options map[string]bool `yaml:"options"`
-	} `yaml:"validation"`
+	serviceUtils  *svc.ServiceUtils
+	configManager *ConfigManager
 }
 
 // ServiceConfig represents a service configuration file
@@ -51,16 +35,30 @@ type ServiceConfig struct {
 // NewProjectManager creates a new project manager
 func NewProjectManager() *ProjectManager {
 	return &ProjectManager{
-		serviceUtils:     svc.NewServiceUtils(),
-		configService:    config.NewConfigService(),
-		configManager:    NewConfigManager(),
-		directoryManager: NewDirectoryManager(),
+		serviceUtils:  svc.NewServiceUtils(),
+		configManager: NewConfigManager(),
 	}
+}
+
+// CreateDirectoryStructure creates the otto-stack directory structure
+func (pm *ProjectManager) CreateDirectoryStructure() error {
+	directories := []string{
+		core.OttoStackDir,
+		core.OttoStackDir + "/" + core.ServiceConfigsDir,
+	}
+
+	for _, dir := range directories {
+		if err := os.MkdirAll(dir, core.PermReadWriteExec); err != nil {
+			return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, dir, messages.ErrorsConfigWriteFailed, err)
+		}
+	}
+
+	return nil
 }
 
 // CreateProjectStructure creates the complete project structure
 func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, base *base.BaseCommand) error {
-	if err := pm.directoryManager.CreateDirectoryStructure(); err != nil {
+	if err := pm.CreateDirectoryStructure(); err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsDirectoryCreateFailed, err)
 	}
 
@@ -91,11 +89,15 @@ func (pm *ProjectManager) CreateProjectStructure(projectCtx clicontext.Context, 
 		}
 	}
 
+	if err := pm.createComposeOverrideFile(base); err != nil {
+		base.Output.Warning(messages.WarningsComposeGenerateSharedFailed, err)
+	}
+
 	if err := pm.createGitignoreEntries(base); err != nil {
 		base.Output.Warning(messages.WarningsGitignoreCreateFailed, err)
 	}
 
-	if err := pm.createReadme(projectCtx.Project.Name, projectCtx.Services.Configs, projectCtx.Sharing.Enabled, base); err != nil {
+	if err := pm.createReadme(projectCtx.Project.Name, projectCtx.Services.Configs, projectCtx.Sharing, base); err != nil {
 		base.Output.Warning(messages.WarningsFailedReadme, err)
 	}
 
@@ -145,6 +147,35 @@ func (pm *ProjectManager) generateDockerComposeWithSharing(serviceConfigs []type
 	return nil
 }
 
+// createComposeOverrideFile creates the user-owned docker-compose.override.yml stub.
+// It is never overwritten — if it already exists, this is a no-op.
+func (pm *ProjectManager) createComposeOverrideFile(base *base.BaseCommand) error {
+	if _, err := os.Stat(docker.DockerComposeOverrideFilePath); err == nil {
+		return nil
+	}
+
+	const content = "# docker-compose.override.yml\n" +
+		"# This file is yours — otto-stack never overwrites it.\n" +
+		"#\n" +
+		"# Add service customizations here. Docker Compose merges this file\n" +
+		"# with docker-compose.yml automatically on every `otto-stack up`.\n" +
+		"#\n" +
+		"# Example:\n" +
+		"#   services:\n" +
+		"#     postgres:\n" +
+		"#       volumes:\n" +
+		"#         - /my/local/data:/var/lib/postgresql/data\n" +
+		"#       environment:\n" +
+		"#         POSTGRES_PASSWORD: localonly\n"
+
+	if err := os.WriteFile(docker.DockerComposeOverrideFilePath, []byte(content), core.PermReadWrite); err != nil {
+		return err
+	}
+
+	base.Output.Success(messages.SuccessCreatedFile, docker.DockerComposeOverrideFilePath)
+	return nil
+}
+
 // createGitignoreEntries adds entries to .gitignore
 func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 	entries := []string{
@@ -152,6 +183,7 @@ func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 		core.OttoStackDir + "/logs/",
 		core.ExtENV + core.LocalFileExtension,
 		core.LocalConfigFileName,
+		docker.DockerComposeOverrideFileName,
 		"*.log",
 	}
 
@@ -167,7 +199,7 @@ func (pm *ProjectManager) createGitignoreEntries(base *base.BaseCommand) error {
 }
 
 // createReadme creates README file
-func (pm *ProjectManager) createReadme(projectName string, serviceConfigs []types.ServiceConfig, sharingEnabled bool, base *base.BaseCommand) error {
+func (pm *ProjectManager) createReadme(projectName string, serviceConfigs []types.ServiceConfig, sharing *clicontext.SharingSpec, base *base.BaseCommand) error {
 	const readmeTemplate = `# %s
 
 This project was initialized with %s.
@@ -195,7 +227,7 @@ This project was initialized with %s.
 %s
 `
 
-	sharedInfo, sharedSection := pm.buildSharedServicesInfo(serviceConfigs, sharingEnabled)
+	sharedInfo, sharedSection := pm.buildSharedServicesInfo(serviceConfigs, sharing)
 
 	readmeContent := fmt.Sprintf(readmeTemplate,
 		projectName,
@@ -219,13 +251,12 @@ This project was initialized with %s.
 }
 
 // buildSharedServicesInfo builds shared services information for README
-func (pm *ProjectManager) buildSharedServicesInfo(serviceConfigs []types.ServiceConfig, sharingEnabled bool) (string, string) {
-	if !sharingEnabled {
+func (pm *ProjectManager) buildSharedServicesInfo(serviceConfigs []types.ServiceConfig, sharing *clicontext.SharingSpec) (string, string) {
+	if sharing == nil || !sharing.Enabled {
 		return "", ""
 	}
 
 	var sharedServices []string
-
 	for _, config := range serviceConfigs {
 		if config.Shareable {
 			sharedServices = append(sharedServices, config.Name)
@@ -237,14 +268,31 @@ func (pm *ProjectManager) buildSharedServicesInfo(serviceConfigs []types.Service
 	}
 
 	homeDir, _ := os.UserHomeDir()
-	sharedPath := filepath.Join(homeDir, core.SharedDir)
+	sharedPath := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
+
+	var sharingScope string
+	if len(sharing.Services) == 0 {
+		sharingScope = "All shareable services are shared globally (default)."
+	} else {
+		var whitelisted []string
+		for name, shared := range sharing.Services {
+			if shared {
+				whitelisted = append(whitelisted, name)
+			}
+		}
+		sort.Strings(whitelisted)
+		sharingScope = fmt.Sprintf("Only the following services are shared globally: %s.\nAll other shareable services run as project-local containers.", strings.Join(whitelisted, ", "))
+	}
 
 	info := fmt.Sprintf("\n### Shared Services\nThe following services are shared across projects:\n%s", pm.formatServicesList(sharedServices))
 
-	section := fmt.Sprintf("\n## Shared Services\nShared services are managed globally and located at:\n- `%s/`\n- Registry: `%s/containers.yaml`\n- Compose: `%s/generated/docker-compose.yml`\n",
+	section := fmt.Sprintf("\n## Shared Services\n%s\n\nShared services are managed globally and located at:\n- `%s/`\n- Registry: `%s/containers.yaml`\n- Compose: `%s/generated/docker-compose.yml`\n\nTo change which services are shared, edit the `sharing.services` map in `%s/%s`.\nAn empty map shares all shareable services; list specific services to whitelist only those.\n",
+		sharingScope,
 		sharedPath,
 		sharedPath,
 		sharedPath,
+		core.OttoStackDir,
+		core.ConfigFileName,
 	)
 
 	return info, section
@@ -321,19 +369,39 @@ func GenerateSharedFiles(serviceConfigs []types.ServiceConfig, sharedRoot string
 	return nil
 }
 
-// filterProjectServices returns only non-shared services for project compose file
-func (pm *ProjectManager) filterProjectServices(serviceConfigs []types.ServiceConfig, sharing *clicontext.SharingSpec) []types.ServiceConfig {
-	if sharing == nil || !sharing.Enabled {
+// FilterProjectServices returns services to include in the project compose file.
+// When sharing is enabled, shareable services are excluded — unless the per-service
+// sharingServices map explicitly disables sharing for a service (value == false).
+// This is called both during init and on every `otto-stack up` to ensure the
+// compose file never includes shared services.
+func FilterProjectServices(serviceConfigs []types.ServiceConfig, sharingEnabled bool, sharingServices map[string]bool) []types.ServiceConfig {
+	if !sharingEnabled {
 		return serviceConfigs
 	}
 
 	var projectServices []types.ServiceConfig
 	for _, config := range serviceConfigs {
+		// Non-shareable services always belong in the project compose.
 		if !config.Shareable {
+			projectServices = append(projectServices, config)
+			continue
+		}
+		// Shareable services are excluded (moved to shared compose) unless the
+		// per-service map explicitly opts them out of sharing.
+		if len(sharingServices) > 0 && !sharingServices[config.Name] {
 			projectServices = append(projectServices, config)
 		}
 	}
 	return projectServices
+}
+
+// filterProjectServices is an internal wrapper that calls FilterProjectServices
+// using the SharingSpec from the init context.
+func (pm *ProjectManager) filterProjectServices(serviceConfigs []types.ServiceConfig, sharing *clicontext.SharingSpec) []types.ServiceConfig {
+	if sharing == nil {
+		return FilterProjectServices(serviceConfigs, false, nil)
+	}
+	return FilterProjectServices(serviceConfigs, sharing.Enabled, sharing.Services)
 }
 
 // formatServicesList formats services for README

@@ -45,6 +45,7 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 			handlerPath: "internal/pkg/cli/handlers/lifecycle/down.go",
 			flags: []string{
 				"all",
+				"project",
 				"remove-orphans",
 				"shared",
 				"timeout",
@@ -54,6 +55,7 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 		"init": {
 			handlerPath: "internal/pkg/cli/handlers/project/init.go",
 			flags: []string{
+				"auto-start",
 				"force",
 				"no-shared-containers",
 				"project-name",
@@ -73,7 +75,9 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 		"restart": {
 			handlerPath: "internal/pkg/cli/handlers/lifecycle/restart.go",
 			flags: []string{
+				"global",
 				"no-deps",
+				"project",
 				"timeout",
 			},
 		},
@@ -99,7 +103,9 @@ func TestAllFlagsAreImplemented(t *testing.T) {
 				"build",
 				"detach",
 				"force-recreate",
+				"global",
 				"no-deps",
+				"project",
 				"timeout",
 			},
 		},

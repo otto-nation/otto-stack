@@ -65,7 +65,7 @@ type DockerClientInterface interface {
 
 // ComposeManagerInterface defines the interface for Compose operations
 type ComposeManagerInterface interface {
-	Up(ctx context.Context, project *types.Project, options api.UpOptions) error
+	Up(ctx context.Context, project *types.Project, options UpOptions) error
 	Down(ctx context.Context, project *types.Project, options api.DownOptions) error
 }
 
@@ -343,6 +343,41 @@ func mapToEnvSlice(env map[string]string) []string {
 		result = append(result, fmt.Sprintf("%s=%s", key, value))
 	}
 	return result
+}
+
+// ResolveServicesToStart inspects the compose project and returns the names of services
+// whose containers do not yet exist and must be created by compose.
+//
+// For each service, the container name is taken from the explicit ContainerName field, or
+// derived as "{project}-{service}" when unset. Three cases are handled:
+//   - Running: container is already at the desired state — skip entirely.
+//   - Not found: compose must create it — include in the returned list.
+//   - Any other state (stopped, paused, etc.): start the container directly via docker start
+//     to avoid a name-conflict error when compose tries to create it.
+func (c *Client) ResolveServicesToStart(ctx context.Context, proj *types.Project) ([]string, error) {
+	var toCreate []string
+	for name, svc := range proj.Services {
+		containerName := svc.ContainerName
+		if containerName == "" {
+			containerName = proj.Name + "-" + name
+		}
+
+		status := c.InspectContainer(ctx, containerName)
+		switch status.State {
+		case StateRunning:
+			slog.Debug("Container already running, skipping", "container", containerName, "service", name)
+		case ServiceStatusNotFound:
+			toCreate = append(toCreate, name)
+		default:
+			// Container exists but is not running — start it directly to avoid a name conflict
+			// that would occur if compose tried to create a new container with the same explicit name.
+			slog.Debug("Starting existing stopped container", "container", containerName, "service", name, "state", status.State)
+			if err := c.cli.ContainerStart(ctx, containerName, container.StartOptions{}); err != nil {
+				return nil, pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentDocker, messages.ErrorsDockerStartContainerFailed, err)
+			}
+		}
+	}
+	return toCreate, nil
 }
 
 // Container status
