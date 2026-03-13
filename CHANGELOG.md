@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.0](https://github.com/otto-nation/otto-stack/compare/otto-stack-v1.0.0...otto-stack-v1.1.0) (2026-03-13)
+
+
+### Features
+
+* shared containers, middleware chain, registry reconciliation, and lifecycle fixes ([#44](https://github.com/otto-nation/otto-stack/issues/44)) ([3bd5417](https://github.com/otto-nation/otto-stack/commit/3bd54172f8240d3374af74faab697cf2118fdab2))
+
+
+### Dependencies
+
+* bump the npm-dependencies group across 1 directory with 6 updates ([#11](https://github.com/otto-nation/otto-stack/issues/11)) ([a877852](https://github.com/otto-nation/otto-stack/commit/a877852a973d6c5c7ed4d2fc3d09812dcaf1233c))
+
+
+### Reverts
+
+* **main:** release otto-stack 1.1.0 ([#45](https://github.com/otto-nation/otto-stack/issues/45)) ([#49](https://github.com/otto-nation/otto-stack/issues/49)) ([ee58c24](https://github.com/otto-nation/otto-stack/commit/ee58c24b17f956d8a386709879b85698da4c88da))
+
 ## 1.0.0 (2026-02-26)
 
 
