@@ -17,6 +17,9 @@ const (
 	contributingPath = "CONTRIBUTING.md"
 	readmePath       = "README.md"
 	outputDirPath    = "docs-site/content"
+
+	permDir  = 0o755
+	permFile = 0o644
 )
 
 // loadYAML reads path and unmarshals its contents into out.
@@ -33,10 +36,10 @@ func loadYAML(path string, out any) error {
 
 func writeOutput(filename, content string) error {
 	outPath := filepath.Join(outputDirPath, filename)
-	if err := os.MkdirAll(filepath.Dir(outPath), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(outPath), permDir); err != nil {
 		return fmt.Errorf("create output dir: %w", err)
 	}
-	if err := os.WriteFile(outPath, []byte(content), 0644); err != nil {
+	if err := os.WriteFile(outPath, []byte(content), permFile); err != nil {
 		return fmt.Errorf("write %s: %w", outPath, err)
 	}
 	fmt.Printf("generated %s\n", outPath)

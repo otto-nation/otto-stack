@@ -10,13 +10,15 @@ import (
 
 // UpOptions represents options for compose up operations
 type UpOptions struct {
-	Build         bool
-	ForceRecreate bool
-	RemoveOrphans bool
-	NoDeps        bool
-	Detach        bool
-	Services      []string
-	Timeout       *time.Duration
+	Build             bool
+	ForceRecreate     bool
+	RemoveOrphans     bool
+	NoDeps            bool
+	Detach            bool
+	PullLatestImages  bool
+	CleanupOnRecreate bool
+	Services          []string
+	Timeout           *time.Duration
 }
 
 // DownOptions represents options for compose down operations

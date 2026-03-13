@@ -12,23 +12,22 @@ import (
 	"github.com/otto-nation/otto-stack/internal/core"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/command"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
-	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
+	"github.com/otto-nation/otto-stack/internal/pkg/services"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
 )
 
 // InitHandler handles the init command
 type InitHandler struct {
-	forceOverwrite          bool
-	base                    *base.BaseCommand
-	promptManager           *PromptManager
-	validationManager       *ValidationManager
-	projectManager          *ProjectManager
-	serviceSelectionManager *ServiceSelectionManager
+	forceOverwrite    bool
+	base              *base.BaseCommand
+	promptManager     *PromptManager
+	validationManager *ValidationManager
+	projectManager    *ProjectManager
 }
 
 // NewInitHandler creates a new InitHandler
@@ -38,7 +37,6 @@ func NewInitHandler() *InitHandler {
 		projectManager:    NewProjectManager(),
 	}
 	handler.promptManager = NewPromptManager(handler)
-	handler.serviceSelectionManager = NewServiceSelectionManager(handler.promptManager, handler.validationManager)
 	return handler
 }
 
@@ -73,17 +71,187 @@ func (h *InitHandler) Handle(ctx context.Context, cmd *cobra.Command, args []str
 	h.forceOverwrite = initFlags.Force
 	h.base = base
 
-	projectCtx, err := h.processMode(ciFlags, initFlags, base, cmd)
+	projectCtx, err := h.gather(ciFlags, initFlags, base)
 	if err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedProcessInitMode, err)
 	}
 
-	if err := h.executeInit(ctx, projectCtx, base); err != nil {
+	// Empty project name means the user cancelled the interactive session.
+	if projectCtx.Project.Name == "" {
+		return nil
+	}
+
+	if err := h.executeInit(projectCtx, base); err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ValidationFailedExecuteInit, err)
 	}
 
 	h.displaySuccessMessage(projectCtx.Project.Name, base)
+
+	if projectCtx.Advanced != nil && projectCtx.Advanced.AutoStart {
+		base.Output.Info("%s", messages.InfoAutoStarting)
+		// Non-fatal: init succeeded; auto-start is best-effort.
+		if err := h.autoStartServices(ctx, projectCtx); err != nil {
+			base.Output.Warning(messages.WarningsAutoStartFailed, err)
+		}
+	}
+
 	return nil
+}
+
+// gather collects all user input — either from flags (non-interactive) or prompts (interactive).
+func (h *InitHandler) gather(ciFlags ci.Flags, initFlags *core.InitFlags, base *base.BaseCommand) (clicontext.Context, error) {
+	if ciFlags.NonInteractive {
+		return h.gatherNonInteractive(initFlags)
+	}
+	return h.gatherInteractive(initFlags, base)
+}
+
+// gatherInteractive runs the interactive prompt flow: project name → service selection → advanced
+// options → confirmation. Returns an empty context (Project.Name == "") if the user cancels.
+func (h *InitHandler) gatherInteractive(initFlags *core.InitFlags, base *base.BaseCommand) (clicontext.Context, error) {
+	base.Output.Header("%s", messages.ProcessInitializing)
+	logger.Info(logger.LogMsgProjectAction, logger.LogFieldAction, core.CommandInit, logger.LogFieldProject, "current_directory")
+
+	projectName, err := h.promptManager.PromptForProjectDetails()
+	if err != nil {
+		return clicontext.Context{}, err
+	}
+
+	for {
+		result, err := h.runSelectionCycle(projectName, base)
+		if err != nil {
+			return clicontext.Context{}, err
+		}
+
+		switch result.action {
+		case core.ActionProceed:
+			serviceNames := services.ExtractServiceNames(result.serviceConfigs)
+			return clicontext.NewBuilder().
+				WithProject(projectName, "").
+				WithServices(serviceNames, result.serviceConfigs).
+				WithValidation(result.validation).
+				WithAdvanced(map[string]bool{}).
+				WithAdvancedSpec(result.advanced).
+				WithRuntimeFlags(initFlags, true).
+				WithSharing(result.sharing).
+				Build(), nil
+		case core.ActionBack:
+			base.Output.Info("%s", messages.InitGoingBack)
+		default:
+			base.Output.Info("%s", messages.InitCancelled)
+			return clicontext.Context{}, nil
+		}
+	}
+}
+
+// selectionResult holds the outcome of one interactive selection cycle.
+type selectionResult struct {
+	serviceConfigs []types.ServiceConfig
+	validation     map[string]bool
+	sharing        *clicontext.SharingSpec
+	advanced       *clicontext.AdvancedSpec
+	action         string
+}
+
+// runSelectionCycle runs one pass of: service selection → advanced options → validation → confirm.
+func (h *InitHandler) runSelectionCycle(projectName string, base *base.BaseCommand) (*selectionResult, error) {
+	selectedConfigs, err := h.promptManager.PromptForServiceConfigs()
+	if err != nil {
+		return nil, err
+	}
+
+	serviceNames := services.ExtractServiceNames(selectedConfigs)
+	serviceConfigs, err := services.ResolveUpServices(serviceNames, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	manager, err := services.New()
+	if err != nil {
+		return nil, err
+	}
+	if err := services.NewValidationService(manager).ValidateResolvedServices(serviceConfigs); err != nil {
+		return nil, err
+	}
+
+	validation, sharing, advanced, err := h.promptManager.PromptForAdvancedOptions(serviceConfigs)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := h.validationManager.RunValidations(validation, h, serviceConfigs, base); err != nil {
+		return nil, err
+	}
+
+	action, err := h.promptManager.ConfirmInitialization(projectName, serviceNames, validation, base)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return original user selection — dependencies are resolved at runtime, not stored in config.
+	return &selectionResult{
+		serviceConfigs: selectedConfigs,
+		validation:     validation,
+		sharing:        sharing,
+		advanced:       advanced,
+		action:         action,
+	}, nil
+}
+
+// gatherNonInteractive builds the context directly from command-line flags.
+func (h *InitHandler) gatherNonInteractive(initFlags *core.InitFlags) (clicontext.Context, error) {
+	if initFlags.Services == "" {
+		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationServicesRequiredNonInteractive, nil)
+	}
+
+	if initFlags.ProjectName == "" {
+		return clicontext.Context{}, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldProjectName, messages.ValidationProjectNameRequiredNonInteractive, nil)
+	}
+
+	serviceNames := parseServiceNames(initFlags.Services)
+	serviceConfigs, err := services.ResolveUpServices(serviceNames, nil)
+	if err != nil {
+		return clicontext.Context{}, err
+	}
+
+	manager, err := services.New()
+	if err != nil {
+		return clicontext.Context{}, err
+	}
+	if err := services.NewValidationService(manager).ValidateResolvedServices(serviceConfigs); err != nil {
+		return clicontext.Context{}, err
+	}
+
+	sharingConfig, err := h.buildSharingConfig(initFlags, serviceConfigs)
+	if err != nil {
+		return clicontext.Context{}, err
+	}
+
+	return clicontext.NewBuilder().
+		WithProject(initFlags.ProjectName, "").
+		WithServices(serviceNames, serviceConfigs).
+		WithValidation(defaultValidation()).
+		WithAdvanced(map[string]bool{}).
+		WithAdvancedSpec(&clicontext.AdvancedSpec{AutoStart: initFlags.AutoStart}).
+		WithRuntimeFlags(initFlags, false).
+		WithSharing(sharingConfig).
+		Build(), nil
+}
+
+func parseServiceNames(s string) []string {
+	parts := strings.Split(s, ",")
+	for i := range parts {
+		parts[i] = strings.TrimSpace(parts[i])
+	}
+	return parts
+}
+
+func defaultValidation() map[string]bool {
+	validation := make(map[string]bool)
+	for key := range ValidationRegistry {
+		validation[key] = true
+	}
+	return validation
 }
 
 func (h *InitHandler) handlePanic() {
@@ -116,27 +284,15 @@ func (h *InitHandler) setDefaultProjectName(initFlags *core.InitFlags, base *bas
 	return nil
 }
 
-func (h *InitHandler) processMode(ciFlags ci.Flags, initFlags *core.InitFlags, base *base.BaseCommand, cmd *cobra.Command) (clicontext.Context, error) {
-	processor := NewModeProcessor(ciFlags.NonInteractive, h)
-	projectCtx, err := processor.Process(initFlags, base)
-	if err != nil {
-		return clicontext.Context{}, err
+func (h *InitHandler) executeInit(projectCtx clicontext.Context, base *base.BaseCommand) error {
+	_, dirExistedErr := os.Stat(core.OttoStackDir)
+
+	err := h.projectManager.CreateProjectStructure(projectCtx, base)
+	if err != nil && os.IsNotExist(dirExistedErr) {
+		// Roll back the partially-created directory tree so the user can retry cleanly.
+		_ = os.RemoveAll(core.OttoStackDir)
 	}
-
-	if base.GetVerbose(cmd) {
-		logger.Debug("Project context created", "services", len(projectCtx.Services.Names))
-	}
-
-	return projectCtx, nil
-}
-
-func (h *InitHandler) executeInit(ctx context.Context, projectCtx clicontext.Context, base *base.BaseCommand) error {
-	initCommand := NewInitCommand(h.projectManager)
-	validationMiddleware := middleware.NewValidationMiddleware()
-	loggingMiddleware := middleware.NewLoggingMiddleware()
-
-	handler := command.NewHandler(initCommand, loggingMiddleware, validationMiddleware)
-	return handler.Execute(ctx, projectCtx, base)
+	return err
 }
 
 func (h *InitHandler) validateInitFlags(cmd *cobra.Command) error {
@@ -235,6 +391,31 @@ func (h *InitHandler) validateServiceShareable(serviceName string, serviceConfig
 		)
 	}
 	return nil
+}
+
+// autoStartServices starts the project services after a successful init.
+// It loads the freshly-written config so the service manager sees the correct project name.
+// Shared services are excluded — they run under their own compose project and must be
+// started separately via `otto-stack up <service>` in shared mode.
+func (h *InitHandler) autoStartServices(ctx context.Context, projectCtx clicontext.Context) error {
+	svc, err := common.NewServiceManager(false)
+	if err != nil {
+		return err
+	}
+
+	var sharingEnabled bool
+	var sharingServices map[string]bool
+	if projectCtx.Sharing != nil {
+		sharingEnabled = projectCtx.Sharing.Enabled
+		sharingServices = projectCtx.Sharing.Services
+	}
+	projectConfigs := FilterProjectServices(projectCtx.Services.Configs, sharingEnabled, sharingServices)
+
+	return svc.Start(ctx, services.StartRequest{
+		Project:        projectCtx.Project.Name,
+		ServiceConfigs: projectConfigs,
+		Detach:         true,
+	})
 }
 
 func (h *InitHandler) checkAlreadyInitialized(force bool) error {

@@ -17,7 +17,7 @@ func TestGenerateEnvFile(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.projectManager.directoryManager.CreateDirectoryStructure()
+	err := handler.projectManager.CreateDirectoryStructure()
 	assert.NoError(t, err)
 
 	serviceConfigs := []types.ServiceConfig{{Name: services.ServicePostgres}}
@@ -32,7 +32,7 @@ func TestGenerateDockerCompose(t *testing.T) {
 	cleanup := setupTestDir(t)
 	defer cleanup()
 
-	err := handler.projectManager.directoryManager.CreateDirectoryStructure()
+	err := handler.projectManager.CreateDirectoryStructure()
 	assert.NoError(t, err)
 
 	serviceConfigs := []types.ServiceConfig{{Name: services.ServicePostgres}}

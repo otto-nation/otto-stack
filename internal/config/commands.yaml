@@ -117,11 +117,19 @@ commands:
         description: "Start all configured services (in project context)"
       - command: "otto-stack up postgres redis"
         description: "Start specific services"
-      - command: "cd ~ && otto-stack up redis"
-        description: "Start shared containers from global context"
+      - command: "otto-stack up --global redis"
+        description: "Start a shared container from inside a project directory"
       - command: "otto-stack up --detach --build"
         description: "Build images and start services in background"
     flags:
+      global:
+        type: "bool"
+        description: "Force shared (global) mode — start as shared containers regardless of current directory"
+        default: false
+      project:
+        type: "string"
+        description: "Path to a project directory — operate on that project regardless of current directory"
+        default: ""
       detach:
         type: "bool"
         description: "Run services in background (detached mode)"
@@ -175,6 +183,10 @@ commands:
       - command: "otto-stack down --timeout 5"
         description: "Stop services with custom timeout"
     flags:
+      project:
+        type: "string"
+        description: "Path to a project directory — operate on that project regardless of current directory"
+        default: ""
       shared:
         type: "bool"
         description: "Stop all shared containers"
@@ -214,7 +226,17 @@ commands:
         description: "Restart a specific service"
       - command: "otto-stack restart --timeout 5"
         description: "Restart with custom timeout"
+      - command: "otto-stack restart --global postgres"
+        description: "Restart a shared container from inside a project directory"
     flags:
+      global:
+        type: "bool"
+        description: "Force shared (global) mode — restart shared containers regardless of current directory"
+        default: false
+      project:
+        type: "string"
+        description: "Path to a project directory — operate on that project regardless of current directory"
+        default: ""
       timeout:
         type: "int"
         description: "Restart timeout in seconds"
@@ -420,6 +442,10 @@ commands:
         type: "string"
         description: "Comma-separated list of services to share across projects (e.g., postgres,redis). Overrides global sharing setting for specified services."
         default: ""
+      auto-start:
+        type: "bool"
+        description: "Automatically run 'up' after initialization completes (non-interactive mode only; interactive mode prompts)"
+        default: false
     related_commands: ["validate"]
 
   web-interfaces:

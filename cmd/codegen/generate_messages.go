@@ -8,6 +8,8 @@ import (
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 )
 
+const permFile = 0o644
+
 // MessageConstant represents a generated message constant
 type MessageConstant struct {
 	Name  string
@@ -76,16 +78,16 @@ func generateMessagesFile(groups []MessageGroup, outputPath string) error {
 
 	// Generate constants for each group
 	for _, group := range groups {
-		sb.WriteString(fmt.Sprintf("// %s messages\n", group.Name))
+		fmt.Fprintf(&sb, "// %s messages\n", group.Name)
 		sb.WriteString("const (\n")
 		for _, constant := range group.Constants {
-			sb.WriteString(fmt.Sprintf("\t%s = %q\n", constant.Name, constant.Value))
+			fmt.Fprintf(&sb, "\t%s = %q\n", constant.Name, constant.Value)
 		}
 		sb.WriteString(")\n\n")
 	}
 
 	// Write to file
-	if err := os.WriteFile(outputPath, []byte(sb.String()), 0644); err != nil {
+	if err := os.WriteFile(outputPath, []byte(sb.String()), permFile); err != nil {
 		return pkgerrors.NewConfigError(pkgerrors.ErrCodeOperationFail, "output", "failed to write messages file", err)
 	}
 

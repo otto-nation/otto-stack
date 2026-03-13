@@ -8,6 +8,8 @@ type Config struct {
 	Stack      StackConfig       `yaml:"stack" json:"stack"`
 	Sharing    *SharingConfig    `yaml:"sharing,omitempty" json:"sharing,omitempty"`
 	Validation *ValidationConfig `yaml:"validation,omitempty" json:"validation,omitempty"`
+	Advanced   *AdvancedConfig   `yaml:"advanced,omitempty" json:"advanced,omitempty"`
+	Version    *VersionConfig    `yaml:"version_config,omitempty" json:"version_config,omitempty"`
 }
 
 // ProjectConfig defines project-level configuration
@@ -26,13 +28,33 @@ type StackConfig struct {
 	Enabled []string `yaml:"enabled" json:"enabled"`
 }
 
-// SharingConfig defines container sharing configuration
+// SharingConfig defines container sharing configuration.
+//
+// Semantics for Services:
+//   - nil or empty map: all services marked shareable in the catalog are shared globally.
+//   - non-empty map: only entries with value true are shared; all other shareable services
+//     run as project-local containers.
 type SharingConfig struct {
-	Enabled  bool            `yaml:"enabled" json:"enabled"`
+	Enabled bool `yaml:"enabled" json:"enabled"`
+	// Services is an optional whitelist of service names to share globally.
+	// true = run as a shared container; false/absent = run project-local.
+	// An empty map shares every service the catalog marks as shareable.
 	Services map[string]bool `yaml:"services,omitempty" json:"services,omitempty"`
 }
 
 // ValidationConfig defines validation settings
 type ValidationConfig struct {
 	Options map[string]bool `yaml:"options,omitempty" json:"options,omitempty"`
+}
+
+// AdvancedConfig defines advanced operational settings
+type AdvancedConfig struct {
+	AutoStart         bool `yaml:"auto_start" json:"auto_start"`
+	PullLatestImages  bool `yaml:"pull_latest_images" json:"pull_latest_images"`
+	CleanupOnRecreate bool `yaml:"cleanup_on_recreate" json:"cleanup_on_recreate"`
+}
+
+// VersionConfig defines version constraint settings
+type VersionConfig struct {
+	RequiredVersion string `yaml:"required_version,omitempty" json:"required_version,omitempty"`
 }

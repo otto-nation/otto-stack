@@ -10,24 +10,24 @@ import (
 )
 
 func TestParseServices(t *testing.T) {
-	result := parseServices(services.ServicePostgres)
+	result := parseServiceNames(services.ServicePostgres)
 	assert.Equal(t, []string{services.ServicePostgres}, result)
 
-	result = parseServices("postgres,redis,mysql")
+	result = parseServiceNames("postgres,redis,mysql")
 	assert.Equal(t, []string{services.ServicePostgres, services.ServiceRedis, services.ServiceMysql}, result)
 
-	result = parseServices("postgres , redis , mysql")
+	result = parseServiceNames("postgres , redis , mysql")
 	assert.Equal(t, []string{services.ServicePostgres, services.ServiceRedis, services.ServiceMysql}, result)
 
-	result = parseServices("  postgres  ,  redis  ")
+	result = parseServiceNames("  postgres  ,  redis  ")
 	assert.Equal(t, []string{services.ServicePostgres, services.ServiceRedis}, result)
 
-	result = parseServices("")
+	result = parseServiceNames("")
 	assert.Equal(t, []string{""}, result)
 }
 
 func TestGetDefaultValidation(t *testing.T) {
-	result := getDefaultValidation()
+	result := defaultValidation()
 	assert.NotNil(t, result)
 
 	for key, value := range result {

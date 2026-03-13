@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+const httpStatusOK = 200
+
 // MockHTTPClient is a mock implementation of http.Client for testing
 type MockHTTPClient struct {
 	DoFunc func(req *http.Request) (*http.Response, error)
@@ -16,7 +18,7 @@ func (m *MockHTTPClient) Do(req *http.Request) (*http.Response, error) {
 		return m.DoFunc(req)
 	}
 	return &http.Response{
-		StatusCode: 200,
+		StatusCode: httpStatusOK,
 		Body:       io.NopCloser(strings.NewReader("{}")),
 	}, nil
 }

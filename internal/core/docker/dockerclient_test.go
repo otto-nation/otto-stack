@@ -28,8 +28,8 @@ func TestClient_RemoveResources(t *testing.T) {
 	ctx := context.Background()
 	mock := &testhelpers.MockDockerClient{}
 
-	mock.ContainerListFunc = func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
-		return []types.Container{{ID: "test-id"}}, nil
+	mock.ContainerListFunc = func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
+		return []container.Summary{{ID: "test-id"}}, nil
 	}
 	mock.ContainerRemoveFunc = func(ctx context.Context, containerID string, options container.RemoveOptions) error {
 		return nil
@@ -47,9 +47,9 @@ func TestDockerClientAdapter_Methods(t *testing.T) {
 
 	t.Run("ContainerList", func(t *testing.T) {
 		called := false
-		mock.ContainerListFunc = func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
+		mock.ContainerListFunc = func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
 			called = true
-			return []types.Container{}, nil
+			return []container.Summary{}, nil
 		}
 		_, err := mock.ContainerList(ctx, container.ListOptions{})
 		assert.NoError(t, err)
@@ -69,9 +69,9 @@ func TestDockerClientAdapter_Methods(t *testing.T) {
 
 	t.Run("ContainerInspect", func(t *testing.T) {
 		called := false
-		mock.ContainerInspectFunc = func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+		mock.ContainerInspectFunc = func(ctx context.Context, containerID string) (container.InspectResponse, error) {
 			called = true
-			return types.ContainerJSON{}, nil
+			return container.InspectResponse{}, nil
 		}
 		_, err := mock.ContainerInspect(ctx, "test")
 		assert.NoError(t, err)

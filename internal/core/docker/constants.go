@@ -10,9 +10,11 @@ const (
 	ComposeProjectLabel = "com.docker.compose.project"
 	ComposeServiceLabel = "com.docker.compose.service"
 
-	DockerComposeFileName     = "docker-compose.yml"
-	DockerComposeFileNameYaml = "docker-compose.yaml"
-	DockerComposeFilePath     = pkgCore.OttoStackDir + "/" + pkgCore.GeneratedDir + "/" + DockerComposeFileName
+	DockerComposeFileName         = "docker-compose.yml"
+	DockerComposeFileNameYaml     = "docker-compose.yaml"
+	DockerComposeFilePath         = pkgCore.OttoStackDir + "/" + pkgCore.GeneratedDir + "/" + DockerComposeFileName
+	DockerComposeOverrideFileName = "docker-compose.override.yml"
+	DockerComposeOverrideFilePath = pkgCore.OttoStackDir + "/" + DockerComposeOverrideFileName
 
 	FlagPrefix = "--"
 )
@@ -46,6 +48,7 @@ const (
 	FlagUntil         = "until"
 	FlagAll           = "all"
 	FlagShared        = "shared"
+	FlagGlobal        = "global"
 	FlagProject       = "project"
 )
 

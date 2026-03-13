@@ -2,8 +2,8 @@ package services
 
 import (
 	"context"
+	"io"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/docker/compose/v5/pkg/api"
@@ -51,14 +51,16 @@ func ResolveUpServices(args []string, cfg *config.Config) ([]servicetypes.Servic
 
 // StartRequest defines parameters for starting a stack
 type StartRequest struct {
-	Project         string
-	ServiceConfigs  []servicetypes.ServiceConfig
-	Build           bool
-	ForceRecreate   bool
-	Detach          bool
-	NoDeps          bool
-	Timeout         time.Duration
-	Characteristics []string
+	Project           string
+	ServiceConfigs    []servicetypes.ServiceConfig
+	Build             bool
+	ForceRecreate     bool
+	Detach            bool
+	NoDeps            bool
+	PullLatestImages  bool
+	CleanupOnRecreate bool
+	Timeout           time.Duration
+	Characteristics   []string
 }
 
 // StopRequest defines parameters for stopping a stack
@@ -106,6 +108,7 @@ type LogRequest struct {
 	Since          string
 	Until          string
 	NoColor        bool
+	Writer         io.Writer
 }
 
 // NewService creates a new stack service
@@ -153,6 +156,18 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 
 	s.logger.Debug("Project loaded successfully", pkgerrors.ComponentProject, req.Project)
 
+	// Pull latest images before starting when requested.
+	if req.PullLatestImages {
+		if pullErr := s.compose.Pull(ctx, project, api.PullOptions{}); pullErr != nil {
+			s.logger.Warn("Failed to pull latest images", "error", pullErr)
+		}
+	}
+
+	// When force-recreating with cleanup enabled, remove volumes first for a full reset.
+	if req.ForceRecreate && req.CleanupOnRecreate {
+		_ = s.compose.Down(ctx, req.Project, api.DownOptions{Volumes: true, RemoveOrphans: true})
+	}
+
 	// Resolve characteristics to options and convert to SDK format
 	options := s.characteristics.ResolveUpOptions(req.Characteristics, req.ServiceConfigs, docker.UpOptions{
 		Build:         req.Build,
@@ -172,8 +187,11 @@ func (s *Service) Start(ctx context.Context, req StartRequest) error {
 
 	s.logger.Debug("Services started successfully")
 
-	// Execute local init scripts for services that have them
+	// Execute local init scripts for services that have them.
+	// On failure, tear down the containers so the system is left in a clean state
+	// rather than partially running with a failed init.
 	if err := s.executeLocalInitScripts(ctx, req.ServiceConfigs, req.Project); err != nil {
+		_ = s.compose.Down(ctx, req.Project, api.DownOptions{RemoveOrphans: true})
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackInitScriptsFailed, err)
 	}
 
@@ -234,7 +252,7 @@ func (s *Service) Logs(ctx context.Context, req LogRequest) error {
 		Since:      req.Since,
 		Until:      req.Until,
 	}
-	consumer := docker.NewServiceLogConsumer(os.Stdout, req.NoColor, len(serviceNames))
+	consumer := docker.NewServiceLogConsumer(req.Writer, req.NoColor, len(serviceNames))
 	err := s.compose.Logs(ctx, req.Project, consumer, options.ToSDK())
 	if err != nil {
 		return pkgerrors.NewServiceError(pkgerrors.ErrCodeOperationFail, pkgerrors.ComponentProject, messages.ErrorsStackGetLogsFailed, err)
