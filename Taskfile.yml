@@ -287,14 +287,13 @@ tasks:
   # DEPENDENCIES
   # ============================================================================
   deps:
-    desc: "Download and tidy Go dependencies"
+    desc: "Download Go dependencies"
     sources:
       - "go.mod"
       - "go.sum"
     silent: true
     cmds:
       - go mod download
-      - go mod tidy
 
   # ============================================================================
   # GIT AUTOMATION
