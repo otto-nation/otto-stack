@@ -7,15 +7,15 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	composetypes "github.com/compose-spec/compose-go/v2/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/otto-nation/otto-stack/test/testhelpers"
 )
 
 func TestClient_ListResources_Unit(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
-			return []types.Container{
+		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
+			return []container.Summary{
 				{ID: "container1", Names: []string{"/test-container"}},
 			}, nil
 		},
@@ -61,10 +61,140 @@ func TestClient_RemoveContainer_Unit(t *testing.T) {
 	}
 }
 
+func TestClient_ResolveServicesToStart_AllRunning(t *testing.T) {
+	mockDocker := &testhelpers.MockDockerClient{
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			return testhelpers.MockContainerJSON(containerID, containerID, "redis:7-alpine", "shared", true), nil
+		},
+	}
+	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
+
+	proj := &composetypes.Project{
+		Name:     "shared",
+		Services: composetypes.Services{"redis": {ContainerName: "otto-stack-redis"}},
+	}
+
+	toCreate, err := client.ResolveServicesToStart(context.Background(), proj)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if len(toCreate) != 0 {
+		t.Errorf("Expected no services to create, got %v", toCreate)
+	}
+}
+
+func TestClient_ResolveServicesToStart_NoneExist(t *testing.T) {
+	mockDocker := &testhelpers.MockDockerClient{
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			return container.InspectResponse{}, errors.New("No such container")
+		},
+	}
+	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
+
+	proj := &composetypes.Project{
+		Name:     "shared",
+		Services: composetypes.Services{"redis": {ContainerName: "otto-stack-redis"}},
+	}
+
+	toCreate, err := client.ResolveServicesToStart(context.Background(), proj)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if len(toCreate) != 1 || toCreate[0] != "redis" {
+		t.Errorf("Expected [redis] to create, got %v", toCreate)
+	}
+}
+
+func TestClient_ResolveServicesToStart_StoppedContainer(t *testing.T) {
+	startCalled := false
+	mockDocker := &testhelpers.MockDockerClient{
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			return testhelpers.MockContainerJSON(containerID, containerID, "redis:7-alpine", "shared", false), nil
+		},
+		ContainerStartFunc: func(ctx context.Context, containerID string, options container.StartOptions) error {
+			startCalled = true
+			return nil
+		},
+	}
+	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
+
+	proj := &composetypes.Project{
+		Name:     "shared",
+		Services: composetypes.Services{"redis": {ContainerName: "otto-stack-redis"}},
+	}
+
+	toCreate, err := client.ResolveServicesToStart(context.Background(), proj)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if len(toCreate) != 0 {
+		t.Errorf("Expected no services to create after direct start, got %v", toCreate)
+	}
+	if !startCalled {
+		t.Error("Expected ContainerStart to be called for stopped container")
+	}
+}
+
+func TestClient_ResolveServicesToStart_FallbackContainerName(t *testing.T) {
+	inspectedName := ""
+	mockDocker := &testhelpers.MockDockerClient{
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			inspectedName = containerID
+			return container.InspectResponse{}, errors.New("No such container")
+		},
+	}
+	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
+
+	// Service has no explicit ContainerName — should fall back to "{project}-{service}"
+	proj := &composetypes.Project{
+		Name:     "shared",
+		Services: composetypes.Services{"postgres": {}},
+	}
+
+	toCreate, err := client.ResolveServicesToStart(context.Background(), proj)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if inspectedName != "shared-postgres" {
+		t.Errorf("Expected container name 'shared-postgres', got %q", inspectedName)
+	}
+	if len(toCreate) != 1 || toCreate[0] != "postgres" {
+		t.Errorf("Expected [postgres] to create, got %v", toCreate)
+	}
+}
+
+func TestClient_ResolveServicesToStart_Mixed(t *testing.T) {
+	mockDocker := &testhelpers.MockDockerClient{
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
+			if containerID == "otto-stack-redis" {
+				return testhelpers.MockContainerJSON(containerID, containerID, "redis:7-alpine", "shared", true), nil
+			}
+			return container.InspectResponse{}, errors.New("No such container")
+		},
+	}
+	client := NewClientWithDependencies(mockDocker, nil, testhelpers.MockLogger())
+
+	proj := &composetypes.Project{
+		Name: "shared",
+		Services: composetypes.Services{
+			"redis":    {ContainerName: "otto-stack-redis"},
+			"postgres": {ContainerName: "otto-stack-postgres"},
+		},
+	}
+
+	toCreate, err := client.ResolveServicesToStart(context.Background(), proj)
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	if len(toCreate) != 1 || toCreate[0] != "postgres" {
+		t.Errorf("Expected only [postgres] to create, got %v", toCreate)
+	}
+}
+
 func TestClient_GetServiceStatus_Unit(t *testing.T) {
 	mockDocker := &testhelpers.MockDockerClient{
-		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
-			return []types.Container{
+		ContainerListFunc: func(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
+			return []container.Summary{
 				{
 					ID:    "web1",
 					Names: []string{"/test-project-web-1"},
@@ -76,11 +206,11 @@ func TestClient_GetServiceStatus_Unit(t *testing.T) {
 				},
 			}, nil
 		},
-		ContainerInspectFunc: func(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+		ContainerInspectFunc: func(ctx context.Context, containerID string) (container.InspectResponse, error) {
 			json := testhelpers.MockContainerJSON(containerID, "/test", "test:latest", "test-project", false)
 			json.Created = "2024-01-01T00:00:00Z"
 			json.State.StartedAt = "2024-01-01T00:00:01Z"
-			json.NetworkSettings = &types.NetworkSettings{}
+			json.NetworkSettings = &container.NetworkSettings{}
 			return json, nil
 		},
 	}

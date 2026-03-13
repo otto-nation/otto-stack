@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/otto-nation/otto-stack/internal/core"
@@ -166,14 +167,8 @@ func (hcm *HealthCheckManager) CheckConfiguration(base *base.BaseCommand) bool {
 	return true
 }
 
-// hasDockerComposePlugin checks if Docker Compose plugin is available
+// hasDockerComposePlugin checks if the Docker Compose plugin is available by
+// running "docker compose version". This is distinct from Docker daemon health.
 func (hcm *HealthCheckManager) hasDockerComposePlugin() bool {
-	stackService, err := common.NewServiceManager(false)
-	if err != nil {
-		return false
-	}
-
-	// Check if compose is available by checking Docker health
-	err = stackService.CheckDockerHealth(context.Background())
-	return err == nil
+	return exec.Command(docker.DockerCmd, docker.DockerComposeCmd, "version").Run() == nil
 }

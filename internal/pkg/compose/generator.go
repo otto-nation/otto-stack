@@ -49,8 +49,11 @@ func (g *Generator) buildComposeStructure(serviceConfigs []types.ServiceConfig) 
 		docker.ComposeFieldServices: services,
 		docker.ComposeFieldNetworks: map[string]any{
 			docker.DefaultNetworkName: map[string]any{
-				docker.ComposeFieldName:   g.projectName + docker.NetworkNameSuffix,
-				docker.ComposeFieldLabels: g.buildOttoLabels("network"),
+				docker.ComposeFieldName: g.projectName + docker.NetworkNameSuffix,
+				docker.ComposeFieldLabels: map[string]string{
+					docker.LabelOttoManaged: "true",
+					docker.LabelOttoProject: g.projectName,
+				},
 			},
 		},
 	}, nil
@@ -263,17 +266,26 @@ func (g *Generator) addHealthCheckTiming(healthCheck map[string]any, hc *types.H
 
 // addServiceLabels adds Otto Stack labels to the service
 func (g *Generator) addServiceLabels(service map[string]any, config *types.ServiceConfig) {
-	service[docker.ComposeFieldLabels] = g.buildOttoLabels(config.Name)
+	service[docker.ComposeFieldLabels] = g.buildOttoLabels(config)
 }
 
-// buildOttoLabels creates Otto Stack management labels
-func (g *Generator) buildOttoLabels(serviceName string) map[string]string {
+// buildOttoLabels creates Otto Stack management labels.
+// Shareable services get LabelOttoShared=true and SharingMode=shared so Docker
+// can be queried as an authoritative source of shared container state.
+func (g *Generator) buildOttoLabels(config *types.ServiceConfig) map[string]string {
+	sharingMode := "isolated"
+	shared := "false"
+	if config.Shareable {
+		sharingMode = "shared"
+		shared = "true"
+	}
 	return map[string]string{
 		docker.LabelOttoManaged:     "true",
 		docker.LabelOttoProject:     g.projectName,
-		docker.LabelOttoService:     serviceName,
+		docker.LabelOttoService:     config.Name,
 		docker.LabelOttoVersion:     "dev",
-		docker.LabelOttoSharingMode: "isolated",
+		docker.LabelOttoSharingMode: sharingMode,
+		docker.LabelOttoShared:      shared,
 	}
 }
 

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // JSONSchema represents a JSON Schema document
@@ -74,10 +77,7 @@ func loadServiceSchema(path string) (*ServiceSchema, error) {
 
 	// Extract enums from x-enums extension
 	for enumName, enumDef := range jsonSchema.XEnums {
-		schema.Enums[enumName] = EnumDefinition{
-			Description: enumDef.Description,
-			Values:      enumDef.Values,
-		}
+		schema.Enums[enumName] = EnumDefinition(enumDef)
 	}
 
 	// Extract structure from properties
@@ -255,15 +255,16 @@ func toPascalCaseWithAcronyms(s string) string {
 		return r == '_' || r == '-'
 	})
 
-	result := ""
+	titler := cases.Title(language.English)
+	var result strings.Builder
 	for _, part := range parts {
 		lower := strings.ToLower(part)
 		if acronym, exists := acronyms[lower]; exists {
-			result += acronym
+			result.WriteString(acronym)
 		} else {
-			result += strings.Title(part)
+			result.WriteString(titler.String(part))
 		}
 	}
 
-	return result
+	return result.String()
 }

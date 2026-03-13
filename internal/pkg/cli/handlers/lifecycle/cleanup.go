@@ -2,13 +2,16 @@ package lifecycle
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/otto-nation/otto-stack/internal/core"
+	"github.com/otto-nation/otto-stack/internal/core/docker"
 	"github.com/otto-nation/otto-stack/internal/pkg/base"
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
-	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/registry"
@@ -44,31 +47,37 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 		base.Output.Header(messages.LifecycleCleaning)
 	}
 
-	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
-	if err != nil {
-		return ci.FormatError(ciFlags, err)
-	}
-	defer cleanup()
-
-	// Reconcile registry with Docker state before checking orphans
+	// Reconcile registry — works from any directory, does not need project config.
 	if err := h.reconcileRegistry(ctx, base, &ciFlags); err != nil {
-		// Log but don't fail - reconciliation is best-effort
+		// Log but don't fail — reconciliation is best-effort
 		if !ciFlags.Quiet {
 			base.Output.Warning(messages.WarningsRegistryReconcileFailed, err)
 		}
 	}
 
-	// Check for orphans (informational only)
-	if err := h.checkOrphans(ctx, setup, base, &ciFlags); err != nil {
-		logger.Error("orphan check failed", "error", err)
-	}
-
-	// Execute cleanup based on flags
 	if flags.Orphans {
-		return h.handleOrphanCleanup(ctx, setup, base, &ciFlags, flags.Force)
+		// Orphan cleanup works from any directory — no project config needed.
+		dockerClient, err := docker.NewClient(nil)
+		if err != nil {
+			return ci.FormatError(ciFlags, pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err))
+		}
+		defer func() { _ = dockerClient.Close() }()
+
+		if !ciFlags.Quiet {
+			if err := h.checkOrphans(ctx, dockerClient, base, &ciFlags); err != nil {
+				logger.Error("orphan check failed", "error", err)
+			}
+		}
+		return h.handleOrphanCleanup(ctx, dockerClient, base, &ciFlags, flags.Force)
 	}
 
 	if flags.All || flags.Volumes || flags.Images || flags.Networks {
+		// Resource cleanup (volumes, images, networks) requires a project context.
+		setup, cleanup, err := middleware.CoreSetupOrCreate(ctx, base)
+		if err != nil {
+			return ci.FormatError(ciFlags, err)
+		}
+		defer cleanup()
 		return h.handleResourceCleanup(ctx, setup, flags, &ciFlags, base)
 	}
 
@@ -78,8 +87,8 @@ func (h *CleanupHandler) Handle(ctx context.Context, cmd *cobra.Command, args []
 	return nil
 }
 
-func (h *CleanupHandler) handleOrphanCleanup(ctx context.Context, setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
-	if err := h.cleanOrphans(ctx, setup, base, ciFlags, force); err != nil {
+func (h *CleanupHandler) handleOrphanCleanup(ctx context.Context, dockerClient *docker.Client, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
+	if err := h.cleanOrphans(ctx, dockerClient, base, ciFlags, force); err != nil {
 		return ci.FormatError(*ciFlags, err)
 	}
 	if !ciFlags.Quiet {
@@ -152,7 +161,7 @@ func (h *CleanupHandler) confirmCleanup(base *base.BaseCommand) bool {
 }
 
 // checkOrphans checks for and reports orphaned shared containers
-func (h *CleanupHandler) checkOrphans(ctx context.Context, setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags) error {
+func (h *CleanupHandler) checkOrphans(ctx context.Context, dockerClient *docker.Client, base *base.BaseCommand, ciFlags *ci.Flags) error {
 	if ciFlags.Quiet {
 		return nil
 	}
@@ -162,7 +171,7 @@ func (h *CleanupHandler) checkOrphans(ctx context.Context, setup *common.CoreSet
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryGetFailed, err)
 	}
 
-	orphans, err := reg.FindOrphansWithChecks(ctx, setup.DockerClient)
+	orphans, err := reg.FindOrphansWithChecks(ctx, dockerClient)
 	if err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryFindOrphansFailed, err)
 	}
@@ -180,14 +189,14 @@ func (h *CleanupHandler) displayOrphans(base *base.BaseCommand, orphans []regist
 	display.Display(orphans)
 }
 
-// cleanOrphans removes orphaned shared containers
-func (h *CleanupHandler) cleanOrphans(ctx context.Context, setup *common.CoreSetup, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
+// cleanOrphans stops and removes orphaned shared containers, then clears them from the registry.
+func (h *CleanupHandler) cleanOrphans(ctx context.Context, dockerClient *docker.Client, base *base.BaseCommand, ciFlags *ci.Flags, force bool) error {
 	reg, err := h.getRegistry()
 	if err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryGetFailed, err)
 	}
 
-	orphans, err := reg.FindOrphansWithChecks(ctx, setup.DockerClient)
+	orphans, err := reg.FindOrphansWithChecks(ctx, dockerClient)
 	if err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryFindOrphansFailed, err)
 	}
@@ -202,6 +211,16 @@ func (h *CleanupHandler) cleanOrphans(ctx context.Context, setup *common.CoreSet
 	if !force && !ciFlags.NonInteractive && !h.confirmOrphanCleanup(base, orphans) {
 		base.Output.Info(messages.OrphanCleanupCancelled)
 		return nil
+	}
+
+	// Stop and remove each orphaned container before clearing the registry entry.
+	for _, orphan := range orphans {
+		if orphan.ContainerState != registry.ContainerStateNotFound {
+			// Force-remove handles both stop and removal in one call.
+			if err := dockerClient.RemoveContainer(ctx, orphan.Container, true); err != nil && !ciFlags.Quiet {
+				base.Output.Warning(messages.WarningsOrphanRemoveContainerFailed, orphan.Container, err)
+			}
+		}
 	}
 
 	cleaned, err := reg.CleanOrphans()
@@ -219,21 +238,15 @@ func (h *CleanupHandler) cleanOrphans(ctx context.Context, setup *common.CoreSet
 	return nil
 }
 
-// getRegistry creates a registry manager
+// getRegistry creates a registry manager pointed at the global shared root.
+// This works from any directory — no project config required.
 func (h *CleanupHandler) getRegistry() (*registry.Manager, error) {
-	execCtx, err := common.DetectExecutionContext()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return nil, err
+		return nil, pkgerrors.NewSystemError(pkgerrors.ErrCodeInternal, messages.ErrorsContextDetectFailed, err)
 	}
-
-	switch m := execCtx.(type) {
-	case *clicontext.ProjectMode:
-		return registry.NewManager(m.Shared.Root), nil
-	case *clicontext.SharedMode:
-		return registry.NewManager(m.Shared.Root), nil
-	default:
-		return nil, pkgerrors.NewSystemErrorf(pkgerrors.ErrCodeInternal, messages.ErrorsContextUnknownMode, execCtx)
-	}
+	sharedRoot := filepath.Join(homeDir, core.OttoStackDir, core.SharedDir)
+	return registry.NewManager(sharedRoot), nil
 }
 
 // reconcileRegistry syncs registry with actual Docker container state
@@ -243,13 +256,13 @@ func (h *CleanupHandler) reconcileRegistry(ctx context.Context, base *base.BaseC
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryGetFailed, err)
 	}
 
-	// Get service manager which has Docker client
-	svc, err := common.NewServiceManager(false)
+	dockerClient, err := docker.NewClient(nil)
 	if err != nil {
-		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsServiceManagerCreateFailed, err)
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
 	}
+	defer func() { _ = dockerClient.Close() }()
 
-	result, err := reg.Reconcile(ctx, svc.DockerClient)
+	result, err := reg.Reconcile(ctx, dockerClient)
 	if err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryReconcileFailed, err)
 	}
@@ -258,9 +271,9 @@ func (h *CleanupHandler) reconcileRegistry(ctx context.Context, base *base.BaseC
 		base.Output.Info(messages.InfoReconciledRegistry, len(result.Removed))
 	}
 
-	if warnings := reg.ValidateAgainstDocker(ctx, svc.DockerClient); len(warnings) > 0 && !ciFlags.Quiet {
+	if warnings := reg.ValidateAgainstDocker(ctx, dockerClient); len(warnings) > 0 && !ciFlags.Quiet {
 		for _, w := range warnings {
-			base.Output.Warning(w)
+			base.Output.Warning("%s", w)
 		}
 	}
 

@@ -10,6 +10,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const minCategoryParts = 2
+
 type serviceConfig struct {
 	Name               string                `yaml:"name"`
 	Description        string                `yaml:"description"`
@@ -96,7 +98,7 @@ func loadService(path string) (*loadedService, error) {
 func inferCategory(path string) string {
 	relPath, _ := filepath.Rel(servicesDirPath, path)
 	parts := strings.Split(filepath.ToSlash(relPath), "/")
-	if len(parts) >= 2 {
+	if len(parts) >= minCategoryParts {
 		return parts[0]
 	}
 	return "other"

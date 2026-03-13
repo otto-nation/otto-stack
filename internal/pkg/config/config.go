@@ -4,11 +4,15 @@ import (
 	"os"
 	"path/filepath"
 
+	goversion "github.com/hashicorp/go-version"
+	embeddedconfig "github.com/otto-nation/otto-stack/internal/config"
 	"github.com/otto-nation/otto-stack/internal/core"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
+	"github.com/otto-nation/otto-stack/internal/pkg/logger"
 	"github.com/otto-nation/otto-stack/internal/pkg/messages"
 	"github.com/otto-nation/otto-stack/internal/pkg/types"
+	"github.com/otto-nation/otto-stack/internal/pkg/version"
 	"gopkg.in/yaml.v3"
 )
 
@@ -70,6 +74,9 @@ func LoadConfig() (*Config, error) {
 		if err := validateSharingPolicy(baseConfig); err != nil {
 			return nil, err
 		}
+		if err := validateRequiredVersion(baseConfig); err != nil {
+			return nil, err
+		}
 		return baseConfig, nil
 	}
 
@@ -77,7 +84,40 @@ func LoadConfig() (*Config, error) {
 	if err := validateSharingPolicy(merged); err != nil {
 		return nil, err
 	}
+	if err := validateRequiredVersion(merged); err != nil {
+		return nil, err
+	}
 	return merged, nil
+}
+
+// validateRequiredVersion checks the running binary version satisfies the config constraint.
+func validateRequiredVersion(cfg *Config) error {
+	if cfg.Version == nil || cfg.Version.RequiredVersion == "" {
+		return nil
+	}
+
+	constraint, err := goversion.NewConstraint(cfg.Version.RequiredVersion)
+	if err != nil {
+		return pkgerrors.NewConfigError(pkgerrors.ErrCodeInvalid, "version_config.required_version", messages.VersionInvalidVersion, err)
+	}
+
+	current, err := goversion.NewVersion(version.GetAppVersion())
+	if err != nil {
+		// If the running version can't be parsed (e.g. dev build), skip the check rather than block.
+		logger.Warn("Could not parse running version for constraint check", "version", version.GetAppVersion())
+		return nil
+	}
+
+	if !constraint.Check(current) {
+		return pkgerrors.NewValidationErrorf(
+			pkgerrors.ErrCodeInvalid,
+			"version_config.required_version",
+			messages.VersionConstraintNotSatisfied,
+			version.GetAppVersion(),
+			cfg.Version.RequiredVersion,
+		)
+	}
+	return nil
 }
 
 // GenerateConfig creates a new otto-stack configuration file
@@ -103,10 +143,8 @@ func GenerateConfig(ctx clicontext.Context) ([]byte, error) {
 		}
 	}
 
-	if ctx.Options.Validation != nil {
-		config.Validation = &ValidationConfig{
-			Options: ctx.Options.Validation,
-		}
+	if ctx.Advanced != nil && ctx.Advanced.AutoStart {
+		config.Advanced = &AdvancedConfig{AutoStart: true}
 	}
 
 	return yaml.Marshal(config)
@@ -156,18 +194,33 @@ func loadLocalConfig() (*Config, error) {
 	return &config, nil
 }
 
-// mergeConfigs merges base config with local overrides
+// mergeConfigs merges base config with local overrides.
+// Local values override base values when set.
 func mergeConfigs(base, local *Config) *Config {
 	merged := *base // Copy base
 
-	// Override project settings
 	if local.Project.Name != "" {
 		merged.Project.Name = local.Project.Name
 	}
 
-	// Override stack settings
 	if len(local.Stack.Enabled) > 0 {
 		merged.Stack.Enabled = local.Stack.Enabled
+	}
+
+	if local.Sharing != nil {
+		merged.Sharing = local.Sharing
+	}
+
+	if local.Validation != nil {
+		merged.Validation = local.Validation
+	}
+
+	if local.Advanced != nil {
+		merged.Advanced = local.Advanced
+	}
+
+	if local.Version != nil {
+		merged.Version = local.Version
 	}
 
 	return &merged
@@ -197,32 +250,28 @@ func validateSharingPolicy(cfg *Config) error {
 	return nil
 }
 
-// loadServiceConfig loads a single service configuration
+// loadServiceConfig loads a single service configuration from the embedded FS.
 func loadServiceConfig(serviceName string) (*types.ServiceConfig, error) {
-	// Search for service file in subdirectories
-	var configPath string
-	err := filepath.Walk("internal/config/services", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() && filepath.Base(path) == serviceName+core.ExtYAML {
-			configPath = path
-			return filepath.SkipAll
-		}
-		return nil
-	})
-	if err != nil || configPath == "" {
+	target := serviceName + core.ExtYAML
+	const embeddedServicesDir = "services"
+	categories, err := embeddedconfig.EmbeddedServicesFS.ReadDir(embeddedServicesDir)
+	if err != nil {
 		return nil, os.ErrNotExist
 	}
-
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return nil, err
+	for _, category := range categories {
+		if !category.IsDir() {
+			continue
+		}
+		filePath := embeddedServicesDir + "/" + category.Name() + "/" + target
+		data, err := embeddedconfig.EmbeddedServicesFS.ReadFile(filePath)
+		if err != nil {
+			continue
+		}
+		var cfg types.ServiceConfig
+		if err := yaml.Unmarshal(data, &cfg); err != nil {
+			return nil, err
+		}
+		return &cfg, nil
 	}
-
-	var cfg types.ServiceConfig
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
-	return &cfg, nil
+	return nil, os.ErrNotExist
 }

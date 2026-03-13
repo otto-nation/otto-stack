@@ -2,6 +2,14 @@ package main
 
 import "gopkg.in/yaml.v3"
 
+const (
+	fieldTypeString  = "string"
+	fieldTypeBoolean = "boolean"
+	fieldTypeInteger = "integer"
+	fieldTypeArray   = "array"
+	fieldTypeObject  = "object"
+)
+
 type schemaField struct {
 	Name        string
 	Type        string
@@ -70,23 +78,23 @@ func buildExamplesNode(fields []*schemaField) *yaml.Node {
 
 func buildFieldExampleNode(f *schemaField) *yaml.Node {
 	switch f.Type {
-	case "string":
+	case fieldTypeString:
 		if f.Default != nil && f.Default.Value != "" {
 			return scalarNode(f.Default.Value)
 		}
-	case "integer":
+	case fieldTypeInteger:
 		if f.Default != nil {
 			return taggedScalarNode("!!int", f.Default.Value)
 		}
-	case "boolean":
+	case fieldTypeBoolean:
 		if f.Default != nil {
 			return taggedScalarNode("!!bool", f.Default.Value)
 		}
-	case "array":
+	case fieldTypeArray:
 		if f.Items != nil {
 			return buildItemSequenceNode(f.Items)
 		}
-	case "object":
+	case fieldTypeObject:
 		if len(f.Properties) > 0 {
 			return buildObjectExampleNode(f.Properties)
 		}
@@ -126,11 +134,11 @@ func buildObjectPropNode(p *schemaField) *yaml.Node {
 		return taggedScalarNode(p.Default.Tag, p.Default.Value)
 	}
 	switch p.Type {
-	case "string":
+	case fieldTypeString:
 		return scalarNode("example-" + p.Name)
-	case "integer":
+	case fieldTypeInteger:
 		return taggedScalarNode("!!int", "1")
-	case "boolean":
+	case fieldTypeBoolean:
 		return taggedScalarNode("!!bool", "true")
 	}
 	return nil

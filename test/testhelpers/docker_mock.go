@@ -15,9 +15,9 @@ import (
 
 // MockDockerClient is a mock implementation of docker.DockerClient for testing
 type MockDockerClient struct {
-	ContainerListFunc    func(ctx context.Context, options container.ListOptions) ([]types.Container, error)
+	ContainerListFunc    func(ctx context.Context, options container.ListOptions) ([]container.Summary, error)
 	ContainerRemoveFunc  func(ctx context.Context, containerID string, options container.RemoveOptions) error
-	ContainerInspectFunc func(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	ContainerInspectFunc func(ctx context.Context, containerID string) (container.InspectResponse, error)
 	ContainerCreateFunc  func(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *ocispec.Platform, containerName string) (container.CreateResponse, error)
 	ContainerStartFunc   func(ctx context.Context, containerID string, options container.StartOptions) error
 	ContainerStopFunc    func(ctx context.Context, containerID string, options container.StopOptions) error
@@ -35,11 +35,11 @@ type MockDockerClient struct {
 	CloseFunc            func() error
 }
 
-func (m *MockDockerClient) ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
+func (m *MockDockerClient) ContainerList(ctx context.Context, options container.ListOptions) ([]container.Summary, error) {
 	if m.ContainerListFunc != nil {
 		return m.ContainerListFunc(ctx, options)
 	}
-	return []types.Container{}, nil
+	return []container.Summary{}, nil
 }
 
 func (m *MockDockerClient) ContainerRemove(ctx context.Context, containerID string, options container.RemoveOptions) error {
@@ -49,11 +49,11 @@ func (m *MockDockerClient) ContainerRemove(ctx context.Context, containerID stri
 	return nil
 }
 
-func (m *MockDockerClient) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+func (m *MockDockerClient) ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error) {
 	if m.ContainerInspectFunc != nil {
 		return m.ContainerInspectFunc(ctx, containerID)
 	}
-	return types.ContainerJSON{}, nil
+	return container.InspectResponse{}, nil
 }
 
 func (m *MockDockerClient) ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *ocispec.Platform, containerName string) (container.CreateResponse, error) {
@@ -167,12 +167,12 @@ func (m *MockDockerClient) Close() error {
 }
 
 // MockContainerJSON creates a ContainerJSON for testing
-func MockContainerJSON(id, name, image, project string, running bool) types.ContainerJSON {
-	return types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
+func MockContainerJSON(id, name, image, project string, running bool) container.InspectResponse {
+	return container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
 			ID:   id,
 			Name: name,
-			State: &types.ContainerState{
+			State: &container.State{
 				Running: running,
 				Status:  map[bool]string{true: "running", false: "exited"}[running],
 			},
@@ -185,13 +185,13 @@ func MockContainerJSON(id, name, image, project string, running bool) types.Cont
 }
 
 // MockContainerJSONWithHealth creates a ContainerJSON with health status for testing
-func MockContainerJSONWithHealth(id string, running bool, healthStatus string) types.ContainerJSON {
-	return types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
+func MockContainerJSONWithHealth(id string, running bool, healthStatus string) container.InspectResponse {
+	return container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
 			ID: id,
-			State: &types.ContainerState{
+			State: &container.State{
 				Running: running,
-				Health: &types.Health{
+				Health: &container.Health{
 					Status: healthStatus,
 				},
 			},

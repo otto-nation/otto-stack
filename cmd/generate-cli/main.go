@@ -684,13 +684,13 @@ func generateFlagValidationTest(rawConfig map[string]any) error {
 	if err != nil {
 		return fmt.Errorf("failed to create output file: %w", err)
 	}
-	defer outputFile.Close()
 
 	if err := tmpl.Execute(outputFile, data); err != nil {
+		_ = outputFile.Close()
 		return fmt.Errorf("failed to execute template: %w", err)
 	}
 
-	return nil
+	return outputFile.Close()
 }
 
 type CommandInfo struct {

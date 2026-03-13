@@ -77,12 +77,12 @@ func renderCommandSection(name string, cmdNode *yaml.Node) string {
 	usage := nodeGetStr(cmdNode, keyUsage)
 	aliases := nodeStringSlice(nodeGet(cmdNode, keyAliases))
 
-	sb.WriteString(fmt.Sprintf("### `%s`\n\n%s\n\n", name, desc))
+	fmt.Fprintf(&sb, "### `%s`\n\n%s\n\n", name, desc)
 	if longDesc != "" {
 		sb.WriteString(strings.TrimSpace(longDesc) + "\n\n")
 	}
 	if usage != "" {
-		sb.WriteString(fmt.Sprintf("%s `otto-stack %s`\n\n", docs.Labels.Usage, usage))
+		fmt.Fprintf(&sb, "%s `otto-stack %s`\n\n", docs.Labels.Usage, usage)
 	}
 	if len(aliases) > 0 {
 		sb.WriteString(docs.Labels.Aliases + " " + strings.Join(quoteEach(aliases), ", ") + "\n\n")

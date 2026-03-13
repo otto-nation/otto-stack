@@ -2,7 +2,6 @@ package operations
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"slices"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/otto-nation/otto-stack/internal/pkg/ci"
 	clicontext "github.com/otto-nation/otto-stack/internal/pkg/cli/context"
 	"github.com/otto-nation/otto-stack/internal/pkg/cli/handlers/common"
+	"github.com/otto-nation/otto-stack/internal/pkg/cli/middleware"
 	"github.com/otto-nation/otto-stack/internal/pkg/display"
 	pkgerrors "github.com/otto-nation/otto-stack/internal/pkg/errors"
 	"github.com/otto-nation/otto-stack/internal/pkg/logger"
@@ -38,7 +38,7 @@ func NewStatusHandler() *StatusHandler {
 
 // Handle executes the status command
 func (h *StatusHandler) Handle(ctx context.Context, cmd *cobra.Command, args []string, base *base.BaseCommand) error {
-	execCtx, err := common.DetectExecutionContext()
+	execCtx, err := middleware.ExecContextOrDetect(ctx)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func (h *StatusHandler) handleProjectStatus(ctx context.Context, cmd *cobra.Comm
 		base.Output.Header(messages.LifecycleStatus)
 	}
 
-	setup, cleanup, err := common.SetupCoreCommand(ctx, base)
+	setup, cleanup, err := middleware.CoreSetupOrCreate(ctx, base)
 	if err != nil {
 		return ci.FormatError(ciFlags, err)
 	}
@@ -129,10 +129,24 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 		sharedRoot = m.Shared.Root
 	}
 
-	reg := registry.NewManager(sharedRoot)
-	_, err := reg.Load()
+	dockerClient, err := docker.NewClient(h.logger)
 	if err != nil {
+		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
+	}
+	defer func() { _ = dockerClient.Close() }()
+
+	reg := registry.NewManager(sharedRoot)
+	if _, err := reg.Load(); err != nil {
 		return pkgerrors.NewSystemError(pkgerrors.ErrCodeOperationFail, messages.ErrorsRegistryLoadFailed, err)
+	}
+
+	// Reconcile registry against Docker before displaying — prunes entries for
+	// containers that no longer exist (manual docker rm, machine restart, etc.).
+	if result, err := reg.Reconcile(ctx, dockerClient); err != nil {
+		// Non-fatal: warn and continue with whatever state we have.
+		base.Output.Warning(messages.WarningsRegistryReconcileFailed, err)
+	} else if len(result.Removed) > 0 {
+		base.Output.Info(messages.InfoReconciledRegistry, len(result.Removed))
 	}
 
 	sharedContainers, err := reg.List()
@@ -143,11 +157,6 @@ func (h *StatusHandler) handleSharedStatus(ctx context.Context, cmd *cobra.Comma
 	if len(sharedContainers) == 0 {
 		base.Output.Info(messages.InfoNoSharedContainers)
 		return nil
-	}
-
-	dockerClient, err := docker.NewClient(h.logger)
-	if err != nil {
-		return pkgerrors.NewDockerError(pkgerrors.ErrCodeOperationFail, messages.ErrorsDockerClientCreateFailed, err)
 	}
 
 	statuses := h.buildSharedStatuses(ctx, sharedContainers, dockerClient)
@@ -188,7 +197,7 @@ func (h *StatusHandler) handleProjectSharedStatusWithRequest(req statusRequest) 
 	ciFlags := ci.GetFlags(req.cmd)
 
 	if !ciFlags.Quiet {
-		req.base.Output.Header(fmt.Sprintf(messages.InfoSharedContainersForProject, req.projectName))
+		req.base.Output.Header(messages.InfoSharedContainersForProject, req.projectName)
 	}
 
 	var sharedRoot string
@@ -217,7 +226,7 @@ func (h *StatusHandler) handleProjectSharedStatusWithRequest(req statusRequest) 
 	}
 
 	if len(projectContainers) == 0 {
-		req.base.Output.Info(fmt.Sprintf(messages.InfoNoSharedContainersForProject, req.projectName))
+		req.base.Output.Info(messages.InfoNoSharedContainersForProject, req.projectName)
 		return nil
 	}
 
@@ -225,6 +234,7 @@ func (h *StatusHandler) handleProjectSharedStatusWithRequest(req statusRequest) 
 	if err != nil {
 		return err
 	}
+	defer func() { _ = dockerClient.Close() }()
 
 	statuses := h.buildSharedStatuses(req.ctx, projectContainers, dockerClient)
 

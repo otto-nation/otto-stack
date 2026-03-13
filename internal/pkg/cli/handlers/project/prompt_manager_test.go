@@ -39,11 +39,12 @@ func TestPromptManager_PromptForServiceConfigs(t *testing.T) {
 
 func TestPromptManager_PromptForAdvancedOptions(t *testing.T) {
 	pm := &PromptManager{}
-	validation, advanced, err := pm.PromptForAdvancedOptions()
+	validation, sharing, advanced, err := pm.PromptForAdvancedOptions(nil)
 	if err != nil {
 		assert.Error(t, err)
 	} else {
 		assert.NotNil(t, validation)
+		assert.NotNil(t, sharing)
 		assert.NotNil(t, advanced)
 	}
 }
@@ -53,7 +54,7 @@ func TestPromptManager_ConfirmInitialization(t *testing.T) {
 	mockOutput := &MockOutput{}
 	base := &base.BaseCommand{Output: mockOutput}
 
-	result, err := pm.ConfirmInitialization("test-project", []string{services.ServicePostgres}, map[string]bool{}, map[string]bool{}, base)
+	result, err := pm.ConfirmInitialization("test-project", []string{services.ServicePostgres}, map[string]bool{}, base)
 	if err != nil {
 		assert.Error(t, err)
 	} else {
