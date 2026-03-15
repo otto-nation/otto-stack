@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/otto-nation/otto-stack/compare/v1.2.0...v1.2.1) (2026-03-15)
+
+
+### Bug Fixes
+
+* **ci:** simplify release config, fix brew tap, and improve UX ([#53](https://github.com/otto-nation/otto-stack/issues/53)) ([cece57c](https://github.com/otto-nation/otto-stack/commit/cece57cdbad9b59e4d18ad8db2e2d2f4d6a81868))
+
 ## [1.2.0](https://github.com/otto-nation/otto-stack/compare/v1.1.0...v1.2.0) (2026-03-13)
 
 
