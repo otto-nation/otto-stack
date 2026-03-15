@@ -166,7 +166,11 @@ func (h *UpHandler) handleGlobalContext(ctx context.Context, cmd *cobra.Command,
 	}
 
 	if len(args) == 0 {
-		return pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationNoServicesSelected, nil)
+		selected, err := h.promptSelectShareableServices()
+		if err != nil {
+			return err
+		}
+		args = selected
 	}
 
 	serviceConfigs, err := h.loadServiceConfigs(args)
@@ -236,6 +240,43 @@ func (h *UpHandler) startSharedContainers(ctx context.Context, composePath strin
 	}
 
 	return composeManager.Up(ctx, proj, docker.UpOptions{Detach: true, Services: servicesToCreate})
+}
+
+func (h *UpHandler) promptSelectShareableServices() ([]string, error) {
+	mgr, err := services.New()
+	if err != nil {
+		return nil, err
+	}
+
+	allServices := mgr.GetAllServices()
+	shareableNames := make([]string, 0, len(allServices))
+	for name, cfg := range allServices {
+		if cfg.Shareable {
+			shareableNames = append(shareableNames, name)
+		}
+	}
+	sort.Strings(shareableNames)
+
+	if len(shareableNames) == 0 {
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.SharedNoShareableServices, nil)
+	}
+
+	prompt := &survey.MultiSelect{
+		Message: messages.SharedSelectServices,
+		Options: shareableNames,
+		Help:    messages.SharedSelectServicesHelp,
+	}
+
+	var selected []string
+	if err := survey.AskOne(prompt, &selected); err != nil {
+		return nil, err
+	}
+
+	if len(selected) == 0 {
+		return nil, pkgerrors.NewValidationError(pkgerrors.ErrCodeInvalid, pkgerrors.FieldServiceName, messages.ValidationNoServicesSelected, nil)
+	}
+
+	return selected, nil
 }
 
 func (h *UpHandler) promptConfirmStart() (bool, error) {

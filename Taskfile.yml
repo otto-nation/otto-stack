@@ -257,7 +257,7 @@ tasks:
       - echo "  ✓ All binaries in {{.BUILD_DIR}}/"
 
   install:
-    desc: "Build and install dev binary to GOPATH/bin"
+    desc: "Build and install dev binary to GOPATH/bin (unlinks Homebrew if needed)"
     deps: [build]
     silent: true
     cmds:
@@ -266,6 +266,14 @@ tasks:
         GOBIN="$(go env GOPATH)/bin"
         INSTALLED="$GOBIN/{{.BINARY_NAME}}"
         echo "  ✓ Installed dev build to $INSTALLED"
+
+        # If Homebrew manages this binary, unlink it so the dev build takes precedence.
+        BREW_CMD=$(command -v brew 2>/dev/null || true)
+        if [[ -n "$BREW_CMD" ]] && "$BREW_CMD" list --formula 2>/dev/null | grep -q "^{{.BINARY_NAME}}$"; then
+          "$BREW_CMD" unlink "{{.BINARY_NAME}}" > /dev/null 2>&1 || true
+          echo "  ✓ Unlinked Homebrew {{.BINARY_NAME}} (run 'task uninstall' to restore it)"
+        fi
+
         ACTIVE=$(command -v {{.BINARY_NAME}} 2>/dev/null || true)
         if [[ -z "$ACTIVE" ]]; then
           echo "  ⚠ '{{.BINARY_NAME}}' not found in PATH"
@@ -333,7 +341,7 @@ tasks:
         fi
 
   uninstall:
-    desc: "Remove the dev binary from GOPATH/bin"
+    desc: "Remove the dev binary from GOPATH/bin and restore Homebrew if installed"
     silent: true
     cmds:
       - |
@@ -345,6 +353,14 @@ tasks:
         else
           echo "  ✓ Dev build was not installed ($BINARY not found)"
         fi
+
+        # Re-link Homebrew if it manages this binary (was unlinked by task install)
+        BREW_CMD=$(command -v brew 2>/dev/null || true)
+        if [[ -n "$BREW_CMD" ]] && "$BREW_CMD" list --formula 2>/dev/null | grep -q "^{{.BINARY_NAME}}$"; then
+          "$BREW_CMD" link "{{.BINARY_NAME}}" > /dev/null 2>&1 || true
+          echo "  ✓ Re-linked Homebrew {{.BINARY_NAME}}"
+        fi
+
         ACTIVE=$(command -v {{.BINARY_NAME}} 2>/dev/null || true)
         if [[ -n "$ACTIVE" ]]; then
           VERSION=$("$ACTIVE" --version 2>/dev/null || "$ACTIVE" version 2>/dev/null || echo "unknown")
